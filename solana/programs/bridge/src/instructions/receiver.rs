@@ -1,6 +1,6 @@
 use anchor_lang::{
     prelude::*,
-    solana_program::{self, instruction::Instruction, keccak},
+    solana_program::{self, keccak},
 };
 
 use crate::{Ix, Message, MessengerPayload, OutputRoot, DEFAULT_SENDER, MESSAGE_SEED};
@@ -19,35 +19,12 @@ pub struct ProveTransaction<'info> {
     )]
     pub message: Account<'info, Message>,
 
-    pub root: Account<'info, OutputRoot>,
+    pub output_root: Account<'info, OutputRoot>,
 
     #[account(mut)]
     payer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-#[instruction(transaction_hash: [u8; 32])]
-pub struct FinalizeTransaction<'info> {
-    #[account(mut, seeds = [MESSAGE_SEED, &transaction_hash], bump)]
-    pub message: Account<'info, Message>,
-}
-
-pub fn finalize_transaction_handler(
-    ctx: Context<FinalizeTransaction>,
-    _transaction_hash: &[u8; 32],
-) -> Result<()> {
-    if ctx.accounts.message.is_executed {
-        return err!(ReceiverError::AlreadyExecuted);
-    }
-
-    ctx.accounts.message.is_executed = true;
-    handle_ixs(
-        ctx.program_id.as_ref(),
-        ctx.remaining_accounts,
-        &mut ctx.accounts.message,
-    )
 }
 
 pub fn prove_transaction_handler(
@@ -58,21 +35,42 @@ pub fn prove_transaction_handler(
     proof: Vec<[u8; 32]>,
 ) -> Result<()> {
     let message_hash = hash_ixs(remote_sender, &ixs);
+    require!(
+        message_hash == *transaction_hash,
+        ReceiverError::InvalidTransactionHash
+    );
 
-    if message_hash != *transaction_hash {
-        return err!(ReceiverError::InvalidTransactionHash);
-    }
-
-    // Run merkle proof of proof against ctx.accounts.root.root
-    if !verify(proof, &ctx.accounts.root.root, transaction_hash) {
-        return err!(ReceiverError::InvalidProof);
-    }
+    // Run merkle proof of proof against ctx.accounts.output_root.output_root
+    require!(
+        verify(&proof, &ctx.accounts.output_root.root, &message_hash),
+        ReceiverError::InvalidProof
+    );
 
     ctx.accounts.message.ixs = ixs;
     ctx.accounts.message.sender = DEFAULT_SENDER;
     ctx.accounts.message.remote_sender = *remote_sender;
 
     Ok(())
+}
+
+#[derive(Accounts)]
+pub struct FinalizeTransaction<'info> {
+    #[account(mut)]
+    pub message: Account<'info, Message>,
+}
+
+pub fn finalize_transaction_handler(ctx: Context<FinalizeTransaction>) -> Result<()> {
+    require!(
+        !ctx.accounts.message.is_executed,
+        ReceiverError::AlreadyExecuted
+    );
+
+    ctx.accounts.message.is_executed = true;
+    handle_ixs(
+        ctx.program_id.as_ref(),
+        &mut ctx.accounts.message,
+        ctx.remaining_accounts,
+    )
 }
 
 /**
@@ -83,8 +81,8 @@ pub fn prove_transaction_handler(
  *
  * This version handles proofs in memory with the default hashing function.
  */
-fn verify(proof: Vec<[u8; 32]>, root: &[u8; 32], leaf: &[u8; 32]) -> bool {
-    return process_proof(proof, leaf) == *root;
+fn verify(proof: &[[u8; 32]], root: &[u8; 32], leaf: &[u8; 32]) -> bool {
+    process_proof(proof, leaf) == *root
 }
 
 /**
@@ -95,14 +93,14 @@ fn verify(proof: Vec<[u8; 32]>, root: &[u8; 32], leaf: &[u8; 32]) -> bool {
  *
  * This version handles proofs in memory with the default hashing function.
  */
-fn process_proof(proof: Vec<[u8; 32]>, leaf: &[u8; 32]) -> [u8; 32] {
+fn process_proof(proof: &[[u8; 32]], leaf: &[u8; 32]) -> [u8; 32] {
     let mut computed_hash = *leaf;
 
     for node in proof {
-        computed_hash = commutative_keccak256(computed_hash, node);
+        computed_hash = commutative_keccak256(computed_hash, *node);
     }
 
-    return computed_hash;
+    computed_hash
 }
 
 /**
@@ -112,9 +110,10 @@ fn process_proof(proof: Vec<[u8; 32]>, leaf: &[u8; 32]) -> [u8; 32] {
  */
 fn commutative_keccak256(a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
     if a < b {
-        return efficient_keccak256(a, b);
+        efficient_keccak256(a, b)
+    } else {
+        efficient_keccak256(b, a)
     }
-    return efficient_keccak256(b, a);
 }
 
 /**
@@ -124,7 +123,7 @@ fn efficient_keccak256(a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
     let mut data_to_hash = Vec::new();
     data_to_hash.extend_from_slice(&a);
     data_to_hash.extend_from_slice(&b);
-    return keccak::hash(&data_to_hash).to_bytes();
+    keccak::hash(&data_to_hash).to_bytes()
 }
 
 /// Creates a hash of the instructions to identify the transaction.
@@ -154,23 +153,21 @@ fn hash_ixs(remote_sender: &[u8; 20], ixs: &[Ix]) -> [u8; 32] {
     keccak::hash(&data).0
 }
 
-fn handle_ixs<'info>(
+fn handle_ixs(
     program_id: &[u8],
-    account_infos: &[AccountInfo],
-    message_account: &mut Account<'info, Message>,
+    message_account: &mut Account<Message>,
+    remaining_accounts: &[AccountInfo],
 ) -> Result<()> {
     for ix in &message_account.ixs.clone() {
-        let ix: Instruction = ix.into();
         if ix.program_id == messenger::local_messenger_pubkey(program_id) {
             messenger::relay_message(
                 program_id,
                 message_account,
-                account_infos,
-                &message_account.remote_sender.clone(),
+                remaining_accounts,
                 MessengerPayload::try_from_slice(&ix.data)?,
             )?;
         } else {
-            solana_program::program::invoke(&ix, account_infos)?;
+            solana_program::program::invoke(&ix.into(), remaining_accounts)?;
         }
     }
     Ok(())

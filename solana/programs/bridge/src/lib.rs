@@ -29,11 +29,13 @@ pub mod bridge {
     ) -> Result<()> {
         standard_bridge::bridge_sol_to_handler(
             ctx,
-            remote_token,
-            to,
-            amount,
-            min_gas_limit,
-            extra_data,
+            BridgeParams {
+                remote_token,
+                to,
+                amount,
+                min_gas_limit,
+                extra_data,
+            },
         )
     }
 
@@ -47,11 +49,13 @@ pub mod bridge {
     ) -> Result<()> {
         standard_bridge::bridge_tokens_to_handler(
             ctx,
-            remote_token,
-            to,
-            amount,
-            min_gas_limit,
-            extra_data,
+            BridgeParams {
+                remote_token,
+                to,
+                amount,
+                min_gas_limit,
+                extra_data,
+            },
         )
     }
 
@@ -89,10 +93,7 @@ pub mod bridge {
         receiver::prove_transaction_handler(ctx, &transaction_hash, &remote_sender, ixs, proof)
     }
 
-    pub fn finalize_transaction(
-        ctx: Context<FinalizeTransaction>,
-        transaction_hash: [u8; 32],
-    ) -> Result<()> {
-        receiver::finalize_transaction_handler(ctx, &transaction_hash)
+    pub fn finalize_transaction(ctx: Context<FinalizeTransaction>) -> Result<()> {
+        receiver::finalize_transaction_handler(ctx)
     }
 }

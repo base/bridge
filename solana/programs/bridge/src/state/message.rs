@@ -3,16 +3,17 @@ use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 #[derive(InitSpace)]
 #[account]
 pub struct Message {
+    /// Whether the message has been executed.
     pub is_executed: bool,
-
+    /// Whether the message has failed.
     pub failed_message: bool,
-
+    /// Whether the message has been successful.
     pub successful_message: bool,
-
+    /// Remote sender of the message.
     pub remote_sender: [u8; 20],
-
+    /// Sender of the message.
     pub sender: [u8; 20],
-
+    /// Instructions to be executed by the wallet.
     #[max_len(10)]
     pub ixs: Vec<Ix>,
 }

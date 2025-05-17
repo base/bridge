@@ -35,7 +35,7 @@ pub fn deposit_transaction_handler(
     deposit_transaction_internal(ctx.accounts.user.key(), to, gas_limit, is_creation, data)
 }
 
-pub fn deposit_transaction_internal<'info>(
+pub fn deposit_transaction_internal(
     from: Pubkey,
     to: [u8; 20],
     gas_limit: u64,
@@ -44,15 +44,14 @@ pub fn deposit_transaction_internal<'info>(
 ) -> Result<()> {
     // Just to be safe, make sure that people specify address(0) as the target when doing
     // contract creations.
-    if is_creation && to != [0; 20] {
-        return err!(PortalError::BadTarget);
-    }
+    require!(!is_creation || to == [0; 20], PortalError::BadTarget);
 
     // Prevent depositing transactions that have too small of a gas limit. Users should pay
     // more for more resource usage.
-    if gas_limit < minimum_gas_limit(data.len() as u64) {
-        return err!(PortalError::GasLimitTooLow);
-    }
+    require!(
+        gas_limit > minimum_gas_limit(data.len() as u64),
+        PortalError::GasLimitTooLow
+    );
 
     // Compute the opaque data that will be emitted as part of the TransactionDeposited event.
     // We use opaque data so that we can update the TransactionDeposited event in the future
@@ -61,7 +60,7 @@ pub fn deposit_transaction_internal<'info>(
 
     // Emit event for the relayer
     emit!(TransactionDeposited {
-        from: from,
+        from,
         to,
         version: DEPOSIT_VERSION,
         opaque_data,
@@ -71,7 +70,7 @@ pub fn deposit_transaction_internal<'info>(
 }
 
 fn minimum_gas_limit(byte_count: u64) -> u64 {
-    return byte_count * 40 + 21000;
+    byte_count * 40 + 21000
 }
 
 fn encode_packed(gas_limit: u64, is_creation: bool, data: Vec<u8>) -> Vec<u8> {
@@ -79,7 +78,7 @@ fn encode_packed(gas_limit: u64, is_creation: bool, data: Vec<u8>) -> Vec<u8> {
     opaque_data.extend_from_slice(&gas_limit.to_be_bytes()); // Equivalent to _gasLimit
     opaque_data.push(is_creation as u8); // Equivalent to _isCreation
     opaque_data.extend_from_slice(&data); // Equivalent to _data
-    return opaque_data;
+    opaque_data
 }
 
 #[error_code]
