@@ -28,16 +28,18 @@ impl FinalizeBridgeWrappedToken {
             InterfaceAccount::<TokenAccount>::try_from(next_account_info(&mut iter)?)?;
         let token_program_2022 = Program::<Token2022>::try_from(next_account_info(&mut iter)?)?;
 
-        // Check that the to is correct
-        require!(
-            to_token_account.key() == self.to,
-            FinalizeBridgeWrappedTokenError::IncorrectTo
+        // Check that the mint is correct given the local token
+        require_keys_eq!(
+            mint.key(),
+            self.local_token,
+            FinalizeBridgeWrappedTokenError::MintDoesNotMatchLocalToken
         );
 
-        // Check that the mint is correct
-        require!(
-            mint.key() == self.local_token,
-            FinalizeBridgeWrappedTokenError::IncorrectMint
+        // Check that the to is correct given the to address
+        require_keys_eq!(
+            to_token_account.key(),
+            self.to,
+            FinalizeBridgeWrappedTokenError::TokenAccountDoesNotMatchTo,
         );
 
         // Get the partial token metadata
@@ -78,8 +80,8 @@ impl FinalizeBridgeWrappedToken {
 
 #[error_code]
 pub enum FinalizeBridgeWrappedTokenError {
-    #[msg("Incorrect to")]
-    IncorrectTo,
-    #[msg("Incorrect mint")]
-    IncorrectMint,
+    #[msg("Token account does not match to address")]
+    TokenAccountDoesNotMatchTo,
+    #[msg("Mint does not match local token")]
+    MintDoesNotMatchLocalToken,
 }

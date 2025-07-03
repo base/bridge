@@ -2,11 +2,7 @@ use anchor_lang::prelude::{
     borsh::{BorshDeserialize, BorshSerialize},
     *,
 };
-use anchor_spl::{
-    token::Token,
-    token_2022::Token2022,
-    token_interface::{self, Mint, TokenAccount, TransferChecked},
-};
+use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 
 use crate::{common::TOKEN_VAULT_SEED, ID};
 
@@ -27,19 +23,20 @@ impl FinalizeBridgeSpl {
             InterfaceAccount::<TokenAccount>::try_from(next_account_info(&mut iter)?)?;
         let to_token_account =
             InterfaceAccount::<TokenAccount>::try_from(next_account_info(&mut iter)?)?;
-        let token_program = Program::<Token>::try_from(next_account_info(&mut iter)?)?;
-        let token_program_2022 = Program::<Token2022>::try_from(next_account_info(&mut iter)?)?;
+        let token_program = Interface::<TokenInterface>::try_from(next_account_info(&mut iter)?)?;
 
-        // Check that the mint is correct
-        require!(
-            mint.key() == self.local_token,
-            FinalizeBridgeSplError::IncorrectMint
+        // Check that the mint is correct given the local token
+        require_keys_eq!(
+            mint.key(),
+            self.local_token,
+            FinalizeBridgeSplError::MintDoesNotMatchLocalToken
         );
 
-        // Check that the to is correct
-        require!(
-            to_token_account.key() == self.to,
-            FinalizeBridgeSplError::IncorrectTo
+        // Check that the token account is correct given the to address
+        require_keys_eq!(
+            to_token_account.key(),
+            self.to,
+            FinalizeBridgeSplError::TokenAccountDoesNotMatchTo
         );
 
         // Check that the token vault is the expected PDA
@@ -52,16 +49,11 @@ impl FinalizeBridgeSpl {
         let (token_vault_pda, token_vault_bump) =
             Pubkey::find_program_address(token_vault_seeds, &ID);
 
-        require!(
-            token_vault.key() == token_vault_pda,
+        require_keys_eq!(
+            token_vault.key(),
+            token_vault_pda,
             FinalizeBridgeSplError::IncorrectTokenVault
         );
-
-        let token_program_info = if mint.to_account_info().owner == &anchor_spl::token::ID {
-            token_program.to_account_info()
-        } else {
-            token_program_2022.to_account_info()
-        };
 
         let seeds: &[&[&[u8]]] = &[&[
             TOKEN_VAULT_SEED,
@@ -72,7 +64,7 @@ impl FinalizeBridgeSpl {
 
         // Transfer the SPL token from the token vault to the recipient
         let cpi_ctx = CpiContext::new_with_signer(
-            token_program_info,
+            token_program.to_account_info(),
             TransferChecked {
                 mint: mint.to_account_info(),
                 from: token_vault.to_account_info(),
@@ -89,10 +81,10 @@ impl FinalizeBridgeSpl {
 
 #[error_code]
 pub enum FinalizeBridgeSplError {
-    #[msg("Incorrect mint")]
-    IncorrectMint,
-    #[msg("Incorrect to")]
-    IncorrectTo,
+    #[msg("Mint does not match local token")]
+    MintDoesNotMatchLocalToken,
+    #[msg("Token account does not match to address")]
+    TokenAccountDoesNotMatchTo,
     #[msg("Incorrect token vault")]
     IncorrectTokenVault,
 }

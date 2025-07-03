@@ -1,6 +1,10 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  getMint,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { toBytes, toHex } from "viem";
 
@@ -156,6 +160,14 @@ async function main() {
         program.programId
       );
 
+      const mint = await program.provider.connection.getAccountInfo(
+        splTransfer.localToken
+      );
+
+      if (!mint) {
+        throw new Error("Mint not found");
+      }
+
       remainingAccounts = [
         {
           pubkey: splTransfer.localToken,
@@ -173,12 +185,7 @@ async function main() {
           isSigner: false,
         },
         {
-          pubkey: TOKEN_PROGRAM_ID,
-          isWritable: false,
-          isSigner: false,
-        },
-        {
-          pubkey: TOKEN_2022_PROGRAM_ID,
+          pubkey: mint.owner,
           isWritable: false,
           isSigner: false,
         },

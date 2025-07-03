@@ -24,17 +24,15 @@ impl FinalizeBridgeSol {
         let system_program_info = Program::<System>::try_from(next_account_info(&mut iter)?)?;
 
         // Check that the to is correct
-        require!(
-            to_info.key() == self.to,
-            FinalizeBridgeSolError::IncorrectTo
-        );
+        require_keys_eq!(to_info.key(), self.to, FinalizeBridgeSolError::IncorrectTo);
 
         // Check that the sol vault is the expected PDA
         let sol_vault_seeds = &[SOL_VAULT_SEED, self.remote_token.as_ref()];
         let (sol_vault_pda, sol_vault_bump) = Pubkey::find_program_address(sol_vault_seeds, &ID);
 
-        require!(
-            sol_vault_info.key() == sol_vault_pda,
+        require_keys_eq!(
+            sol_vault_info.key(),
+            sol_vault_pda,
             FinalizeBridgeSolError::IncorrectSolVault
         );
 
