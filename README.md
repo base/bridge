@@ -121,3 +121,5 @@ If deploying a fresh version of the Solana program, follow these steps:
 8. Make sure the oracle has the updated bridge program ID
 
 9. For the new wETH and wERC20 tokens on Solana, convert both pubkeys to bytes32 format like above, and add to [`base/Makefile`](base/Makefile) as `REMOTE_ERC20` and `REMOTE_ETH`.
+
+10. For testing with the new wETH and wERC20 tokens, create an ATA account for both with the `anchor run create-user-ata` command (you will need to adjust the mint public key in [`solana/scripts/spl/create-user-ata.ts](solana/scripts/spl/create-user-ata.ts) depending on which wrapped token you are using).
