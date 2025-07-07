@@ -10,7 +10,7 @@ pub struct Proof {
 /// Verifies an MMR proof.
 ///
 /// The proof consists of sibling hashes along the path from the leaf to its
-/// mountain's peak, followed by the hashes of all other mountain peaks (right-to-left).
+/// mountain's peak, followed by the hashes of all other mountain peaks (left-to-right).
 ///
 /// # Arguments
 /// * `proof` - The proof elements.
@@ -111,9 +111,9 @@ fn calculate_root_from_proof(
     let mut all_peak_hashes: Vec<[u8; 32]> = Vec::new();
     let mut remaining_proof_idx = proof_idx_offset;
 
-    // Peaks are needed in right-to-left order for bagging.
-    // The `mountains` vector is currently left-to-right.
-    for (_height, _num_leaves, is_leafs_m) in mountains.iter().rev() {
+    // Peaks are needed in left-to-right order for bagging.
+    // The `mountains` vector is already in left-to-right order.
+    for (_height, _num_leaves, is_leafs_m) in mountains.iter() {
         if *is_leafs_m {
             all_peak_hashes.push(leaf_mountain_peak_hash);
         } else {
@@ -132,8 +132,8 @@ fn calculate_root_from_proof(
         MmrError::UnusedProofElementsRemaining
     );
 
-    // 4. Bag the peaks (right-to-left).
-    // `all_peak_hashes` is already in right-to-left mountain order because we iterated `mountains.iter().rev()`.
+    // 4. Bag the peaks (left-to-right).
+    // `all_peak_hashes` is already in left-to-right mountain order.
     if all_peak_hashes.is_empty() {
         // Should be caught by total_leaf_count == 0 earlier, but as a safeguard.
         require!(total_leaf_count == 0, MmrError::NoPeaksFoundForNonEmptyMmr);
@@ -142,12 +142,12 @@ fn calculate_root_from_proof(
         return Ok([0u8; 32]);
     }
 
-    let mut current_root = all_peak_hashes[0]; // Start with the rightmost peak.
+    let mut current_root = all_peak_hashes[0]; // Start with the leftmost peak.
     for peak_hash in all_peak_hashes.iter().skip(1) {
-        // next_peak_hash is to the left of current_root.
+        // next_peak_hash is to the right of current_root.
         // Hashing order for bagging: H(LeftPeak, H(MiddlePeak, RightPeak))
-        // So, current_root is the right operand, all_peak_hashes[i] is the left.
-        current_root = commutative_keccak256(*peak_hash, current_root);
+        // So, current_root is the left operand, all_peak_hashes[i] is the right.
+        current_root = commutative_keccak256(current_root, *peak_hash);
     }
 
     Ok(current_root)
