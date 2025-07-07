@@ -11,6 +11,7 @@ import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {Twin} from "../src/Twin.sol";
 import {Call, CallType} from "../src/libraries/CallLib.sol";
+import {IncomingMessage, MessageType} from "../src/libraries/MessageLib.sol";
 import {MessageStorageLib} from "../src/libraries/MessageStorageLib.sol";
 import {SVMBridgeLib} from "../src/libraries/SVMBridgeLib.sol";
 import {Ix, Pubkey} from "../src/libraries/SVMLib.sol";
@@ -211,12 +212,12 @@ contract BridgeTest is Test {
     //////////////////////////////////////////////////////////////
 
     function test_relayMessages_withTrustedRelayer() public {
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -238,12 +239,12 @@ contract BridgeTest is Test {
 
     function test_relayMessages_withNonTrustedRelayer() public {
         // First, make a message fail from trusted relayer
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 100000, // Insufficient gas to force failure
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -269,12 +270,12 @@ contract BridgeTest is Test {
     }
 
     function test_relayMessages_revertsOnIncrementalNonce() public {
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 1, // Should be 0
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -294,12 +295,12 @@ contract BridgeTest is Test {
 
     function test_relayMessages_revertsOnAlreadySuccessfulMessage() public {
         // First, create a message that will succeed with trusted relayer
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -324,12 +325,12 @@ contract BridgeTest is Test {
     }
 
     function test_relayMessages_emitsSuccessEvent() public {
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -353,12 +354,12 @@ contract BridgeTest is Test {
     }
 
     function test_relayMessages_emitsFailureEvent() public {
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -386,12 +387,12 @@ contract BridgeTest is Test {
     //////////////////////////////////////////////////////////////
 
     function test_relayMessage_callType() public {
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -423,12 +424,12 @@ contract BridgeTest is Test {
             remoteAmount: 100e6
         });
 
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Transfer,
+            ty: MessageType.Transfer,
             data: abi.encode(transfer)
         });
 
@@ -456,12 +457,12 @@ contract BridgeTest is Test {
             data: abi.encodeWithSelector(MockTarget.setValue.selector, 456)
         });
 
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.TransferAndCall,
+            ty: MessageType.TransferAndCall,
             data: abi.encode(transfer, call)
         });
 
@@ -475,12 +476,12 @@ contract BridgeTest is Test {
     }
 
     function test_relayMessage_remoteBridgeSpecialCase() public {
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: remoteBridge, // Special case
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(address(mockToken), TEST_REMOTE_TOKEN, uint8(12))
         });
 
@@ -498,11 +499,11 @@ contract BridgeTest is Test {
     //////////////////////////////////////////////////////////////
 
     function test_validateAndRelay_revertsOnDirectCall() public {
-        Bridge.IncomingMessage memory message = Bridge.IncomingMessage({
+        IncomingMessage memory message = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -519,11 +520,11 @@ contract BridgeTest is Test {
     }
 
     function test_relayMessage_revertsOnDirectCall() public {
-        Bridge.IncomingMessage memory message = Bridge.IncomingMessage({
+        IncomingMessage memory message = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -545,12 +546,12 @@ contract BridgeTest is Test {
 
     function test_gasEstimation_revertsOnFailure() public {
         // First make this message fail by trusted relayer so it can be retried
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 100000, // Low gas to cause failure
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -788,7 +789,7 @@ contract BridgeTest is Test {
     //////////////////////////////////////////////////////////////
 
     function test_relayMessages_withEmptyArray() public {
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](0);
+        IncomingMessage[] memory messages = new IncomingMessage[](0);
         bytes memory ismData = hex"";
 
         vm.prank(trustedRelayer);
@@ -799,13 +800,13 @@ contract BridgeTest is Test {
     }
 
     function test_relayMessages_withMultipleMessages() public {
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](3);
+        IncomingMessage[] memory messages = new IncomingMessage[](3);
         for (uint256 i = 0; i < 3; i++) {
-            messages[i] = Bridge.IncomingMessage({
+            messages[i] = IncomingMessage({
                 nonce: uint64(i),
                 sender: TEST_SENDER,
                 gasLimit: 1000000,
-                ty: Bridge.MessageType.Call,
+                ty: MessageType.Call,
                 data: abi.encode(
                     Call({
                         ty: CallType.Call,
@@ -828,12 +829,12 @@ contract BridgeTest is Test {
 
     function test_twinReuse() public {
         // First message creates Twin
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -893,12 +894,12 @@ contract BridgeTest is Test {
 
         // Increment the nonce naturally by sending messages
         for (uint64 i = 0; i < nonce; i++) {
-            Bridge.IncomingMessage[] memory tempMessages = new Bridge.IncomingMessage[](1);
-            tempMessages[0] = Bridge.IncomingMessage({
+            IncomingMessage[] memory tempMessages = new IncomingMessage[](1);
+            tempMessages[0] = IncomingMessage({
                 nonce: i,
                 sender: TEST_SENDER,
                 gasLimit: 1000000,
-                ty: Bridge.MessageType.Call,
+                ty: MessageType.Call,
                 data: abi.encode(
                     Call({
                         ty: CallType.Call,
@@ -915,12 +916,12 @@ contract BridgeTest is Test {
         }
 
         // Now send the actual test message
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: nonce,
             sender: TEST_SENDER,
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: abi.encode(
                 Call({
                     ty: CallType.Call,
@@ -955,12 +956,12 @@ contract BridgeTest is Test {
         });
         bytes memory data = abi.encode(call);
 
-        Bridge.IncomingMessage[] memory messages = new Bridge.IncomingMessage[](1);
-        messages[0] = Bridge.IncomingMessage({
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
             nonce: bridge.nextIncomingNonce(),
             sender: remoteBridge, // Only remote bridge can register tokens
             gasLimit: 1000000,
-            ty: Bridge.MessageType.Call,
+            ty: MessageType.Call,
             data: data
         });
 

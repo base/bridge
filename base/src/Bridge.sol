@@ -6,12 +6,14 @@ import {ReentrancyGuardTransient} from "solady/utils/ReentrancyGuardTransient.so
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
 import {Call} from "./libraries/CallLib.sol";
+import {IncomingMessage, MessageType} from "./libraries/MessageLib.sol";
 import {MessageStorageLib} from "./libraries/MessageStorageLib.sol";
 import {SVMBridgeLib} from "./libraries/SVMBridgeLib.sol";
 import {Ix, Pubkey} from "./libraries/SVMLib.sol";
 import {SolanaTokenType, TokenLib, Transfer} from "./libraries/TokenLib.sol";
 
 import {Twin} from "./Twin.sol";
+import {ISMVerification} from "./ISMVerification.sol";
 
 /// @title Bridge
 ///
@@ -69,27 +71,6 @@ contract Bridge is ReentrancyGuardTransient {
     //////////////////////////////////////////////////////////////
     ///                       Structs                          ///
     //////////////////////////////////////////////////////////////
-
-    /// @notice Enum containing operation types.
-    enum MessageType {
-        Call,
-        Transfer,
-        TransferAndCall
-    }
-
-    /// @notice Message sent from Solana to Base.
-    ///
-    /// @custom:field nonce Unique nonce for the message.
-    /// @custom:field sender The Solana sender's pubkey.
-    /// @custom:field gasLimit The gas limit for the message execution.
-    /// @custom:field operations The operations to be executed.
-    struct IncomingMessage {
-        uint64 nonce;
-        Pubkey sender;
-        uint64 gasLimit;
-        MessageType ty;
-        bytes data;
-    }
 
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
@@ -165,6 +146,9 @@ contract Bridge is ReentrancyGuardTransient {
 
     /// @notice The nonce used for the next incoming message relayed.
     uint64 public nextIncomingNonce;
+
+    /// @notice The ISM verification contract address.
+    address public ismVerification;
 
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
@@ -276,7 +260,7 @@ contract Bridge is ReentrancyGuardTransient {
     function relayMessages(IncomingMessage[] calldata messages, bytes calldata ismData) external nonReentrant {
         bool isTrustedRelayer = msg.sender == TRUSTED_RELAYER;
         if (isTrustedRelayer) {
-            _ismVerify({messages: messages, ismData: ismData});
+            ISMVerification(ismVerification).verifyISM({messages: messages, ismData: ismData});
         }
 
         for (uint256 i; i < messages.length; i++) {
@@ -399,17 +383,5 @@ contract Bridge is ReentrancyGuardTransient {
     /// @notice Asserts that the caller is the entrypoint.
     function _assertSenderIsEntrypoint() private view {
         require(msg.sender == address(this), SenderIsNotEntrypoint());
-    }
-
-    /// @notice Checks whether the ISM verification is successful.
-    ///
-    /// @param messages The messages to verify.
-    /// @param ismData Encoded ISM data used to verify the call.
-    function _ismVerify(IncomingMessage[] calldata messages, bytes calldata ismData) private pure {
-        messages; // Silence unused variable warning.
-        ismData; // Silence unused variable warning.
-
-        // TODO: Plug some ISM verification here.
-        require(true, ISMVerificationFailed());
     }
 }
