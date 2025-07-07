@@ -36,8 +36,12 @@ contract CreateTokenScript is Script {
 
     function run() public {
         vm.startBroadcast();
-        address token =
-            crossChainERC20Factory.deploy({remoteToken: REMOTE_TOKEN, name: tokenName, symbol: tokenSymbol, decimals: 9});
+        address token = crossChainERC20Factory.deploy({
+            remoteToken: REMOTE_TOKEN,
+            name: tokenName,
+            symbol: tokenSymbol,
+            decimals: 9
+        });
         console.log("Deployed Token at: %s", token);
         vm.stopBroadcast();
 

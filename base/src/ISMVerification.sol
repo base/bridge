@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Ownable} from "solady/auth/Ownable.sol";
 import {IncomingMessage} from "./libraries/MessageLib.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
 contract ISMVerification is Ownable {
     //////////////////////////////////////////////////////////////
@@ -60,7 +60,9 @@ contract ISMVerification is Ownable {
 
     /// @notice Constructs the ISMVerification contract.
     ///
+    /// @param _validators Array of validator addresses.
     /// @param _threshold The ISM verification threshold.
+    /// @param _owner The owner of the contract.
     constructor(address[] memory _validators, uint256 _threshold, address _owner) {
         require(_threshold > 0 && _threshold <= _validators.length, "Invalid threshold");
 
@@ -69,7 +71,7 @@ contract ISMVerification is Ownable {
         }
         validatorCount = _validators.length;
         threshold = _threshold;
-        
+
         _initializeOwner(_owner);
     }
 
@@ -81,7 +83,7 @@ contract ISMVerification is Ownable {
     /// @return True if the ISM is verified, false otherwise.
     function verifyISM(IncomingMessage[] memory messages, bytes calldata ismData) public view returns (bool) {
         require(threshold > 0, ThresholdIsZero());
-        
+
         // Decode only signatures (addresses recovered from signatures)
         (bytes memory signatures) = abi.decode(ismData, (bytes));
 
@@ -90,36 +92,36 @@ contract ISMVerification is Ownable {
 
         // Check that the provided signature data is not too short
         require(signatures.length >= threshold * 65, InvalidSignatureLength());
-        
+
         // There cannot be a validator with address 0
         address lastValidator = address(0);
-        
+
         // Verify M-of-N signatures
         for (uint256 i = 0; i < threshold; i++) {
             (uint8 v, bytes32 r, bytes32 s) = signatureSplit(signatures, i);
-            
+
             // Standard ECDSA signature recovery
             address currentValidator = ecrecover(messageHash, v, r, s);
-            
+
             // Verify recovered address is valid
             require(currentValidator != address(0), InvalidSigner());
-            
+
             // Check for duplicate signers
             if (currentValidator == lastValidator) {
                 revert DuplicateSigner();
             }
-            
+
             // Ensure ascending order
             if (currentValidator < lastValidator) {
                 revert InvalidSignatureOrder();
             }
-            
+
             // Verify signer is a registered validator
             require(validators[currentValidator], SignerNotValidator());
-            
+
             lastValidator = currentValidator;
         }
-        
+
         return true;
     }
 
@@ -128,10 +130,10 @@ contract ISMVerification is Ownable {
      * @param signatures Concatenated signatures
      * @param pos Position of signature to split (0-indexed)
      */
-    function signatureSplit(bytes memory signatures, uint256 pos) 
-        internal 
-        pure 
-        returns (uint8 v, bytes32 r, bytes32 s) 
+    function signatureSplit(bytes memory signatures, uint256 pos)
+        internal
+        pure
+        returns (uint8 v, bytes32 r, bytes32 s)
     {
         assembly {
             let signaturePos := mul(0x41, pos)

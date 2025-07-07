@@ -12,8 +12,8 @@ import {SVMBridgeLib} from "./libraries/SVMBridgeLib.sol";
 import {Ix, Pubkey} from "./libraries/SVMLib.sol";
 import {SolanaTokenType, TokenLib, Transfer} from "./libraries/TokenLib.sol";
 
-import {Twin} from "./Twin.sol";
 import {ISMVerification} from "./ISMVerification.sol";
+import {Twin} from "./Twin.sol";
 
 /// @title Bridge
 ///
@@ -93,6 +93,9 @@ contract Bridge is ReentrancyGuardTransient {
     /// @notice Address of the Twin beacon.
     address public immutable TWIN_BEACON;
 
+    /// @notice Address of the ISM verification contract.
+    address public immutable ISM_VERIFICATION;
+
     /// @notice Address of the CrossChainERC20Factory.
     address public immutable CROSS_CHAIN_ERC20_FACTORY;
 
@@ -147,9 +150,6 @@ contract Bridge is ReentrancyGuardTransient {
     /// @notice The nonce used for the next incoming message relayed.
     uint64 public nextIncomingNonce;
 
-    /// @notice The ISM verification contract address.
-    address public ismVerification;
-
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
     //////////////////////////////////////////////////////////////
@@ -159,11 +159,19 @@ contract Bridge is ReentrancyGuardTransient {
     /// @param remoteBridge The pubkey of the remote bridge on Solana.
     /// @param trustedRelayer The address of the trusted relayer.
     /// @param twinBeacon The address of the Twin beacon.
+    /// @param ismVerification The address of the ISM verification contract.
     /// @param crossChainErc20Factory The address of the CrossChainERC20Factory.
-    constructor(Pubkey remoteBridge, address trustedRelayer, address twinBeacon, address crossChainErc20Factory) {
+    constructor(
+        Pubkey remoteBridge,
+        address trustedRelayer,
+        address twinBeacon,
+        address ismVerification,
+        address crossChainErc20Factory
+    ) {
         REMOTE_BRIDGE = remoteBridge;
         TRUSTED_RELAYER = trustedRelayer;
         TWIN_BEACON = twinBeacon;
+        ISM_VERIFICATION = ismVerification;
         CROSS_CHAIN_ERC20_FACTORY = crossChainErc20Factory;
     }
 
@@ -260,7 +268,7 @@ contract Bridge is ReentrancyGuardTransient {
     function relayMessages(IncomingMessage[] calldata messages, bytes calldata ismData) external nonReentrant {
         bool isTrustedRelayer = msg.sender == TRUSTED_RELAYER;
         if (isTrustedRelayer) {
-            ISMVerification(ismVerification).verifyISM({messages: messages, ismData: ismData});
+            ISMVerification(ISM_VERIFICATION).verifyISM({messages: messages, ismData: ismData});
         }
 
         for (uint256 i; i < messages.length; i++) {
