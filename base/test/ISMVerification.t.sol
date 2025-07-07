@@ -383,6 +383,27 @@ contract ISMVerificationTest is Test {
         ismVerification.verifyISM(testMessages, ismData);
     }
     
+    function test_verifyISM_revertsWithInvalidSignatureOrder() public {
+        bytes32 messageHash = keccak256(abi.encode(testMessages));
+        
+        // Create signatures in wrong order by deliberately choosing validators with descending addresses
+        address higherValidator = validator1 > validator2 ? validator1 : validator2;
+        address lowerValidator = validator1 > validator2 ? validator2 : validator1;
+        uint256 higherKey = validator1 > validator2 ? VALIDATOR1_KEY : VALIDATOR2_KEY;
+        uint256 lowerKey = validator1 > validator2 ? VALIDATOR2_KEY : VALIDATOR1_KEY;
+        
+        // Create signatures with higher address first (descending order)
+        bytes memory signatures = abi.encodePacked(
+            _createSignature(messageHash, higherKey),
+            _createSignature(messageHash, lowerKey)
+        );
+        
+        bytes memory ismData = abi.encode(signatures);
+        
+        vm.expectRevert(ISMVerification.InvalidSignatureOrder.selector);
+        ismVerification.verifyISM(testMessages, ismData);
+    }
+    
     //////////////////////////////////////////////////////////////
     ///                    Helper Functions                    ///
     //////////////////////////////////////////////////////////////
