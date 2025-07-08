@@ -7,3 +7,5 @@ test-ledger
 .yarn
 
 .env
+clients/
+keypairs/

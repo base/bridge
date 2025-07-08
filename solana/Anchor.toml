@@ -1,31 +1,9 @@
-[toolchain]
-anchor_version = "0.31.0"
+# This file is now only used to build the IDL via `bun generate:idl`.
 
 [features]
 resolution = false
 skip-lint = false
 
-[programs.devnet]
-bridge = "4L8cUU2DXTzEaa5C8MWLTyEV8dpmpDbCjg8DNgUuGedc"
-
-[registry]
-url = "https://api.apr.dev"
-
 [provider]
-cluster = "devnet"
-wallet = "~/.config/solana/deployer.devnet.alpha.json"
-
-[scripts]
-bridge-call = "bun run scripts/solana-to-base/bridge-call.ts"
-bridge-call-value = "bun run scripts/solana-to-base/bridge-call-value.ts"
-bridge-sol = "bun run scripts/solana-to-base/bridge-sol.ts"
-bridge-spl = "bun run scripts/solana-to-base/bridge-spl.ts"
-bridge-wrapped-token = "bun run scripts/solana-to-base/bridge-wrapped-token.ts"
-create-mint = "bun run scripts/spl/create-mint.ts"
-create-user-ata = "bun run scripts/spl/create-user-ata.ts"
-initialize = "bun run scripts/initialize.ts"
-mint-spl = "bun run scripts/spl/mint-spl.ts"
-prove-message = "bun run scripts/base-to-solana/prove-message.ts"
-pubkey-to-bytes32 = "bun run scripts/utils/pubkey-to-bytes32.ts"
-relay-message = "bun run scripts/base-to-solana/relay-message.ts"
-wrap-token = "bun run scripts/solana-to-base/wrap-token.ts"
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
