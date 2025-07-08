@@ -125,18 +125,18 @@ contract ISMVerificationTest is Test {
         validators[1] = validator2;
 
         // Test threshold = 0
-        vm.expectRevert("Invalid threshold");
+        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
         new ISMVerification(validators, 0, owner);
 
         // Test threshold > validator count
-        vm.expectRevert("Invalid threshold");
+        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
         new ISMVerification(validators, 3, owner);
     }
 
     function test_constructor_revertsWithEmptyValidatorsAndNonZeroThreshold() public {
         address[] memory validators = new address[](0);
 
-        vm.expectRevert("Invalid threshold");
+        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
         new ISMVerification(validators, 1, owner);
     }
 
@@ -144,7 +144,7 @@ contract ISMVerificationTest is Test {
         address[] memory validators = new address[](0);
 
         // This should actually fail based on the current validation logic
-        vm.expectRevert("Invalid threshold");
+        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
         new ISMVerification(validators, 0, owner);
     }
 
@@ -164,7 +164,7 @@ contract ISMVerificationTest is Test {
 
     function test_addValidator_revertsIfAlreadyValidator() public {
         vm.prank(owner);
-        vm.expectRevert("Already validator");
+        vm.expectRevert(ISMVerification.ValidatorAlreadyAdded.selector);
         ismVerification.addValidator(validator1);
     }
 
@@ -178,7 +178,7 @@ contract ISMVerificationTest is Test {
 
     function test_removeValidator_revertsIfNotValidator() public {
         vm.prank(owner);
-        vm.expectRevert("Not a validator");
+        vm.expectRevert(ISMVerification.ValidatorNotExisted.selector);
         ismVerification.removeValidator(nonValidator);
     }
 
@@ -195,13 +195,13 @@ contract ISMVerificationTest is Test {
 
     function test_setThreshold_revertsIfZero() public {
         vm.prank(owner);
-        vm.expectRevert("Invalid threshold");
+        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
         ismVerification.setThreshold(0);
     }
 
     function test_setThreshold_revertsIfGreaterThanValidatorCount() public {
         vm.prank(owner);
-        vm.expectRevert("Invalid threshold");
+        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
         ismVerification.setThreshold(5); // Greater than 4 validators
     }
 
@@ -224,7 +224,7 @@ contract ISMVerificationTest is Test {
         bytes memory ismData = abi.encode(signatures);
 
         // Verify ISM
-        bool result = ismVerification.verifyISM(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, ismData);
         assertTrue(result);
     }
 
@@ -237,7 +237,7 @@ contract ISMVerificationTest is Test {
         bytes memory signatures = _createValidSignatures(messageHash, 3);
         bytes memory ismData = abi.encode(signatures);
 
-        bool result = ismVerification.verifyISM(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, ismData);
         assertTrue(result);
     }
 
@@ -249,7 +249,7 @@ contract ISMVerificationTest is Test {
         bytes memory ismData = abi.encode(signatures);
 
         vm.expectRevert(ISMVerification.InvalidSignatureLength.selector);
-        ismVerification.verifyISM(testMessages, ismData);
+        ismVerification.isApproved(testMessages, ismData);
     }
 
     function test_verifyISM_revertsWithInvalidSignature() public {
@@ -260,7 +260,7 @@ contract ISMVerificationTest is Test {
         bytes memory ismData = abi.encode(signatures);
 
         vm.expectRevert(ISMVerification.InvalidSignatureLength.selector);
-        ismVerification.verifyISM(testMessages, ismData);
+        ismVerification.isApproved(testMessages, ismData);
     }
 
     function test_verifyISM_revertsWithNonValidatorSigner() public {
@@ -276,8 +276,8 @@ contract ISMVerificationTest is Test {
 
         bytes memory ismData = abi.encode(signatures);
 
-        vm.expectRevert(ISMVerification.SignerNotValidator.selector);
-        ismVerification.verifyISM(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, ismData);
+        assertFalse(result);
     }
 
     function test_verifyISM_revertsWithDuplicateSigners() public {
@@ -290,8 +290,8 @@ contract ISMVerificationTest is Test {
 
         bytes memory ismData = abi.encode(signatures);
 
-        vm.expectRevert(ISMVerification.DuplicateSigner.selector);
-        ismVerification.verifyISM(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, ismData);
+        assertFalse(result);
     }
 
     function test_verifyISM_revertsWithWrongMessageHash() public {
@@ -310,8 +310,8 @@ contract ISMVerificationTest is Test {
         bytes memory ismData = abi.encode(signatures);
 
         // Try to verify with original messages (different hash)
-        vm.expectRevert(ISMVerification.SignerNotValidator.selector);
-        ismVerification.verifyISM(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, ismData);
+        assertFalse(result);
     }
 
     function test_verifyISM_revertsWithZeroThreshold() public {
@@ -323,7 +323,7 @@ contract ISMVerificationTest is Test {
 
         // Set threshold to 0 (this should be prevented, but let's test the verification)
         vm.prank(owner);
-        vm.expectRevert("Invalid threshold");
+        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
         zeroThresholdISM.setThreshold(0);
     }
 
@@ -351,7 +351,7 @@ contract ISMVerificationTest is Test {
 
         bytes memory ismData = abi.encode(signatures);
 
-        bool result = ismVerification.verifyISM(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, ismData);
         assertTrue(result);
     }
 
@@ -379,8 +379,8 @@ contract ISMVerificationTest is Test {
 
         bytes memory ismData = abi.encode(signatures);
 
-        vm.expectRevert(ISMVerification.InvalidSignatureOrder.selector);
-        ismVerification.verifyISM(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, ismData);
+        assertFalse(result);
     }
 
     function test_verifyISM_revertsWithInvalidSignatureOrder() public {
@@ -398,8 +398,8 @@ contract ISMVerificationTest is Test {
 
         bytes memory ismData = abi.encode(signatures);
 
-        vm.expectRevert(ISMVerification.InvalidSignatureOrder.selector);
-        ismVerification.verifyISM(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, ismData);
+        assertFalse(result);
     }
 
     //////////////////////////////////////////////////////////////

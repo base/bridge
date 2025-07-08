@@ -15,7 +15,7 @@ contract HelperConfig is Script {
         address trustedRelayer;
         address erc1967Factory;
         address[] initialValidators;
-        uint256 initialThreshold;
+        uint128 initialThreshold;
     }
 
     NetworkConfig private _activeNetworkConfig;
@@ -70,10 +70,11 @@ contract HelperConfig is Script {
 
         ERC1967Factory f = new ERC1967Factory();
 
+        // Use deterministic private keys for validators so tests can sign ISM data
         address[] memory validators = new address[](3);
-        validators[0] = makeAddr("validator1");
-        validators[1] = makeAddr("validator2");
-        validators[2] = makeAddr("validator3");
+        validators[0] = vm.addr(0x1); // VALIDATOR1_KEY
+        validators[1] = vm.addr(0x2); // VALIDATOR2_KEY
+        validators[2] = vm.addr(0x3); // VALIDATOR3_KEY
 
         return NetworkConfig({
             initialOwner: makeAddr("initialOwner"),

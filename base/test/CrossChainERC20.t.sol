@@ -34,7 +34,7 @@ contract CrossChainERC20Test is Test {
 
     function setUp() public {
         DeployScript deployer = new DeployScript();
-        (, bridge, factory,) = deployer.run();
+        (, bridge,, factory,) = deployer.run();
         token = CrossChainERC20(factory.deploy(REMOTE_TOKEN, TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS));
     }
 

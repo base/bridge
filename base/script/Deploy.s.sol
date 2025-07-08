@@ -16,7 +16,7 @@ import {Twin} from "../src/Twin.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployScript is Script {
-    function run() public returns (Twin, Bridge, CrossChainERC20Factory, HelperConfig) {
+    function run() public returns (Twin, Bridge, ISMVerification, CrossChainERC20Factory, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
 
@@ -52,7 +52,13 @@ contract DeployScript is Script {
         json = vm.serializeAddress({objectKey: obj, valueKey: "ISMVerification", value: ismVerification});
         vm.writeJson(json, string.concat("deployments/", chain.chainAlias, ".json"));
 
-        return (Twin(payable(twinBeacon)), Bridge(bridge), CrossChainERC20Factory(factory), helperConfig);
+        return (
+            Twin(payable(twinBeacon)),
+            Bridge(bridge),
+            ISMVerification(ismVerification),
+            CrossChainERC20Factory(factory),
+            helperConfig
+        );
     }
 
     function _deployTwinBeacon(HelperConfig.NetworkConfig memory cfg, address precomputedBridgeAddress)
@@ -70,11 +76,7 @@ contract DeployScript is Script {
             _owner: cfg.initialOwner
         });
 
-        return ERC1967Factory(cfg.erc1967Factory).deployDeterministic({
-            implementation: address(ismImpl),
-            admin: cfg.initialOwner,
-            salt: _salt("ism_verif")
-        });
+        return ERC1967Factory(cfg.erc1967Factory).deploy({implementation: address(ismImpl), admin: cfg.initialOwner});
     }
 
     function _deployBridge(

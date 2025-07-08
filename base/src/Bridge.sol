@@ -22,57 +22,6 @@ import {Twin} from "./Twin.sol";
 /// @dev Calls sent from Solana to Base are relayed via a Twin contract that is specific per Solana sender pubkey.
 contract Bridge is ReentrancyGuardTransient {
     //////////////////////////////////////////////////////////////
-    ///                       Events                           ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice Emitted whenever a message is successfully relayed and executed.
-    ///
-    /// @param messageHash Keccak256 hash of the message that was successfully relayed.
-    event MessageSuccessfullyRelayed(bytes32 indexed messageHash);
-
-    /// @notice Emitted whenever a message fails to be relayed.
-    ///
-    /// @param messageHash Keccak256 hash of the message that failed to be relayed.
-    event FailedToRelayMessage(bytes32 indexed messageHash);
-
-    //////////////////////////////////////////////////////////////
-    ///                       Errors                           ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice Thrown when the ISM verification fails.
-    error ISMVerificationFailed();
-
-    /// @notice Thrown when doing gas estimation and the call's gas left is insufficient to cover the `minGas` plus the
-    ///         `reservedGas`.
-    error EstimationInsufficientGas();
-
-    /// @notice Thrown when the call execution fails.
-    error ExecutionFailed();
-
-    /// @notice Thrown when the sender is not the entrypoint.
-    error SenderIsNotEntrypoint();
-
-    /// @notice Thrown when the nonce is not incremental.
-    error NonceNotIncremental();
-
-    /// @notice Thrown when a message has already been successfully relayed.
-    error MessageAlreadySuccessfullyRelayed();
-
-    /// @notice Thrown when a message has already failed to relay.
-    error MessageAlreadyFailedToRelay();
-
-    /// @notice Thrown when a message has not been marked as failed by the relayer but a user tries to relay it
-    /// manually.
-    error MessageNotAlreadyFailedToRelay();
-
-    /// @notice Thrown when an Anchor instruction is invalid.
-    error UnsafeIxTarget();
-
-    //////////////////////////////////////////////////////////////
-    ///                       Structs                          ///
-    //////////////////////////////////////////////////////////////
-
-    //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
 
@@ -149,6 +98,53 @@ contract Bridge is ReentrancyGuardTransient {
 
     /// @notice The nonce used for the next incoming message relayed.
     uint64 public nextIncomingNonce;
+
+    //////////////////////////////////////////////////////////////
+    ///                       Events                           ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice Emitted whenever a message is successfully relayed and executed.
+    ///
+    /// @param messageHash Keccak256 hash of the message that was successfully relayed.
+    event MessageSuccessfullyRelayed(bytes32 indexed messageHash);
+
+    /// @notice Emitted whenever a message fails to be relayed.
+    ///
+    /// @param messageHash Keccak256 hash of the message that failed to be relayed.
+    event FailedToRelayMessage(bytes32 indexed messageHash);
+
+    //////////////////////////////////////////////////////////////
+    ///                       Errors                           ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice Thrown when the ISM verification fails.
+    error ISMVerificationFailed();
+
+    /// @notice Thrown when doing gas estimation and the call's gas left is insufficient to cover the `minGas` plus the
+    ///         `reservedGas`.
+    error EstimationInsufficientGas();
+
+    /// @notice Thrown when the call execution fails.
+    error ExecutionFailed();
+
+    /// @notice Thrown when the sender is not the entrypoint.
+    error SenderIsNotEntrypoint();
+
+    /// @notice Thrown when the nonce is not incremental.
+    error NonceNotIncremental();
+
+    /// @notice Thrown when a message has already been successfully relayed.
+    error MessageAlreadySuccessfullyRelayed();
+
+    /// @notice Thrown when a message has already failed to relay.
+    error MessageAlreadyFailedToRelay();
+
+    /// @notice Thrown when a message has not been marked as failed by the relayer but a user tries to relay it
+    /// manually.
+    error MessageNotAlreadyFailedToRelay();
+
+    /// @notice Thrown when an Anchor instruction is invalid.
+    error UnsafeIxTarget();
 
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
@@ -268,7 +264,7 @@ contract Bridge is ReentrancyGuardTransient {
     function relayMessages(IncomingMessage[] calldata messages, bytes calldata ismData) external nonReentrant {
         bool isTrustedRelayer = msg.sender == TRUSTED_RELAYER;
         if (isTrustedRelayer) {
-            ISMVerification(ISM_VERIFICATION).verifyISM({messages: messages, ismData: ismData});
+            require(ISMVerification(ISM_VERIFICATION).isApproved(messages, ismData), ISMVerificationFailed());
         }
 
         for (uint256 i; i < messages.length; i++) {

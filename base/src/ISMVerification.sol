@@ -4,38 +4,16 @@ pragma solidity 0.8.28;
 import {IncomingMessage} from "./libraries/MessageLib.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
+/// @title ISM Verification
+///
+/// @notice A Verifcation contract to verify ISM messages from for Bridge
 contract ISMVerification is Ownable {
     //////////////////////////////////////////////////////////////
-    ///                       Events                           ///
+    ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Emitted whenever a message is successfully relayed and executed.
-    event ISMVerified();
-
-    //////////////////////////////////////////////////////////////
-    ///                       Errors                           ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice Thrown when the ISM verification fails.
-    error ISMVerificationFailed();
-
-    /// @notice Thrown when threshold is 0.
-    error ThresholdIsZero();
-
-    /// @notice Thrown when the signature length is invalid.
-    error InvalidSignatureLength();
-
-    /// @notice Thrown when the signer is invalid.
-    error InvalidSigner();
-
-    /// @notice Thrown when a duplicate signer is detected.
-    error DuplicateSigner();
-
-    /// @notice Thrown when the signer is not a validator.
-    error SignerNotValidator();
-
-    /// @notice Thrown when signatures are not in ascending order.
-    error InvalidSignatureOrder();
+    /// @notice The length of a signature in bytes.
+    uint256 public constant SIGNATURE_LENGTH_THRESHOLD = 65;
 
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
@@ -45,17 +23,48 @@ contract ISMVerification is Ownable {
     mapping(address => bool) public validators;
 
     /// @notice ISM verification threshold.
-    uint256 public threshold;
+    uint128 public threshold;
 
     /// @notice Count of validators.
-    uint256 public validatorCount;
+    uint128 public validatorCount;
 
     //////////////////////////////////////////////////////////////
-    ///                       Structs                          ///
+    ///                       Events                           ///
     //////////////////////////////////////////////////////////////
 
+    /// @notice Emitted whenever the threshold is updated.
+    event ThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+
+    /// @notice Emitted whenever a validator is added.
+    event ValidatorAdded(address validator);
+
+    /// @notice Emitted whenever a validator is removed.
+    event ValidatorRemoved(address validator);
+
     //////////////////////////////////////////////////////////////
-    ///                       Public Functions                 ///
+    ///                       Errors                           ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice Thrown when threshold is 0.
+    error InvalidThreshold();
+
+    /// @notice Thrown when the signature length is invalid.
+    error InvalidSignatureLength();
+
+    /// @notice Thrown when a validator is already added.
+    error ValidatorAlreadyAdded();
+
+    /// @notice Thrown when a validator is not a validator.
+    error ValidatorNotExisted();
+
+    /// @notice Thrown when signatures are not in ascending order.
+    error InvalidSignatureOrder();
+
+    /// @notice Thrown when ISM data is empty.
+    error EmptyISMData();
+
+    //////////////////////////////////////////////////////////////
+    ///                       Constructor                      ///
     //////////////////////////////////////////////////////////////
 
     /// @notice Constructs the ISMVerification contract.
@@ -63,17 +72,63 @@ contract ISMVerification is Ownable {
     /// @param _validators Array of validator addresses.
     /// @param _threshold The ISM verification threshold.
     /// @param _owner The owner of the contract.
-    constructor(address[] memory _validators, uint256 _threshold, address _owner) {
-        require(_threshold > 0 && _threshold <= _validators.length, "Invalid threshold");
+    constructor(address[] memory _validators, uint128 _threshold, address _owner) {
+        require(_threshold > 0 && _threshold <= _validators.length, InvalidThreshold());
 
-        for (uint256 i = 0; i < _validators.length; i++) {
+        for (uint128 i = 0; i < _validators.length; i++) {
             validators[_validators[i]] = true;
         }
-        validatorCount = _validators.length;
+        validatorCount = uint128(_validators.length);
         threshold = _threshold;
 
         _initializeOwner(_owner);
     }
+
+    //////////////////////////////////////////////////////////////
+    ///                    External Functions                  ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice Sets the ISM verification threshold.
+    ///
+    /// @param newThreshold The new ISM verification threshold.
+    function setThreshold(uint128 newThreshold) public onlyOwner {
+        require(newThreshold > 0 && newThreshold <= validatorCount, InvalidThreshold());
+        threshold = newThreshold;
+
+        emit ThresholdUpdated(threshold, newThreshold);
+    }
+
+    /// @notice Add a validator to the set
+    ///
+    /// @param validator Address to add as validator
+    function addValidator(address validator) external onlyOwner {
+        require(!validators[validator], ValidatorAlreadyAdded());
+        validators[validator] = true;
+
+        unchecked {
+            validatorCount++;
+        }
+
+        emit ValidatorAdded(validator);
+    }
+
+    /// @notice Remove a validator from the set
+    ///
+    /// @param validator Address to remove
+    function removeValidator(address validator) external onlyOwner {
+        require(validators[validator], ValidatorNotExisted());
+        validators[validator] = false;
+
+        unchecked {
+            validatorCount--;
+        }
+
+        emit ValidatorRemoved(validator);
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                 External View Functions                ///
+    //////////////////////////////////////////////////////////////
 
     /// @notice Verifies the ISM by checking M-of-N validator signatures.
     ///
@@ -81,17 +136,20 @@ contract ISMVerification is Ownable {
     /// @param ismData The ISM data containing concatenated signatures.
     ///
     /// @return True if the ISM is verified, false otherwise.
-    function verifyISM(IncomingMessage[] memory messages, bytes calldata ismData) public view returns (bool) {
-        require(threshold > 0, ThresholdIsZero());
+    function isApproved(IncomingMessage[] calldata messages, bytes calldata ismData) external view returns (bool) {
+        // Check for empty ISM data
+        if (ismData.length == 0) {
+            revert EmptyISMData();
+        }
 
-        // Decode only signatures (addresses recovered from signatures)
+        // Decode only signatures
         (bytes memory signatures) = abi.decode(ismData, (bytes));
 
         // Compute hash of the messages being verified
         bytes32 messageHash = keccak256(abi.encode(messages));
 
         // Check that the provided signature data is not too short
-        require(signatures.length >= threshold * 65, InvalidSignatureLength());
+        require(signatures.length >= threshold * SIGNATURE_LENGTH_THRESHOLD, InvalidSignatureLength());
 
         // There cannot be a validator with address 0
         address lastValidator = address(0);
@@ -103,21 +161,25 @@ contract ISMVerification is Ownable {
             // Standard ECDSA signature recovery
             address currentValidator = ecrecover(messageHash, v, r, s);
 
-            // Verify recovered address is valid
-            require(currentValidator != address(0), InvalidSigner());
+            // Verify recovered address is non-zero
+            if (currentValidator == address(0)) {
+                return false;
+            }
 
             // Check for duplicate signers
             if (currentValidator == lastValidator) {
-                revert DuplicateSigner();
+                return false;
             }
 
             // Ensure ascending order
             if (currentValidator < lastValidator) {
-                revert InvalidSignatureOrder();
+                return false;
             }
 
             // Verify signer is a registered validator
-            require(validators[currentValidator], SignerNotValidator());
+            if (!validators[currentValidator]) {
+                return false;
+            }
 
             lastValidator = currentValidator;
         }
@@ -125,11 +187,18 @@ contract ISMVerification is Ownable {
         return true;
     }
 
-    /**
-     * @notice Splits signature bytes into v, r, s components
-     * @param signatures Concatenated signatures
-     * @param pos Position of signature to split (0-indexed)
-     */
+    //////////////////////////////////////////////////////////////
+    ///                   Internal Functions                   ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice Splits signature bytes into v, r, s components
+    ///
+    /// @param signatures Concatenated signatures
+    /// @param pos Position of signature to split (0-indexed)
+    ///
+    /// @return v The recovery id
+    /// @return r The r component of the signature
+    /// @return s The s component of the signature
     function signatureSplit(bytes memory signatures, uint256 pos)
         internal
         pure
@@ -141,33 +210,5 @@ contract ISMVerification is Ownable {
             s := mload(add(signatures, add(signaturePos, 0x40)))
             v := and(mload(add(signatures, add(signaturePos, 0x41))), 0xff)
         }
-    }
-
-    /// @notice Sets the ISM verification threshold.
-    ///
-    /// @param _threshold The ISM verification threshold.
-    function setThreshold(uint256 _threshold) public onlyOwner {
-        require(_threshold > 0 && _threshold <= validatorCount, "Invalid threshold");
-        threshold = _threshold;
-    }
-
-    /**
-     * @notice Add a validator to the set
-     * @param validator Address to add as validator
-     */
-    function addValidator(address validator) external onlyOwner {
-        require(!validators[validator], "Already validator");
-        validators[validator] = true;
-        validatorCount++;
-    }
-
-    /**
-     * @notice Remove a validator from the set
-     * @param validator Address to remove
-     */
-    function removeValidator(address validator) external onlyOwner {
-        require(validators[validator], "Not a validator");
-        validators[validator] = false;
-        validatorCount--;
     }
 }
