@@ -142,25 +142,26 @@ contract ISMVerification is Ownable {
     ///
     /// @return True if the ISM is verified, false otherwise.
     function isApproved(IncomingMessage[] calldata messages, bytes calldata ismData) external view returns (bool) {
-        // Change ismData into bytes memory
-        bytes memory signatures = ismData;
-
         // Check that the provided signature data is not too short
-        require(signatures.length >= threshold * SIGNATURE_LENGTH_THRESHOLD, InvalidSignatureLength());
+        require(ismData.length >= threshold * SIGNATURE_LENGTH_THRESHOLD, InvalidSignatureLength());
+
+        uint256 offset;
+        assembly {
+            offset := ismData.offset
+        }
 
         // Compute hash of the messages being verified
         bytes32 messageHash = keccak256(abi.encode(messages));
-
         // There cannot be a validator with address 0
         address lastValidator = address(0);
 
         // Verify M-of-N signatures
         for (uint256 i = 0; i < threshold; i++) {
-            (uint8 v, bytes32 r, bytes32 s) = signatureSplit(signatures, i);
+            (uint8 v, bytes32 r, bytes32 s) = signatureSplit(offset, i);
 
             // Standard ECDSA signature recovery
             address currentValidator = ecrecover(messageHash, v, r, s);
-
+            
             // Check for duplicate signers
             if (currentValidator == lastValidator) {
                 return false;
@@ -188,22 +189,22 @@ contract ISMVerification is Ownable {
 
     /// @notice Splits signature bytes into v, r, s components
     ///
-    /// @param signatures Concatenated signatures
+    /// @param signaturesCalldataOffset Calldata offset where signatures bytes starts
     /// @param pos Position of signature to split (0-indexed)
     ///
     /// @return v The recovery id
     /// @return r The r component of the signature
     /// @return s The s component of the signature
-    function signatureSplit(bytes memory signatures, uint256 pos)
+    function signatureSplit(uint256 signaturesCalldataOffset, uint256 pos)
         internal
         pure
         returns (uint8 v, bytes32 r, bytes32 s)
     {
         assembly {
-            let signaturePos := mul(0x41, pos)
-            r := mload(add(signatures, add(signaturePos, 0x20)))
-            s := mload(add(signatures, add(signaturePos, 0x40)))
-            v := and(mload(add(signatures, add(signaturePos, 0x41))), 0xff)
+            let signaturePos := mul(0x41, pos)  // 65 bytes per signature
+            r := calldataload(add(signaturesCalldataOffset, signaturePos))          // r at offset 0
+            s := calldataload(add(signaturesCalldataOffset, add(signaturePos, 0x20))) // s at offset 32
+            v := and(calldataload(add(signaturesCalldataOffset, add(signaturePos, 0x21))), 0xff) // v at offset 64
         }
     }
 }
