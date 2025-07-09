@@ -14,9 +14,7 @@ async function main() {
     `${workingDirectory}/target/deploy/bridge.so`
   );
 
-  const bridgeAddress = await keyPairToAddress(
-    constants.solanaBridgeKeyPairFile
-  );
+  const bridgeAddress = await keyPairToAddress(constants.bridgeKeyPairFile);
   const deployerAddress = await keyPairToAddress(constants.deployerKeyPairFile);
 
   console.log("=".repeat(40));
@@ -35,7 +33,7 @@ async function main() {
   console.log(`Deployer balance: ${balance.trim()}`);
 
   console.log("🚀 Deploying program...");
-  await $`solana program deploy --url ${constants.cluster} --keypair ${constants.deployerKeyPairFile.name} --program-id ${constants.solanaBridgeKeyPairFile.name} ${programFile.name}`;
+  await $`solana program deploy --url ${constants.cluster} --keypair ${constants.deployerKeyPairFile.name} --program-id ${constants.bridgeKeyPairFile.name} ${programFile.name}`;
   console.log("✅ Deployment completed successfully!");
 }
 

@@ -20,17 +20,14 @@ import {
 import { CONSTANTS } from "../../constants";
 import { fileFromPath } from "../../utils/file";
 
-let payer: TransactionSigner;
-export async function getPayer(keyPairFile?: string) {
-  if (payer) return payer;
+export async function getPayer(keyPairFile?: Bun.BunFile) {
+  const payerKeyPairFile = keyPairFile
+    ? keyPairFile
+    : await fileFromPath(`${homedir()}/.config/solana/id.json`);
 
-  const payerKeyPairFile = await fileFromPath(
-    keyPairFile ?? `${homedir()}/.config/solana/id.json`
-  );
   const payerKeyPairBytes = new Uint8Array(await payerKeyPairFile.json());
   const payerKeypair = await createKeyPairFromBytes(payerKeyPairBytes);
-  payer = await createSignerFromKeyPair(payerKeypair);
-  return payer;
+  return await createSignerFromKeyPair(payerKeypair);
 }
 
 export function getRpc(target: keyof typeof CONSTANTS) {
@@ -40,7 +37,8 @@ export function getRpc(target: keyof typeof CONSTANTS) {
 
 export async function buildAndSendTransaction(
   target: keyof typeof CONSTANTS,
-  instructions: IInstruction[]
+  instructions: IInstruction[],
+  payer?: TransactionSigner
 ) {
   const constants = CONSTANTS[target];
 
@@ -54,12 +52,12 @@ export async function buildAndSendTransaction(
     rpcSubscriptions,
   });
 
-  const payer = await getPayer();
+  const txPayer = payer ?? (await getPayer());
   const blockhash = await rpc.getLatestBlockhash().send();
 
   const transactionMessage = pipe(
     createTransactionMessage({ version: 0 }),
-    (tx) => setTransactionMessageFeePayer(payer.address, tx),
+    (tx) => setTransactionMessageFeePayer(txPayer.address, tx),
     (tx) => setTransactionMessageLifetimeUsingBlockhash(blockhash.value, tx),
     (tx) => appendTransactionMessageInstructions(instructions, tx)
   );

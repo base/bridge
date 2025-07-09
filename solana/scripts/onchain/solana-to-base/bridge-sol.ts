@@ -5,7 +5,6 @@ import {
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import { toBytes } from "viem";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import { getBridgeSolInstruction } from "../../../clients/ts/generated";
 import { CONSTANTS } from "../../constants";
@@ -66,7 +65,7 @@ async function main() {
       gasLimit: 1_000_000n,
       to: toBytes(constants.recipient),
       remoteToken,
-      amount: BigInt(0.001 * LAMPORTS_PER_SOL),
+      amount: BigInt(0.001 * 1e9),
       call: null,
     },
     { programAddress: constants.solanaBridge }

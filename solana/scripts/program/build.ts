@@ -30,9 +30,7 @@ async function main() {
     false
   );
 
-  const bridgeAddress = await keyPairToAddress(
-    constants.solanaBridgeKeyPairFile
-  );
+  const bridgeAddress = await keyPairToAddress(constants.bridgeKeyPairFile);
   const deployerAddress = await keyPairToAddress(constants.deployerKeyPairFile);
 
   console.log("=".repeat(40));

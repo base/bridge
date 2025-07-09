@@ -1,6 +1,5 @@
 import {
   createSignerFromKeyPair,
-  Endian,
   generateKeyPair,
   getProgramDerivedAddress,
   getU8Codec,
@@ -21,7 +20,7 @@ import { buildAndSendTransaction, getPayer } from "../utils/transaction";
 async function main() {
   const target = getTarget();
   const constants = CONSTANTS[target];
-  const payer = await getPayer();
+  const payer = await getPayer(constants.deployerKeyPairFile);
 
   console.log("=".repeat(40));
   console.log(`Target: ${target}`);
@@ -34,10 +33,10 @@ async function main() {
   // Instruction arguments
   const args: WrapTokenInstructionDataArgs = {
     decimals: 6,
-    name: "Wrapped ETH",
-    symbol: "wETH",
+    name: "Wrapped ERC20",
+    symbol: "wERC20",
     remoteToken: toBytes(constants.erc20),
-    scalerExponent: 12,
+    scalerExponent: 9,
     gasLimit: 1_000_000n,
   };
 
@@ -94,7 +93,7 @@ async function main() {
   );
 
   console.log("🚀 Sending transaction...");
-  await buildAndSendTransaction(target, [ix]);
+  await buildAndSendTransaction(target, [ix], payer);
   console.log("✅ Done!");
 }
 
