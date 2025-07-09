@@ -221,10 +221,9 @@ contract ISMVerificationTest is Test {
 
         // Create signatures (threshold = 2, so we need 2 signatures)
         bytes memory signatures = _createValidSignatures(messageHash, 2);
-        bytes memory ismData = abi.encode(signatures);
 
         // Verify ISM
-        bool result = ismVerification.isApproved(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, signatures);
         assertTrue(result);
     }
 
@@ -235,9 +234,8 @@ contract ISMVerificationTest is Test {
 
         bytes32 messageHash = keccak256(abi.encode(testMessages));
         bytes memory signatures = _createValidSignatures(messageHash, 3);
-        bytes memory ismData = abi.encode(signatures);
 
-        bool result = ismVerification.isApproved(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, signatures);
         assertTrue(result);
     }
 
@@ -246,10 +244,9 @@ contract ISMVerificationTest is Test {
 
         // Only provide 1 signature when threshold is 2
         bytes memory signatures = _createValidSignatures(messageHash, 1);
-        bytes memory ismData = abi.encode(signatures);
 
         vm.expectRevert(ISMVerification.InvalidSignatureLength.selector);
-        ismVerification.isApproved(testMessages, ismData);
+        ismVerification.isApproved(testMessages, signatures);
     }
 
     function test_verifyISM_revertsWithInvalidSignature() public {
@@ -274,9 +271,7 @@ contract ISMVerificationTest is Test {
         bytes memory validSig = _createSignature(messageHash, VALIDATOR1_KEY);
         signatures = abi.encodePacked(signatures, validSig);
 
-        bytes memory ismData = abi.encode(signatures);
-
-        bool result = ismVerification.isApproved(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, signatures);
         assertFalse(result);
     }
 
@@ -288,9 +283,7 @@ contract ISMVerificationTest is Test {
         bytes memory sig2 = _createSignature(messageHash, VALIDATOR1_KEY);
         bytes memory signatures = abi.encodePacked(sig1, sig2);
 
-        bytes memory ismData = abi.encode(signatures);
-
-        bool result = ismVerification.isApproved(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, signatures);
         assertFalse(result);
     }
 
@@ -307,10 +300,9 @@ contract ISMVerificationTest is Test {
 
         bytes32 differentMessageHash = keccak256(abi.encode(differentMessages));
         bytes memory signatures = _createValidSignatures(differentMessageHash, 2);
-        bytes memory ismData = abi.encode(signatures);
 
         // Try to verify with original messages (different hash)
-        bool result = ismVerification.isApproved(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, signatures);
         assertFalse(result);
     }
 
@@ -349,9 +341,7 @@ contract ISMVerificationTest is Test {
         bytes memory signatures =
             abi.encodePacked(_createSignature(messageHash, sortedKeys[0]), _createSignature(messageHash, sortedKeys[1]));
 
-        bytes memory ismData = abi.encode(signatures);
-
-        bool result = ismVerification.isApproved(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, signatures);
         assertTrue(result);
     }
 
@@ -377,9 +367,7 @@ contract ISMVerificationTest is Test {
         bytes memory signatures =
             abi.encodePacked(_createSignature(messageHash, sortedKeys[0]), _createSignature(messageHash, sortedKeys[1]));
 
-        bytes memory ismData = abi.encode(signatures);
-
-        bool result = ismVerification.isApproved(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, signatures);
         assertFalse(result);
     }
 
@@ -396,9 +384,7 @@ contract ISMVerificationTest is Test {
         bytes memory signatures =
             abi.encodePacked(_createSignature(messageHash, higherKey), _createSignature(messageHash, lowerKey));
 
-        bytes memory ismData = abi.encode(signatures);
-
-        bool result = ismVerification.isApproved(testMessages, ismData);
+        bool result = ismVerification.isApproved(testMessages, signatures);
         assertFalse(result);
     }
 

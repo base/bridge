@@ -1204,7 +1204,7 @@ contract BridgeTest is Test {
             signatures = abi.encodePacked(signatures, r, s, v);
         }
 
-        return abi.encode(signatures);
+        return signatures;
     }
 }
 

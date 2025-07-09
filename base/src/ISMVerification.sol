@@ -4,9 +4,14 @@ pragma solidity 0.8.28;
 import {IncomingMessage} from "./libraries/MessageLib.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
-/// @title ISM Verification
+/// @title ISMVerification
 ///
-/// @notice A Verifcation contract to verify ISM messages from for Bridge
+/// @notice A verification contract for ISM Messages being broadcasted from Solana to Base by requiring 
+///         a specific minimum amount of validators to sign the message.
+///
+/// @dev This contract is only relevant for Stage 0 of the bridge where offchain oracle handles the relaying 
+///      of messages. This contract should be irrelevant for Stage 1, where messages will automatically be 
+///      included by the Base sequencer.
 contract ISMVerification is Ownable {
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
@@ -137,19 +142,14 @@ contract ISMVerification is Ownable {
     ///
     /// @return True if the ISM is verified, false otherwise.
     function isApproved(IncomingMessage[] calldata messages, bytes calldata ismData) external view returns (bool) {
-        // Check for empty ISM data
-        if (ismData.length == 0) {
-            revert EmptyISMData();
-        }
-
-        // Decode only signatures
-        (bytes memory signatures) = abi.decode(ismData, (bytes));
-
-        // Compute hash of the messages being verified
-        bytes32 messageHash = keccak256(abi.encode(messages));
+        // Change ismData into bytes memory
+        bytes memory signatures = ismData;
 
         // Check that the provided signature data is not too short
         require(signatures.length >= threshold * SIGNATURE_LENGTH_THRESHOLD, InvalidSignatureLength());
+
+        // Compute hash of the messages being verified
+        bytes32 messageHash = keccak256(abi.encode(messages));
 
         // There cannot be a validator with address 0
         address lastValidator = address(0);
@@ -160,11 +160,6 @@ contract ISMVerification is Ownable {
 
             // Standard ECDSA signature recovery
             address currentValidator = ecrecover(messageHash, v, r, s);
-
-            // Verify recovered address is non-zero
-            if (currentValidator == address(0)) {
-                return false;
-            }
 
             // Check for duplicate signers
             if (currentValidator == lastValidator) {
