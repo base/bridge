@@ -68,6 +68,9 @@ contract ISMVerification is Ownable {
     /// @notice Thrown when ISM data is empty.
     error EmptyISMData();
 
+    /// @notice Thrown when validator count is less than threshold.
+    error ValidatorCountLessThanThreshold();
+
     //////////////////////////////////////////////////////////////
     ///                       Constructor                      ///
     //////////////////////////////////////////////////////////////
@@ -116,12 +119,14 @@ contract ISMVerification is Ownable {
 
         emit ValidatorAdded(validator);
     }
-
+ 
     /// @notice Remove a validator from the set
     ///
     /// @param validator Address to remove
     function removeValidator(address validator) external onlyOwner {
         require(validators[validator], ValidatorNotExisted());
+        require(validatorCount - 1 >= threshold, ValidatorCountLessThanThreshold());
+
         validators[validator] = false;
 
         unchecked {
