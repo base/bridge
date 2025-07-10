@@ -10,12 +10,10 @@ import {IncomingMessage} from "./MessageLib.sol";
 /// @custom:field validators Mapping of validator addresses to their status.
 /// @custom:field threshold ISM verification threshold.
 /// @custom:field validatorCount Count of validators.
-/// @custom:field owner Address of the contract owner (for access control).
 struct ISMVerificationLibStorage {
     mapping(address => bool) validators;
     uint128 threshold;
     uint128 validatorCount;
-    address owner;
 }
 
 
@@ -81,8 +79,7 @@ library ISMVerificationLib {
     /// @notice Thrown when validator count is less than threshold.
     error ValidatorCountLessThanThreshold();
 
-    /// @notice Thrown when caller is not the owner.
-    error NotOwner();
+
 
     //////////////////////////////////////////////////////////////
     ///                       Internal Functions               ///
@@ -101,8 +98,7 @@ library ISMVerificationLib {
     ///
     /// @param validators Array of validator addresses.
     /// @param threshold The ISM verification threshold.
-    /// @param owner The owner of the contract.
-    function initialize(address[] calldata validators, uint128 threshold, address owner) internal {
+    function initialize(address[] calldata validators, uint128 threshold) internal {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
         
         require(threshold > 0 && threshold <= validators.length, InvalidThreshold());
@@ -112,7 +108,6 @@ library ISMVerificationLib {
         }
         $.validatorCount = uint128(validators.length);
         $.threshold = threshold;
-        $.owner = owner;
     }
 
     /// @notice Sets the ISM verification threshold.
@@ -120,7 +115,6 @@ library ISMVerificationLib {
     /// @param newThreshold The new ISM verification threshold.
     function setThreshold(uint128 newThreshold) internal {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
-        require(msg.sender == $.owner, NotOwner());
         require(newThreshold > 0 && newThreshold <= $.validatorCount, InvalidThreshold());
         
         uint256 oldThreshold = $.threshold;
@@ -134,7 +128,6 @@ library ISMVerificationLib {
     /// @param validator Address to add as validator
     function addValidator(address validator) internal {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
-        require(msg.sender == $.owner, NotOwner());
         require(!$.validators[validator], ValidatorAlreadyAdded());
         
         $.validators[validator] = true;
@@ -151,7 +144,6 @@ library ISMVerificationLib {
     /// @param validator Address to remove
     function removeValidator(address validator) internal {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
-        require(msg.sender == $.owner, NotOwner());
         require($.validators[validator], ValidatorNotExisted());
         require($.validatorCount - 1 >= $.threshold, ValidatorCountLessThanThreshold());
 
@@ -239,13 +231,7 @@ library ISMVerificationLib {
         return $.validators[validator];
     }
 
-    /// @notice Gets the owner address.
-    ///
-    /// @return The owner address.
-    function getOwner() internal view returns (address) {
-        ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
-        return $.owner;
-    }
+
 
     /// @notice Splits signature bytes into v, r, s components
     ///

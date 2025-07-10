@@ -55,7 +55,8 @@ clean-lib:
 .PHONY: forge-deps
 forge-deps:
 	forge install --no-git github.com/foundry-rs/forge-std \
-		github.com/Vectorized/solady@92e647bb2b387e952480a5a37800e9b4d54f7a06
+		github.com/Vectorized/solady@92e647bb2b387e952480a5a37800e9b4d54f7a06 \
+		github.com/OpenZeppelin/openzeppelin-contracts-upgradeable@v5.3.0
 
 .PHONY: coverage
 coverage:

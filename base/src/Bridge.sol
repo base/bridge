@@ -4,7 +4,8 @@ pragma solidity 0.8.28;
 import {LibClone} from "solady/utils/LibClone.sol";
 import {ReentrancyGuardTransient} from "solady/utils/ReentrancyGuardTransient.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
-import {Initializable} from "solady/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {Call} from "./libraries/CallLib.sol";
 import {IncomingMessage, MessageType} from "./libraries/MessageLib.sol";
@@ -21,7 +22,7 @@ import {Twin} from "./Twin.sol";
 /// @notice The Bridge enables sending calls from Solana to Base.
 ///
 /// @dev Calls sent from Solana to Base are relayed via a Twin contract that is specific per Solana sender pubkey.
-contract Bridge is ReentrancyGuardTransient, Initializable {
+contract Bridge is ReentrancyGuardTransient, Initializable, OwnableUpgradeable {
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
@@ -179,12 +180,15 @@ contract Bridge is ReentrancyGuardTransient, Initializable {
     /// @param threshold The ISM verification threshold.
     /// @param ismOwner The owner of the ISM verification system.
     function initialize(
-        address[] memory validators,
+        address[] calldata validators,
         uint128 threshold,
         address ismOwner
     ) external initializer {
+        // Initialize ownership
+        __Ownable_init(ismOwner);
+        
         // Initialize ISM verification library
-        ISMVerificationLib.initialize(validators, threshold, ismOwner);
+        ISMVerificationLib.initialize(validators, threshold);
     }
 
     /// @notice Get the current root of the MMR.
@@ -388,21 +392,21 @@ contract Bridge is ReentrancyGuardTransient, Initializable {
     /// @notice Sets the ISM verification threshold.
     ///
     /// @param newThreshold The new ISM verification threshold.
-    function setISMThreshold(uint128 newThreshold) external {
+    function setISMThreshold(uint128 newThreshold) external onlyOwner {
         ISMVerificationLib.setThreshold(newThreshold);
     }
 
     /// @notice Add a validator to the ISM verification set.
     ///
     /// @param validator Address to add as validator.
-    function addISMValidator(address validator) external {
+    function addISMValidator(address validator) external onlyOwner {
         ISMVerificationLib.addValidator(validator);
     }
 
     /// @notice Remove a validator from the ISM verification set.
     ///
     /// @param validator Address to remove.
-    function removeISMValidator(address validator) external {
+    function removeISMValidator(address validator) external onlyOwner {
         ISMVerificationLib.removeValidator(validator);
     }
 
@@ -432,7 +436,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable {
     ///
     /// @return The owner address.
     function getISMOwner() external view returns (address) {
-        return ISMVerificationLib.getOwner();
+        return owner();
     }
 
     //////////////////////////////////////////////////////////////
