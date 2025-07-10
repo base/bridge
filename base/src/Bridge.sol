@@ -58,17 +58,21 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     ///
     uint256 private constant _EXECUTION_PROLOGUE_GAS_BUFFER = 35_000;
 
-    /// @notice Gas required to run the execution epilogue section of `__validateAndRelay`.
+    /// @notice Gas required to run the execution section of `__validateAndRelay`.
     ///
-    /// @dev Simulated via a forge test performing a call to `relayMessages` with a single message where:
-    ///      - The execution prologue and the execution sections were commented out to isolate the execution epilogue
-    ///        section.
+    /// @dev Simulated via a forge test performing a single call to `__validateAndRelay` where:
+    ///      - The execution epilogue section was commented out to isolate the execution section.
+    ///      - The `message.data` field was 4KB large which is sufficient given that the message has to be built from a
+    ///        single Solana transaction (which currently is 1232 bytes).
     ///      - The metered gas (including the execution prologue section) was 32,858 gas thus the isolated
     ///        execution section was 32,858 - 30,252 = 2,606 gas.
     ///      - No buffer is strictly needed as the `_EXECUTION_PROLOGUE_GAS_BUFFER` is already rounded up and above
     ///        that.
     uint256 private constant _EXECUTION_GAS_BUFFER = 3_000;
 
+
+    /// @notice Gas required to run the execution epilogue section of `__validateAndRelay`.
+    ///
     /// @dev Simulated via a forge test performing a single call to `__validateAndRelay` where:
     ///      - The `message.data` field was 4KB large which is sufficient given that the message has to be built from a
     ///        single Solana transaction (which currently is 1232 bytes).
