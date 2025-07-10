@@ -13,7 +13,7 @@ use base_to_solana::*;
 use common::*;
 use solana_to_base::*;
 
-declare_id!("4L8cUU2DXTzEaa5C8MWLTyEV8dpmpDbCjg8DNgUuGedc");
+declare_id!("HqeqEZJeZhzraqQWwJYmWnSoq3fYzBWPVrJ62j7E123M");
 
 #[program]
 pub mod bridge {
@@ -27,8 +27,8 @@ pub mod bridge {
 
     // Base -> Solana
 
-    pub fn register_output_root(
-        ctx: Context<RegisterOutputRoot>,
+    pub fn register_output_root<'a, 'info>(
+        ctx: Context<'a, '_, 'info, 'info, RegisterOutputRoot<'info>>,
         output_root: [u8; 32],
         block_number: u64,
     ) -> Result<()> {
