@@ -83,13 +83,8 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice The nonce of the last MMR root for a given block number. This provides efficient access to the
-    ///         currently active roots for fast-lane optimization without double-inclusion proofs.
-    mapping(uint256 blockNumber => uint256 nonce) public latestRootNonces;
-
-    /// @notice Mapping of message hashes to boolean values indicating successful execution. A message hash will be
-    ///         present in this mapping if and only if it has been successfully executed (including during failed
-    ///         transactions that were later manually retried by users).
+    /// @notice Mapping of message hashes to boolean values indicating successful execution. A message will only be
+    ///         present in this mapping if it has successfully been executed, and therefore cannot be executed again.
     mapping(bytes32 messageHash => bool success) public successes;
 
     /// @notice Mapping of message hashes to boolean values indicating failed execution attempts. A message will be
