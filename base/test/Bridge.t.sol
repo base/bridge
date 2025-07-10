@@ -9,7 +9,7 @@ import {HelperConfig} from "../script/HelperConfig.s.sol";
 import {Bridge} from "../src/Bridge.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
-import {ISMVerification} from "../src/ISMVerification.sol";
+
 import {Twin} from "../src/Twin.sol";
 import {Call, CallType} from "../src/libraries/CallLib.sol";
 import {IncomingMessage, MessageType} from "../src/libraries/MessageLib.sol";
@@ -21,7 +21,6 @@ import {TokenLib, Transfer} from "../src/libraries/TokenLib.sol";
 contract BridgeTest is Test {
     Twin public twinBeacon;
     Bridge public bridge;
-    ISMVerification public ismVerification;
     CrossChainERC20Factory public factory;
     HelperConfig public helperConfig;
 
@@ -52,7 +51,7 @@ contract BridgeTest is Test {
     function setUp() public {
         // Use the DeployScript normally - now it uses deterministic validator keys
         DeployScript deployer = new DeployScript();
-        (twinBeacon, bridge, ismVerification, factory, helperConfig) = deployer.run();
+        (twinBeacon, bridge, factory, helperConfig) = deployer.run();
 
         HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
 
@@ -81,18 +80,28 @@ contract BridgeTest is Test {
     //////////////////////////////////////////////////////////////
 
     function test_constructor_setsCorrectValues() public {
+        address[] memory validators = new address[](2);
+        validators[0] = vm.addr(VALIDATOR1_KEY);
+        validators[1] = vm.addr(VALIDATOR2_KEY);
+        
         Bridge testBridge = new Bridge({
             remoteBridge: TEST_SENDER,
             trustedRelayer: trustedRelayer,
             twinBeacon: address(twinBeacon),
-            ismVerification: address(ismVerification),
-            crossChainErc20Factory: address(factory)
+            crossChainErc20Factory: address(factory),
+            validators: validators,
+            threshold: 2,
+            ismOwner: initialOwner
         });
 
         assertEq(Pubkey.unwrap(testBridge.REMOTE_BRIDGE()), Pubkey.unwrap(TEST_SENDER));
         assertEq(testBridge.TRUSTED_RELAYER(), trustedRelayer);
         assertEq(testBridge.TWIN_BEACON(), address(twinBeacon));
         assertEq(testBridge.nextIncomingNonce(), 0);
+        assertEq(testBridge.getISMThreshold(), 2);
+        assertEq(testBridge.getISMValidatorCount(), 2);
+        assertTrue(testBridge.isISMValidator(validators[0]));
+        assertTrue(testBridge.isISMValidator(validators[1]));
     }
 
     //////////////////////////////////////////////////////////////

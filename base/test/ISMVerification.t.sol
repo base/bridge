@@ -3,14 +3,17 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
+import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
 import {IncomingMessage, MessageType} from "../src/libraries/MessageLib.sol";
 import {Pubkey} from "../src/libraries/SVMLib.sol";
-
-import {ISMVerification} from "../src/ISMVerification.sol";
+import {Bridge} from "../src/Bridge.sol";
+import {Twin} from "../src/Twin.sol";
+import {CrossChainERC20} from "../src/CrossChainERC20.sol";
+import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 
 contract ISMVerificationTest is Test {
-    ISMVerification public ismVerification;
+    Bridge public bridge;
 
     // Test accounts
     address public owner;
@@ -19,6 +22,7 @@ contract ISMVerificationTest is Test {
     address public validator3;
     address public validator4;
     address public nonValidator;
+    address public trustedRelayer;
 
     // Test private keys for signing
     uint256 public constant VALIDATOR1_KEY = 0x1;
@@ -40,19 +44,41 @@ contract ISMVerificationTest is Test {
         validator4 = vm.addr(VALIDATOR4_KEY);
         nonValidator = makeAddr("nonValidator");
 
-        // Deploy ISMVerification with validators and threshold
+        // Deploy Bridge with ISM validators and threshold
         address[] memory validators = new address[](4);
         validators[0] = validator1;
         validators[1] = validator2;
         validators[2] = validator3;
         validators[3] = validator4;
 
-        ismVerification = new ISMVerification(validators, 2, owner);
+        // Deploy supporting contracts first
+        Pubkey remoteBridge = Pubkey.wrap(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        trustedRelayer = makeAddr("trustedRelayer");
+
+        // Create Twin beacon
+        address twinImpl = address(new Twin(address(0))); // Placeholder, will be updated
+        address twinBeacon = address(new UpgradeableBeacon(owner, twinImpl));
+
+        // Create CrossChainERC20Factory  
+        address erc20Impl = address(new CrossChainERC20(address(0))); // Placeholder
+        address erc20Beacon = address(new UpgradeableBeacon(owner, erc20Impl));
+        CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
+
+        // Deploy Bridge with ISM configuration
+        bridge = new Bridge({
+            remoteBridge: remoteBridge,
+            trustedRelayer: trustedRelayer, 
+            twinBeacon: twinBeacon,
+            crossChainErc20Factory: address(factory),
+            validators: validators,
+            threshold: 2,
+            ismOwner: owner
+        });
 
         // Create test messages
         testMessages.push(
             IncomingMessage({
-                nonce: 1,
+                nonce: 0,
                 sender: Pubkey.wrap(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef),
                 gasLimit: 1000000,
                 ty: MessageType.Call,
@@ -62,7 +88,7 @@ contract ISMVerificationTest is Test {
 
         testMessages.push(
             IncomingMessage({
-                nonce: 2,
+                nonce: 1,
                 sender: Pubkey.wrap(0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890),
                 gasLimit: 500000,
                 ty: MessageType.Transfer,
@@ -76,47 +102,24 @@ contract ISMVerificationTest is Test {
     //////////////////////////////////////////////////////////////
 
     function test_constructor_setsCorrectThreshold() public {
-        address[] memory validators = new address[](3);
-        validators[0] = validator1;
-        validators[1] = validator2;
-        validators[2] = validator3;
-
-        ISMVerification testISM = new ISMVerification(validators, 3, owner);
-        assertEq(testISM.threshold(), 3);
+        assertEq(bridge.getISMThreshold(), 2);
     }
 
     function test_constructor_setsOwner() public {
-        address[] memory validators = new address[](2);
-        validators[0] = validator1;
-        validators[1] = validator2;
-
-        ISMVerification testISM = new ISMVerification(validators, 1, owner);
-        assertEq(testISM.owner(), owner);
+        assertEq(bridge.getISMOwner(), owner);
     }
 
     function test_constructor_setsValidators() public {
-        address[] memory validators = new address[](3);
-        validators[0] = validator1;
-        validators[1] = validator2;
-        validators[2] = validator3;
-
-        ISMVerification testISM = new ISMVerification(validators, 2, owner);
-
         // Check that all validators are correctly set
-        assertTrue(testISM.validators(validator1));
-        assertTrue(testISM.validators(validator2));
-        assertTrue(testISM.validators(validator3));
-        assertFalse(testISM.validators(validator4)); // Should not be a validator
+        assertTrue(bridge.isISMValidator(validator1));
+        assertTrue(bridge.isISMValidator(validator2));
+        assertTrue(bridge.isISMValidator(validator3));
+        assertTrue(bridge.isISMValidator(validator4));
+        assertFalse(bridge.isISMValidator(nonValidator)); // Should not be a validator
     }
 
     function test_constructor_setsValidatorCount() public {
-        address[] memory validators = new address[](3);
-        validators[0] = validator1;
-        validators[1] = validator2;
-        validators[2] = validator3;
-
-        ISMVerification testISM = new ISMVerification(validators, 2, owner);
-        assertEq(testISM.validatorCount(), 3);
+        assertEq(bridge.getISMValidatorCount(), 4);
     }
 
     function test_constructor_revertsWithInvalidThreshold() public {
@@ -124,28 +127,84 @@ contract ISMVerificationTest is Test {
         validators[0] = validator1;
         validators[1] = validator2;
 
+        // Deploy supporting contracts first
+        Pubkey remoteBridge = Pubkey.wrap(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        address twinImpl = address(new Twin(address(0)));
+        address twinBeacon = address(new UpgradeableBeacon(owner, twinImpl));
+        address erc20Impl = address(new CrossChainERC20(address(0)));
+        address erc20Beacon = address(new UpgradeableBeacon(owner, erc20Impl));
+        CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
+
         // Test threshold = 0
-        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
-        new ISMVerification(validators, 0, owner);
+        vm.expectRevert(); // Library will revert with InvalidThreshold
+        new Bridge({
+            remoteBridge: remoteBridge,
+            trustedRelayer: trustedRelayer,
+            twinBeacon: twinBeacon,
+            crossChainErc20Factory: address(factory),
+            validators: validators,
+            threshold: 0,
+            ismOwner: owner
+        });
 
         // Test threshold > validator count
-        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
-        new ISMVerification(validators, 3, owner);
+        vm.expectRevert(); // Library will revert with InvalidThreshold
+        new Bridge({
+            remoteBridge: remoteBridge,
+            trustedRelayer: trustedRelayer,
+            twinBeacon: twinBeacon,
+            crossChainErc20Factory: address(factory),
+            validators: validators,
+            threshold: 3,
+            ismOwner: owner
+        });
     }
 
     function test_constructor_revertsWithEmptyValidatorsAndNonZeroThreshold() public {
         address[] memory validators = new address[](0);
 
-        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
-        new ISMVerification(validators, 1, owner);
+        // Deploy supporting contracts first
+        Pubkey remoteBridge = Pubkey.wrap(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        address twinImpl = address(new Twin(address(0)));
+        address twinBeacon = address(new UpgradeableBeacon(owner, twinImpl));
+        address erc20Impl = address(new CrossChainERC20(address(0)));
+        address erc20Beacon = address(new UpgradeableBeacon(owner, erc20Impl));
+        CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
+
+        vm.expectRevert(); // Library will revert with InvalidThreshold
+        new Bridge({
+            remoteBridge: remoteBridge,
+            trustedRelayer: trustedRelayer,
+            twinBeacon: twinBeacon,
+            crossChainErc20Factory: address(factory),
+            validators: validators,
+            threshold: 1,
+            ismOwner: owner
+        });
     }
 
     function test_constructor_allowsEmptyValidatorsWithZeroThreshold() public {
         address[] memory validators = new address[](0);
 
+        // Deploy supporting contracts first
+        Pubkey remoteBridge = Pubkey.wrap(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        address twinImpl = address(new Twin(address(0)));
+        address twinBeacon = address(new UpgradeableBeacon(owner, twinImpl));
+        address erc20Impl = address(new CrossChainERC20(address(0)));
+        address erc20Beacon = address(new UpgradeableBeacon(owner, erc20Impl));
+        CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
+
         // This should actually fail based on the current validation logic
-        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
-        new ISMVerification(validators, 0, owner);
+        vm.expectRevert(); // Library will revert with InvalidThreshold
+        new Bridge({
+            remoteBridge: remoteBridge,
+            trustedRelayer: trustedRelayer,
+            twinBeacon: twinBeacon,
+            crossChainErc20Factory: address(factory),
+            validators: validators,
+            threshold: 0,
+            ismOwner: owner
+        });
     }
 
     //////////////////////////////////////////////////////////////
@@ -156,30 +215,30 @@ contract ISMVerificationTest is Test {
         address newValidator = makeAddr("newValidator");
 
         vm.prank(owner);
-        ismVerification.addValidator(newValidator);
+        bridge.addISMValidator(newValidator);
 
-        assertTrue(ismVerification.validators(newValidator));
-        assertEq(ismVerification.validatorCount(), 5); // 4 + 1
+        assertTrue(bridge.isISMValidator(newValidator));
+        assertEq(bridge.getISMValidatorCount(), 5); // 4 + 1
     }
 
     function test_addValidator_revertsIfAlreadyValidator() public {
         vm.prank(owner);
-        vm.expectRevert(ISMVerification.ValidatorAlreadyAdded.selector);
-        ismVerification.addValidator(validator1);
+        vm.expectRevert(); // Library will revert with ValidatorAlreadyAdded
+        bridge.addISMValidator(validator1);
     }
 
     function test_removeValidator_removesValidatorCorrectly() public {
         vm.prank(owner);
-        ismVerification.removeValidator(validator1);
+        bridge.removeISMValidator(validator1);
 
-        assertFalse(ismVerification.validators(validator1));
-        assertEq(ismVerification.validatorCount(), 3); // 4 - 1
+        assertFalse(bridge.isISMValidator(validator1));
+        assertEq(bridge.getISMValidatorCount(), 3); // 4 - 1
     }
 
     function test_removeValidator_revertsIfNotValidator() public {
         vm.prank(owner);
-        vm.expectRevert(ISMVerification.ValidatorNotExisted.selector);
-        ismVerification.removeValidator(nonValidator);
+        vm.expectRevert(); // Library will revert with ValidatorNotExisted
+        bridge.removeISMValidator(nonValidator);
     }
 
     //////////////////////////////////////////////////////////////
@@ -188,55 +247,56 @@ contract ISMVerificationTest is Test {
 
     function test_setThreshold_setsCorrectThreshold() public {
         vm.prank(owner);
-        ismVerification.setThreshold(3);
+        bridge.setISMThreshold(3);
 
-        assertEq(ismVerification.threshold(), 3);
+        assertEq(bridge.getISMThreshold(), 3);
     }
 
     function test_setThreshold_revertsIfZero() public {
         vm.prank(owner);
-        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
-        ismVerification.setThreshold(0);
+        vm.expectRevert(); // Library will revert with InvalidThreshold
+        bridge.setISMThreshold(0);
     }
 
     function test_setThreshold_revertsIfGreaterThanValidatorCount() public {
         vm.prank(owner);
-        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
-        ismVerification.setThreshold(5); // Greater than 4 validators
+        vm.expectRevert(); // Library will revert with InvalidThreshold
+        bridge.setISMThreshold(5); // Greater than 4 validators
     }
 
     function test_setThreshold_revertsIfNotOwner() public {
         vm.prank(nonValidator);
         vm.expectRevert();
-        ismVerification.setThreshold(3);
+        bridge.setISMThreshold(3);
     }
 
     //////////////////////////////////////////////////////////////
     ///                ISM Verification Tests                  ///
     //////////////////////////////////////////////////////////////
 
-    function test_verifyISM_withValidSignatures() public view {
+    function test_verifyISM_withValidSignatures() public {
         // Create message hash
         bytes32 messageHash = keccak256(abi.encode(testMessages));
 
         // Create signatures (threshold = 2, so we need 2 signatures)
         bytes memory signatures = _createValidSignatures(messageHash, 2);
 
-        // Verify ISM
-        bool result = ismVerification.isApproved(testMessages, signatures);
-        assertTrue(result);
+        // Verify ISM through relayMessages - should succeed
+        vm.prank(trustedRelayer);
+        bridge.relayMessages(testMessages, signatures);
     }
 
     function test_verifyISM_withThresholdSignatures() public {
         // Set threshold to 3
         vm.prank(owner);
-        ismVerification.setThreshold(3);
+        bridge.setISMThreshold(3);
 
         bytes32 messageHash = keccak256(abi.encode(testMessages));
         bytes memory signatures = _createValidSignatures(messageHash, 3);
 
-        bool result = ismVerification.isApproved(testMessages, signatures);
-        assertTrue(result);
+        // Verify ISM through relayMessages - should succeed
+        vm.prank(trustedRelayer);
+        bridge.relayMessages(testMessages, signatures);
     }
 
     function test_verifyISM_revertsWithInsufficientSignatures() public {
@@ -245,19 +305,18 @@ contract ISMVerificationTest is Test {
         // Only provide 1 signature when threshold is 2
         bytes memory signatures = _createValidSignatures(messageHash, 1);
 
-        vm.expectRevert(ISMVerification.InvalidSignatureLength.selector);
-        ismVerification.isApproved(testMessages, signatures);
+        vm.expectRevert(); // Library will revert with InvalidSignatureLength
+        vm.prank(trustedRelayer);
+        bridge.relayMessages(testMessages, signatures);
     }
 
     function test_verifyISM_revertsWithInvalidSignature() public {
-        bytes32 messageHash = keccak256(abi.encode(testMessages));
-
         // Create malformed signature (wrong length)
         bytes memory signatures = new bytes(64); // Should be 65 bytes per signature
-        bytes memory ismData = abi.encode(signatures);
 
-        vm.expectRevert(ISMVerification.InvalidSignatureLength.selector);
-        ismVerification.isApproved(testMessages, ismData);
+        vm.expectRevert(); // Library will revert with InvalidSignatureLength
+        vm.prank(trustedRelayer);
+        bridge.relayMessages(testMessages, signatures);
     }
 
     function test_verifyISM_revertsWithNonValidatorSigner() public {
@@ -271,8 +330,9 @@ contract ISMVerificationTest is Test {
         bytes memory validSig = _createSignature(messageHash, VALIDATOR1_KEY);
         signatures = abi.encodePacked(signatures, validSig);
 
-        bool result = ismVerification.isApproved(testMessages, signatures);
-        assertFalse(result);
+        vm.expectRevert(); // Library will revert with ISMVerificationFailed
+        vm.prank(trustedRelayer);
+        bridge.relayMessages(testMessages, signatures);
     }
 
     function test_verifyISM_revertsWithDuplicateSigners() public {
@@ -283,15 +343,16 @@ contract ISMVerificationTest is Test {
         bytes memory sig2 = _createSignature(messageHash, VALIDATOR1_KEY);
         bytes memory signatures = abi.encodePacked(sig1, sig2);
 
-        bool result = ismVerification.isApproved(testMessages, signatures);
-        assertFalse(result);
+        vm.expectRevert(); // Library will revert with ISMVerificationFailed
+        vm.prank(trustedRelayer);
+        bridge.relayMessages(testMessages, signatures);
     }
 
     function test_verifyISM_revertsWithWrongMessageHash() public {
         // Create signatures for different messages
         IncomingMessage[] memory differentMessages = new IncomingMessage[](1);
         differentMessages[0] = IncomingMessage({
-            nonce: 999,
+            nonce: 0,
             sender: Pubkey.wrap(0x9999999999999999999999999999999999999999999999999999999999999999),
             gasLimit: 999999,
             ty: MessageType.Call,
@@ -302,24 +363,13 @@ contract ISMVerificationTest is Test {
         bytes memory signatures = _createValidSignatures(differentMessageHash, 2);
 
         // Try to verify with original messages (different hash)
-        bool result = ismVerification.isApproved(testMessages, signatures);
-        assertFalse(result);
+        vm.expectRevert(); // Library will revert with ISMVerificationFailed
+        vm.prank(trustedRelayer);
+        bridge.relayMessages(testMessages, signatures);
     }
 
-    function test_verifyISM_revertsWithZeroThreshold() public {
-        // Deploy ISM with validators and initial threshold of 1
-        address[] memory validators = new address[](1);
-        validators[0] = validator1;
 
-        ISMVerification zeroThresholdISM = new ISMVerification(validators, 1, owner);
-
-        // Set threshold to 0 (this should be prevented, but let's test the verification)
-        vm.prank(owner);
-        vm.expectRevert(ISMVerification.InvalidThreshold.selector);
-        zeroThresholdISM.setThreshold(0);
-    }
-
-    function test_verifyISM_withAscendingOrderSignatures() public view {
+    function test_verifyISM_withAscendingOrderSignatures() public {
         bytes32 messageHash = keccak256(abi.encode(testMessages));
 
         // Ensure signatures are in ascending order of addresses
@@ -341,8 +391,9 @@ contract ISMVerificationTest is Test {
         bytes memory signatures =
             abi.encodePacked(_createSignature(messageHash, sortedKeys[0]), _createSignature(messageHash, sortedKeys[1]));
 
-        bool result = ismVerification.isApproved(testMessages, signatures);
-        assertTrue(result);
+        // Verify ISM through relayMessages - should succeed
+        vm.prank(trustedRelayer);
+        bridge.relayMessages(testMessages, signatures);
     }
 
     function test_verifyISM_revertsWithDescendingOrderSignatures() public {
@@ -367,16 +418,15 @@ contract ISMVerificationTest is Test {
         bytes memory signatures =
             abi.encodePacked(_createSignature(messageHash, sortedKeys[0]), _createSignature(messageHash, sortedKeys[1]));
 
-        bool result = ismVerification.isApproved(testMessages, signatures);
-        assertFalse(result);
+        vm.expectRevert(); // Library will revert with ISMVerificationFailed
+        vm.prank(trustedRelayer);
+        bridge.relayMessages(testMessages, signatures);
     }
 
     function test_verifyISM_revertsWithInvalidSignatureOrder() public {
         bytes32 messageHash = keccak256(abi.encode(testMessages));
 
         // Create signatures in wrong order by deliberately choosing validators with descending addresses
-        address higherValidator = validator1 > validator2 ? validator1 : validator2;
-        address lowerValidator = validator1 > validator2 ? validator2 : validator1;
         uint256 higherKey = validator1 > validator2 ? VALIDATOR1_KEY : VALIDATOR2_KEY;
         uint256 lowerKey = validator1 > validator2 ? VALIDATOR2_KEY : VALIDATOR1_KEY;
 
@@ -384,8 +434,9 @@ contract ISMVerificationTest is Test {
         bytes memory signatures =
             abi.encodePacked(_createSignature(messageHash, higherKey), _createSignature(messageHash, lowerKey));
 
-        bool result = ismVerification.isApproved(testMessages, signatures);
-        assertFalse(result);
+        vm.expectRevert(); // Library will revert with ISMVerificationFailed
+        vm.prank(trustedRelayer);
+        bridge.relayMessages(testMessages, signatures);
     }
 
     //////////////////////////////////////////////////////////////

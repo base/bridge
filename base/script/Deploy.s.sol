@@ -11,12 +11,12 @@ import {Bridge} from "../src/Bridge.sol";
 
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
-import {ISMVerification} from "../src/ISMVerification.sol";
+
 import {Twin} from "../src/Twin.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployScript is Script {
-    function run() public returns (Twin, Bridge, ISMVerification, CrossChainERC20Factory, HelperConfig) {
+    function run() public returns (Twin, Bridge, CrossChainERC20Factory, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
 
@@ -28,12 +28,10 @@ contract DeployScript is Script {
 
         vm.startBroadcast(msg.sender);
         address twinBeacon = _deployTwinBeacon({cfg: cfg, precomputedBridgeAddress: precomputedBridgeAddress});
-        address ismVerification = _deployISMVerification({cfg: cfg});
         address factory = _deployFactory({cfg: cfg, precomputedBridgeAddress: precomputedBridgeAddress});
         address bridge = _deployBridge({
             cfg: cfg,
             twinBeacon: twinBeacon,
-            ismVerification: ismVerification,
             crossChainErc20Factory: factory
         });
         vm.stopBroadcast();
@@ -41,7 +39,6 @@ contract DeployScript is Script {
         require(address(bridge) == precomputedBridgeAddress, "Bridge address mismatch");
 
         console.log("Deployed TwinBeacon at: %s", twinBeacon);
-        console.log("Deployed ISMVerification at: %s", ismVerification);
         console.log("Deployed Bridge at: %s", bridge);
         console.log("Deployed CrossChainERC20Factory at: %s", factory);
 
@@ -49,13 +46,11 @@ contract DeployScript is Script {
         string memory json = vm.serializeAddress({objectKey: obj, valueKey: "Bridge", value: bridge});
         json = vm.serializeAddress({objectKey: obj, valueKey: "CrossChainERC20Factory", value: factory});
         json = vm.serializeAddress({objectKey: obj, valueKey: "Twin", value: twinBeacon});
-        json = vm.serializeAddress({objectKey: obj, valueKey: "ISMVerification", value: ismVerification});
         vm.writeJson(json, string.concat("deployments/", chain.chainAlias, ".json"));
 
         return (
             Twin(payable(twinBeacon)),
             Bridge(bridge),
-            ISMVerification(ismVerification),
             CrossChainERC20Factory(factory),
             helperConfig
         );
@@ -69,28 +64,19 @@ contract DeployScript is Script {
         return address(new UpgradeableBeacon({initialOwner: cfg.initialOwner, initialImplementation: twinImpl}));
     }
 
-    function _deployISMVerification(HelperConfig.NetworkConfig memory cfg) private returns (address) {
-        ISMVerification ismImpl = new ISMVerification({
-            _validators: cfg.initialValidators,
-            _threshold: cfg.initialThreshold,
-            _owner: cfg.initialOwner
-        });
-
-        return ERC1967Factory(cfg.erc1967Factory).deploy({implementation: address(ismImpl), admin: cfg.initialOwner});
-    }
-
     function _deployBridge(
         HelperConfig.NetworkConfig memory cfg,
         address twinBeacon,
-        address ismVerification,
         address crossChainErc20Factory
     ) private returns (address) {
         Bridge bridgeImpl = new Bridge({
             remoteBridge: cfg.remoteBridge,
             trustedRelayer: cfg.trustedRelayer,
             twinBeacon: twinBeacon,
-            ismVerification: ismVerification,
-            crossChainErc20Factory: crossChainErc20Factory
+            crossChainErc20Factory: crossChainErc20Factory,
+            validators: cfg.initialValidators,
+            threshold: cfg.initialThreshold,
+            ismOwner: cfg.initialOwner
         });
 
         return ERC1967Factory(cfg.erc1967Factory).deployDeterministic({

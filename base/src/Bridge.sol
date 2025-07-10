@@ -12,7 +12,7 @@ import {SVMBridgeLib} from "./libraries/SVMBridgeLib.sol";
 import {Ix, Pubkey} from "./libraries/SVMLib.sol";
 import {SolanaTokenType, TokenLib, Transfer} from "./libraries/TokenLib.sol";
 
-import {ISMVerification} from "./ISMVerification.sol";
+import {ISMVerificationLib} from "./libraries/ISMVerificationLib.sol";
 import {Twin} from "./Twin.sol";
 
 /// @title Bridge
@@ -41,9 +41,6 @@ contract Bridge is ReentrancyGuardTransient {
 
     /// @notice Address of the Twin beacon.
     address public immutable TWIN_BEACON;
-
-    /// @notice Address of the ISM verification contract.
-    address public immutable ISM_VERIFICATION;
 
     /// @notice Address of the CrossChainERC20Factory.
     address public immutable CROSS_CHAIN_ERC20_FACTORY;
@@ -155,20 +152,26 @@ contract Bridge is ReentrancyGuardTransient {
     /// @param remoteBridge The pubkey of the remote bridge on Solana.
     /// @param trustedRelayer The address of the trusted relayer.
     /// @param twinBeacon The address of the Twin beacon.
-    /// @param ismVerification The address of the ISM verification contract.
     /// @param crossChainErc20Factory The address of the CrossChainERC20Factory.
+    /// @param validators Array of validator addresses for ISM verification.
+    /// @param threshold The ISM verification threshold.
+    /// @param ismOwner The owner of the ISM verification system.
     constructor(
         Pubkey remoteBridge,
         address trustedRelayer,
         address twinBeacon,
-        address ismVerification,
-        address crossChainErc20Factory
+        address crossChainErc20Factory,
+        address[] memory validators,
+        uint128 threshold,
+        address ismOwner
     ) {
         REMOTE_BRIDGE = remoteBridge;
         TRUSTED_RELAYER = trustedRelayer;
         TWIN_BEACON = twinBeacon;
-        ISM_VERIFICATION = ismVerification;
         CROSS_CHAIN_ERC20_FACTORY = crossChainErc20Factory;
+        
+        // Initialize ISM verification library
+        ISMVerificationLib.initialize(validators, threshold, ismOwner);
     }
 
     /// @notice Get the current root of the MMR.
@@ -264,7 +267,7 @@ contract Bridge is ReentrancyGuardTransient {
     function relayMessages(IncomingMessage[] calldata messages, bytes calldata ismData) external nonReentrant {
         bool isTrustedRelayer = msg.sender == TRUSTED_RELAYER;
         if (isTrustedRelayer) {
-            require(ISMVerification(ISM_VERIFICATION).isApproved(messages, ismData), ISMVerificationFailed());
+            require(ISMVerificationLib.isApproved(messages, ismData), ISMVerificationFailed());
         }
 
         for (uint256 i; i < messages.length; i++) {
@@ -367,6 +370,56 @@ contract Bridge is ReentrancyGuardTransient {
             TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
             Twin(payable(twins[message.sender])).execute(call);
         }
+    }
+
+    /// @notice Sets the ISM verification threshold.
+    ///
+    /// @param newThreshold The new ISM verification threshold.
+    function setISMThreshold(uint128 newThreshold) external {
+        ISMVerificationLib.setThreshold(newThreshold);
+    }
+
+    /// @notice Add a validator to the ISM verification set.
+    ///
+    /// @param validator Address to add as validator.
+    function addISMValidator(address validator) external {
+        ISMVerificationLib.addValidator(validator);
+    }
+
+    /// @notice Remove a validator from the ISM verification set.
+    ///
+    /// @param validator Address to remove.
+    function removeISMValidator(address validator) external {
+        ISMVerificationLib.removeValidator(validator);
+    }
+
+    /// @notice Gets the current ISM verification threshold.
+    ///
+    /// @return The current threshold.
+    function getISMThreshold() external view returns (uint128) {
+        return ISMVerificationLib.getThreshold();
+    }
+
+    /// @notice Gets the current ISM validator count.
+    ///
+    /// @return The current validator count.
+    function getISMValidatorCount() external view returns (uint128) {
+        return ISMVerificationLib.getValidatorCount();
+    }
+
+    /// @notice Checks if an address is an ISM validator.
+    ///
+    /// @param validator The address to check.
+    /// @return True if the address is a validator, false otherwise.
+    function isISMValidator(address validator) external view returns (bool) {
+        return ISMVerificationLib.isValidator(validator);
+    }
+
+    /// @notice Gets the ISM verification owner address.
+    ///
+    /// @return The owner address.
+    function getISMOwner() external view returns (address) {
+        return ISMVerificationLib.getOwner();
     }
 
     //////////////////////////////////////////////////////////////
