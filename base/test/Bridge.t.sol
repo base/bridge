@@ -88,7 +88,11 @@ contract BridgeTest is Test {
             remoteBridge: TEST_SENDER,
             trustedRelayer: trustedRelayer,
             twinBeacon: address(twinBeacon),
-            crossChainErc20Factory: address(factory),
+            crossChainErc20Factory: address(factory)
+        });
+
+        // Initialize the Bridge with ISM parameters
+        testBridge.initialize({
             validators: validators,
             threshold: 2,
             ismOwner: initialOwner
@@ -881,8 +885,11 @@ contract BridgeTest is Test {
             })
         );
 
+        // Regenerate ISM data for the modified message
+        bytes memory ismData2 = _generateValidISMData(messages);
+
         vm.prank(trustedRelayer);
-        bridge.relayMessages(messages, ismData);
+        bridge.relayMessages(messages, ismData2);
 
         address secondTwin = bridge.twins(TEST_SENDER);
         assertEq(firstTwin, secondTwin);

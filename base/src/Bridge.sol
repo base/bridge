@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {LibClone} from "solady/utils/LibClone.sol";
 import {ReentrancyGuardTransient} from "solady/utils/ReentrancyGuardTransient.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
 
 import {Call} from "./libraries/CallLib.sol";
 import {IncomingMessage, MessageType} from "./libraries/MessageLib.sol";
@@ -20,7 +21,7 @@ import {Twin} from "./Twin.sol";
 /// @notice The Bridge enables sending calls from Solana to Base.
 ///
 /// @dev Calls sent from Solana to Base are relayed via a Twin contract that is specific per Solana sender pubkey.
-contract Bridge is ReentrancyGuardTransient {
+contract Bridge is ReentrancyGuardTransient, Initializable {
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
@@ -56,33 +57,37 @@ contract Bridge is ReentrancyGuardTransient {
     ///
     uint256 private constant _EXECUTION_PROLOGUE_GAS_BUFFER = 35_000;
 
-    /// @notice Gas required to run the execution section of `__validateAndRelay`.
-    ///
-    /// @dev Simulated via a forge test performing a single call to `__validateAndRelay` where:
-    ///      - The execution epilogue section was commented out to isolate the execution section.
-    ///      - The `message.data` field was 4KB large which is sufficient given that the message has to be built from a
-    ///        single Solana transaction (which currently is 1232 bytes).
-    ///      - The metered gas (including the execution prologue section) was 32,858 gas thus the isolated
-    ///        execution section was 32,858 - 30,252 = 2,606 gas.
-    ///      - No buffer is strictly needed as the `_EXECUTION_PROLOGUE_GAS_BUFFER` is already rounded up and above
-    ///        that.
-    uint256 private constant _EXECUTION_GAS_BUFFER = 3_000;
-
     /// @notice Gas required to run the execution epilogue section of `__validateAndRelay`.
     ///
-    /// @dev Simulated via a forge test performing a single call to `__validateAndRelay` where:
+    /// @dev Simulated via a forge test performing a call to `relayMessages` with a single message where:
+    ///      - The execution prologue and the execution sections were commented out to isolate the execution epilogue
+    ///        section.
+    ///      - `isTrustedRelayer` was true to estimate the worst case scenario of doing an additional SSTORE.
     ///      - The `message.data` field was 4KB large which is sufficient given that the message has to be built from a
     ///        single Solana transaction (which currently is 1232 bytes).
-    ///      - The metered gas (including the execution prologue and execution sections) was 54,481 gas thus the
-    ///        isolated execution epilogue section was 54,481 - 32,858 = 21,623 gas.
-    uint256 private constant _EXECUTION_EPILOGUE_GAS_BUFFER = 25_000;
+    ///      - The metered gas was 6,458 gas.
+    ///
+    uint256 private constant _EXECUTION_EPILOGUE_GAS_BUFFER = 10_000;
+
+    /// @notice Gas buffer required to execute the try-catch in `__validateAndRelay` and run the catch block.
+    ///
+    /// @dev Computed based on the following formula:
+    ///      `_EXECUTION_GAS_BUFFER = _EXECUTION_PROLOGUE_GAS_BUFFER + _EXECUTION_EPILOGUE_GAS_BUFFER + catch_block_gas`
+    ///      Where the `catch_block_gas` is roughly 5,000 gas.
+    ///
+    uint256 private constant _EXECUTION_GAS_BUFFER = 50_000;
 
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Mapping of message hashes to boolean values indicating successful execution. A message will only be
-    ///         present in this mapping if it has successfully been executed, and therefore cannot be executed again.
+    /// @notice The nonce of the last MMR root for a given block number. This provides efficient access to the
+    ///         currently active roots for fast-lane optimization without double-inclusion proofs.
+    mapping(uint256 blockNumber => uint256 nonce) public latestRootNonces;
+
+    /// @notice Mapping of message hashes to boolean values indicating successful execution. A message hash will be
+    ///         present in this mapping if and only if it has been successfully executed (including during failed
+    ///         transactions that were later manually retried by users).
     mapping(bytes32 messageHash => bool success) public successes;
 
     /// @notice Mapping of message hashes to boolean values indicating failed execution attempts. A message will be
@@ -153,23 +158,31 @@ contract Bridge is ReentrancyGuardTransient {
     /// @param trustedRelayer The address of the trusted relayer.
     /// @param twinBeacon The address of the Twin beacon.
     /// @param crossChainErc20Factory The address of the CrossChainERC20Factory.
-    /// @param validators Array of validator addresses for ISM verification.
-    /// @param threshold The ISM verification threshold.
-    /// @param ismOwner The owner of the ISM verification system.
     constructor(
         Pubkey remoteBridge,
         address trustedRelayer,
         address twinBeacon,
-        address crossChainErc20Factory,
-        address[] memory validators,
-        uint128 threshold,
-        address ismOwner
+        address crossChainErc20Factory
     ) {
         REMOTE_BRIDGE = remoteBridge;
         TRUSTED_RELAYER = trustedRelayer;
         TWIN_BEACON = twinBeacon;
         CROSS_CHAIN_ERC20_FACTORY = crossChainErc20Factory;
-        
+    }
+
+    /// @notice Initializes the Bridge contract with ISM verification parameters.
+    ///
+    /// @dev This function should be called immediately after deployment when using with a proxy.
+    ///      Can only be called once due to the initializer modifier.
+    ///
+    /// @param validators Array of validator addresses for ISM verification.
+    /// @param threshold The ISM verification threshold.
+    /// @param ismOwner The owner of the ISM verification system.
+    function initialize(
+        address[] memory validators,
+        uint128 threshold,
+        address ismOwner
+    ) external initializer {
         // Initialize ISM verification library
         ISMVerificationLib.initialize(validators, threshold, ismOwner);
     }

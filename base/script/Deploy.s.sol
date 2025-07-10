@@ -73,17 +73,23 @@ contract DeployScript is Script {
             remoteBridge: cfg.remoteBridge,
             trustedRelayer: cfg.trustedRelayer,
             twinBeacon: twinBeacon,
-            crossChainErc20Factory: crossChainErc20Factory,
+            crossChainErc20Factory: crossChainErc20Factory
+        });
+
+        address proxy = ERC1967Factory(cfg.erc1967Factory).deployDeterministic({
+            implementation: address(bridgeImpl),
+            admin: cfg.initialOwner,
+            salt: _salt("bridge15")
+        });
+
+        // Initialize the Bridge with ISM parameters
+        Bridge(proxy).initialize({
             validators: cfg.initialValidators,
             threshold: cfg.initialThreshold,
             ismOwner: cfg.initialOwner
         });
 
-        return ERC1967Factory(cfg.erc1967Factory).deployDeterministic({
-            implementation: address(bridgeImpl),
-            admin: cfg.initialOwner,
-            salt: _salt("bridge15")
-        });
+        return proxy;
     }
 
     function _deployFactory(HelperConfig.NetworkConfig memory cfg, address precomputedBridgeAddress)

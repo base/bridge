@@ -64,12 +64,16 @@ contract ISMVerificationTest is Test {
         address erc20Beacon = address(new UpgradeableBeacon(owner, erc20Impl));
         CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
 
-        // Deploy Bridge with ISM configuration
+        // Deploy Bridge
         bridge = new Bridge({
             remoteBridge: remoteBridge,
             trustedRelayer: trustedRelayer, 
             twinBeacon: twinBeacon,
-            crossChainErc20Factory: address(factory),
+            crossChainErc20Factory: address(factory)
+        });
+
+        // Initialize Bridge with ISM configuration
+        bridge.initialize({
             validators: validators,
             threshold: 2,
             ismOwner: owner
@@ -136,24 +140,30 @@ contract ISMVerificationTest is Test {
         CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
 
         // Test threshold = 0
-        vm.expectRevert(); // Library will revert with InvalidThreshold
-        new Bridge({
+        Bridge testBridge1 = new Bridge({
             remoteBridge: remoteBridge,
             trustedRelayer: trustedRelayer,
             twinBeacon: twinBeacon,
-            crossChainErc20Factory: address(factory),
+            crossChainErc20Factory: address(factory)
+        });
+        
+        vm.expectRevert(); // Library will revert with InvalidThreshold
+        testBridge1.initialize({
             validators: validators,
             threshold: 0,
             ismOwner: owner
         });
 
         // Test threshold > validator count
-        vm.expectRevert(); // Library will revert with InvalidThreshold
-        new Bridge({
+        Bridge testBridge2 = new Bridge({
             remoteBridge: remoteBridge,
             trustedRelayer: trustedRelayer,
             twinBeacon: twinBeacon,
-            crossChainErc20Factory: address(factory),
+            crossChainErc20Factory: address(factory)
+        });
+        
+        vm.expectRevert(); // Library will revert with InvalidThreshold
+        testBridge2.initialize({
             validators: validators,
             threshold: 3,
             ismOwner: owner
@@ -171,12 +181,15 @@ contract ISMVerificationTest is Test {
         address erc20Beacon = address(new UpgradeableBeacon(owner, erc20Impl));
         CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
 
-        vm.expectRevert(); // Library will revert with InvalidThreshold
-        new Bridge({
+        Bridge testBridge3 = new Bridge({
             remoteBridge: remoteBridge,
             trustedRelayer: trustedRelayer,
             twinBeacon: twinBeacon,
-            crossChainErc20Factory: address(factory),
+            crossChainErc20Factory: address(factory)
+        });
+        
+        vm.expectRevert(); // Library will revert with InvalidThreshold
+        testBridge3.initialize({
             validators: validators,
             threshold: 1,
             ismOwner: owner
@@ -195,12 +208,15 @@ contract ISMVerificationTest is Test {
         CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
 
         // This should actually fail based on the current validation logic
-        vm.expectRevert(); // Library will revert with InvalidThreshold
-        new Bridge({
+        Bridge testBridge4 = new Bridge({
             remoteBridge: remoteBridge,
             trustedRelayer: trustedRelayer,
             twinBeacon: twinBeacon,
-            crossChainErc20Factory: address(factory),
+            crossChainErc20Factory: address(factory)
+        });
+        
+        vm.expectRevert(); // Library will revert with InvalidThreshold
+        testBridge4.initialize({
             validators: validators,
             threshold: 0,
             ismOwner: owner
