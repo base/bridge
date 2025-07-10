@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
+import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
+import {HelperConfig} from "../script/HelperConfig.s.sol";
 
 import {IncomingMessage, MessageType} from "../src/libraries/MessageLib.sol";
 import {Pubkey} from "../src/libraries/SVMLib.sol";
@@ -37,6 +39,9 @@ contract ISMVerificationTest is Test {
     event ISMVerified();
 
     function setUp() public {
+        HelperConfig helperConfig = new HelperConfig();
+        HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
+
         owner = makeAddr("owner");
         validator1 = vm.addr(VALIDATOR1_KEY);
         validator2 = vm.addr(VALIDATOR2_KEY);
@@ -65,19 +70,23 @@ contract ISMVerificationTest is Test {
         CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
 
         // Deploy Bridge
-        bridge = new Bridge({
+        vm.prank(owner);
+        Bridge bridgeImpl = new Bridge({
             remoteBridge: remoteBridge,
             trustedRelayer: trustedRelayer, 
             twinBeacon: twinBeacon,
             crossChainErc20Factory: address(factory)
         });
 
-        // Initialize Bridge with ISM configuration
-        bridge.initialize({
-            validators: validators,
-            threshold: 2,
-            ismOwner: owner
+        vm.prank(owner);
+        address bridgeAddr = ERC1967Factory(cfg.erc1967Factory).deployDeterministicAndCall({
+            implementation: address(bridgeImpl),
+            admin: owner,
+            salt: _salt(bytes12("bridge")),
+            data: abi.encodeCall(Bridge.initialize, (validators, 2, owner))
         });
+
+        bridge = Bridge(bridgeAddr);
 
         // Create test messages
         testMessages.push(
@@ -495,5 +504,11 @@ contract ISMVerificationTest is Test {
     function _createInvalidSignature() internal pure returns (bytes memory) {
         // Create a signature with invalid length
         return new bytes(64); // Should be 65 bytes
+    }
+
+    function _salt(bytes12 salt) private view returns (bytes32) {
+        // Concat the owner (who will be the caller via vm.prank) and the salt
+        bytes memory packed = abi.encodePacked(owner, salt);
+        return bytes32(packed);
     }
 }

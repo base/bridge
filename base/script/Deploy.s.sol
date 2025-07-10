@@ -76,19 +76,13 @@ contract DeployScript is Script {
             crossChainErc20Factory: crossChainErc20Factory
         });
 
-        address proxy = ERC1967Factory(cfg.erc1967Factory).deployDeterministic({
+        address proxy = ERC1967Factory(cfg.erc1967Factory).deployDeterministicAndCall({
             implementation: address(bridgeImpl),
             admin: cfg.initialOwner,
-            salt: _salt("bridge15")
+            salt: _salt("bridge15"), 
+            data: abi.encodeCall(Bridge.initialize, (cfg.initialValidators, cfg.initialThreshold, cfg.initialOwner))
         });
-
-        // Initialize the Bridge with ISM parameters
-        Bridge(proxy).initialize({
-            validators: cfg.initialValidators,
-            threshold: cfg.initialThreshold,
-            ismOwner: cfg.initialOwner
-        });
-
+        
         return proxy;
     }
 

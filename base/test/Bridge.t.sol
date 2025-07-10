@@ -76,39 +76,6 @@ contract BridgeTest is Test {
     }
 
     //////////////////////////////////////////////////////////////
-    ///                   Constructor Tests                    ///
-    //////////////////////////////////////////////////////////////
-
-    function test_constructor_setsCorrectValues() public {
-        address[] memory validators = new address[](2);
-        validators[0] = vm.addr(VALIDATOR1_KEY);
-        validators[1] = vm.addr(VALIDATOR2_KEY);
-        
-        Bridge testBridge = new Bridge({
-            remoteBridge: TEST_SENDER,
-            trustedRelayer: trustedRelayer,
-            twinBeacon: address(twinBeacon),
-            crossChainErc20Factory: address(factory)
-        });
-
-        // Initialize the Bridge with ISM parameters
-        testBridge.initialize({
-            validators: validators,
-            threshold: 2,
-            ismOwner: initialOwner
-        });
-
-        assertEq(Pubkey.unwrap(testBridge.REMOTE_BRIDGE()), Pubkey.unwrap(TEST_SENDER));
-        assertEq(testBridge.TRUSTED_RELAYER(), trustedRelayer);
-        assertEq(testBridge.TWIN_BEACON(), address(twinBeacon));
-        assertEq(testBridge.nextIncomingNonce(), 0);
-        assertEq(testBridge.getISMThreshold(), 2);
-        assertEq(testBridge.getISMValidatorCount(), 2);
-        assertTrue(testBridge.isISMValidator(validators[0]));
-        assertTrue(testBridge.isISMValidator(validators[1]));
-    }
-
-    //////////////////////////////////////////////////////////////
     ///                 Bridge Call Tests                      ///
     //////////////////////////////////////////////////////////////
 

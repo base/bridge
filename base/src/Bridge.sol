@@ -4,8 +4,8 @@ pragma solidity 0.8.28;
 import {LibClone} from "solady/utils/LibClone.sol";
 import {ReentrancyGuardTransient} from "solady/utils/ReentrancyGuardTransient.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
+import {Ownable} from "solady/auth/Ownable.sol";
 
 import {Call} from "./libraries/CallLib.sol";
 import {IncomingMessage, MessageType} from "./libraries/MessageLib.sol";
@@ -22,7 +22,7 @@ import {Twin} from "./Twin.sol";
 /// @notice The Bridge enables sending calls from Solana to Base.
 ///
 /// @dev Calls sent from Solana to Base are relayed via a Twin contract that is specific per Solana sender pubkey.
-contract Bridge is ReentrancyGuardTransient, Initializable, OwnableUpgradeable {
+contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
@@ -63,20 +63,18 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableUpgradeable {
     /// @dev Simulated via a forge test performing a call to `relayMessages` with a single message where:
     ///      - The execution prologue and the execution sections were commented out to isolate the execution epilogue
     ///        section.
-    ///      - `isTrustedRelayer` was true to estimate the worst case scenario of doing an additional SSTORE.
+    ///      - The metered gas (including the execution prologue section) was 32,858 gas thus the isolated
+    ///        execution section was 32,858 - 30,252 = 2,606 gas.
+    ///      - No buffer is strictly needed as the `_EXECUTION_PROLOGUE_GAS_BUFFER` is already rounded up and above
+    ///        that.
+    uint256 private constant _EXECUTION_GAS_BUFFER = 3_000;
+
+    /// @dev Simulated via a forge test performing a single call to `__validateAndRelay` where:
     ///      - The `message.data` field was 4KB large which is sufficient given that the message has to be built from a
     ///        single Solana transaction (which currently is 1232 bytes).
-    ///      - The metered gas was 6,458 gas.
-    ///
-    uint256 private constant _EXECUTION_EPILOGUE_GAS_BUFFER = 10_000;
-
-    /// @notice Gas buffer required to execute the try-catch in `__validateAndRelay` and run the catch block.
-    ///
-    /// @dev Computed based on the following formula:
-    ///      `_EXECUTION_GAS_BUFFER = _EXECUTION_PROLOGUE_GAS_BUFFER + _EXECUTION_EPILOGUE_GAS_BUFFER + catch_block_gas`
-    ///      Where the `catch_block_gas` is roughly 5,000 gas.
-    ///
-    uint256 private constant _EXECUTION_GAS_BUFFER = 50_000;
+    ///      - The metered gas (including the execution prologue and execution sections) was 54,481 gas thus the
+    ///        isolated execution epilogue section was 54,481 - 32,858 = 21,623 gas.
+    uint256 private constant _EXECUTION_EPILOGUE_GAS_BUFFER = 25_000;
 
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
@@ -169,6 +167,8 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableUpgradeable {
         TRUSTED_RELAYER = trustedRelayer;
         TWIN_BEACON = twinBeacon;
         CROSS_CHAIN_ERC20_FACTORY = crossChainErc20Factory;
+
+        _disableInitializers();
     }
 
     /// @notice Initializes the Bridge contract with ISM verification parameters.
@@ -185,7 +185,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableUpgradeable {
         address ismOwner
     ) external initializer {
         // Initialize ownership
-        __Ownable_init(ismOwner);
+        _initializeOwner(ismOwner);
         
         // Initialize ISM verification library
         ISMVerificationLib.initialize(validators, threshold);
