@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {Ownable} from "solady/auth/Ownable.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {ReentrancyGuardTransient} from "solady/utils/ReentrancyGuardTransient.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
-import {Initializable} from "solady/utils/Initializable.sol";
-import {Ownable} from "solady/auth/Ownable.sol";
 
 import {Call} from "./libraries/CallLib.sol";
 import {IncomingMessage, MessageType} from "./libraries/MessageLib.sol";
@@ -14,8 +14,8 @@ import {SVMBridgeLib} from "./libraries/SVMBridgeLib.sol";
 import {Ix, Pubkey} from "./libraries/SVMLib.sol";
 import {SolanaTokenType, TokenLib, Transfer} from "./libraries/TokenLib.sol";
 
-import {ISMVerificationLib} from "./libraries/ISMVerificationLib.sol";
 import {Twin} from "./Twin.sol";
+import {ISMVerificationLib} from "./libraries/ISMVerificationLib.sol";
 
 /// @title Bridge
 ///
@@ -69,7 +69,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     ///      - No buffer is strictly needed as the `_EXECUTION_PROLOGUE_GAS_BUFFER` is already rounded up and above
     ///        that.
     uint256 private constant _EXECUTION_GAS_BUFFER = 3_000;
-
 
     /// @notice Gas required to run the execution epilogue section of `__validateAndRelay`.
     ///
@@ -161,12 +160,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     /// @param trustedRelayer The address of the trusted relayer.
     /// @param twinBeacon The address of the Twin beacon.
     /// @param crossChainErc20Factory The address of the CrossChainERC20Factory.
-    constructor(
-        Pubkey remoteBridge,
-        address trustedRelayer,
-        address twinBeacon,
-        address crossChainErc20Factory
-    ) {
+    constructor(Pubkey remoteBridge, address trustedRelayer, address twinBeacon, address crossChainErc20Factory) {
         REMOTE_BRIDGE = remoteBridge;
         TRUSTED_RELAYER = trustedRelayer;
         TWIN_BEACON = twinBeacon;
@@ -183,14 +177,10 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     /// @param validators Array of validator addresses for ISM verification.
     /// @param threshold The ISM verification threshold.
     /// @param ismOwner The owner of the ISM verification system.
-    function initialize(
-        address[] calldata validators,
-        uint128 threshold,
-        address ismOwner
-    ) external initializer {
+    function initialize(address[] calldata validators, uint128 threshold, address ismOwner) external initializer {
         // Initialize ownership
         _initializeOwner(ismOwner);
-        
+
         // Initialize ISM verification library
         ISMVerificationLib.initialize(validators, threshold);
     }

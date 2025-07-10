@@ -16,14 +16,13 @@ struct ISMVerificationLibStorage {
     uint128 validatorCount;
 }
 
-
 /// @title ISMVerificationLib
 ///
-/// @notice A verification contract for ISM Messages being broadcasted from Solana to Base by requiring 
+/// @notice A verification contract for ISM Messages being broadcasted from Solana to Base by requiring
 ///         a specific minimum amount of validators to sign the message.
 ///
-/// @dev This contract is only relevant for Stage 0 of the bridge where offchain oracle handles the relaying 
-///      of messages. This contract should be irrelevant for Stage 1, where messages will automatically be 
+/// @dev This contract is only relevant for Stage 0 of the bridge where offchain oracle handles the relaying
+///      of messages. This contract should be irrelevant for Stage 1, where messages will automatically be
 ///      included by the Base sequencer.
 library ISMVerificationLib {
     //////////////////////////////////////////////////////////////
@@ -35,7 +34,8 @@ library ISMVerificationLib {
 
     /// @dev Slot for the `ISMVerificationLibStorage` struct in storage.
     ///      Computed from:
-    ///         keccak256(abi.encode(uint256(keccak256("coinbase.storage.ISMVerificationLib")) - 1)) & ~bytes32(uint256(0xff))
+    ///         keccak256(abi.encode(uint256(keccak256("coinbase.storage.ISMVerificationLib")) - 1)) &
+    /// ~bytes32(uint256(0xff))
     ///
     ///      Follows ERC-7201 (see https://eips.ethereum.org/EIPS/eip-7201).
     bytes32 private constant _ISM_VERIFICATION_LIB_STORAGE_LOCATION =
@@ -79,8 +79,6 @@ library ISMVerificationLib {
     /// @notice Thrown when validator count is less than threshold.
     error ValidatorCountLessThanThreshold();
 
-
-
     //////////////////////////////////////////////////////////////
     ///                       Internal Functions               ///
     //////////////////////////////////////////////////////////////
@@ -100,7 +98,7 @@ library ISMVerificationLib {
     /// @param threshold The ISM verification threshold.
     function initialize(address[] calldata validators, uint128 threshold) internal {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
-        
+
         require(threshold > 0 && threshold <= validators.length, InvalidThreshold());
 
         for (uint128 i = 0; i < validators.length; i++) {
@@ -116,7 +114,7 @@ library ISMVerificationLib {
     function setThreshold(uint128 newThreshold) internal {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
         require(newThreshold > 0 && newThreshold <= $.validatorCount, InvalidThreshold());
-        
+
         uint256 oldThreshold = $.threshold;
         $.threshold = newThreshold;
 
@@ -129,7 +127,7 @@ library ISMVerificationLib {
     function addValidator(address validator) internal {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
         require(!$.validators[validator], ValidatorAlreadyAdded());
-        
+
         $.validators[validator] = true;
 
         unchecked {
@@ -138,7 +136,7 @@ library ISMVerificationLib {
 
         emit ValidatorAdded(validator);
     }
- 
+
     /// @notice Remove a validator from the set
     ///
     /// @param validator Address to remove
@@ -164,7 +162,7 @@ library ISMVerificationLib {
     /// @return True if the ISM is verified, false otherwise.
     function isApproved(IncomingMessage[] calldata messages, bytes calldata ismData) internal view returns (bool) {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
-        
+
         // Check that the provided signature data is not too short
         require(ismData.length >= $.threshold * SIGNATURE_LENGTH_THRESHOLD, InvalidSignatureLength());
 
@@ -184,7 +182,7 @@ library ISMVerificationLib {
 
             // Standard ECDSA signature recovery
             address currentValidator = ecrecover(messageHash, v, r, s);
-            
+
             // Check for duplicate signers
             if (currentValidator == lastValidator) {
                 return false;
@@ -231,8 +229,6 @@ library ISMVerificationLib {
         return $.validators[validator];
     }
 
-
-
     /// @notice Splits signature bytes into v, r, s components
     ///
     /// @param signaturesCalldataOffset Calldata offset where signatures bytes starts
@@ -247,10 +243,10 @@ library ISMVerificationLib {
         returns (uint8 v, bytes32 r, bytes32 s)
     {
         assembly {
-            let signaturePos := mul(0x41, pos)  // 65 bytes per signature
-            r := calldataload(add(signaturesCalldataOffset, signaturePos))          // r at offset 0
+            let signaturePos := mul(0x41, pos) // 65 bytes per signature
+            r := calldataload(add(signaturesCalldataOffset, signaturePos)) // r at offset 0
             s := calldataload(add(signaturesCalldataOffset, add(signaturePos, 0x20))) // s at offset 32
             v := and(calldataload(add(signaturesCalldataOffset, add(signaturePos, 0x21))), 0xff) // v at offset 64
         }
     }
-} 
+}

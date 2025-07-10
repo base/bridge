@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {HelperConfig} from "../script/HelperConfig.s.sol";
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
-import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
-import {HelperConfig} from "../script/HelperConfig.s.sol";
+import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
-import {IncomingMessage, MessageType} from "../src/libraries/MessageLib.sol";
-import {Pubkey} from "../src/libraries/SVMLib.sol";
 import {Bridge} from "../src/Bridge.sol";
-import {Twin} from "../src/Twin.sol";
+
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
+import {Twin} from "../src/Twin.sol";
+import {IncomingMessage, MessageType} from "../src/libraries/MessageLib.sol";
+import {Pubkey} from "../src/libraries/SVMLib.sol";
 
 contract ISMVerificationTest is Test {
     Bridge public bridge;
@@ -64,7 +65,7 @@ contract ISMVerificationTest is Test {
         address twinImpl = address(new Twin(address(0))); // Placeholder, will be updated
         address twinBeacon = address(new UpgradeableBeacon(owner, twinImpl));
 
-        // Create CrossChainERC20Factory  
+        // Create CrossChainERC20Factory
         address erc20Impl = address(new CrossChainERC20(address(0))); // Placeholder
         address erc20Beacon = address(new UpgradeableBeacon(owner, erc20Impl));
         CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
@@ -73,7 +74,7 @@ contract ISMVerificationTest is Test {
         vm.prank(owner);
         Bridge bridgeImpl = new Bridge({
             remoteBridge: remoteBridge,
-            trustedRelayer: trustedRelayer, 
+            trustedRelayer: trustedRelayer,
             twinBeacon: twinBeacon,
             crossChainErc20Factory: address(factory)
         });
@@ -155,13 +156,9 @@ contract ISMVerificationTest is Test {
             twinBeacon: twinBeacon,
             crossChainErc20Factory: address(factory)
         });
-        
+
         vm.expectRevert(); // Library will revert with InvalidThreshold
-        testBridge1.initialize({
-            validators: validators,
-            threshold: 0,
-            ismOwner: owner
-        });
+        testBridge1.initialize({validators: validators, threshold: 0, ismOwner: owner});
 
         // Test threshold > validator count
         Bridge testBridge2 = new Bridge({
@@ -170,13 +167,9 @@ contract ISMVerificationTest is Test {
             twinBeacon: twinBeacon,
             crossChainErc20Factory: address(factory)
         });
-        
+
         vm.expectRevert(); // Library will revert with InvalidThreshold
-        testBridge2.initialize({
-            validators: validators,
-            threshold: 3,
-            ismOwner: owner
-        });
+        testBridge2.initialize({validators: validators, threshold: 3, ismOwner: owner});
     }
 
     function test_constructor_revertsWithEmptyValidatorsAndNonZeroThreshold() public {
@@ -196,13 +189,9 @@ contract ISMVerificationTest is Test {
             twinBeacon: twinBeacon,
             crossChainErc20Factory: address(factory)
         });
-        
+
         vm.expectRevert(); // Library will revert with InvalidThreshold
-        testBridge3.initialize({
-            validators: validators,
-            threshold: 1,
-            ismOwner: owner
-        });
+        testBridge3.initialize({validators: validators, threshold: 1, ismOwner: owner});
     }
 
     function test_constructor_allowsEmptyValidatorsWithZeroThreshold() public {
@@ -223,13 +212,9 @@ contract ISMVerificationTest is Test {
             twinBeacon: twinBeacon,
             crossChainErc20Factory: address(factory)
         });
-        
+
         vm.expectRevert(); // Library will revert with InvalidThreshold
-        testBridge4.initialize({
-            validators: validators,
-            threshold: 0,
-            ismOwner: owner
-        });
+        testBridge4.initialize({validators: validators, threshold: 0, ismOwner: owner});
     }
 
     //////////////////////////////////////////////////////////////
@@ -392,7 +377,6 @@ contract ISMVerificationTest is Test {
         vm.prank(trustedRelayer);
         bridge.relayMessages(testMessages, signatures);
     }
-
 
     function test_verifyISM_withAscendingOrderSignatures() public {
         bytes32 messageHash = keccak256(abi.encode(testMessages));
