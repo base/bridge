@@ -27,8 +27,8 @@ pub mod bridge {
 
     // Base -> Solana
 
-    pub fn register_output_root<'a, 'info>(
-        ctx: Context<'a, '_, 'info, 'info, RegisterOutputRoot<'info>>,
+    pub fn register_output_root(
+        ctx: Context<RegisterOutputRoot>,
         output_root: [u8; 32],
         block_number: u64,
     ) -> Result<()> {
