@@ -18,6 +18,15 @@ struct ISMVerificationLibStorage {
     address owner;
 }
 
+
+/// @title ISMVerificationLib
+///
+/// @notice A verification contract for ISM Messages being broadcasted from Solana to Base by requiring 
+///         a specific minimum amount of validators to sign the message.
+///
+/// @dev This contract is only relevant for Stage 0 of the bridge where offchain oracle handles the relaying 
+///      of messages. This contract should be irrelevant for Stage 1, where messages will automatically be 
+///      included by the Base sequencer.
 library ISMVerificationLib {
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
