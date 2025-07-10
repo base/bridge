@@ -102,7 +102,7 @@ library ISMVerificationLib {
     /// @param validators Array of validator addresses.
     /// @param threshold The ISM verification threshold.
     /// @param owner The owner of the contract.
-    function initialize(address[] memory validators, uint128 threshold, address owner) internal {
+    function initialize(address[] calldata validators, uint128 threshold, address owner) internal {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
         
         require(threshold > 0 && threshold <= validators.length, InvalidThreshold());
