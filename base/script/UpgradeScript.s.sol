@@ -2,7 +2,6 @@
 pragma solidity 0.8.28;
 
 import {Script} from "forge-std/Script.sol";
-
 import {stdJson} from "forge-std/StdJson.sol";
 import {console} from "forge-std/console.sol";
 
@@ -39,14 +38,7 @@ contract UpgradeScript is Script {
         // Read existing deployment addresses
         (bridgeAddress, erc20FactoryAddress, twinAddress) = _readDeploymentFile(chain);
 
-        // Deploy new implementations only if needed
-        if (upgradeBridge) {
-            bridgeAddress = ERC1967Factory(cfg.erc1967Factory).predictDeterministicAddress({salt: _salt("bridge16")});
-        } else {
-            bridgeAddress = bridgeAddress;
-        }
-
-        vm.startBroadcast(msg.sender);
+        vm.startBroadcast();
 
         // Upgrade TwinBeacon
         if (upgradeTwin) {
@@ -80,13 +72,13 @@ contract UpgradeScript is Script {
         return (json.readAddress(".Bridge"), json.readAddress(".CrossChainERC20Factory"), json.readAddress(".Twin"));
     }
 
-    function _upgradeTwinBeacon(address currentBridgeAddress, address currentTwinAddress) internal {
+    function _upgradeTwinBeacon(address currentBridgeAddress, address twinBeacon) internal {
         // Deploy new Twin Implementation
         address twinImpl = address(new Twin(currentBridgeAddress));
         console.log("Deployed new Twin implementation: %s", twinImpl);
 
         // Upgrade TwinBeacon to new implementation
-        UpgradeableBeacon beacon = UpgradeableBeacon(currentTwinAddress);
+        UpgradeableBeacon beacon = UpgradeableBeacon(twinBeacon);
         beacon.upgradeTo(twinImpl);
         console.log("Upgraded TwinBeacon!");
     }
@@ -108,11 +100,11 @@ contract UpgradeScript is Script {
         address currentFactoryAddress
     ) internal {
         // Deploy new Factory implementation
-        CrossChainERC20Factory xChainERC20FactoryImpl = new CrossChainERC20Factory(currentBeaconAddress);
-        console.log("Deployed new CrossChainERC20Factory implementation: %s", address(xChainERC20FactoryImpl));
+        address xChainERC20FactoryImpl = address(new CrossChainERC20Factory(currentBeaconAddress));
+        console.log("Deployed new CrossChainERC20Factory implementation: %s", xChainERC20FactoryImpl);
 
         // Upgrade CrossChainERC20Factory to new implementation
-        ERC1967Factory(cfg.erc1967Factory).upgrade(currentFactoryAddress, address(xChainERC20FactoryImpl));
+        ERC1967Factory(cfg.erc1967Factory).upgrade(currentFactoryAddress, xChainERC20FactoryImpl);
         console.log("Upgraded CrossChainERC20Factory!");
     }
 
@@ -133,14 +125,7 @@ contract UpgradeScript is Script {
 
         console.log("Deployed new Bridge implementation: %s", bridgeImpl);
         // Use ERC1967Factory to upgrade the proxy
-        ERC1967Factory factory = ERC1967Factory(cfg.erc1967Factory);
-        factory.upgrade(currentBridgeAddress, bridgeImpl);
+        ERC1967Factory(cfg.erc1967Factory).upgrade(currentBridgeAddress, bridgeImpl);
         console.log("Upgraded Bridge proxy!");
-    }
-
-    function _salt(bytes12 salt) private view returns (bytes32) {
-        // Concat the msg.sender and the salt
-        bytes memory packed = abi.encodePacked(msg.sender, salt);
-        return bytes32(packed);
     }
 }

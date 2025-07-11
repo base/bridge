@@ -55,6 +55,25 @@ contract DeployScript is Script {
         return address(new UpgradeableBeacon({initialOwner: cfg.initialOwner, initialImplementation: twinImpl}));
     }
 
+    function _deployFactory(HelperConfig.NetworkConfig memory cfg, address precomputedBridgeAddress)
+        private
+        returns (address)
+    {
+        address erc20Impl = address(new CrossChainERC20(precomputedBridgeAddress));
+        address erc20Beacon =
+            address(new UpgradeableBeacon({initialOwner: cfg.initialOwner, initialImplementation: erc20Impl}));
+
+        address xChainERC20FactoryImpl = address(new CrossChainERC20Factory(erc20Beacon));
+        return address(
+            CrossChainERC20Factory(
+                ERC1967Factory(cfg.erc1967Factory).deploy({
+                    implementation: xChainERC20FactoryImpl,
+                    admin: cfg.initialOwner
+                })
+            )
+        );
+    }
+
     function _deployBridge(HelperConfig.NetworkConfig memory cfg, address twinBeacon, address crossChainErc20Factory)
         private
         returns (address)
@@ -66,7 +85,7 @@ contract DeployScript is Script {
             crossChainErc20Factory: crossChainErc20Factory
         });
 
-        address proxy = ERC1967Factory(cfg.erc1967Factory).deployDeterministicAndCall({
+        return ERC1967Factory(cfg.erc1967Factory).deployDeterministicAndCall({
             implementation: address(bridgeImpl),
             admin: cfg.initialOwner,
             salt: _salt("bridge15"),
@@ -74,27 +93,6 @@ contract DeployScript is Script {
                 Bridge.initialize, (cfg.initialValidators, cfg.initialThreshold, cfg.initialOwner, cfg.guardians)
             )
         });
-
-        return proxy;
-    }
-
-    function _deployFactory(HelperConfig.NetworkConfig memory cfg, address precomputedBridgeAddress)
-        private
-        returns (address)
-    {
-        address erc20Impl = address(new CrossChainERC20(precomputedBridgeAddress));
-        address erc20Beacon =
-            address(new UpgradeableBeacon({initialOwner: cfg.initialOwner, initialImplementation: erc20Impl}));
-
-        CrossChainERC20Factory xChainERC20FactoryImpl = new CrossChainERC20Factory(erc20Beacon);
-        CrossChainERC20Factory xChainERC20Factory = CrossChainERC20Factory(
-            ERC1967Factory(cfg.erc1967Factory).deploy({
-                implementation: address(xChainERC20FactoryImpl),
-                admin: cfg.initialOwner
-            })
-        );
-
-        return address(xChainERC20Factory);
     }
 
     function _salt(bytes12 salt) private view returns (bytes32) {
