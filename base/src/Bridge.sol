@@ -118,6 +118,11 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @param messageHash Keccak256 hash of the message that failed to be relayed.
     event FailedToRelayMessage(bytes32 indexed messageHash);
 
+    /// @notice Emitted whenever the bridge is paused or unpaused.
+    ///
+    /// @param paused Whether the bridge is paused.
+    event PauseSwitched(bool paused);
+
     //////////////////////////////////////////////////////////////
     ///                       Errors                           ///
     //////////////////////////////////////////////////////////////
@@ -162,53 +167,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         require(!paused, Paused());
         _;
     }
-
-    //////////////////////////////////////////////////////////////
-    ///                       Events                           ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice Emitted whenever a message is successfully relayed and executed.
-    ///
-    /// @param messageHash Keccak256 hash of the message that was successfully relayed.
-    event MessageSuccessfullyRelayed(bytes32 indexed messageHash);
-
-    /// @notice Emitted whenever a message fails to be relayed.
-    ///
-    /// @param messageHash Keccak256 hash of the message that failed to be relayed.
-    event FailedToRelayMessage(bytes32 indexed messageHash);
-
-    //////////////////////////////////////////////////////////////
-    ///                       Errors                           ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice Thrown when the ISM verification fails.
-    error ISMVerificationFailed();
-
-    /// @notice Thrown when doing gas estimation and the call's gas left is insufficient to cover the `minGas` plus the
-    ///         `reservedGas`.
-    error EstimationInsufficientGas();
-
-    /// @notice Thrown when the call execution fails.
-    error ExecutionFailed();
-
-    /// @notice Thrown when the sender is not the entrypoint.
-    error SenderIsNotEntrypoint();
-
-    /// @notice Thrown when the nonce is not incremental.
-    error NonceNotIncremental();
-
-    /// @notice Thrown when a message has already been successfully relayed.
-    error MessageAlreadySuccessfullyRelayed();
-
-    /// @notice Thrown when a message has already failed to relay.
-    error MessageAlreadyFailedToRelay();
-
-    /// @notice Thrown when a message has not been marked as failed by the relayer but a user tries to relay it
-    /// manually.
-    error MessageNotAlreadyFailedToRelay();
-
-    /// @notice Thrown when an Anchor instruction is invalid.
-    error UnsafeIxTarget();
 
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
@@ -304,7 +262,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @param remoteToken The pubkey of the remote token.
     ///
     /// @return The scalar used to convert local token amounts to remote token amounts.
-    function scalars(address localToken, Pubkey remoteToken) external view returns (uint256) { g
+    function scalars(address localToken, Pubkey remoteToken) external view returns (uint256) {
         return TokenLib.getTokenLibStorage().scalars[localToken][remoteToken];
     }
 
@@ -356,6 +314,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @dev This function can only be called by a guardian.
     function pauseSwitch() external onlyRoles(GUARDIAN_ROLE) {
         paused = !paused;
+        emit PauseSwitched(paused);
     }
 
     /// @notice Validates and relays a message sent from Solana to Base.
@@ -495,11 +454,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @return True if the address is a validator, false otherwise.
     function isISMValidator(address validator) external view returns (bool) {
         return ISMVerificationLib.isValidator(validator);
-    }
-
-    /// @notice Pauses the bridge.
-    function pause() external onlyOwner {
-        paused = true;
     }
 
     //////////////////////////////////////////////////////////////
