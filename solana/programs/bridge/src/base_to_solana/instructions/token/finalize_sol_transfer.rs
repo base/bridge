@@ -1,14 +1,11 @@
 use anchor_lang::{
-    prelude::{
-        borsh::{BorshDeserialize, BorshSerialize},
-        *,
-    },
+    prelude::*,
     system_program::{self, Transfer},
 };
 
 use crate::{common::SOL_VAULT_SEED, ID};
 
-#[derive(Debug, Copy, Clone, BorshSerialize, BorshDeserialize)]
+#[derive(Debug, Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct FinalizeBridgeSol {
     pub remote_token: [u8; 20],
     pub to: Pubkey,

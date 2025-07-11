@@ -1,7 +1,4 @@
-use anchor_lang::prelude::{
-    borsh::{BorshDeserialize, BorshSerialize},
-    *,
-};
+use anchor_lang::prelude::*;
 use anchor_spl::{
     token_2022::{MintToChecked, Token2022},
     token_interface::{self, Mint, TokenAccount},
@@ -12,7 +9,7 @@ use crate::{
     ID,
 };
 
-#[derive(Debug, Copy, Clone, BorshSerialize, BorshDeserialize)]
+#[derive(Debug, Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct FinalizeBridgeWrappedToken {
     pub local_token: Pubkey,
     pub to: Pubkey,

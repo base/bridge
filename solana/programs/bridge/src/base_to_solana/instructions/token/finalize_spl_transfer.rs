@@ -1,12 +1,9 @@
-use anchor_lang::prelude::{
-    borsh::{BorshDeserialize, BorshSerialize},
-    *,
-};
+use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 
 use crate::{common::TOKEN_VAULT_SEED, ID};
 
-#[derive(Debug, Copy, Clone, BorshSerialize, BorshDeserialize)]
+#[derive(Debug, Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct FinalizeBridgeSpl {
     pub remote_token: [u8; 20],
     pub local_token: Pubkey,

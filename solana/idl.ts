@@ -741,6 +741,80 @@ export const IDL = {
       }
     },
     {
+      "name": "FinalizeBridgeSol",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "remote_token",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "to",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FinalizeBridgeSpl",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "remote_token",
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "local_token",
+            "type": "pubkey"
+          },
+          {
+            "name": "to",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FinalizeBridgeWrappedToken",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "local_token",
+            "type": "pubkey"
+          },
+          {
+            "name": "to",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "IncomingMessage",
       "type": {
         "kind": "struct",
@@ -755,8 +829,12 @@ export const IDL = {
             }
           },
           {
-            "name": "data",
-            "type": "bytes"
+            "name": "message",
+            "type": {
+              "defined": {
+                "name": "bridge::base_to_solana::state::incoming_message::Message"
+              }
+            }
           },
           {
             "name": "executed",
@@ -766,29 +844,77 @@ export const IDL = {
       }
     },
     {
-      "name": "Message",
+      "name": "Ix",
+      "docs": [
+        "Instruction to be executed by the wallet.",
+        "Functionally equivalent to a Solana Instruction."
+      ],
       "type": {
-        "kind": "enum",
-        "variants": [
+        "kind": "struct",
+        "fields": [
           {
-            "name": "Call",
-            "fields": [
-              {
-                "defined": {
-                  "name": "Call"
-                }
-              }
-            ]
+            "name": "program_id",
+            "docs": [
+              "Program that will process this instruction."
+            ],
+            "type": "pubkey"
           },
           {
-            "name": "Transfer",
-            "fields": [
-              {
+            "name": "accounts",
+            "docs": [
+              "Accounts required for this instruction."
+            ],
+            "type": {
+              "vec": {
                 "defined": {
-                  "name": "Transfer"
+                  "name": "IxAccount"
                 }
               }
-            ]
+            }
+          },
+          {
+            "name": "data",
+            "docs": [
+              "Instruction data."
+            ],
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IxAccount",
+      "docs": [
+        "Account used in an instruction.",
+        "Identical to Solana's AccountMeta but implements AnchorSerialize and AnchorDeserialize."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey_or_pda",
+            "docs": [
+              "Public key of the account."
+            ],
+            "type": {
+              "defined": {
+                "name": "PubkeyOrPda"
+              }
+            }
+          },
+          {
+            "name": "is_writable",
+            "docs": [
+              "Whether the account is writable."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "is_signer",
+            "docs": [
+              "Whether the account is a signer."
+            ],
+            "type": "bool"
           }
         ]
       }
@@ -814,7 +940,7 @@ export const IDL = {
             "name": "message",
             "type": {
               "defined": {
-                "name": "Message"
+                "name": "bridge::solana_to_base::state::outgoing_message::Message"
               }
             }
           }
@@ -895,7 +1021,145 @@ export const IDL = {
       }
     },
     {
-      "name": "Transfer",
+      "name": "PubkeyOrPda",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pubkey",
+            "fields": [
+              "pubkey"
+            ]
+          },
+          {
+            "name": "PDA",
+            "fields": [
+              {
+                "name": "seeds",
+                "type": {
+                  "vec": "bytes"
+                }
+              },
+              {
+                "name": "program_id",
+                "type": "pubkey"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bridge::base_to_solana::state::incoming_message::Message",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Call",
+            "fields": [
+              {
+                "vec": {
+                  "defined": {
+                    "name": "Ix"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Transfer",
+            "fields": [
+              {
+                "name": "transfer",
+                "type": {
+                  "defined": {
+                    "name": "bridge::base_to_solana::state::incoming_message::Transfer"
+                  }
+                }
+              },
+              {
+                "name": "ixs",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "Ix"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bridge::base_to_solana::state::incoming_message::Transfer",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Sol",
+            "fields": [
+              {
+                "defined": {
+                  "name": "FinalizeBridgeSol"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Spl",
+            "fields": [
+              {
+                "defined": {
+                  "name": "FinalizeBridgeSpl"
+                }
+              }
+            ]
+          },
+          {
+            "name": "WrappedToken",
+            "fields": [
+              {
+                "defined": {
+                  "name": "FinalizeBridgeWrappedToken"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bridge::solana_to_base::state::outgoing_message::Message",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Call",
+            "fields": [
+              {
+                "defined": {
+                  "name": "Call"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Transfer",
+            "fields": [
+              {
+                "defined": {
+                  "name": "bridge::solana_to_base::state::outgoing_message::Transfer"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bridge::solana_to_base::state::outgoing_message::Transfer",
       "type": {
         "kind": "struct",
         "fields": [
@@ -983,7 +1247,7 @@ export const IDL = {
     {
       "name": "GAS_FEE_RECEIVER",
       "type": "pubkey",
-      "value": "4vTj5kmBrmds3zWogiyUxtZPggcVUmG44EXRy2CxTcEZ"
+      "value": "eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt"
     },
     {
       "name": "INCOMING_MESSAGE_SEED",
@@ -1053,7 +1317,7 @@ export const IDL = {
     {
       "name": "TRUSTED_ORACLE",
       "type": "pubkey",
-      "value": "4vTj5kmBrmds3zWogiyUxtZPggcVUmG44EXRy2CxTcEZ"
+      "value": "eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt"
     },
     {
       "name": "WRAPPED_TOKEN_SEED",

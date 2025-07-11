@@ -24,7 +24,7 @@ pub fn relay_message_handler<'a, 'info>(
         RelayMessageError::AlreadyExecuted
     );
 
-    let message = Message::try_from_slice(&ctx.accounts.message.data)?;
+    let message = ctx.accounts.message.message.clone();
     let (transfer, ixs) = match message {
         Message::Call(ixs) => (None, ixs),
         Message::Transfer { transfer, ixs } => (Some(transfer), ixs),

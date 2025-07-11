@@ -4,6 +4,7 @@ use crate::base_to_solana::{
     constants::INCOMING_MESSAGE_SEED,
     internal::mmr::{self, Proof},
     state::{IncomingMessage, OutputRoot},
+    Message,
 };
 
 #[derive(Accounts)]
@@ -47,7 +48,7 @@ pub fn prove_message_handler(
     *ctx.accounts.message = IncomingMessage {
         executed: false,
         sender,
-        data,
+        message: Message::try_from_slice(&data)?,
     };
 
     Ok(())

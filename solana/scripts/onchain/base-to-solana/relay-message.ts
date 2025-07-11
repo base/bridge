@@ -3,6 +3,7 @@ import {
   createKeyPairFromBytes,
   createSignerFromKeyPair,
   getProgramDerivedAddress,
+  type Address,
   type IAccountMeta,
   type IInstruction,
   type TransactionPartialSigner,
@@ -14,6 +15,7 @@ import { toBytes, toHex } from "viem";
 import {
   fetchIncomingMessage,
   getRelayMessageInstruction,
+  type Ix,
 } from "../../../clients/ts/generated";
 import { CONSTANTS } from "../../constants";
 import { getTarget } from "../../utils/argv";
@@ -23,7 +25,7 @@ import {
   getPayer,
   getRpc,
 } from "../utils/transaction";
-import { deserializeMessage } from "../utils/deserializer";
+// import { deserializeMessage } from "../utils/deserializer";
 
 const MESSAGE_HASH =
   "0x5a1e91ae8594a7e58ae2aa213954d7733a5e90b276a37d62800ec00a97e7e66d";
@@ -60,7 +62,7 @@ async function main() {
   });
 
   // Fetch the message to get the sender for the bridge CPI authority
-  const message = await fetchIncomingMessage(rpc, messagePda);
+  const incomingMessage = await fetchIncomingMessage(rpc, messagePda);
 
   // Find the bridge CPI authority PDA. Not always needed, but simpler to always compute it here.
   // It is only really needed if the relayed message needs to CPI into a program that requires
@@ -69,75 +71,64 @@ async function main() {
     programAddress: constants.solanaBridge,
     seeds: [
       Buffer.from(getIdlConstant("BRIDGE_CPI_AUTHORITY_SEED")),
-      Buffer.from(message.data.sender),
+      Buffer.from(incomingMessage.data.sender),
     ],
   });
 
   console.log(`Message PDA: ${messagePda}`);
   console.log(`Bridge CPI Authority PDA: ${bridgeCpiAuthorityPda}`);
-  console.log(`Message executed: ${message.data.executed}`);
-  console.log(`Message sender: ${toHex(Buffer.from(message.data.sender))}`);
+  console.log(`Message executed: ${incomingMessage.data.executed}`);
+  console.log(
+    `Message sender: ${toHex(Buffer.from(incomingMessage.data.sender))}`
+  );
 
-  //   if (message.data.executed) {
-  //     console.log("Message has already been executed!");
-  //     return;
-  //   }
+  if (incomingMessage.data.executed) {
+    console.log("Message has already been executed!");
+    return;
+  }
 
-  const messageData = Buffer.from(message.data.data);
-  const deserializedMessage = await deserializeMessage(messageData);
+  const message = incomingMessage.data.message;
 
   let remainingAccounts: Array<IAccountMeta> = [];
   const signers: Array<TransactionPartialSigner> = [];
 
-  if (deserializedMessage.type === "Call") {
-    console.log(
-      `Call message with ${deserializedMessage.ixs.length} instructions`
-    );
+  if (message.__kind === "Call") {
+    console.log(`Call message with ${message.fields.length} instructions`);
 
-    const { ixs } = deserializedMessage;
+    const ixs = message.fields[0];
     if (ixs.length === 0) {
       throw new Error("Zero instructions in call message");
     }
 
     // Include both the accounts and program IDs for each instruction
     remainingAccounts = [
-      ...ixs.flatMap((i) =>
-        i.accounts.map((acc) => ({
-          address: acc.address,
-          role: acc.isWritable
-            ? acc.isSigner
-              ? AccountRole.WRITABLE_SIGNER
-              : AccountRole.WRITABLE
-            : acc.isSigner
-              ? AccountRole.READONLY_SIGNER
-              : AccountRole.READONLY,
-        }))
-      ),
+      ...(await getIxAccounts(ixs)),
       ...ixs.map((i) => ({
-        address: i.programAddress,
+        address: i.programId,
         role: AccountRole.READONLY,
       })),
     ];
-    signers.push(newAccount);
-  } else if (deserializedMessage.type === "Transfer") {
-    console.log(
-      `Transfer message with ${deserializedMessage.ixs.length} instructions`
-    );
 
-    if (deserializedMessage.transfer.type === "Sol") {
+    signers.push(newAccount);
+  } else if (message.__kind === "Transfer") {
+    console.log(`Transfer message with ${message.ixs.length} instructions`);
+
+    if (message.transfer.__kind === "Sol") {
       console.log("SOL transfer detected");
-      const solTransfer = deserializedMessage.transfer;
+      const solTransfer = message.transfer;
+
+      const { remoteToken, to, amount } = solTransfer.fields[0];
 
       console.log(`SOL transfer:`);
-      console.log(`  Remote token: 0x${toHex(solTransfer.remoteToken)}`);
-      console.log(`  To: ${solTransfer.to}`);
-      console.log(`  Amount: ${solTransfer.amount}`);
+      console.log(`  Remote token: 0x${remoteToken.toHex()}`);
+      console.log(`  To: ${to}`);
+      console.log(`  Amount: ${amount}`);
 
       const [solVaultPda] = await getProgramDerivedAddress({
         programAddress: constants.solanaBridge,
         seeds: [
           Buffer.from(getIdlConstant("SOL_VAULT_SEED")),
-          Buffer.from(solTransfer.remoteToken),
+          Buffer.from(remoteToken),
         ],
       });
 
@@ -147,7 +138,7 @@ async function main() {
           role: AccountRole.WRITABLE,
         },
         {
-          address: solTransfer.to,
+          address: to,
           role: AccountRole.WRITABLE,
         },
         {
@@ -155,33 +146,35 @@ async function main() {
           role: AccountRole.READONLY,
         },
       ];
-    } else if (deserializedMessage.transfer.type === "Spl") {
+    } else if (message.transfer.__kind === "Spl") {
       console.log("SPL transfer detected");
-      const splTransfer = deserializedMessage.transfer;
+      const splTransfer = message.transfer;
+
+      const { remoteToken, localToken, to, amount } = splTransfer.fields[0];
 
       console.log(`SPL transfer:`);
-      console.log(`  RemoteToken: 0x${toHex(splTransfer.remoteToken)}`);
-      console.log(`  LocalToken: ${splTransfer.localToken}`);
-      console.log(`  To: ${splTransfer.to}`);
-      console.log(`  Amount: ${splTransfer.amount}`);
+      console.log(`  RemoteToken: 0x${remoteToken.toHex()}`);
+      console.log(`  LocalToken: ${localToken}`);
+      console.log(`  To: ${to}`);
+      console.log(`  Amount: ${amount}`);
 
       const [tokenVaultPda] = await getProgramDerivedAddress({
         programAddress: constants.solanaBridge,
         seeds: [
           Buffer.from(getIdlConstant("TOKEN_VAULT_SEED")),
-          splTransfer.localToken,
-          Buffer.from(splTransfer.remoteToken),
+          Buffer.from(localToken),
+          Buffer.from(remoteToken),
         ],
       });
 
-      const mint = await rpc.getAccountInfo(splTransfer.localToken).send();
+      const mint = await rpc.getAccountInfo(localToken).send();
       if (!mint.value) {
         throw new Error("Mint not found");
       }
 
       remainingAccounts = [
         {
-          address: splTransfer.localToken,
+          address: localToken,
           role: AccountRole.READONLY,
         },
         {
@@ -189,7 +182,7 @@ async function main() {
           role: AccountRole.WRITABLE,
         },
         {
-          address: splTransfer.to,
+          address: to,
           role: AccountRole.WRITABLE,
         },
         {
@@ -197,17 +190,19 @@ async function main() {
           role: AccountRole.READONLY,
         },
       ];
-    } else if (deserializedMessage.transfer.type === "WrappedToken") {
-      const wrappedTransfer = deserializedMessage.transfer;
+    } else if (message.transfer.__kind === "WrappedToken") {
+      const wrappedTransfer = message.transfer;
+
+      const { localToken, to, amount } = wrappedTransfer.fields[0];
 
       console.log(`WrappedToken transfer:`);
-      console.log(`  Local Token: ${wrappedTransfer.localToken}`);
-      console.log(`  To: ${wrappedTransfer.to}`);
-      console.log(`  Amount: ${wrappedTransfer.amount}`);
+      console.log(`  Local Token: ${localToken}`);
+      console.log(`  To: ${to}`);
+      console.log(`  Amount: ${amount}`);
 
       remainingAccounts = [
         {
-          address: wrappedTransfer.localToken,
+          address: localToken,
           role: AccountRole.WRITABLE,
         },
         {
@@ -221,24 +216,13 @@ async function main() {
     }
 
     // Process the list of optional instructions
-    const { ixs } = deserializedMessage;
+    const ixs = message.ixs;
 
     // Include both the accounts and program IDs for each instruction
     remainingAccounts.push(
-      ...ixs.flatMap((i) =>
-        i.accounts.map((acc) => ({
-          address: acc.address,
-          role: acc.isWritable
-            ? acc.isSigner
-              ? AccountRole.WRITABLE_SIGNER
-              : AccountRole.WRITABLE
-            : acc.isSigner
-              ? AccountRole.READONLY_SIGNER
-              : AccountRole.READONLY,
-        }))
-      ),
+      ...(await getIxAccounts(ixs)),
       ...ixs.map((i) => ({
-        address: i.programAddress,
+        address: i.programId,
         role: AccountRole.READONLY,
       }))
     );
@@ -281,3 +265,37 @@ main().catch((e) => {
   console.error("❌ Relay message failed:", e);
   process.exit(1);
 });
+
+async function getIxAccounts(ixs: Ix[]) {
+  const allIxsAccounts = [];
+  for (const ix of ixs) {
+    const ixAccounts = await Promise.all(
+      ix.accounts.map(async (acc: any) => {
+        let address: Address;
+        if (acc.pubkeyOrPda.__kind === "Pubkey") {
+          address = acc.pubkeyOrPda.fields[0];
+        } else {
+          [address] = await getProgramDerivedAddress({
+            programAddress: acc.pubkeyOrPda.programId,
+            seeds: acc.pubkeyOrPda.seeds,
+          });
+        }
+
+        return {
+          address,
+          role: acc.isWritable
+            ? acc.isSigner
+              ? AccountRole.WRITABLE_SIGNER
+              : AccountRole.WRITABLE
+            : acc.isSigner
+              ? AccountRole.READONLY_SIGNER
+              : AccountRole.READONLY,
+        };
+      })
+    );
+
+    allIxsAccounts.push(...ixAccounts);
+  }
+
+  return allIxsAccounts;
+}
