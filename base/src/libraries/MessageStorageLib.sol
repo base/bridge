@@ -322,7 +322,7 @@ library MessageStorageLib {
             peaks := mload(0x40)
             mstore(peaks, peakCount)
             mstore(0x40, add(peaks, add(0x20, mul(peakCount, 0x20))))
-            
+
             // Copy elements in natural order (left-to-right)
             for { let i := 0 } lt(i, peakCount) { i := add(i, 1) } {
                 let sourceIndex := add(tempPeaks, add(0x20, mul(i, 0x20)))
@@ -330,7 +330,7 @@ library MessageStorageLib {
                 mstore(destIndex, mload(sourceIndex))
             }
         }
-        
+
         return peaks;
     }
 
@@ -423,7 +423,7 @@ library MessageStorageLib {
             peakIndices := mload(0x40)
             mstore(peakIndices, peakCount)
             mstore(0x40, add(peakIndices, add(0x20, mul(peakCount, 0x20))))
-            
+
             // Copy elements in natural order (left-to-right)
             for { let i := 0 } lt(i, peakCount) { i := add(i, 1) } {
                 let sourceIndex := add(tempPeakIndices, add(0x20, mul(i, 0x20)))
@@ -431,7 +431,7 @@ library MessageStorageLib {
                 mstore(destIndex, mload(sourceIndex))
             }
         }
-        
+
         return peakIndices;
     }
 
@@ -502,8 +502,6 @@ library MessageStorageLib {
     function _calculateMountainSize(uint256 height) private pure returns (uint256) {
         return (1 << (height + 1)) - 1;
     }
-
-
 
     /// @notice Hashes two node hashes together.
     ///

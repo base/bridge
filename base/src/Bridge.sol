@@ -48,7 +48,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     address public immutable CROSS_CHAIN_ERC20_FACTORY;
 
     /// @notice Guardian Role to pause the bridge.
-    uint256 private constant GUARDIAN_ROLE = 1 << 0;
+    uint256 public constant GUARDIAN_ROLE = 1 << 0;
 
     /// @notice Gas required to run the execution prologue section of `__validateAndRelay`.
     ///
@@ -195,7 +195,12 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @param validators Array of validator addresses for ISM verification.
     /// @param threshold The ISM verification threshold.
     /// @param ismOwner The owner of the ISM verification system.
-    function initialize(address[] calldata validators, uint128 threshold, address ismOwner, address[] calldata guardians) external initializer {
+    function initialize(
+        address[] calldata validators,
+        uint128 threshold,
+        address ismOwner,
+        address[] calldata guardians
+    ) external initializer {
         // Initialize ownership
         _initializeOwner(ismOwner);
 
@@ -297,7 +302,11 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///
     /// @param messages The messages to relay.
     /// @param ismData Encoded ISM data used to verify the messages.
-    function relayMessages(IncomingMessage[] calldata messages, bytes calldata ismData) external nonReentrant whenNotPaused {
+    function relayMessages(IncomingMessage[] calldata messages, bytes calldata ismData)
+        external
+        nonReentrant
+        whenNotPaused
+    {
         bool isTrustedRelayer = msg.sender == TRUSTED_RELAYER;
         if (isTrustedRelayer) {
             require(ISMVerificationLib.isApproved(messages, ismData), ISMVerificationFailed());
