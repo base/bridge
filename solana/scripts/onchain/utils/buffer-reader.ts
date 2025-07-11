@@ -1,4 +1,4 @@
-import { PublicKey } from "@solana/web3.js";
+import { address, getBase58Codec, type Address } from "@solana/kit";
 
 export class BufferReader {
   private buffer: Buffer;
@@ -32,8 +32,8 @@ export class BufferReader {
     return value;
   }
 
-  readPublicKey(): PublicKey {
-    return new PublicKey(this.readBytes(32));
+  readAddress(): Address {
+    return address(getBase58Codec().decode(this.readBytes(32)));
   }
 
   readArray20(): Buffer {

@@ -3,14 +3,36 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
-  "dependencies": {
-    "@coral-xyz/anchor": "^0.31.0",
-    "@solana/spl-token": "^0.4.13",
-    "@solana/web3.js": "^1.98.2",
-    "viem": "^2.30.0"
+  "scripts": {
+    "program:build": "bun ./scripts/program/build.ts",
+    "program:deploy": "bun ./scripts/program/deploy.ts",
+    "generate:client": "bun ./scripts/generate-client.ts",
+    "generate:idl": "bun ./scripts/generate-idl.ts",
+    "tx:spl:create-mint": "bun ./scripts/onchain/spl/create-mint.ts",
+    "tx:spl:create-ata": "bun ./scripts/onchain/spl/create-ata.ts",
+    "tx:spl:mint": "bun ./scripts/onchain/spl/mint.ts",
+    "tx:initialize": "bun ./scripts/onchain/initialize.ts",
+    "tx:wrap-token": "bun ./scripts/onchain/solana-to-base/wrap-token.ts",
+    "tx:bridge-call": "bun ./scripts/onchain/solana-to-base/bridge-call.ts",
+    "tx:bridge-call-value": "bun ./scripts/onchain/solana-to-base/bridge-call-value.ts",
+    "tx:bridge-sol": "bun ./scripts/onchain/solana-to-base/bridge-sol.ts",
+    "tx:bridge-spl": "bun ./scripts/onchain/solana-to-base/bridge-spl.ts",
+    "tx:bridge-wrapped-token": "bun ./scripts/onchain/solana-to-base/bridge-wrapped-token.ts",
+    "tx:prove-message": "bun ./scripts/onchain/base-to-solana/prove-message.ts",
+    "tx:relay-message": "bun ./scripts/onchain/base-to-solana/relay-message.ts",
+    "pubkey-to-bytes32": "bun ./scripts/utils/pubkey-to-bytes32.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "codama": "^1.3.0",
+    "@codama/nodes-from-anchor": "^1.2.1",
+    "@codama/renderers-js": "^1.2.14",
+    "@solana/kit": "^2.1.1",
+    "@solana-program/system": "^0.7.0",
+    "@solana-program/token": "^0.5.1",
+    "@solana-program/token-2022": "^0.4.2",
+    "@solana/spl-token": "^0.4.13",
+    "@types/bun": "latest",
+    "viem": "^2.30.0"
   },
   "peerDependencies": {
     "typescript": "^5"

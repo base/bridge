@@ -1,11 +1,11 @@
-import { PublicKey } from "@solana/web3.js";
+import { getProgramDerivedAddress, type Address } from "@solana/kit";
 import { BufferReader } from "./buffer-reader";
 
 type Message = Call | Transfer;
 
 type Call = {
   type: "Call";
-  ixs: ReturnType<typeof deserializeIx>[];
+  ixs: Awaited<ReturnType<typeof deserializeIx>>[];
 };
 
 type Transfer = {
@@ -14,27 +14,27 @@ type Transfer = {
     | {
         type: "Sol";
         remoteToken: Buffer;
-        to: PublicKey;
+        to: Address;
         amount: bigint;
       }
     | {
         type: "Spl";
         remoteToken: Buffer;
-        localToken: PublicKey;
-        to: PublicKey;
+        localToken: Address;
+        to: Address;
         amount: bigint;
       }
     | {
         type: "WrappedToken";
-        localToken: PublicKey;
-        to: PublicKey;
+        localToken: Address;
+        to: Address;
         amount: bigint;
       };
 
-  ixs: ReturnType<typeof deserializeIx>[];
+  ixs: Awaited<ReturnType<typeof deserializeIx>>[];
 };
 
-export function deserializeMessage(buffer: Buffer): Message {
+export async function deserializeMessage(buffer: Buffer): Promise<Message> {
   const reader = new BufferReader(buffer);
 
   // Read Message enum discriminator (1 byte)
@@ -42,7 +42,7 @@ export function deserializeMessage(buffer: Buffer): Message {
 
   // Message::Call(Vec<Ix>)
   if (messageDiscriminator === 0) {
-    const ixs = deserializeIxs(reader);
+    const ixs = await deserializeIxs(reader);
     return { type: "Call", ixs };
   }
   // Message::Transfer { transfer: Transfer, ixs: Vec<Ix> }
@@ -54,7 +54,7 @@ export function deserializeMessage(buffer: Buffer): Message {
     // Sol(FinalizeBridgeSol)
     if (transferDiscriminator === 0) {
       const remoteToken = reader.readArray20(); // [u8; 20]
-      const to = reader.readPublicKey(); // Pubkey
+      const to = reader.readAddress(); // Address
       const amount = reader.readBigUInt64LE(); // u64
 
       transfer = { type: "Sol", remoteToken, to, amount };
@@ -62,16 +62,16 @@ export function deserializeMessage(buffer: Buffer): Message {
     // Spl(FinalizeBridgeSpl)
     else if (transferDiscriminator === 1) {
       const remoteToken = reader.readArray20(); // [u8; 20]
-      const localToken = reader.readPublicKey(); // Pubkey (mint)
-      const to = reader.readPublicKey(); // Pubkey
+      const localToken = reader.readAddress(); // Address (mint)
+      const to = reader.readAddress(); // Address
       const amount = reader.readBigUInt64LE(); // u64
 
       transfer = { type: "Spl", remoteToken, localToken, to, amount };
     }
     // WrappedToken(FinalizeBridgeWrappedToken)
     else if (transferDiscriminator === 2) {
-      const localToken = reader.readPublicKey(); // Pubkey (mint)
-      const to = reader.readPublicKey(); // Pubkey
+      const localToken = reader.readAddress(); // Address (mint)
+      const to = reader.readAddress(); // Address
       const amount = reader.readBigUInt64LE(); // u64
 
       transfer = { type: "WrappedToken", localToken, to, amount };
@@ -84,7 +84,7 @@ export function deserializeMessage(buffer: Buffer): Message {
     }
 
     // Read Vec<Ix> after the transfer
-    const ixs = deserializeIxs(reader);
+    const ixs = await deserializeIxs(reader);
 
     return { type: "Transfer", transfer, ixs } as const;
   }
@@ -92,23 +92,23 @@ export function deserializeMessage(buffer: Buffer): Message {
   throw new Error(`Unknown discriminator: ${messageDiscriminator}`);
 }
 
-function deserializeIxs(reader: BufferReader) {
+async function deserializeIxs(reader: BufferReader) {
   // Read Vec length (4 bytes)
   const ixsLength = reader.readUInt32LE();
 
   // Read instructions
   const ixs = [];
   for (let i = 0; i < ixsLength; i++) {
-    const ix = deserializeIx(reader);
+    const ix = await deserializeIx(reader);
     ixs.push(ix);
   }
 
   return ixs;
 }
 
-function deserializeIx(reader: BufferReader) {
+async function deserializeIx(reader: BufferReader) {
   // Read program_id (32 bytes)
-  const programId = reader.readPublicKey();
+  const programAddress = reader.readAddress();
 
   // Read accounts Vec length (4 bytes)
   const accountsLength = reader.readUInt32LE();
@@ -116,7 +116,7 @@ function deserializeIx(reader: BufferReader) {
   // Read accounts
   const accounts = [];
   for (let i = 0; i < accountsLength; i++) {
-    const account = deserializeIxAccount(reader);
+    const account = await deserializeIxAccount(reader);
     accounts.push(account);
   }
 
@@ -126,24 +126,24 @@ function deserializeIx(reader: BufferReader) {
   // Read data
   const data = reader.readBytes(dataLength);
 
-  return { programId, accounts, data };
+  return { programAddress, accounts, data };
 }
 
-function deserializeIxAccount(reader: BufferReader) {
-  const pubkey = deserializePubkeyOrPda(reader);
+async function deserializeIxAccount(reader: BufferReader) {
+  const address = await deserializeAddressOrPda(reader);
 
   const isWritable = reader.readUInt8() === 1;
   const isSigner = reader.readUInt8() === 1;
 
-  return { pubkey, isWritable, isSigner };
+  return { address, isWritable, isSigner };
 }
 
-function deserializePubkeyOrPda(reader: BufferReader) {
+async function deserializeAddressOrPda(reader: BufferReader) {
   const discriminator = reader.readUInt8();
 
   // Pubkey variant
   if (discriminator === 0) {
-    return reader.readPublicKey();
+    return reader.readAddress();
   }
   // PDA variant
   else if (discriminator === 1) {
@@ -156,11 +156,14 @@ function deserializePubkeyOrPda(reader: BufferReader) {
       seeds.push(seed);
     }
 
-    const programId = reader.readPublicKey();
+    const programAddress = reader.readAddress();
 
     // Derive the PDA
-    const [pubkey] = PublicKey.findProgramAddressSync(seeds, programId);
-    return pubkey;
+    const [address] = await getProgramDerivedAddress({
+      seeds,
+      programAddress,
+    });
+    return address;
   }
 
   throw new Error(`Unknown PubkeyOrPda discriminator: ${discriminator}`);
