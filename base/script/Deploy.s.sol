@@ -70,7 +70,9 @@ contract DeployScript is Script {
             implementation: address(bridgeImpl),
             admin: cfg.initialOwner,
             salt: _salt("bridge15"),
-            data: abi.encodeCall(Bridge.initialize, (cfg.initialValidators, cfg.initialThreshold, cfg.initialOwner, cfg.guardians))
+            data: abi.encodeCall(
+                Bridge.initialize, (cfg.initialValidators, cfg.initialThreshold, cfg.initialOwner, cfg.guardians)
+            )
         });
 
         return proxy;

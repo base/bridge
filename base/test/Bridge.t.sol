@@ -934,6 +934,95 @@ contract BridgeTest is Test {
     }
 
     //////////////////////////////////////////////////////////////
+    ///                  Pause Mechanism Tests                 ///
+    //////////////////////////////////////////////////////////////
+
+    function test_pause_blocksBridgeOperations() public {
+        // Set up guardian and pause the bridge
+        address guardian = makeAddr("guardian");
+        vm.startPrank(initialOwner);
+        bridge.grantRoles(guardian, bridge.GUARDIAN_ROLE());
+        vm.stopPrank();
+
+        vm.prank(guardian);
+        bridge.pauseSwitch();
+
+        assertTrue(bridge.paused(), "Bridge should be paused");
+
+        // Test bridgeCall reverts when paused
+        Ix[] memory ixs = new Ix[](1);
+        ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: new bytes[](0), data: hex"deadbeef"});
+
+        vm.expectRevert(Bridge.Paused.selector);
+        vm.prank(user);
+        bridge.bridgeCall(ixs);
+
+        // Test bridgeToken reverts when paused
+        Transfer memory transfer = Transfer({
+            localToken: TokenLib.ETH_ADDRESS,
+            remoteToken: TokenLib.NATIVE_SOL_PUBKEY,
+            to: bytes32(uint256(uint160(user))),
+            remoteAmount: 1e9
+        });
+
+        vm.expectRevert(Bridge.Paused.selector);
+        vm.prank(user);
+        bridge.bridgeToken{value: 1e18}(transfer, new Ix[](0));
+    }
+
+    function test_pauseSwitch_onlyGuardian() public {
+        // Test that non-guardian cannot pause
+        vm.expectRevert(); // Should revert with Unauthorized
+        vm.prank(unauthorizedUser);
+        bridge.pauseSwitch();
+
+        // Grant guardian role and verify they can pause/unpause
+        address guardian = makeAddr("guardian");
+        vm.startPrank(initialOwner);
+        bridge.grantRoles(guardian, bridge.GUARDIAN_ROLE());
+        vm.stopPrank();
+
+        assertFalse(bridge.paused(), "Bridge should start unpaused");
+
+        // Guardian can pause
+        vm.prank(guardian);
+        bridge.pauseSwitch();
+        assertTrue(bridge.paused(), "Bridge should be paused after guardian toggle");
+
+        // Guardian can unpause
+        vm.prank(guardian);
+        bridge.pauseSwitch();
+        assertFalse(bridge.paused(), "Bridge should be unpaused after second guardian toggle");
+    }
+
+    function test_pause_worksNormallyWhenUnpaused() public {
+        // Set up guardian and pause then unpause
+        address guardian = makeAddr("guardian");
+        vm.startPrank(initialOwner);
+        bridge.grantRoles(guardian, bridge.GUARDIAN_ROLE());
+        vm.stopPrank();
+
+        vm.prank(guardian);
+        bridge.pauseSwitch(); // Pause
+
+        vm.prank(guardian);
+        bridge.pauseSwitch(); // Unpause
+
+        assertFalse(bridge.paused(), "Bridge should be unpaused");
+
+        // Test bridgeCall works normally when unpaused
+        Ix[] memory ixs = new Ix[](1);
+        ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: new bytes[](0), data: hex"deadbeef"});
+
+        uint64 initialNonce = bridge.getLastOutgoingNonce();
+
+        vm.prank(user);
+        bridge.bridgeCall(ixs); // Should not revert
+
+        assertEq(bridge.getLastOutgoingNonce(), initialNonce + 1, "Bridge call should succeed when unpaused");
+    }
+
+    //////////////////////////////////////////////////////////////
     ///                  Helper Functions                      ///
     //////////////////////////////////////////////////////////////
 
