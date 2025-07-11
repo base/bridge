@@ -47,21 +47,20 @@ contract HelperConfig is Script {
         //     trustedRelayer: 0x0e9a877906EBc3b7098DA2404412BF0Ed1A5EFb4,
         //     erc1967Factory: ERC1967FactoryConstants.ADDRESS
         // });
+        address BASE_ORACLE = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2;
+        address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
         // Public version
-        address[] memory validators = new address[](3);
-        validators[0] = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
-        validators[1] = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2;
-        validators[2] = 0x0e9a877906EBc3b7098DA2404412BF0Ed1A5EFb4;
+        address[] memory validators = new address[](1);
+        validators[0] = BASE_ORACLE;
 
-        address[] memory guardians = new address[](2);
-        guardians[0] = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733; // Same as initial owner
-        guardians[1] = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2; // Same as trusted relayer
+        address[] memory guardians = new address[](1);
+        guardians[0] = BRIDGE_ADMIN; // Same as initial owner
 
         return NetworkConfig({
-            initialOwner: 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733,
+            initialOwner: BRIDGE_ADMIN,
             remoteBridge: Pubkey.wrap(0x9379502b8fd1d9f6feee747094a08cd0f9b79fbbc7e51a36e2da237ee1506460), // AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH
-            trustedRelayer: 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2,
+            trustedRelayer: BASE_ORACLE,
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             initialValidators: validators,
             initialThreshold: 2,
