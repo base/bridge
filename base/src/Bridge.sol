@@ -421,13 +421,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
         return ISMVerificationLib.isValidator(validator);
     }
 
-    /// @notice Gets the ISM verification owner address.
-    ///
-    /// @return The owner address.
-    function getISMOwner() external view returns (address) {
-        return owner();
-    }
-
     //////////////////////////////////////////////////////////////
     ///                       Internal Functions                ///
     //////////////////////////////////////////////////////////////

@@ -115,15 +115,15 @@ contract ISMVerificationTest is Test {
     ///                   Constructor Tests                    ///
     //////////////////////////////////////////////////////////////
 
-    function test_constructor_setsCorrectThreshold() public {
+    function test_constructor_setsCorrectThreshold() public view {
         assertEq(bridge.getISMThreshold(), 2);
     }
 
-    function test_constructor_setsOwner() public {
-        assertEq(bridge.getISMOwner(), owner);
+    function test_constructor_setsOwner() public view {
+        assertEq(bridge.owner(), owner);
     }
 
-    function test_constructor_setsValidators() public {
+    function test_constructor_setsValidators() public view {
         // Check that all validators are correctly set
         assertTrue(bridge.isISMValidator(validator1));
         assertTrue(bridge.isISMValidator(validator2));
@@ -132,7 +132,7 @@ contract ISMVerificationTest is Test {
         assertFalse(bridge.isISMValidator(nonValidator)); // Should not be a validator
     }
 
-    function test_constructor_setsValidatorCount() public {
+    function test_constructor_setsValidatorCount() public view {
         assertEq(bridge.getISMValidatorCount(), 4);
     }
 
