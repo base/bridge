@@ -288,7 +288,7 @@ library MessageStorageLib {
     ///
     /// @param leafIndex The 0-indexed position of the leaf to prove.
     ///
-    /// @return Hashes of other mountain peaks in right-to-left order.
+    /// @return Hashes of other mountain peaks in left-to-right order.
     function _collectOtherPeaks(uint64 leafIndex) private view returns (bytes32[] memory) {
         MessageStorageLibStorage storage $ = getMessageStorageLibStorage();
 
@@ -298,6 +298,7 @@ library MessageStorageLib {
         uint64 leafOffset = 0;
         uint256 maxHeight = _calculateMaxPossibleHeight($.lastOutgoingNonce);
 
+        // Collect peaks in left-to-right order (largest to smallest mountain)
         for (uint256 h = maxHeight + 1; h > 0; h--) {
             uint256 height = h - 1;
 
@@ -315,11 +316,21 @@ library MessageStorageLib {
             }
         }
 
-        // Copy to exact size array in reverse order (right-to-left for peak bagging)
-        bytes32[] memory peaks = new bytes32[](peakCount);
-        for (uint256 i = 0; i < peakCount; i++) {
-            peaks[i] = tempPeaks[peakCount - 1 - i];
+        // Use assembly to create exact size array without reversal
+        bytes32[] memory peaks;
+        assembly ("memory-safe") {
+            peaks := mload(0x40)
+            mstore(peaks, peakCount)
+            mstore(0x40, add(peaks, add(0x20, mul(peakCount, 0x20))))
+            
+            // Copy elements in natural order (left-to-right)
+            for { let i := 0 } lt(i, peakCount) { i := add(i, 1) } {
+                let sourceIndex := add(tempPeaks, add(0x20, mul(i, 0x20)))
+                let destIndex := add(peaks, add(0x20, mul(i, 0x20)))
+                mstore(destIndex, mload(sourceIndex))
+            }
         }
+        
         return peaks;
     }
 
@@ -349,21 +360,21 @@ library MessageStorageLib {
         return _hashPeaksSequentially(peakIndices);
     }
 
-    /// @notice Hashes all peaks sequentially from right to left.
+    /// @notice Hashes all peaks sequentially from left to right.
     ///
-    /// @param peakIndices Array of peak node indices (ordered from rightmost to leftmost).
+    /// @param peakIndices Array of peak node indices (ordered from leftmost to rightmost).
     ///
     /// @return The final root hash after hashing all peaks.
     function _hashPeaksSequentially(uint256[] memory peakIndices) private view returns (bytes32) {
         MessageStorageLibStorage storage $ = getMessageStorageLibStorage();
 
-        // Start with the rightmost peak (first in our reversed list)
+        // Start with the leftmost peak (first in our left-to-right list)
         bytes32 currentRoot = $.nodes[peakIndices[0]];
 
-        // Sequentially hash with the next peak to the left
+        // Sequentially hash with the next peak to the right
         for (uint256 i = 1; i < peakIndices.length; i++) {
             bytes32 nextPeakHash = $.nodes[peakIndices[i]];
-            currentRoot = _hashInternalNode(nextPeakHash, currentRoot);
+            currentRoot = _hashInternalNode(currentRoot, nextPeakHash);
         }
 
         return currentRoot;
@@ -371,7 +382,7 @@ library MessageStorageLib {
 
     /// @notice Gets the indices of all peak nodes in the MMR.
     ///
-    /// @return The indices of the peak nodes ordered from rightmost to leftmost.
+    /// @return The indices of the peak nodes ordered from leftmost to rightmost.
     function _getPeakNodeIndices() private view returns (uint256[] memory) {
         MessageStorageLibStorage storage $ = getMessageStorageLibStorage();
         return _getPeakNodeIndicesForLeafCount($.lastOutgoingNonce);
@@ -381,7 +392,7 @@ library MessageStorageLib {
     ///
     /// @param leafCount The number of leaves to calculate peaks for.
     ///
-    /// @return The indices of the peak nodes ordered from rightmost to leftmost.
+    /// @return The indices of the peak nodes ordered from leftmost to rightmost.
     function _getPeakNodeIndicesForLeafCount(uint64 leafCount) private pure returns (uint256[] memory) {
         if (leafCount == 0) {
             return new uint256[](0);
@@ -390,25 +401,38 @@ library MessageStorageLib {
         uint256[] memory tempPeakIndices = new uint256[](_MAX_PEAKS);
         uint256 peakCount = 0;
         uint256 nodeOffset = 0;
-        uint64 remainingLeaves = leafCount;
 
         uint256 maxHeight = _calculateMaxPossibleHeight(leafCount);
 
-        // Process each possible height from largest to smallest
+        // Process each possible height from largest to smallest (left-to-right)
         for (uint256 height = maxHeight + 1; height > 0; height--) {
             uint256 currentHeight = height - 1;
-            if (_hasCompleteMountainAtHeight(remainingLeaves, currentHeight)) {
+            if (_hasCompleteMountainAtHeight(leafCount, currentHeight)) {
                 uint256 peakIndex = _calculatePeakIndex(nodeOffset, currentHeight);
                 tempPeakIndices[peakCount] = peakIndex;
                 peakCount++;
 
                 // Update state for next iteration
                 nodeOffset += _calculateMountainSize(currentHeight);
-                remainingLeaves -= uint64(1 << currentHeight);
             }
         }
 
-        return _reversePeakIndices(tempPeakIndices, peakCount);
+        // Use assembly to create exact size array without reversal
+        uint256[] memory peakIndices;
+        assembly ("memory-safe") {
+            peakIndices := mload(0x40)
+            mstore(peakIndices, peakCount)
+            mstore(0x40, add(peakIndices, add(0x20, mul(peakCount, 0x20))))
+            
+            // Copy elements in natural order (left-to-right)
+            for { let i := 0 } lt(i, peakCount) { i := add(i, 1) } {
+                let sourceIndex := add(tempPeakIndices, add(0x20, mul(i, 0x20)))
+                let destIndex := add(peakIndices, add(0x20, mul(i, 0x20)))
+                mstore(destIndex, mload(sourceIndex))
+            }
+        }
+        
+        return peakIndices;
     }
 
     /// @notice Checks if nodes should be merged at the given height based on leaf count.
@@ -479,23 +503,7 @@ library MessageStorageLib {
         return (1 << (height + 1)) - 1;
     }
 
-    /// @notice Reverses the peak indices array to get the correct order.
-    ///
-    /// @param tempPeakIndices Temporary array containing peak indices.
-    /// @param peakCount Number of peaks found.
-    ///
-    /// @return Reversed array of peak indices.
-    function _reversePeakIndices(uint256[] memory tempPeakIndices, uint256 peakCount)
-        private
-        pure
-        returns (uint256[] memory)
-    {
-        uint256[] memory peakIndices = new uint256[](peakCount);
-        for (uint256 i = 0; i < peakCount; i++) {
-            peakIndices[i] = tempPeakIndices[peakCount - 1 - i];
-        }
-        return peakIndices;
-    }
+
 
     /// @notice Hashes two node hashes together.
     ///

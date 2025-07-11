@@ -46,7 +46,7 @@ library ISMVerificationLib {
     //////////////////////////////////////////////////////////////
 
     /// @notice Emitted whenever the threshold is updated.
-    event ThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+    event ThresholdUpdated(uint256 newThreshold);
 
     /// @notice Emitted whenever a validator is added.
     event ValidatorAdded(address validator);
@@ -63,6 +63,9 @@ library ISMVerificationLib {
 
     /// @notice Thrown when the signature length is invalid.
     error InvalidSignatureLength();
+
+    /// @notice Thrown when a validator address is 0.
+    error InvalidValidatorAddress();
 
     /// @notice Thrown when a validator is already added.
     error ValidatorAlreadyAdded();
@@ -102,6 +105,8 @@ library ISMVerificationLib {
         require(threshold > 0 && threshold <= validators.length, InvalidThreshold());
 
         for (uint128 i = 0; i < validators.length; i++) {
+            require(validators[i] != address(0), InvalidValidatorAddress());
+            require(!$.validators[validators[i]], ValidatorAlreadyAdded());
             $.validators[validators[i]] = true;
         }
         $.validatorCount = uint128(validators.length);
@@ -115,10 +120,9 @@ library ISMVerificationLib {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
         require(newThreshold > 0 && newThreshold <= $.validatorCount, InvalidThreshold());
 
-        uint256 oldThreshold = $.threshold;
         $.threshold = newThreshold;
 
-        emit ThresholdUpdated(oldThreshold, newThreshold);
+        emit ThresholdUpdated(newThreshold);
     }
 
     /// @notice Add a validator to the set
@@ -126,6 +130,7 @@ library ISMVerificationLib {
     /// @param validator Address to add as validator
     function addValidator(address validator) internal {
         ISMVerificationLibStorage storage $ = getISMVerificationLibStorage();
+        require(validator != address(0), InvalidValidatorAddress());
         require(!$.validators[validator], ValidatorAlreadyAdded());
 
         $.validators[validator] = true;

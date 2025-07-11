@@ -7,4 +7,8 @@ contract Counter {
     function increment() external {
         count++;
     }
+
+    function incrementPayable() external payable {
+        count++;
+    }
 }

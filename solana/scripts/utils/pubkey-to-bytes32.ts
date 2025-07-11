@@ -1,10 +1,10 @@
-import { PublicKey } from "@solana/web3.js";
+import { getBase58Codec } from "@solana/kit";
+import { CONSTANTS } from "../constants";
 
-const PUBKEY = "6bmM7CK2yfP4M7KGHmb6Q3b7yCKcdkGQYKszSLwwfpmD";
+const ADDRESS = CONSTANTS["devnet-alpha"].wEthAta;
 
 function main() {
-  const pubKey = new PublicKey(PUBKEY);
-  const bytes32 = pubKey.toBuffer().toString("hex");
+  const bytes32 = getBase58Codec().encode(ADDRESS).toHex();
   console.log({ bytes32 });
 }
 
