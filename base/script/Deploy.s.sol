@@ -80,9 +80,9 @@ contract DeployScript is Script {
         private
         returns (address)
     {
-        address erc20 = address(new CrossChainERC20(precomputedBridgeAddress));
+        address erc20Impl = address(new CrossChainERC20(precomputedBridgeAddress));
         address erc20Beacon =
-            address(new UpgradeableBeacon({initialOwner: cfg.initialOwner, initialImplementation: erc20}));
+            address(new UpgradeableBeacon({initialOwner: cfg.initialOwner, initialImplementation: erc20Impl}));
 
         CrossChainERC20Factory xChainERC20FactoryImpl = new CrossChainERC20Factory(erc20Beacon);
         CrossChainERC20Factory xChainERC20Factory = CrossChainERC20Factory(
