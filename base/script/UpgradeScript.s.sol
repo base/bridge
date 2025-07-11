@@ -18,10 +18,10 @@ contract UpgradeScript is Script {
     using stdJson for string;
 
     // Upgrade Config:
-    bool upgradeTwin = true; // MODIFY THIS WHEN UPGRADING
-    bool upgradeERC20 = true; // MODIFY THIS WHEN UPGRADING
-    bool upgradeERC20Factory = true; // MODIFY THIS WHEN UPGRADING
-    bool upgradeBridge = true; // MODIFY THIS WHEN UPGRADING
+    bool upgradeTwin = false; // MODIFY THIS WHEN UPGRADING
+    bool upgradeERC20 = false; // MODIFY THIS WHEN UPGRADING
+    bool upgradeERC20Factory = false; // MODIFY THIS WHEN UPGRADING
+    bool upgradeBridge = false; // MODIFY THIS WHEN UPGRADING
 
     // Deployment addresss
     address bridgeAddress;
