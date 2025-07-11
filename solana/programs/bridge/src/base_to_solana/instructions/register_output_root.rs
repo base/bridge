@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     base_to_solana::{
-        constants::{OUTPUT_ROOT_SEED, TRUSTED_ORACLE, TRUSTED_VALIDATOR},
+        constants::{OUTPUT_ROOT_SEED, TRUSTED_ORACLE},
         state::OutputRoot,
     },
     common::{bridge::Bridge, BRIDGE_SEED},
