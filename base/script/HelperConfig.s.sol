@@ -16,6 +16,7 @@ contract HelperConfig is Script {
         address erc1967Factory;
         address[] initialValidators;
         uint128 initialThreshold;
+        address[] guardians;
     }
 
     NetworkConfig private _activeNetworkConfig;
@@ -53,13 +54,18 @@ contract HelperConfig is Script {
         validators[1] = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2;
         validators[2] = 0x0e9a877906EBc3b7098DA2404412BF0Ed1A5EFb4;
 
+        address[] memory guardians = new address[](2);
+        guardians[0] = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733; // Same as initial owner
+        guardians[1] = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2; // Same as trusted relayer
+
         return NetworkConfig({
             initialOwner: 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733,
             remoteBridge: Pubkey.wrap(0x9379502b8fd1d9f6feee747094a08cd0f9b79fbbc7e51a36e2da237ee1506460), // AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH
             trustedRelayer: 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2,
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             initialValidators: validators,
-            initialThreshold: 2
+            initialThreshold: 2,
+            guardians: guardians
         });
     }
 
@@ -76,13 +82,17 @@ contract HelperConfig is Script {
         validators[1] = vm.addr(0x2); // VALIDATOR2_KEY
         validators[2] = vm.addr(0x3); // VALIDATOR3_KEY
 
+        address[] memory guardians = new address[](1);
+        guardians[0] = makeAddr("guardian"); // Single guardian for local testing
+
         return NetworkConfig({
             initialOwner: makeAddr("initialOwner"),
             remoteBridge: Pubkey.wrap(0xc4c16980efe2a570c1a7599fd2ebb40ca7f85daf897482b9c85d4b8933a61608),
             trustedRelayer: makeAddr("trustedRelayer"),
             erc1967Factory: address(f),
             initialValidators: validators,
-            initialThreshold: 2
+            initialThreshold: 2,
+            guardians: guardians
         });
     }
 }

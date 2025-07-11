@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Ownable} from "solady/auth/Ownable.sol";
+import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {ReentrancyGuardTransient} from "solady/utils/ReentrancyGuardTransient.sol";
@@ -22,7 +22,7 @@ import {ISMVerificationLib} from "./libraries/ISMVerificationLib.sol";
 /// @notice The Bridge enables sending calls from Solana to Base.
 ///
 /// @dev Calls sent from Solana to Base are relayed via a Twin contract that is specific per Solana sender pubkey.
-contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
+contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
@@ -46,6 +46,9 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
 
     /// @notice Address of the CrossChainERC20Factory.
     address public immutable CROSS_CHAIN_ERC20_FACTORY;
+
+    /// @notice Guardian Role to pause the bridge.
+    uint256 private constant GUARDIAN_ROLE = 1 << 0;
 
     /// @notice Gas required to run the execution prologue section of `__validateAndRelay`.
     ///
@@ -98,6 +101,9 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     /// @notice The nonce used for the next incoming message relayed.
     uint64 public nextIncomingNonce;
 
+    /// @notice Whether the bridge is paused.
+    bool public paused;
+
     //////////////////////////////////////////////////////////////
     ///                       Events                           ///
     //////////////////////////////////////////////////////////////
@@ -145,6 +151,18 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     /// @notice Thrown when an Anchor instruction is invalid.
     error UnsafeIxTarget();
 
+    /// @notice Thrown when the bridge is paused.
+    error Paused();
+
+    //////////////////////////////////////////////////////////////
+    ///                       Modifiers                        ///
+    //////////////////////////////////////////////////////////////
+
+    modifier whenNotPaused() {
+        require(!paused, Paused());
+        _;
+    }
+
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
     //////////////////////////////////////////////////////////////
@@ -172,9 +190,14 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     /// @param validators Array of validator addresses for ISM verification.
     /// @param threshold The ISM verification threshold.
     /// @param ismOwner The owner of the ISM verification system.
-    function initialize(address[] calldata validators, uint128 threshold, address ismOwner) external initializer {
+    function initialize(address[] calldata validators, uint128 threshold, address ismOwner, address[] calldata guardians) external initializer {
         // Initialize ownership
         _initializeOwner(ismOwner);
+
+        // Initialize guardians
+        for (uint256 i; i < guardians.length; i++) {
+            _grantRoles(guardians[i], GUARDIAN_ROLE);
+        }
 
         // Initialize ISM verification library
         ISMVerificationLib.initialize(validators, threshold);
@@ -242,7 +265,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     /// @notice Bridges a call to the Solana bridge.
     ///
     /// @param ixs The Solana instructions.
-    function bridgeCall(Ix[] memory ixs) external {
+    function bridgeCall(Ix[] memory ixs) external whenNotPaused {
         MessageStorageLib.sendMessage({sender: msg.sender, data: SVMBridgeLib.serializeCall(ixs)});
     }
 
@@ -253,7 +276,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     ///
     /// @param transfer The token transfer to execute.
     /// @param ixs The optional Solana instructions.
-    function bridgeToken(Transfer memory transfer, Ix[] memory ixs) external payable {
+    function bridgeToken(Transfer memory transfer, Ix[] memory ixs) external payable whenNotPaused {
         // IMPORTANT: The `TokenLib.initializeTransfer` function might modify the `transfer.remoteAmount` field to
         //            account for potential transfer fees.
         SolanaTokenType transferType =
@@ -270,7 +293,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
     ///
     /// @param messages The messages to relay.
     /// @param ismData Encoded ISM data used to verify the messages.
-    function relayMessages(IncomingMessage[] calldata messages, bytes calldata ismData) external nonReentrant {
+    function relayMessages(IncomingMessage[] calldata messages, bytes calldata ismData) external nonReentrant whenNotPaused {
         bool isTrustedRelayer = msg.sender == TRUSTED_RELAYER;
         if (isTrustedRelayer) {
             require(ISMVerificationLib.isApproved(messages, ismData), ISMVerificationFailed());
@@ -280,6 +303,13 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
             IncomingMessage calldata message = messages[i];
             this.__validateAndRelay{gas: message.gasLimit}({message: message, isTrustedRelayer: isTrustedRelayer});
         }
+    }
+
+    /// @notice Pauses or unpauses the bridge.
+    ///
+    /// @dev This function can only be called by a guardian.
+    function pauseSwitch() external onlyRoles(GUARDIAN_ROLE) {
+        paused = !paused;
     }
 
     /// @notice Validates and relays a message sent from Solana to Base.
@@ -421,11 +451,9 @@ contract Bridge is ReentrancyGuardTransient, Initializable, Ownable {
         return ISMVerificationLib.isValidator(validator);
     }
 
-    /// @notice Gets the ISM verification owner address.
-    ///
-    /// @return The owner address.
-    function getISMOwner() external view returns (address) {
-        return owner();
+    /// @notice Pauses the bridge.
+    function pause() external onlyOwner {
+        paused = true;
     }
 
     //////////////////////////////////////////////////////////////

@@ -84,7 +84,7 @@ contract ISMVerificationTest is Test {
             implementation: address(bridgeImpl),
             admin: owner,
             salt: _salt(bytes12("bridge")),
-            data: abi.encodeCall(Bridge.initialize, (validators, 2, owner))
+            data: abi.encodeCall(Bridge.initialize, (validators, 2, owner, new address[](0)))
         });
 
         bridge = Bridge(bridgeAddr);
@@ -117,10 +117,6 @@ contract ISMVerificationTest is Test {
 
     function test_constructor_setsCorrectThreshold() public {
         assertEq(bridge.getISMThreshold(), 2);
-    }
-
-    function test_constructor_setsOwner() public {
-        assertEq(bridge.getISMOwner(), owner);
     }
 
     function test_constructor_setsValidators() public {
@@ -158,7 +154,7 @@ contract ISMVerificationTest is Test {
         });
 
         vm.expectRevert(); // Library will revert with InvalidThreshold
-        testBridge1.initialize({validators: validators, threshold: 0, ismOwner: owner});
+        testBridge1.initialize({validators: validators, threshold: 0, ismOwner: owner, guardians: new address[](0)});
 
         // Test threshold > validator count
         Bridge testBridge2 = new Bridge({
@@ -169,7 +165,7 @@ contract ISMVerificationTest is Test {
         });
 
         vm.expectRevert(); // Library will revert with InvalidThreshold
-        testBridge2.initialize({validators: validators, threshold: 3, ismOwner: owner});
+        testBridge2.initialize({validators: validators, threshold: 3, ismOwner: owner, guardians: new address[](0)});
     }
 
     function test_constructor_revertsWithEmptyValidatorsAndNonZeroThreshold() public {
@@ -191,7 +187,7 @@ contract ISMVerificationTest is Test {
         });
 
         vm.expectRevert(); // Library will revert with InvalidThreshold
-        testBridge3.initialize({validators: validators, threshold: 1, ismOwner: owner});
+        testBridge3.initialize({validators: validators, threshold: 1, ismOwner: owner, guardians: new address[](0)});
     }
 
     function test_constructor_allowsEmptyValidatorsWithZeroThreshold() public {
@@ -214,7 +210,7 @@ contract ISMVerificationTest is Test {
         });
 
         vm.expectRevert(); // Library will revert with InvalidThreshold
-        testBridge4.initialize({validators: validators, threshold: 0, ismOwner: owner});
+        testBridge4.initialize({validators: validators, threshold: 0, ismOwner: owner, guardians: new address[](0)});
     }
 
     //////////////////////////////////////////////////////////////
