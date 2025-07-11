@@ -37,7 +37,7 @@ mod private {
         use super::*;
 
         #[constant]
-        pub const TRUSTED_ORACLE: Pubkey = pubkey!("6FfuqkJTptvr6dCZnyp3tq3M4HkvyTE5DHyvqC537Lqt");
+        pub const TRUSTED_ORACLE: Pubkey = pubkey!("CB8GXDdZDSD5uqfeow1qfp48ouayxXGpw7ycmoovuQMX");
         
         #[constant]
         pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("9n3vTKJ49M4Xk3MhiCZY4LxXAdeEaDMVMuGxDwt54Hgx");
