@@ -17,8 +17,10 @@ mod private {
         #[constant]
         pub const TRUSTED_ORACLE: Pubkey = pubkey!("eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt");
         
+
+        // TODO: Update the address later when we have a trusted validator
         #[constant]
-        pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("9n3vTKJ49M4Xk3MhiCZY4LxXAdeEaDMVMuGxDwt54Hgx");
+        pub const TRUSTED_VALIDATOR: Pubkey = Pubkey::default();
     }
 
     #[cfg(all(feature = "devnet", feature = "prod"))]
@@ -28,8 +30,9 @@ mod private {
         #[constant]
         pub const TRUSTED_ORACLE: Pubkey = pubkey!("4vTj5kmBrmds3zWogiyUxtZPggcVUmG44EXRy2CxTcEZ");
         
+        // TODO: Update the address later when we have a trusted validator
         #[constant]
-        pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("9n3vTKJ49M4Xk3MhiCZY4LxXAdeEaDMVMuGxDwt54Hgx");
+        pub const TRUSTED_VALIDATOR: Pubkey = Pubkey::default();
     }
 
     #[cfg(not(any(feature = "devnet")))]
