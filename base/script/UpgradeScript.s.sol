@@ -2,10 +2,12 @@
 pragma solidity 0.8.28;
 
 import {Script} from "forge-std/Script.sol";
-import {console} from "forge-std/console.sol";
+
 import {stdJson} from "forge-std/StdJson.sol";
-import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
+import {console} from "forge-std/console.sol";
+
 import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
+import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
 import {Bridge} from "../src/Bridge.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
@@ -67,7 +69,7 @@ contract UpgradeScript is Script {
             _upgradeBridge(cfg, bridgeAddress, twinAddress, erc20FactoryAddress);
         }
 
-         vm.stopBroadcast();
+        vm.stopBroadcast();
     }
 
     function _readDeploymentFile(Chain memory chain) internal view returns (address, address, address) {
@@ -93,7 +95,8 @@ contract UpgradeScript is Script {
         // Deploy new erc20 implementation
         address erc20Impl = address(new CrossChainERC20(currentBridgeAddress));
 
-        // Upgrade CrossChainERC20Beacon to new implementation --> This will automatically upgrade the Factory contract as well
+        // Upgrade CrossChainERC20Beacon to new implementation --> This will automatically upgrade the Factory contract
+        // as well
         UpgradeableBeacon beacon = UpgradeableBeacon(currentBeaconAddress);
         beacon.upgradeTo(erc20Impl);
         console.log("Upgraded CrossChainERC20Beacon!");
@@ -119,12 +122,14 @@ contract UpgradeScript is Script {
         address currentTwinAddress,
         address currentFactoryAddress
     ) internal {
-        address bridgeImpl = address(new Bridge({
-            remoteBridge: cfg.remoteBridge,
-            trustedRelayer: cfg.trustedRelayer,
-            twinBeacon: currentTwinAddress,
-            crossChainErc20Factory: currentFactoryAddress
-        }));
+        address bridgeImpl = address(
+            new Bridge({
+                remoteBridge: cfg.remoteBridge,
+                trustedRelayer: cfg.trustedRelayer,
+                twinBeacon: currentTwinAddress,
+                crossChainErc20Factory: currentFactoryAddress
+            })
+        );
 
         console.log("Deployed new Bridge implementation: %s", bridgeImpl);
         // Use ERC1967Factory to upgrade the proxy
@@ -139,4 +144,3 @@ contract UpgradeScript is Script {
         return bytes32(packed);
     }
 }
-
