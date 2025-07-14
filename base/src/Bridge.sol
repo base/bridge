@@ -275,7 +275,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Bridges a call to the Solana bridge.
     ///
     /// @param ixs The Solana instructions.
-    function bridgeCall(Ix[] memory ixs) external whenNotPaused {
+    function bridgeCall(Ix[] memory ixs) external nonReentrant whenNotPaused {
         MessageStorageLib.sendMessage({sender: msg.sender, data: SVMBridgeLib.serializeCall(ixs)});
     }
 
@@ -286,7 +286,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///
     /// @param transfer The token transfer to execute.
     /// @param ixs The optional Solana instructions.
-    function bridgeToken(Transfer memory transfer, Ix[] memory ixs) external payable whenNotPaused {
+    function bridgeToken(Transfer memory transfer, Ix[] memory ixs) external payable nonReentrant whenNotPaused {
         // IMPORTANT: The `TokenLib.initializeTransfer` function might modify the `transfer.remoteAmount` field to
         //            account for potential transfer fees.
         SolanaTokenType transferType =
