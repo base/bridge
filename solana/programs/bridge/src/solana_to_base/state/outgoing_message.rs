@@ -95,6 +95,10 @@ pub struct OutgoingMessage {
     /// Each sender maintains their own nonce sequence starting from 0.
     pub nonce: u64,
 
+    /// The Solana public key of the account that paid for the message.
+    /// This is needed to refund the payer once the message has been relayed to Base.
+    pub payer: Pubkey,
+
     /// The Solana public key of the account that initiated this cross-chain message.
     /// This is used for authentication and to identify the message originator on Base.
     pub sender: Pubkey,
@@ -109,18 +113,26 @@ pub struct OutgoingMessage {
 }
 
 impl OutgoingMessage {
-    pub fn new_call(nonce: u64, sender: Pubkey, gas_limit: u64, call: Call) -> Self {
+    pub fn new_call(nonce: u64, payer: Pubkey, sender: Pubkey, gas_limit: u64, call: Call) -> Self {
         Self {
             nonce,
+            payer,
             sender,
             gas_limit,
             message: Message::Call(call),
         }
     }
 
-    pub fn new_transfer(nonce: u64, sender: Pubkey, gas_limit: u64, transfer: Transfer) -> Self {
+    pub fn new_transfer(
+        nonce: u64,
+        payer: Pubkey,
+        sender: Pubkey,
+        gas_limit: u64,
+        transfer: Transfer,
+    ) -> Self {
         Self {
             nonce,
+            payer,
             sender,
             gas_limit,
             message: Message::Transfer(transfer),

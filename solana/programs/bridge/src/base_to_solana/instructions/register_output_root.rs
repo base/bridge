@@ -58,15 +58,21 @@ pub struct RegisterOutputRoot<'info> {
 pub fn register_output_root_handler(
     ctx: Context<RegisterOutputRoot>,
     output_root: [u8; 32],
-    block_number: u64,
+    base_block_number: u64,
+    base_last_relayed_nonce: u64,
 ) -> Result<()> {
     require!(
-        block_number > ctx.accounts.bridge.base_block_number && block_number % 300 == 0,
+        base_block_number > ctx.accounts.bridge.base_block_number && base_block_number % 300 == 0,
         RegisterOutputRootError::IncorrectBlockNumber
+    );
+    require!(
+        base_last_relayed_nonce > ctx.accounts.bridge.base_last_relayed_nonce,
+        RegisterOutputRootError::IncorrectLastRelayedNonce
     );
 
     ctx.accounts.root.root = output_root;
-    ctx.accounts.bridge.base_block_number = block_number;
+    ctx.accounts.bridge.base_block_number = base_block_number;
+    ctx.accounts.bridge.base_last_relayed_nonce = base_last_relayed_nonce;
 
     Ok(())
 }
@@ -77,6 +83,8 @@ pub enum RegisterOutputRootError {
     Unauthorized,
     #[msg("IncorrectBlockNumber")]
     IncorrectBlockNumber,
+    #[msg("IncorrectLastRelayedNonce")]
+    IncorrectLastRelayedNonce,
 }
 
 // TODO: Uncomment this when we have a trusted validator

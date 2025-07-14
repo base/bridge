@@ -58,6 +58,7 @@ pub fn bridge_call_handler(ctx: Context<BridgeCall>, gas_limit: u64, call: Call)
 
     let message = OutgoingMessage::new_call(
         ctx.accounts.bridge.nonce,
+        ctx.accounts.payer.key(),
         ctx.accounts.from.key(),
         gas_limit,
         call,

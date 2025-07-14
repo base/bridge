@@ -13,7 +13,7 @@ use base_to_solana::*;
 use common::*;
 use solana_to_base::*;
 
-declare_id!("AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH");
+declare_id!("4L8cUU2DXTzEaa5C8MWLTyEV8dpmpDbCjg8DNgUuGedc");
 
 #[program]
 pub mod bridge {
@@ -30,6 +30,10 @@ pub mod bridge {
         initialize_handler(ctx)
     }
 
+    pub fn close_outgoing_message(ctx: Context<CloseOutgoingMessage>) -> Result<()> {
+        close_outgoing_message_handler(ctx)
+    }
+
     // Base -> Solana
 
     /// Registers an output root from Base to enable message verification.
@@ -43,9 +47,10 @@ pub mod bridge {
     pub fn register_output_root(
         ctx: Context<RegisterOutputRoot>,
         output_root: [u8; 32],
-        block_number: u64,
+        base_block_number: u64,
+        base_last_relayed_nonce: u64,
     ) -> Result<()> {
-        register_output_root_handler(ctx, output_root, block_number)
+        register_output_root_handler(ctx, output_root, base_block_number, base_last_relayed_nonce)
     }
 
     /// Proves that a cross-chain message exists in the Base Bridge contract using an MMR proof.

@@ -129,6 +129,7 @@ pub fn bridge_spl_handler(
 
     let message = OutgoingMessage::new_transfer(
         ctx.accounts.bridge.nonce,
+        ctx.accounts.payer.key(),
         ctx.accounts.from.key(),
         gas_limit,
         TransferOp {

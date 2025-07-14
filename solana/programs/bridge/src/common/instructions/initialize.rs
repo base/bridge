@@ -38,7 +38,8 @@ pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
 
     *ctx.accounts.bridge = Bridge {
         base_block_number: 0,
-        nonce: 0,
+        base_last_relayed_nonce: 0,
+        nonce: 1, // Starts the first nonce at 1 so that 0 can safely be used to initialize `base_last_relayed_nonce`
         eip1559: Eip1559::new(current_timestamp),
     };
 
@@ -118,7 +119,8 @@ mod tests {
             bridge,
             Bridge {
                 base_block_number: 0,
-                nonce: 0,
+                base_last_relayed_nonce: 0,
+                nonce: 1,
                 eip1559: Eip1559::new(timestamp),
             }
         );
