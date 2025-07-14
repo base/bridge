@@ -25,7 +25,6 @@ import {
   getPayer,
   getRpc,
 } from "../utils/transaction";
-// import { deserializeMessage } from "../utils/deserializer";
 
 const MESSAGE_HASH =
   "0x5a1e91ae8594a7e58ae2aa213954d7733a5e90b276a37d62800ec00a97e7e66d";
