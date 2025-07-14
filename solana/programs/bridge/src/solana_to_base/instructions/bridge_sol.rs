@@ -4,7 +4,7 @@ use anchor_lang::{
 };
 
 use crate::{
-    common::{bridge::Bridge, BRIDGE_SEED, SOL_VAULT_SEED},
+    common::{bridge::{Bridge, BridgeError}, BRIDGE_SEED, SOL_VAULT_SEED},
     solana_to_base::{
         check_and_pay_for_gas, check_call, Call, OutgoingMessage, Transfer as TransferOp,
         GAS_FEE_RECEIVER, NATIVE_SOL_PUBKEY,
@@ -52,6 +52,9 @@ pub fn bridge_sol_handler(
     amount: u64,
     call: Option<Call>,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
+    
     if let Some(call) = &call {
         check_call(call)?;
     }

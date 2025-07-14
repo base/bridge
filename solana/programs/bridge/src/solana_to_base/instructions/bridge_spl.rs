@@ -5,7 +5,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use crate::common::PartialTokenMetadata;
 use crate::solana_to_base::{check_and_pay_for_gas, check_call};
 use crate::{
-    common::{bridge::Bridge, BRIDGE_SEED, TOKEN_VAULT_SEED},
+    common::{bridge::{Bridge, BridgeError}, BRIDGE_SEED, TOKEN_VAULT_SEED},
     solana_to_base::{Call, OutgoingMessage, Transfer as TransferOp, GAS_FEE_RECEIVER},
 };
 
@@ -60,6 +60,9 @@ pub fn bridge_spl_handler(
     amount: u64,
     call: Option<Call>,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
+    
     if let Some(call) = &call {
         check_call(call)?;
     }

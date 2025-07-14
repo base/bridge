@@ -10,6 +10,9 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// The owner of the bridge who will have administrative privileges
+    pub owner: Signer<'info>,
+
     #[account(
         init,
         payer = payer,
@@ -29,6 +32,9 @@ pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
         base_block_number: 0,
         nonce: 0,
         eip1559: Eip1559::new(current_timestamp),
+        owner: ctx.accounts.owner.key(),
+        guardians: Vec::new(),
+        paused: false,
     };
 
     Ok(())
@@ -74,6 +80,7 @@ mod tests {
         // Build the Initialize instruction accounts
         let accounts = accounts::Initialize {
             payer: payer_pk,
+            owner: payer_pk, // Mock owner for testing
             bridge: bridge_pda,
             system_program: system_program::ID,
         }
@@ -109,6 +116,9 @@ mod tests {
                 base_block_number: 0,
                 nonce: 0,
                 eip1559: Eip1559::new(timestamp),
+                owner: payer_pk,
+                guardians: Vec::new(),
+                paused: false,
             }
         );
     }

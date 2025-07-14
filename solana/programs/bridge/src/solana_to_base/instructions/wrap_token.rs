@@ -14,7 +14,7 @@ use anchor_spl::token_interface::{
 };
 use spl_type_length_value::variable_len_pack::VariableLenPack;
 
-use crate::common::{bridge::Bridge, PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED};
+use crate::common::{bridge::{Bridge, BridgeError}, PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED};
 use crate::solana_to_base::{
     check_and_pay_for_gas, Call, CallType, OutgoingMessage, GAS_FEE_RECEIVER,
 };
@@ -74,6 +74,9 @@ pub fn wrap_token_handler(
     partial_token_metadata: PartialTokenMetadata,
     gas_limit: u64,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
+    
     initialize_metadata(&ctx, decimals, &partial_token_metadata)?;
 
     register_remote_token(
