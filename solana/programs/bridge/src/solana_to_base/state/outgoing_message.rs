@@ -51,24 +51,33 @@ pub enum Message {
 #[derive(Debug, Eq, PartialEq)]
 pub struct OutgoingMessage {
     pub nonce: u64,
+    pub payer: Pubkey,
     pub sender: Pubkey,
     pub gas_limit: u64,
     pub message: Message,
 }
 
 impl OutgoingMessage {
-    pub fn new_call(nonce: u64, sender: Pubkey, gas_limit: u64, call: Call) -> Self {
+    pub fn new_call(nonce: u64, payer: Pubkey, sender: Pubkey, gas_limit: u64, call: Call) -> Self {
         Self {
             nonce,
+            payer,
             sender,
             gas_limit,
             message: Message::Call(call),
         }
     }
 
-    pub fn new_transfer(nonce: u64, sender: Pubkey, gas_limit: u64, transfer: Transfer) -> Self {
+    pub fn new_transfer(
+        nonce: u64,
+        payer: Pubkey,
+        sender: Pubkey,
+        gas_limit: u64,
+        transfer: Transfer,
+    ) -> Self {
         Self {
             nonce,
+            payer,
             sender,
             gas_limit,
             message: Message::Transfer(transfer),

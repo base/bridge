@@ -25,14 +25,19 @@ pub mod bridge {
         initialize_handler(ctx)
     }
 
+    pub fn close_outgoing_message(ctx: Context<CloseOutgoingMessage>) -> Result<()> {
+        close_outgoing_message_handler(ctx)
+    }
+
     // Base -> Solana
 
     pub fn register_output_root(
         ctx: Context<RegisterOutputRoot>,
         output_root: [u8; 32],
-        block_number: u64,
+        base_block_number: u64,
+        base_last_relayed_nonce: u64,
     ) -> Result<()> {
-        register_output_root_handler(ctx, output_root, block_number)
+        register_output_root_handler(ctx, output_root, base_block_number, base_last_relayed_nonce)
     }
 
     pub fn prove_message(
