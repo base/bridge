@@ -25,24 +25,6 @@ pub mod bridge {
         initialize_handler(ctx)
     }
 
-    // Pause Management
-
-    pub fn add_guardian(ctx: Context<AddGuardian>, guardian: Pubkey) -> Result<()> {
-        add_guardian_handler(ctx, guardian)
-    }
-
-    pub fn remove_guardian(ctx: Context<RemoveGuardian>, guardian: Pubkey) -> Result<()> {
-        remove_guardian_handler(ctx, guardian)
-    }
-
-    pub fn pause_switch(ctx: Context<PauseSwitch>) -> Result<()> {
-        pause_switch_handler(ctx)
-    }
-
-    pub fn transfer_ownership(ctx: Context<TransferOwnership>, new_owner: Pubkey) -> Result<()> {
-        transfer_ownership_handler(ctx, new_owner)
-    }
-
     // Base -> Solana
 
     pub fn register_output_root(

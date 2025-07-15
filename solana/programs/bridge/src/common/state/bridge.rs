@@ -17,55 +17,14 @@ pub struct Bridge {
     pub nonce: u64,
     /// EIP-1559 state for dynamic pricing.
     pub eip1559: Eip1559,
-    /// Owner of the bridge with administrative privileges.
-    pub owner: Pubkey,
-    /// Guardians who can pause/unpause the bridge.
-    #[max_len(10)]
-    pub guardians: Vec<Pubkey>,
-    /// Whether the bridge is currently paused.
+    /// Whether the bridge is currently paused (hardcoded to false, upgradeable only by authority).
     pub paused: bool,
-}
-
-impl Bridge {
-    pub const MAX_GUARDIANS: usize = 10;
-    
-    pub fn is_guardian(&self, pubkey: &Pubkey) -> bool {
-        self.guardians.contains(pubkey)
-    }
-    
-    pub fn add_guardian(&mut self, guardian: Pubkey) -> Result<()> {
-        require!(
-            self.guardians.len() < Self::MAX_GUARDIANS,
-            BridgeError::TooManyGuardians
-        );
-        require!(
-            !self.is_guardian(&guardian),
-            BridgeError::GuardianAlreadyExists
-        );
-        self.guardians.push(guardian);
-        Ok(())
-    }
-    
-    pub fn remove_guardian(&mut self, guardian: &Pubkey) -> Result<()> {
-        let index = self.guardians.iter().position(|g| g == guardian)
-            .ok_or(BridgeError::GuardianNotFound)?;
-        self.guardians.remove(index);
-        Ok(())
-    }
 }
 
 #[error_code]
 pub enum BridgeError {
-    #[msg("Unauthorized access")]
-    Unauthorized,
     #[msg("Bridge is paused")]
     BridgePaused,
-    #[msg("Too many guardians")]
-    TooManyGuardians,
-    #[msg("Guardian already exists")]
-    GuardianAlreadyExists,
-    #[msg("Guardian not found")]
-    GuardianNotFound,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
