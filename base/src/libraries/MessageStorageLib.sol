@@ -316,22 +316,12 @@ library MessageStorageLib {
             }
         }
 
-        // Use assembly to create exact size array without reversal
-        bytes32[] memory peaks;
+        // Use assembly to truncate tempPeaks to exact size
         assembly ("memory-safe") {
-            peaks := mload(0x40)
-            mstore(peaks, peakCount)
-            mstore(0x40, add(peaks, add(0x20, mul(peakCount, 0x20))))
-
-            // Copy elements in natural order (left-to-right)
-            for { let i := 0 } lt(i, peakCount) { i := add(i, 1) } {
-                let sourceIndex := add(tempPeaks, add(0x20, mul(i, 0x20)))
-                let destIndex := add(peaks, add(0x20, mul(i, 0x20)))
-                mstore(destIndex, mload(sourceIndex))
-            }
+            mstore(tempPeaks, peakCount)
         }
 
-        return peaks;
+        return tempPeaks;
     }
 
     /// @notice Calculates the current root by "bagging the peaks".
@@ -417,22 +407,12 @@ library MessageStorageLib {
             }
         }
 
-        // Use assembly to create exact size array without reversal
-        uint256[] memory peakIndices;
+        // Use assembly to truncate tempPeakIndices to exact size
         assembly ("memory-safe") {
-            peakIndices := mload(0x40)
-            mstore(peakIndices, peakCount)
-            mstore(0x40, add(peakIndices, add(0x20, mul(peakCount, 0x20))))
-
-            // Copy elements in natural order (left-to-right)
-            for { let i := 0 } lt(i, peakCount) { i := add(i, 1) } {
-                let sourceIndex := add(tempPeakIndices, add(0x20, mul(i, 0x20)))
-                let destIndex := add(peakIndices, add(0x20, mul(i, 0x20)))
-                mstore(destIndex, mload(sourceIndex))
-            }
+            mstore(tempPeakIndices, peakCount)
         }
 
-        return peakIndices;
+        return tempPeakIndices;
     }
 
     /// @notice Checks if nodes should be merged at the given height based on leaf count.
