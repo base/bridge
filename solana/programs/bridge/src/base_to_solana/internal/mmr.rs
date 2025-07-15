@@ -31,6 +31,7 @@ pub fn verify_proof(expected_root: &[u8; 32], leaf_hash: &[u8; 32], proof: &Proo
     if *total_leaf_count == 0 {
         require!(proof.is_empty(), MmrError::MmrShouldBeEmpty);
         require!(*expected_root == [0u8; 32], MmrError::InvalidProof);
+        require!(*leaf_hash == [0u8; 32], MmrError::InvalidProof);
         return Ok(());
     }
 
