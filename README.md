@@ -1,4 +1,8 @@
-# Base <> alt-L1 Bridge
+# Base Bridge
+
+A bridge between Base and blockchains outside the Ethereum ecosystem. Currently has support for Solana.
+
+For the native Ethereum <> Base bridge, please see [our docs](https://docs.base.org/base-chain/network-information/bridges-mainnet).
 
 ## Test the bridge
 

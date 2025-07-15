@@ -9,3 +9,4 @@ test-ledger
 .env
 clients/
 keypairs/
+/.idea/

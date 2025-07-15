@@ -1,13 +1,13 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/go
 {
-	"name": "base-alt-l1-bridge",
+	"name": "base-bridge",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"build": {
 		"dockerfile": "Dockerfile"
 	},
 	"runArgs": [
-		"--name=base-alt-l1-bridge"
+		"--name=base-bridge"
 	],
 	"customizations": {
 		"vscode": {
