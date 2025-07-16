@@ -53,7 +53,7 @@ pub fn bridge_sol_handler(
     call: Option<Call>,
 ) -> Result<()> {
     // Check if bridge is paused
-    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
+    require!(!ctx.accounts.bridge.is_paused(), BridgeError::BridgePaused);
     
     if let Some(call) = &call {
         check_call(call)?;

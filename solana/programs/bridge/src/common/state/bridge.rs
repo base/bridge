@@ -17,9 +17,16 @@ pub struct Bridge {
     pub nonce: u64,
     /// EIP-1559 state for dynamic pricing.
     pub eip1559: Eip1559,
-    /// Whether the bridge is currently paused (hardcoded to false, upgradeable only by authority).
-    pub paused: bool,
 }
+
+impl Bridge {
+    /// Returns whether the bridge is currently paused.
+    /// Hardcoded to false - can only be changed through program upgrade.
+    pub fn is_paused(&self) -> bool {
+        false
+    }
+}
+
 
 #[error_code]
 pub enum BridgeError {

@@ -75,7 +75,7 @@ pub fn wrap_token_handler(
     gas_limit: u64,
 ) -> Result<()> {
     // Check if bridge is paused
-    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
+    require!(!ctx.accounts.bridge.is_paused(), BridgeError::BridgePaused);
     
     initialize_metadata(&ctx, decimals, &partial_token_metadata)?;
 

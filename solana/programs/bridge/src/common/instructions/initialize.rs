@@ -29,7 +29,6 @@ pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
         base_block_number: 0,
         nonce: 0,
         eip1559: Eip1559::new(current_timestamp),
-        paused: false, // Hardcoded to false, only upgradeable by authority
     };
 
     Ok(())
@@ -110,8 +109,10 @@ mod tests {
                 base_block_number: 0,
                 nonce: 0,
                 eip1559: Eip1559::new(timestamp),
-                paused: false,
             }
         );
+
+        // Asset the bridge is not paused
+        assert_eq!(bridge.is_paused(), false);
     }
 }

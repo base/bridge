@@ -32,7 +32,7 @@ pub struct BridgeCall<'info> {
 
 pub fn bridge_call_handler(ctx: Context<BridgeCall>, gas_limit: u64, call: Call) -> Result<()> {
     // Check if bridge is paused
-    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
+    require!(!ctx.accounts.bridge.is_paused(), BridgeError::BridgePaused);
     
     check_call(&call)?;
 
