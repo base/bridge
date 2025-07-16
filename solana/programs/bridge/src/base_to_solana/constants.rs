@@ -16,11 +16,10 @@ mod private {
 
         #[constant]
         pub const TRUSTED_ORACLE: Pubkey = pubkey!("eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt");
-        
 
         // TODO: Update the address later when we have a trusted validator
         #[constant]
-        pub const TRUSTED_VALIDATOR: Pubkey = Pubkey::default();
+        pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("11111111111111111111111111111111");
     }
 
     #[cfg(all(feature = "devnet", feature = "prod"))]
@@ -29,10 +28,10 @@ mod private {
 
         #[constant]
         pub const TRUSTED_ORACLE: Pubkey = pubkey!("4vTj5kmBrmds3zWogiyUxtZPggcVUmG44EXRy2CxTcEZ");
-        
+
         // TODO: Update the address later when we have a trusted validator
         #[constant]
-        pub const TRUSTED_VALIDATOR: Pubkey = Pubkey::default();
+        pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("11111111111111111111111111111111");
     }
 
     #[cfg(not(any(feature = "devnet")))]
@@ -43,9 +42,10 @@ mod private {
         // This is for registering output roots test
         // pub const TRUSTED_ORACLE: Pubkey = pubkey!("6FfuqkJTptvr6dCZnyp3tq3M4HkvyTE5DHyvqC537Lqt");
         pub const TRUSTED_ORACLE: Pubkey = pubkey!("CB8GXDdZDSD5uqfeow1qfp48ouayxXGpw7ycmoovuQMX");
-        
+
         #[constant]
-        pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("9n3vTKJ49M4Xk3MhiCZY4LxXAdeEaDMVMuGxDwt54Hgx");
+        pub const TRUSTED_VALIDATOR: Pubkey =
+            pubkey!("9n3vTKJ49M4Xk3MhiCZY4LxXAdeEaDMVMuGxDwt54Hgx");
     }
 }
 
