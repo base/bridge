@@ -1,10 +1,10 @@
-![Base](logo.webp)
+![Base](logo.png)
 
 # Base Bridge
 
 A bridge between Base and blockchains outside the Ethereum ecosystem. Currently has support for Solana.
 
-For the native Ethereum <> Base bridge, please see [our docs](https://docs.base.org/base-chain/network-information/bridges-mainnet).
+> **Note**: For native Ethereum ↔ Base bridging, see [our official docs](https://docs.base.org/base-chain/network-information/bridges-mainnet).
 
 <!-- Badge row 1 - status -->
 
@@ -27,6 +27,41 @@ For the native Ethereum <> Base bridge, please see [our docs](https://docs.base.
 [![GitHub pull requests by-label](https://img.shields.io/github/issues-pr-raw/base/bridge)](https://github.com/base/bridge/pulls)
 [![GitHub Issues](https://img.shields.io/github/issues-raw/base/bridge.svg)](https://github.com/base/bridge/issues)
 
+## How it Works
+
+This bridge allows you to:
+
+- Transfer tokens between Base (Ethereum L2) and Solana
+- Send arbitrary cross-chain messages
+- Deploy wrapped tokens on either chain
+
+## Usage
+
+### Base → Solana
+
+Send tokens or messages from Base to Solana (multi-step process):
+
+```bash
+cd base
+# See base/README.md for detailed instructions
+```
+
+After initiating on Base, wait ~15 minutes for an updated root to be posted to Solana and complete the transfer with prove + finalize steps:
+
+```bash
+cd solana
+# See solana/README.md for prove and finalize instructions
+```
+
+### Solana → Base
+
+Send tokens or messages from Solana to Base:
+
+```bash
+cd solana
+# See solana/README.md for detailed instructions
+```
+
 ## License
 
-This project is licensed under the MIT License.
+MIT License - see [LICENSE](LICENSE) for details.
