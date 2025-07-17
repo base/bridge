@@ -11,7 +11,7 @@ A cross-chain bridge implementation that enables seamless message passing and to
 The Base Bridge contracts facilitate bidirectional communication between Base and Solana. The system allows:
 
 - Receiving and executing calls sent from Solana
-- Transferring tokens between Base and Solana  
+- Transferring tokens between Base and Solana
 - Creating wrapped versions of Solana tokens on Base
 
 ## Architecture
@@ -33,11 +33,13 @@ The Base Bridge contracts facilitate bidirectional communication between Base an
 ### Environment Setup
 
 1. Install dependencies:
+
 ```bash
 make deps
 ```
 
 2. Set up wallet account:
+
 ```bash
 # Create or import account for testnet deployments
 cast wallet import testnet-admin --interactive
@@ -73,6 +75,7 @@ make deploy
 ```
 
 This will deploy:
+
 - Bridge contract
 - Twin beacon (for proxy patterns)
 - CrossChainERC20Factory
@@ -90,6 +93,7 @@ REMOTE_SPL=0x... TOKEN_NAME="MyToken" TOKEN_SYMBOL="MTK" make create-wrapped-spl
 ```
 
 Custom token creation:
+
 ```bash
 TOKEN_NAME="MyToken" TOKEN_SYMBOL="MTK" REMOTE_TOKEN=0x1234... forge script CreateTokenScript --account testnet-admin --rpc-url $BASE_RPC --broadcast -vvvv
 ```
@@ -115,9 +119,15 @@ make bridge-eth-to-solana
 ```
 
 Custom bridging:
+
 ```bash
 LOCAL_TOKEN=0x123... REMOTE_TOKEN=0x456... TO=0x789... AMOUNT=1000000 forge script BridgeTokensToSolanaScript --account testnet-admin --rpc-url $BASE_RPC --broadcast -vvvv
 ```
+
+- `LOCAL_TOKEN`: address of ERC20 token on Base
+- `REMOTE_TOKEN`: bytes32 representation of SPL mint pubkey on Solana (`0x069be72ab836d4eacc02525b7350a78a395da2f1253a40ebafd6630000000000` for native SOL)
+- `TO`: bytes32 representation of Solana pubkey receiver (this is your Solana wallet address if bridging SOL and it should be your associated token account if bridging into an SPL token)
+- `AMOUNT`: The amount of Base tokens to bridge in wei
 
 ### Testing Utilities
 
@@ -134,14 +144,16 @@ make check-root
 The system uses upgradeable beacon proxies. To upgrade contracts:
 
 1. Edit `UpgradeScript.s.sol` and set the appropriate upgrade flags:
+
 ```solidity
-bool upgradeTwin = true;     // Enable to upgrade Twin implementation
-bool upgradeERC20 = true;    // Enable to upgrade CrossChainERC20 implementation  
+bool upgradeTwin = true;         // Enable to upgrade Twin implementation
+bool upgradeERC20 = true;        // Enable to upgrade CrossChainERC20 implementation
 bool upgradeERC20Factory = true; // Enable to upgrade factory
-bool upgradeBridge = true;   // Enable to upgrade Bridge implementation
+bool upgradeBridge = true;       // Enable to upgrade Bridge implementation
 ```
 
 2. Run the upgrade:
+
 ```bash
 forge script UpgradeScript --account testnet-admin --rpc-url $BASE_RPC --broadcast -vvvv
 ```
