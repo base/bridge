@@ -33,7 +33,7 @@ A bridge between Base and blockchains outside the Ethereum ecosystem. Currently 
 
 This bridge allows you to:
 
-- Transfer tokens between Base (Ethereum L2) and Solana
+- Transfer tokens between Base and Solana
 - Send arbitrary cross-chain messages
 - Deploy wrapped tokens on either chain
 
