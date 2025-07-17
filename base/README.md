@@ -43,8 +43,6 @@ make deps
 cast wallet import testnet-admin --interactive
 ```
 
-3. Configure environment variables by copying addresses from the Makefile or deployment files
-
 ## Development
 
 ### Building
@@ -85,11 +83,10 @@ This will deploy:
 Create wrapped versions of Solana tokens:
 
 ```bash
-# Create wrapped SOL token
-make create-wrapped-sol
-
-# Create wrapped SPL token  
-make create-wrapped-spl
+# Create wrapped SPL token (requires setting environment variables first)
+# Set REMOTE_SPL as bytes32 representation of SPL mint pubkey on Solana
+# Set TOKEN_NAME and TOKEN_SYMBOL for the wrapped token
+REMOTE_SPL=0x... TOKEN_NAME="MyToken" TOKEN_SYMBOL="MTK" make create-wrapped-spl
 ```
 
 Custom token creation:
@@ -161,35 +158,3 @@ forge script UpgradeScript --account testnet-admin --rpc-url $BASE_RPC --broadca
 - **`CreateToken.s.sol`**: Creates wrapped ERC20 tokens representing Solana tokens
 - **`BridgeTokensToSolana.s.sol`**: Initiates token transfers from Base to Solana
 - **`DeployERC20.s.sol`**: Deploys mock ERC20 tokens for testing
-
-## Usage Examples
-
-### Complete Development Setup
-
-```bash
-# 1. Install dependencies and build
-make deps
-forge build
-
-# 2. Deploy contracts  
-make deploy
-
-# 3. Create wrapped tokens
-make create-wrapped-sol
-make create-wrapped-spl
-
-# 4. Bridge tokens to Solana
-make bridge-sol-to-solana
-```
-
-### Custom Operations
-
-```bash
-# Deploy a custom wrapped token
-TOKEN_NAME="CustomToken" TOKEN_SYMBOL="CTK" REMOTE_TOKEN=0xabc123... \
-forge script CreateTokenScript --account testnet-admin --rpc-url $BASE_RPC --broadcast
-
-# Bridge custom amount to specific address
-LOCAL_TOKEN=0x123... REMOTE_TOKEN=0x456... TO=0x789... AMOUNT=5000000 \
-forge script BridgeTokensToSolanaScript --account testnet-admin --rpc-url $BASE_RPC --broadcast
-```
