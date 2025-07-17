@@ -3,14 +3,20 @@ use anchor_lang::{
     solana_program::{self},
 };
 
-use crate::base_to_solana::{
-    constants::BRIDGE_CPI_AUTHORITY_SEED, state::IncomingMessage, Message, Transfer,
+use crate::{
+    base_to_solana::{
+        constants::BRIDGE_CPI_AUTHORITY_SEED, state::IncomingMessage, Message, Transfer,
+    },
+    common::{bridge::Bridge, BRIDGE_SEED},
 };
 
 #[derive(Accounts)]
 pub struct RelayMessage<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
+
+    #[account(seeds = [BRIDGE_SEED], bump)]
+    pub bridge: Account<'info, Bridge>,
 
     #[account(mut)]
     pub message: Account<'info, IncomingMessage>,
@@ -19,6 +25,9 @@ pub struct RelayMessage<'info> {
 pub fn relay_message_handler<'a, 'info>(
     ctx: Context<'a, '_, 'info, 'info, RelayMessage<'info>>,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.is_paused(), crate::common::bridge::BridgeError::BridgePaused);
+    
     require!(
         !ctx.accounts.message.executed,
         RelayMessageError::AlreadyExecuted

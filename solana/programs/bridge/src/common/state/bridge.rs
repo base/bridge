@@ -19,6 +19,21 @@ pub struct Bridge {
     pub eip1559: Eip1559,
 }
 
+impl Bridge {
+    /// Returns whether the bridge is currently paused.
+    /// Hardcoded to false - can only be changed through program upgrade.
+    pub fn is_paused(&self) -> bool {
+        false
+    }
+}
+
+
+#[error_code]
+pub enum BridgeError {
+    #[msg("Bridge is paused")]
+    BridgePaused,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct Eip1559 {
     /// Gas target per window

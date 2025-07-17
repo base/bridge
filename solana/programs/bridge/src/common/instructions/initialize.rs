@@ -111,5 +111,8 @@ mod tests {
                 eip1559: Eip1559::new(timestamp),
             }
         );
+
+        // Asset the bridge is not paused
+        assert_eq!(bridge.is_paused(), false);
     }
 }

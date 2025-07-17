@@ -42,6 +42,9 @@ pub fn register_output_root_handler(
     output_root: [u8; 32],
     block_number: u64,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.is_paused(), crate::common::bridge::BridgeError::BridgePaused);
+    
     require!(
         block_number > ctx.accounts.bridge.base_block_number && block_number % 300 == 0,
         RegisterOutputRootError::IncorrectBlockNumber

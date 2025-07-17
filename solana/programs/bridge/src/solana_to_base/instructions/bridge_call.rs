@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    common::{bridge::Bridge, BRIDGE_SEED},
+    common::{bridge::{Bridge, BridgeError}, BRIDGE_SEED},
     solana_to_base::{check_and_pay_for_gas, check_call, Call, OutgoingMessage, GAS_FEE_RECEIVER},
 };
 
@@ -31,6 +31,9 @@ pub struct BridgeCall<'info> {
 }
 
 pub fn bridge_call_handler(ctx: Context<BridgeCall>, gas_limit: u64, call: Call) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.is_paused(), BridgeError::BridgePaused);
+    
     check_call(&call)?;
 
     let message = OutgoingMessage::new_call(

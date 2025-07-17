@@ -1,10 +1,13 @@
 use anchor_lang::{prelude::*, solana_program::keccak};
 
-use crate::base_to_solana::{
-    constants::INCOMING_MESSAGE_SEED,
-    internal::mmr::{self, Proof},
-    state::{IncomingMessage, OutputRoot},
-    Message,
+use crate::{
+    base_to_solana::{
+        constants::INCOMING_MESSAGE_SEED,
+        internal::mmr::{self, Proof},
+        state::{IncomingMessage, OutputRoot},
+        Message,
+    },
+    common::{bridge::Bridge, BRIDGE_SEED},
 };
 
 #[derive(Accounts)]
@@ -14,6 +17,9 @@ pub struct ProveMessage<'info> {
     pub payer: Signer<'info>,
 
     pub output_root: Account<'info, OutputRoot>,
+
+    #[account(seeds = [BRIDGE_SEED], bump)]
+    pub bridge: Account<'info, Bridge>,
 
     #[account(
         init,
@@ -35,6 +41,9 @@ pub fn prove_message_handler(
     proof: Proof,
     message_hash: [u8; 32],
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.is_paused(), crate::common::bridge::BridgeError::BridgePaused);
+    
     // Verify that the provided message hash matches the computed hash
     let computed_hash = hash_message(&nonce.to_be_bytes(), &sender, &data);
     require!(
