@@ -13,13 +13,12 @@ The Base Bridge contracts facilitate bidirectional communication between Base an
 - Receiving and executing calls sent from Solana
 - Transferring tokens between Base and Solana  
 - Creating wrapped versions of Solana tokens on Base
-- Managing cross-chain token bridges
 
 ## Architecture
 
 ### Core Contracts
 
-- **Bridge**: Main contract that receives calls from Solana and manages message execution via Twin contracts
+- **Bridge**: Main contract that receives calls from Solana and manages message execution via Twin contracts. Bridge is also the entrypoint for sending messages to Solana
 - **Twin**: Execution contract specific to each Solana sender pubkey that processes calls from the bridge
 - **CrossChainERC20**: ERC20 token implementation that can be minted/burned by the bridge for cross-chain transfers
 - **CrossChainERC20Factory**: Factory contract for deploying wrapped tokens representing Solana tokens on Base
@@ -162,30 +161,6 @@ forge script UpgradeScript --account testnet-admin --rpc-url $BASE_RPC --broadca
 - **`CreateToken.s.sol`**: Creates wrapped ERC20 tokens representing Solana tokens
 - **`BridgeTokensToSolana.s.sol`**: Initiates token transfers from Base to Solana
 - **`DeployERC20.s.sol`**: Deploys mock ERC20 tokens for testing
-
-## Environment Variables
-
-Key environment variables used by scripts:
-
-```bash
-# Deployment
-BASE_RPC=https://base-sepolia.cbhq.net
-
-# Token creation
-TOKEN_NAME="WrappedSOL"
-TOKEN_SYMBOL="wSOL" 
-REMOTE_TOKEN=0x069be72ab836d4eacc02525b7350a78a395da2f1253a40ebafd6630000000000
-
-# Bridging
-LOCAL_TOKEN=0x4D3210A178De60668986eecfF4eC0B2508eEE1B2
-REMOTE_TOKEN=0x069be72ab836d4eacc02525b7350a78a395da2f1253a40ebafd6630000000000
-TO=0x82c9f09a109bce580bb82c13c310689fd00e2225f8dd22015271620ecc035221
-AMOUNT=1000000
-NEEDS_APPROVAL=true  # Set for ERC20 tokens requiring approval
-
-# Testing
-ADMIN=0x8C1a617BdB47342F9C17Ac8750E0b070c372C721
-```
 
 ## Usage Examples
 
