@@ -4,7 +4,9 @@
 
 A bridge between Base and blockchains outside the Ethereum ecosystem. Currently has support for Solana.
 
-> **Note**: For native Ethereum ↔ Base bridging, see [our official docs](https://docs.base.org/base-chain/network-information/bridges-mainnet).
+> [!NOTE]
+>
+> For native Ethereum ↔ Base bridging, see [our official docs](https://docs.base.org/base-chain/network-information/bridges-mainnet).
 
 <!-- Badge row 1 - status -->
 
