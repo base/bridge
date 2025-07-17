@@ -4,9 +4,9 @@
 
 A bridge between Base and blockchains outside the Ethereum ecosystem. Currently has support for Solana.
 
-> [!NOTE]
+> [!WARNING]
 >
-> For native Ethereum ↔ Base bridging, see [our official docs](https://docs.base.org/base-chain/network-information/bridges-mainnet).
+> The bridge is only live on testnet between Solana Devnet <> Base Sepolia. The code is a WIP and has not yet been audited. Do not use in production!!
 
 <!-- Badge row 1 - status -->
 
@@ -36,6 +36,10 @@ This bridge allows you to:
 - Transfer tokens between Base and Solana
 - Send arbitrary cross-chain messages
 - Deploy wrapped tokens on either chain
+
+> [!NOTE]
+>
+> For native Ethereum ↔ Base bridging, see [our official docs](https://docs.base.org/base-chain/network-information/bridges-mainnet).
 
 ## Usage
 
