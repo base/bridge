@@ -103,6 +103,12 @@ The program expects the following keypair files in the `keypairs/` directory:
 
 ## Development
 
+### Install Dependencies
+
+```bash
+bun install
+```
+
 ### Building
 
 ```bash
