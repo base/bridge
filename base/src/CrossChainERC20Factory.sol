@@ -10,19 +10,6 @@ import {CrossChainERC20} from "./CrossChainERC20.sol";
 /// @notice Factory contract for deploying ERC-1967 beacon proxies of CrossChainERC20 tokens.
 contract CrossChainERC20Factory {
     //////////////////////////////////////////////////////////////
-    ///                       Events                           ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice Emitted when a CrossChainERC20 token is successfully deployed
-    ///
-    /// @dev The salt used for CREATE2 is derived from keccak256(abi.encode(remoteToken, name, symbol, decimals))
-    ///
-    /// @param localToken  Address of the newly deployed CrossChainERC20 contract on this chain
-    /// @param remoteToken The 32-byte identifier of the corresponding token on the remote chain
-    /// @param deployer    Address of the account that initiated the token deployment
-    event CrossChainERC20Created(address indexed localToken, bytes32 indexed remoteToken, address deployer);
-
-    //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
 
@@ -36,6 +23,19 @@ contract CrossChainERC20Factory {
     /// @notice Mapping of token addresses to boolean values indicating whether they have been deployed by this factory
     ///         and thus have cross-chain functionality.
     mapping(address token => bool isCrossChainErc20) public isCrossChainErc20;
+
+    //////////////////////////////////////////////////////////////
+    ///                       Events                           ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice Emitted when a CrossChainERC20 token is successfully deployed
+    ///
+    /// @dev The salt used for CREATE2 is derived from keccak256(abi.encode(remoteToken, name, symbol, decimals))
+    ///
+    /// @param localToken  Address of the newly deployed CrossChainERC20 contract on this chain
+    /// @param remoteToken The 32-byte identifier of the corresponding token on the remote chain
+    /// @param deployer    Address of the account that initiated the token deployment
+    event CrossChainERC20Created(address indexed localToken, bytes32 indexed remoteToken, address deployer);
 
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
