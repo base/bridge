@@ -9,6 +9,29 @@ import {Initializable} from "solady/utils/Initializable.sol";
 /// @notice A cross-chain ERC20 token implementation that can be minted and burned by an authorized bridge contract.
 contract CrossChainERC20 is ERC20, Initializable {
     //////////////////////////////////////////////////////////////
+    ///                       Constants                        ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice The bridge contract address that has minting and burning privileges.
+    address private immutable _BRIDGE;
+
+    //////////////////////////////////////////////////////////////
+    ///                       Storage                          ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice The name of the token.
+    string private _name;
+
+    /// @notice The symbol of the token.
+    string private _symbol;
+
+    /// @notice The address of the corresponding token on the remote chain.
+    bytes32 private _remoteToken;
+
+    /// @notice The number of decimal places for this token.
+    uint8 private _decimals;
+
+    //////////////////////////////////////////////////////////////
     ///                       Events                           ///
     //////////////////////////////////////////////////////////////
 
@@ -36,29 +59,6 @@ contract CrossChainERC20 is ERC20, Initializable {
 
     /// @notice Thrown when the burning from the zero address is attempted.
     error BurnFromZeroAddress();
-
-    //////////////////////////////////////////////////////////////
-    ///                       Constants                        ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice The bridge contract address that has minting and burning privileges.
-    address private immutable _BRIDGE;
-
-    //////////////////////////////////////////////////////////////
-    ///                       Storage                          ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice The name of the token.
-    string private _name;
-
-    /// @notice The symbol of the token.
-    string private _symbol;
-
-    /// @notice The address of the corresponding token on the remote chain.
-    bytes32 private _remoteToken;
-
-    /// @notice The number of decimal places for this token.
-    uint8 private _decimals;
 
     //////////////////////////////////////////////////////////////
     ///                       Modifiers                        ///
