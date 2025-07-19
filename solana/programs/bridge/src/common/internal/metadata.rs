@@ -8,11 +8,30 @@ use anchor_spl::{
     token_interface::spl_token_metadata_interface::state::TokenMetadata,
 };
 
+/// Represents token metadata for tokens that are bridged between Base and Solana.
+///
+/// This struct contains metadata needed to represent a token that exists on both
+/// chains, including information about its remote counterpart and any scaling factors needed
+/// to handle differences between the chains (such as decimal precision).
+///
+/// The metadata is stored in the Solana Token-2022 program's additional metadata field and
+/// can be used to reconstruct the relationship between tokens on both sides of the bridge.
 #[derive(Debug, Clone, AnchorDeserialize, AnchorSerialize)]
 pub struct PartialTokenMetadata {
+    /// The human-readable name of the token (e.g., "Wrapped Bitcoin")
     pub name: String,
+
+    /// The symbol/ticker of the token (e.g., "WBTC")
     pub symbol: String,
+
+    /// The 20-byte address of the corresponding token contract on Base.
+    /// This allows the bridge to identify which Base token this Solana token represents.
     pub remote_token: [u8; 20],
+
+    /// The scaling exponent used to convert between token amounts on different chains.
+    /// This handles cases where tokens have different decimal precision on Base vs Solana.
+    /// For example, if Base token has 18 decimals and Solana token has 9 decimals,
+    /// this would be used to scale amounts appropriately during bridging operations.
     pub scaler_exponent: u8,
 }
 

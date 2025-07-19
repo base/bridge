@@ -1,9 +1,28 @@
 use anchor_lang::{prelude::*, solana_program::keccak};
 
+/// Represents a Merkle Mountain Range (MMR) proof that can be used to verify
+/// the inclusion of a specific leaf in the MMR.
+///
+/// An MMR proof contains all the necessary information to reconstruct the MMR root
+/// from a given leaf, proving that the leaf was included in the MMR at the time
+/// the proof was generated.
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct Proof {
+    /// The proof elements consisting of:
+    /// 1. Sibling hashes along the path from the leaf to its mountain's peak
+    /// 2. The hashes of all other mountain peaks (in left-to-right order)
+    ///
+    /// These elements are used to reconstruct the MMR root and verify leaf inclusion.
     pub proof: Vec<[u8; 32]>,
+
+    /// The 0-indexed position of the leaf being proven within the MMR.
+    /// This index determines which mountain the leaf belongs to and its position
+    /// within that mountain.
     pub leaf_index: u64,
+
+    /// The total number of leaves that were present in the MMR when this proof
+    /// was generated. This is crucial for determining the MMR structure and
+    /// mountain configuration at the time of proof creation.
     pub total_leaf_count: u64,
 }
 

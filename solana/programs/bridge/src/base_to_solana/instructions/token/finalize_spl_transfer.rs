@@ -3,11 +3,35 @@ use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, Tran
 
 use crate::{common::TOKEN_VAULT_SEED, ID};
 
+/// Data structure for finalizing SPL token transfers from Base to Solana.
+///
+/// This struct contains all the necessary information to complete a cross-chain
+/// SPL token transfer that was initiated on Base and is being finalized on Solana.
+/// It handles the release of tokens from a program-controlled vault to the
+/// designated recipient on Solana.
 #[derive(Debug, Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct FinalizeBridgeSpl {
+    /// The token contract address on Base.
+    /// This is a 20-byte address representing the ERC-20 token
+    /// contract on Base that was originally bridged. Used to derive the
+    /// token vault PDA and ensure proper token mapping between chains.
     pub remote_token: [u8; 20],
+
+    /// The SPL token mint public key on Solana.
+    /// This represents the corresponding SPL token on Solana that mirrors
+    /// the remote token.
     pub local_token: Pubkey,
+
+    /// The recipient's token account public key on Solana.
+    /// This is the SPL token account that will receive the bridged tokens.
+    /// Must be an associated token account or valid token account owned
+    /// by the intended recipient and matching the local_token mint.
     pub to: Pubkey,
+
+    /// The amount of tokens to transfer in the token's base units.
+    /// This amount respects the token's decimal precision as defined by
+    /// the mint. The transfer will be validated using transfer_checked
+    /// to ensure decimal accuracy.
     pub amount: u64,
 }
 

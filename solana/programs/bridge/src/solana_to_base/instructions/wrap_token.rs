@@ -25,16 +25,29 @@ const REGISTER_REMOTE_TOKEN_DATA_LEN: usize = {
     32 + 32 + 32 // abi.encode(address, bytes32, uint8) = 96 bytes
 };
 
+/// Accounts struct for the wrap token instruction that creates a wrapped representation
+/// of a Base token on Solana. This instruction initializes a new SPL token
+/// with Token-2022 extensions and registers it with Base for cross-chain
+/// token transfers. The wrapped token maintains metadata linking it to its Base counterpart.
 #[derive(Accounts)]
 #[instruction(decimals: u8, metadata: PartialTokenMetadata)]
 pub struct WrapToken<'info> {
+    /// The account that pays for the transaction and all account creation costs.
+    /// Must be mutable to deduct lamports for mint creation, metadata storage, and gas fees.
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// The hardcoded gas fee receiver account that collects cross-chain transaction fees.
+    /// This account receives payment for the gas costs of registering the token on Base.
+    /// Must match the GAS_FEE_RECEIVER constant to prevent fee payment to wrong accounts.
     /// CHECK: This is the hardcoded gas fee receiver account.
     #[account(mut, address = GAS_FEE_RECEIVER @ WrapTokenError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
+    /// The new SPL Token-2022 mint being created for the wrapped token.
+    /// - Uses PDA with token metadata hash and decimals for deterministic address
+    /// - Mint authority set to itself (mint account) for controlled minting
+    /// - Includes metadata pointer extension to store token information onchain
     #[account(
         init,
         payer = payer,
@@ -53,9 +66,15 @@ pub struct WrapToken<'info> {
     )]
     pub mint: InterfaceAccount<'info, Mint>,
 
+    /// The main bridge state account that tracks cross-chain operations.
+    /// Used to increment the nonce counter and manage EIP-1559 gas pricing.
+    /// Must be mutable to update the nonce after creating the outgoing message.
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
 
+    /// The outgoing message account that stores the cross-chain call to register
+    /// the wrapped token on the Base blockchain. Contains the encoded function call
+    /// with token address, local mint address, and scaling parameters.
     #[account(
         init,
         payer = payer,
@@ -63,8 +82,12 @@ pub struct WrapToken<'info> {
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
+    /// SPL Token-2022 program for creating the mint with metadata extensions.
+    /// Required for initializing tokens with advanced features like metadata pointer.
     pub token_program: Program<'info, Token2022>,
 
+    /// System program required for creating new accounts and transferring lamports.
+    /// Used internally by Anchor for account initialization and rent payments.
     pub system_program: Program<'info, System>,
 }
 

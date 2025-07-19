@@ -10,27 +10,51 @@ use crate::{
     solana_to_base::{Call, OutgoingMessage, Transfer as TransferOp, GAS_FEE_RECEIVER},
 };
 
+/// Accounts struct for the bridge wrapped token instruction that transfers wrapped tokens from Solana to Base.
+/// This instruction burns wrapped tokens on Solana and creates an outgoing message to transfer equivalent
+/// tokens on Base. The wrapped tokens must have been originally bridged from Base.
 #[derive(Accounts)]
 #[instruction(_gas_limit: u64, _to: [u8; 20], _amount: u64, call: Option<Call>)]
 pub struct BridgeWrappedToken<'info> {
+    /// The account that pays for transaction fees and outgoing message account creation.
+    /// Must be mutable to deduct lamports for account rent and gas fees.
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// The token owner who is bridging their wrapped tokens back to Base.
+    /// Must sign the transaction to authorize burning their tokens.
     pub from: Signer<'info>,
 
+    /// The hardcoded account that receives gas fees for Base operations.
+    /// - Must match the predefined GAS_FEE_RECEIVER address
+    /// - Receives lamports to cover gas costs on Base
+    /// 
     /// CHECK: This is the hardcoded gas fee receiver account.
     #[account(mut, address = GAS_FEE_RECEIVER @ BridgeWrappedTokenError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
+    /// The wrapped token mint account representing the original Base token.
+    /// - Contains metadata linking to the original token on Base
+    /// - Tokens will be burned from this mint
     #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
 
+    /// The user's token account holding the wrapped tokens to be bridged.
+    /// - Must contain sufficient token balance for the bridge amount
+    /// - Tokens will be burned from this account
     #[account(mut)]
     pub from_token_account: InterfaceAccount<'info, TokenAccount>,
 
+    /// The main bridge state account storing global bridge configuration.
+    /// - Uses PDA with BRIDGE_SEED for deterministic address
+    /// - Tracks nonce for message ordering and EIP-1559 gas pricing
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
 
+    /// The outgoing message account being created to store bridge transfer data.
+    /// - Contains transfer details and optional call data for Base execution
+    /// - Space allocated based on call data size
+    /// - Will be read by Base relayers to complete the bridge operation
     #[account(
         init,       
         payer = payer,
@@ -38,8 +62,12 @@ pub struct BridgeWrappedToken<'info> {
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
+    /// Token2022 program used for burning the wrapped tokens.
+    /// Required for all token operations including burn_checked.
     pub token_program: Program<'info, Token2022>,
 
+    /// System program required for creating the outgoing message account.
+    /// Used internally by Anchor for account initialization.
     pub system_program: Program<'info, System>,
 }
 

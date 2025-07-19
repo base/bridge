@@ -11,18 +11,34 @@ use crate::{
     },
 };
 
+/// Accounts struct for the bridge_sol instruction that transfers native SOL from Solana to Base.
+/// This instruction locks SOL in a vault on Solana and creates an outgoing message to mint
+/// corresponding tokens on the Base blockchain.
 #[derive(Accounts)]
 #[instruction(_gas_limit: u64, _to: [u8; 20], remote_token: [u8; 20], _amount: u64, call: Option<Call>)]
 pub struct BridgeSol<'info> {
+    /// The account that pays for transaction fees and account creation.
+    /// Must be mutable to deduct lamports for account rent and gas fees.
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// The account that owns the SOL tokens being bridged.
+    /// Must sign the transaction to authorize the transfer of their SOL.
     pub from: Signer<'info>,
 
+    /// The hardcoded account that receives gas fees for cross-chain operations.
+    /// - Must match the predefined GAS_FEE_RECEIVER address
+    /// - Mutable to receive gas fee payments
+    ///
     /// CHECK: This is the hardcoded gas fee receiver account.
     #[account(mut, address = GAS_FEE_RECEIVER @ BridgeSolError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
+    /// The SOL vault account that holds locked tokens for the specific remote token.
+    /// - Uses PDA with SOL_VAULT_SEED and remote_token for deterministic address
+    /// - Mutable to receive the locked SOL tokens
+    /// - Each remote token has its own dedicated vault
+    ///
     /// CHECK: This is the SOL vault account.
     #[account(
         mut,
@@ -31,9 +47,16 @@ pub struct BridgeSol<'info> {
     )]
     pub sol_vault: AccountInfo<'info>,
 
+    /// The main bridge state account that tracks nonces and fee parameters.
+    /// - Uses PDA with BRIDGE_SEED for deterministic address
+    /// - Mutable to increment nonce and update EIP1559 fee data
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
 
+    /// The outgoing message account that stores cross-chain transfer details.
+    /// - Created fresh for each bridge operation
+    /// - Payer funds the account creation
+    /// - Space allocated dynamically based on optional call data size
     #[account(
         init,
         payer = payer,
@@ -41,6 +64,8 @@ pub struct BridgeSol<'info> {
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
+    /// System program required for SOL transfers and account creation.
+    /// Used for transferring SOL from user to vault and creating outgoing message account.
     pub system_program: Program<'info, System>,
 }
 

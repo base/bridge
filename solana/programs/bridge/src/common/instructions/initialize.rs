@@ -5,11 +5,20 @@ use crate::common::{
     BRIDGE_SEED,
 };
 
+/// Accounts struct for the initialize instruction that sets up the bridge program's initial state.
+/// This instruction creates the main bridge account with default values for cross-chain operations
+/// between Base and Solana.
 #[derive(Accounts)]
 pub struct Initialize<'info> {
+    /// The account that pays for the transaction and bridge account creation.
+    /// Must be mutable to deduct lamports for account rent.
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// The bridge state account being initialized.
+    /// - Uses PDA with BRIDGE_SEED for deterministic address
+    /// - Payer funds the account creation
+    /// - Space allocated for bridge state (8-byte discriminator + Bridge::INIT_SPACE)
     #[account(
         init,
         payer = payer,
@@ -19,6 +28,8 @@ pub struct Initialize<'info> {
     )]
     pub bridge: Account<'info, Bridge>,
 
+    /// System program required for creating new accounts.
+    /// Used internally by Anchor for account initialization.
     pub system_program: Program<'info, System>,
 }
 

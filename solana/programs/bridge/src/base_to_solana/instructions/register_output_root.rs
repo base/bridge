@@ -8,16 +8,28 @@ use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
 };
 
+/// Accounts struct for the register_output_root instruction that stores Base MMR roots
+/// on Solana for cross-chain message verification. This instruction allows a trusted oracle to
+/// register output roots from Base at specific block intervals, enabling subsequent message
+/// proofs and cross-chain operations.
 #[derive(Accounts)]
 #[instruction(_output_root: [u8; 32], block_number: u64)]
 pub struct RegisterOutputRoot<'info> {
+    /// The trusted oracle account that submits MMR roots from Base.
     #[account(mut, address = TRUSTED_ORACLE @ RegisterOutputRootError::Unauthorized)]
     pub payer: Signer<'info>,
 
     // TODO: Uncomment this when we have a trusted validator
+    // /// Additional trusted validator that must co-sign output root registrations.
+    // /// - Provides additional security by requiring dual authorization
+    // /// - Must match TRUSTED_VALIDATOR constant for authorization
     // #[account(address = TRUSTED_VALIDATOR @ RegisterOutputRootError::Unauthorized)]
     // pub validator: Signer<'info>,
-
+    /// The output root account being created to store the Base MMR root.
+    /// - Uses PDA with OUTPUT_ROOT_SEED and block_number for deterministic address
+    /// - Payer (trusted oracle) funds the account creation
+    /// - Space allocated for output root state (8-byte discriminator + OutputRoot::INIT_SPACE)
+    /// - Each output root corresponds to a specific Base block number
     #[account(
         init,
         payer = payer,
@@ -27,6 +39,10 @@ pub struct RegisterOutputRoot<'info> {
     )]
     pub root: Account<'info, OutputRoot>,
 
+    /// The main bridge state account that tracks the latest registered Base block number.
+    /// - Uses PDA with BRIDGE_SEED for deterministic address  
+    /// - Must be mutable to update the base_block_number field
+    /// - Ensures output roots are registered in sequential order
     #[account(
         mut,
         seeds = [BRIDGE_SEED],
@@ -34,6 +50,8 @@ pub struct RegisterOutputRoot<'info> {
     )]
     pub bridge: Account<'info, Bridge>,
 
+    /// System program required for creating new accounts.
+    /// Used internally by Anchor for output root account initialization.
     pub system_program: Program<'info, System>,
 }
 
@@ -65,7 +83,7 @@ pub enum RegisterOutputRootError {
 // #[cfg(test)]
 // mod tests {
 //     use super::*;
-    
+
 //     // Test-only trusted validator constant
 //     const TRUSTED_ORACLE_TEST: Pubkey = pubkey!("6FfuqkJTptvr6dCZnyp3tq3M4HkvyTE5DHyvqC537Lqt");
 //     const TRUSTED_VALIDATOR_TEST: Pubkey = pubkey!("9n3vTKJ49M4Xk3MhiCZY4LxXAdeEaDMVMuGxDwt54Hgx");
@@ -134,26 +152,26 @@ pub enum RegisterOutputRootError {
 //     fn test_register_output_root_with_trusted_validator() {
 //         let (mut svm, _regular_payer, bridge_pda) = setup_bridge_and_svm();
 
-//         // Create test trusted oracle keypair  
+//         // Create test trusted oracle keypair
 //         let test_oracle_keypair = Keypair::from_bytes(&[
 //             169,46,7,83,108,249,201,221,43,19,226,141,187,150,2,108,88,89,47,87,103,22,105,135,249,146,55,84,129,218,105,66,
 //             78,12,144,20,159,189,227,58,36,89,213,181,252,139,164,54,7,39,121,246,107,77,168,231,40,53,10,133,197,117,180,15
 //         ]).unwrap();
-        
+
 //         // Create our test trusted validator keypair
 //         let test_validator_keypair = Keypair::from_bytes(&[
 //             7,203,36,165,34,16,183,13,229,220,44,231,46,32,229,21,245,102,103,75,136,63,19,95,73,20,32,100,117,147,9,50,
 //             130,103,239,111,221,79,12,179,120,215,230,145,126,141,29,118,104,180,179,63,226,116,1,101,226,229,190,176,241,235,41,101
 //         ]).unwrap();
-        
+
 //         // Verify keypairs match our constants
 //         assert_eq!(test_oracle_keypair.pubkey(), TRUSTED_ORACLE_TEST, "Test oracle pubkey must match TRUSTED_ORACLE_TEST constant");
 //         assert_eq!(test_validator_keypair.pubkey(), TRUSTED_VALIDATOR_TEST, "Test validator pubkey must match TRUSTED_VALIDATOR_TEST constant");
-        
+
 //         // Airdrop to our test validator
 //         svm.airdrop(&test_oracle_keypair.pubkey(), LAMPORTS_PER_SOL * 10).unwrap();
 //         svm.airdrop(&test_validator_keypair.pubkey(), LAMPORTS_PER_SOL * 10).unwrap();
-        
+
 //         let output_root = [1u8; 32];
 //         let block_number = 300u64;
 
@@ -190,24 +208,24 @@ pub enum RegisterOutputRootError {
 
 //         // Execute the transaction
 //         let result = svm.send_transaction(tx);
-        
+
 //         match result {
 //             Ok(_) => {
 //                 println!("✅ SUCCESS! Trusted validator approach works!");
-                
+
 //                 // Verify the output root was created correctly
 //                 let output_root_account = svm.get_account(&output_root_pda).expect("Output root should be created");
 //                 assert_eq!(output_root_account.owner, ID);
-                
+
 //                 // Deserialize and verify the output root data
 //                 let output_root_data = OutputRoot::try_deserialize(&mut &output_root_account.data[..]).unwrap();
 //                 assert_eq!(output_root_data.root, output_root);
-                
+
 //                 // Verify the bridge state was updated
 //                 let bridge_account = svm.get_account(&bridge_pda).expect("Bridge should exist");
 //                 let bridge_data = Bridge::try_deserialize(&mut &bridge_account.data[..]).unwrap();
 //                 assert_eq!(bridge_data.base_block_number, block_number);
-                
+
 //                 println!("✅ Output root PDA created successfully!");
 //                 println!("✅ Bridge state updated correctly!");
 //             }
