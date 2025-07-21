@@ -108,8 +108,6 @@ contract TokenLibTest is Test {
     //////////////////////////////////////////////////////////////
 
     function _registerTokenPair(address localToken, Pubkey remoteToken, uint8 scalarExponent) internal {
-        // Use the Bridge's registerRemoteToken function - simulate it being called by the remote bridge
-        // The Bridge expects the data to be encoded as a Call struct (copied from Bridge.t.sol)
         Call memory call = Call({
             ty: CallType.Call,
             to: address(0), // Not relevant for token registration
@@ -133,13 +131,7 @@ contract TokenLibTest is Test {
         bridge.relayMessages(messages, ismData);
     }
 
-    function _createTransfer(address localToken, Pubkey remoteToken, bytes32 to, uint64 remoteAmount)
-        internal
-        pure
-        returns (Transfer memory)
-    {
-        return Transfer({localToken: localToken, remoteToken: remoteToken, to: to, remoteAmount: remoteAmount});
-    }
+
 
     function _finalizeTransfer(Transfer memory transfer) internal {
         // Simulate message relay from Solana to finalize transfer
@@ -165,8 +157,12 @@ contract TokenLibTest is Test {
         uint256 scalar = bridge.scalars(localToken, remoteToken);
         uint64 remoteAmount = uint64(amount / scalar);
 
-        Transfer memory setupTransfer =
-            _createTransfer(localToken, remoteToken, bytes32(bytes20(address(this))), remoteAmount);
+        Transfer memory setupTransfer = Transfer({
+            localToken: localToken,
+            remoteToken: remoteToken,
+            to: bytes32(bytes20(address(this))),
+            remoteAmount: remoteAmount
+        });
 
         if (localToken != TokenLib.ETH_ADDRESS) {
             // Make sure bridge has enough tokens to work with
@@ -246,12 +242,12 @@ contract TokenLibTest is Test {
         // Register ETH-SOL pair
         _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9);
 
-        Transfer memory transfer = _createTransfer(
-            TokenLib.ETH_ADDRESS,
-            TokenLib.NATIVE_SOL_PUBKEY,
-            bytes32(uint256(uint160(alice))),
-            1e9 // 1 SOL
-        );
+        Transfer memory transfer = Transfer({
+            localToken: TokenLib.ETH_ADDRESS,
+            remoteToken: TokenLib.NATIVE_SOL_PUBKEY,
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 1e9 // 1 SOL
+        });
 
         uint256 expectedLocalAmount = 1e18; // 1 ETH (scaled by 1e9)
 
@@ -268,8 +264,12 @@ contract TokenLibTest is Test {
     function test_initializeTransfer_nativeETH_revertsOnInvalidMsgValue() public {
         _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9);
 
-        Transfer memory transfer =
-            _createTransfer(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, bytes32(uint256(uint160(alice))), 1e9);
+        Transfer memory transfer = Transfer({
+            localToken: TokenLib.ETH_ADDRESS,
+            remoteToken: TokenLib.NATIVE_SOL_PUBKEY,
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 1e9
+        });
 
         // Send wrong amount of ETH
         vm.expectRevert(TokenLib.InvalidMsgValue.selector);
@@ -278,8 +278,12 @@ contract TokenLibTest is Test {
     }
 
     function test_initializeTransfer_nativeETH_revertsOnUnregisteredRoute() public {
-        Transfer memory transfer =
-            _createTransfer(TokenLib.ETH_ADDRESS, TEST_REMOTE_TOKEN, bytes32(uint256(uint160(alice))), 1e9);
+        Transfer memory transfer = Transfer({
+            localToken: TokenLib.ETH_ADDRESS,
+            remoteToken: TEST_REMOTE_TOKEN,
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 1e9
+        });
 
         vm.expectRevert(TokenLib.WrappedSplRouteNotRegistered.selector);
         Ix[] memory emptyIxs;
@@ -290,12 +294,12 @@ contract TokenLibTest is Test {
         // Register token pair
         _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
 
-        Transfer memory transfer = _createTransfer(
-            address(mockToken),
-            TEST_REMOTE_TOKEN,
-            bytes32(uint256(uint160(bob))), // Bob is the recipient on Solana
-            100e6 // 100 tokens (6 decimals on Solana)
-        );
+        Transfer memory transfer = Transfer({
+            localToken: address(mockToken),
+            remoteToken: TEST_REMOTE_TOKEN,
+            to: bytes32(uint256(uint160(bob))), // Bob is the recipient on Solana
+            remoteAmount: 100e6 // 100 tokens (6 decimals on Solana)
+        });
 
         uint256 expectedLocalAmount = 100e18; // 100 tokens (18 decimals on Base)
 
@@ -330,12 +334,12 @@ contract TokenLibTest is Test {
         // Register fee token pair
         _registerTokenPair(address(feeToken), TEST_REMOTE_TOKEN, 12);
 
-        Transfer memory transfer = _createTransfer(
-            address(feeToken),
-            TEST_REMOTE_TOKEN,
-            bytes32(uint256(uint160(alice))),
-            100e6 // 100 tokens requested
-        );
+        Transfer memory transfer = Transfer({
+            localToken: address(feeToken),
+            remoteToken: TEST_REMOTE_TOKEN,
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 100e6 // 100 tokens requested
+        });
 
         uint256 requestedLocalAmount = 100e18;
         uint256 actualReceivedAmount = 99e18; // 1% fee deducted
@@ -369,12 +373,12 @@ contract TokenLibTest is Test {
     }
 
     function test_initializeTransfer_crossChainSPL_success() public {
-        Transfer memory transfer = _createTransfer(
-            address(crossChainToken),
-            TEST_SPL_TOKEN, // Use the correct remote token that crossChainToken was deployed with
-            bytes32(uint256(uint160(alice))),
-            100e9 // 100 SPL tokens
-        );
+        Transfer memory transfer = Transfer({
+            localToken: address(crossChainToken),
+            remoteToken: TEST_SPL_TOKEN, // Use the correct remote token that crossChainToken was deployed with
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 100e9 // 100 SPL tokens
+        });
 
         uint256 aliceInitialBalance = crossChainToken.balanceOf(alice);
 
@@ -390,12 +394,12 @@ contract TokenLibTest is Test {
     }
 
     function test_initializeTransfer_crossChainSPL_original() public {
-        Transfer memory transfer = _createTransfer(
-            address(crossChainToken),
-            TEST_SPL_TOKEN,
-            bytes32(uint256(uint160(alice))),
-            100e9 // 100 SPL tokens
-        );
+        Transfer memory transfer = Transfer({
+            localToken: address(crossChainToken),
+            remoteToken: TEST_SPL_TOKEN,
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 100e9 // 100 SPL tokens
+        });
 
         uint256 aliceInitialBalance = crossChainToken.balanceOf(alice);
 
@@ -411,12 +415,12 @@ contract TokenLibTest is Test {
     }
 
     function test_initializeTransfer_crossChain_revertsOnIncorrectRemoteToken() public {
-        Transfer memory transfer = _createTransfer(
-            address(crossChainToken),
-            TEST_REMOTE_TOKEN, // Wrong remote token (crossChainToken expects TEST_SPL_TOKEN)
-            bytes32(uint256(uint160(alice))),
-            100e9
-        );
+        Transfer memory transfer = Transfer({
+            localToken: address(crossChainToken),
+            remoteToken: TEST_REMOTE_TOKEN, // Wrong remote token (crossChainToken expects TEST_SPL_TOKEN)
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 100e9
+        });
 
         vm.expectRevert(TokenLib.IncorrectRemoteToken.selector);
         vm.prank(alice);
@@ -427,8 +431,12 @@ contract TokenLibTest is Test {
     function test_initializeTransfer_revertsOnETHSentWithERC20() public {
         _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
 
-        Transfer memory transfer =
-            _createTransfer(address(mockToken), TEST_REMOTE_TOKEN, bytes32(uint256(uint160(alice))), 100e6);
+        Transfer memory transfer = Transfer({
+            localToken: address(mockToken),
+            remoteToken: TEST_REMOTE_TOKEN,
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 100e6
+        });
 
         vm.expectRevert(TokenLib.InvalidMsgValue.selector);
         Ix[] memory emptyIxs;
@@ -443,12 +451,12 @@ contract TokenLibTest is Test {
         // Register ETH-SOL pair and set up deposits
         _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9);
 
-        Transfer memory transfer = _createTransfer(
-            TokenLib.ETH_ADDRESS,
-            TokenLib.NATIVE_SOL_PUBKEY,
-            bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
-            1e9 // 1 SOL
-        );
+        Transfer memory transfer = Transfer({
+            localToken: TokenLib.ETH_ADDRESS,
+            remoteToken: TokenLib.NATIVE_SOL_PUBKEY,
+            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            remoteAmount: 1e9 // 1 SOL
+        });
 
         uint256 expectedLocalAmount = 1e18; // 1 ETH
         uint256 aliceInitialBalance = alice.balance;
@@ -466,12 +474,12 @@ contract TokenLibTest is Test {
         _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
         _setDeposits(address(mockToken), TEST_REMOTE_TOKEN, 100e18);
 
-        Transfer memory transfer = _createTransfer(
-            address(mockToken),
-            TEST_REMOTE_TOKEN,
-            bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
-            100e6 // 100 tokens on Solana
-        );
+        Transfer memory transfer = Transfer({
+            localToken: address(mockToken),
+            remoteToken: TEST_REMOTE_TOKEN,
+            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            remoteAmount: 100e6 // 100 tokens on Solana
+        });
 
         uint256 expectedLocalAmount = 100e18; // 100 tokens on Base
         uint256 aliceInitialBalance = mockToken.balanceOf(alice);
@@ -493,12 +501,12 @@ contract TokenLibTest is Test {
     }
 
     function test_finalizeTransfer_crossChainSOL_success() public {
-        Transfer memory transfer = _createTransfer(
-            address(crossChainSOLToken),
-            TEST_NATIVE_SOL,
-            bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
-            1e9 // 1 SOL
-        );
+        Transfer memory transfer = Transfer({
+            localToken: address(crossChainSOLToken),
+            remoteToken: TEST_NATIVE_SOL,
+            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            remoteAmount: 1e9 // 1 SOL
+        });
 
         uint256 aliceInitialBalance = crossChainSOLToken.balanceOf(alice);
 
@@ -511,12 +519,12 @@ contract TokenLibTest is Test {
     }
 
     function test_finalizeTransfer_crossChainSPL_success() public {
-        Transfer memory transfer = _createTransfer(
-            address(crossChainToken),
-            TEST_SPL_TOKEN,
-            bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
-            100e9 // 100 SPL tokens
-        );
+        Transfer memory transfer = Transfer({
+            localToken: address(crossChainToken),
+            remoteToken: TEST_SPL_TOKEN,
+            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            remoteAmount: 100e9 // 100 SPL tokens
+        });
 
         uint256 aliceInitialBalance = crossChainToken.balanceOf(alice);
 
@@ -529,12 +537,12 @@ contract TokenLibTest is Test {
     }
 
     function test_finalizeTransfer_revertsOnUnregisteredETHRoute() public {
-        Transfer memory transfer = _createTransfer(
-            TokenLib.ETH_ADDRESS,
-            TEST_REMOTE_TOKEN, // Unregistered pair
-            bytes32(uint256(uint160(alice))),
-            1e9
-        );
+        Transfer memory transfer = Transfer({
+            localToken: TokenLib.ETH_ADDRESS,
+            remoteToken: TEST_REMOTE_TOKEN, // Unregistered pair
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 1e9
+        });
 
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
@@ -561,12 +569,12 @@ contract TokenLibTest is Test {
     }
 
     function test_finalizeTransfer_revertsOnUnregisteredERC20Route() public {
-        Transfer memory transfer = _createTransfer(
-            address(mockToken),
-            TEST_REMOTE_TOKEN, // Unregistered pair
-            bytes32(uint256(uint160(alice))),
-            100e6
-        );
+        Transfer memory transfer = Transfer({
+            localToken: address(mockToken),
+            remoteToken: TEST_REMOTE_TOKEN, // Unregistered pair
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 100e6
+        });
 
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
@@ -593,12 +601,12 @@ contract TokenLibTest is Test {
     }
 
     function test_finalizeTransfer_crossChain_revertsOnIncorrectRemoteToken() public {
-        Transfer memory transfer = _createTransfer(
-            address(crossChainToken),
-            TEST_REMOTE_TOKEN, // Wrong remote token (crossChainToken expects TEST_SPL_TOKEN)
-            bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
-            100e9
-        );
+        Transfer memory transfer = Transfer({
+            localToken: address(crossChainToken),
+            remoteToken: TEST_REMOTE_TOKEN, // Wrong remote token (crossChainToken expects TEST_SPL_TOKEN)
+            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            remoteAmount: 100e9
+        });
 
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
@@ -667,12 +675,12 @@ contract TokenLibTest is Test {
         _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
 
         // Initialize transfer (Base -> Solana)
-        Transfer memory outgoingTransfer = _createTransfer(
-            address(mockToken),
-            TEST_REMOTE_TOKEN,
-            bytes32(bytes20(alice)), // Fix: address conversion
-            100e6
-        );
+        Transfer memory outgoingTransfer = Transfer({
+            localToken: address(mockToken),
+            remoteToken: TEST_REMOTE_TOKEN,
+            to: bytes32(bytes20(alice)), // Fix: address conversion
+            remoteAmount: 100e6
+        });
 
         uint256 aliceInitialBalance = mockToken.balanceOf(alice);
         uint256 bridgeInitialBalance = mockToken.balanceOf(address(bridge));
@@ -691,12 +699,12 @@ contract TokenLibTest is Test {
         assertEq(deposits, 100e18, "Deposits should increase");
 
         // Finalize transfer (Solana -> Base)
-        Transfer memory incomingTransfer = _createTransfer(
-            address(mockToken),
-            TEST_REMOTE_TOKEN,
-            bytes32(bytes20(bob)), // Fix: address conversion
-            50e6 // Different amount
-        );
+        Transfer memory incomingTransfer = Transfer({
+            localToken: address(mockToken),
+            remoteToken: TEST_REMOTE_TOKEN,
+            to: bytes32(bytes20(bob)), // Fix: address conversion
+            remoteAmount: 50e6 // Different amount
+        });
 
         uint256 bobInitialBalance = mockToken.balanceOf(bob);
         _finalizeTransfer(incomingTransfer);
@@ -710,12 +718,12 @@ contract TokenLibTest is Test {
 
     function test_fullBridgeCycle_crossChainTokens() public {
         // Initialize transfer (Solana -> Base) - minting cross-chain tokens
-        Transfer memory incomingTransfer = _createTransfer(
-            address(crossChainToken),
-            TEST_SPL_TOKEN,
-            bytes32(bytes20(bob)), // Fix: address should be in first 20 bytes
-            200e9
-        );
+        Transfer memory incomingTransfer = Transfer({
+            localToken: address(crossChainToken),
+            remoteToken: TEST_SPL_TOKEN,
+            to: bytes32(bytes20(bob)), // Fix: address should be in first 20 bytes
+            remoteAmount: 200e9
+        });
 
         uint256 bobInitialBalance = crossChainToken.balanceOf(bob);
 
@@ -724,12 +732,12 @@ contract TokenLibTest is Test {
         assertEq(crossChainToken.balanceOf(bob), bobInitialBalance + 200e9, "Bob should receive cross-chain tokens");
 
         // Initialize transfer (Base -> Solana) - burning cross-chain tokens
-        Transfer memory outgoingTransfer = _createTransfer(
-            address(crossChainToken),
-            TEST_SPL_TOKEN,
-            bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
-            150e9
-        );
+        Transfer memory outgoingTransfer = Transfer({
+            localToken: address(crossChainToken),
+            remoteToken: TEST_SPL_TOKEN,
+            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            remoteAmount: 150e9
+        });
 
         vm.prank(bob);
         crossChainToken.approve(address(bridge), 150e9);

@@ -116,15 +116,14 @@ contract ISMVerificationTest is Test {
     //////////////////////////////////////////////////////////////
 
     function test_constructor_successfulInitializationInSetup() public view {
-        // This test verifies that lines 105, 108, 109 success paths were executed in setUp()
-        // Line 105: require(threshold > 0 && threshold <= validators.length, InvalidThreshold());
-        // Lines 108-109: Loop through validators checking for zero address and duplicates
+        /// @dev This test verifies that constructor validation success paths were executed in setUp().
+        /// Tests threshold validation requirement and validator loop that checks for zero addresses and duplicates.
 
         // Verify the successful initialization from setUp()
-        assertEq(bridge.getISMThreshold(), 2, "Threshold should be 2 (line 105 success)");
-        assertEq(bridge.getISMValidatorCount(), 4, "Should have 4 validators (lines 108-109 success)");
+        assertEq(bridge.getISMThreshold(), 2, "Threshold should be 2 (constructor validation success)");
+        assertEq(bridge.getISMValidatorCount(), 4, "Should have 4 validators (constructor validation success)");
 
-        // Verify all validators were processed successfully (lines 108-109 success paths)
+        /// @dev Verify all validators were processed successfully during constructor validation.
         assertTrue(bridge.isISMValidator(validator1), "validator1 should be registered");
         assertTrue(bridge.isISMValidator(validator2), "validator2 should be registered");
         assertTrue(bridge.isISMValidator(validator3), "validator3 should be registered");
@@ -214,7 +213,7 @@ contract ISMVerificationTest is Test {
     }
 
     function test_constructor_revertsWithZeroAddressValidator() public {
-        // Test line 108: require(validators[i] != address(0), InvalidValidatorAddress());
+        /// @dev Test validator zero address validation in constructor.
         address[] memory validators = new address[](2);
         validators[0] = validator1;
         validators[1] = address(0); // Zero address should trigger error
@@ -238,7 +237,7 @@ contract ISMVerificationTest is Test {
     }
 
     function test_constructor_revertsWithDuplicateValidators() public {
-        // Test line 109: require(!$.validators[validators[i]], ValidatorAlreadyAdded());
+        /// @dev Test duplicate validator detection in constructor.
         address[] memory validators = new address[](2);
         validators[0] = validator1;
         validators[1] = validator1; // Duplicate validator should trigger error
@@ -282,7 +281,7 @@ contract ISMVerificationTest is Test {
     }
 
     function test_addValidator_revertsWithZeroAddress() public {
-        // Test line 133: require(validator != address(0), InvalidValidatorAddress());
+        /// @dev Test zero address validation when adding a validator.
         vm.prank(owner);
         vm.expectRevert(); // Library will revert with InvalidValidatorAddress
         bridge.addISMValidator(address(0));
@@ -303,7 +302,7 @@ contract ISMVerificationTest is Test {
     }
 
     function test_removeValidator_revertsWithThresholdViolation() public {
-        // Test line 151: require($.validatorCount - 1 >= $.threshold, ValidatorCountLessThanThreshold());
+        /// @dev Test threshold validation when removing a validator.
         // Current setup has 4 validators with threshold 3
         // Set threshold to 4 so removing any validator would violate it
         vm.prank(owner);

@@ -82,6 +82,7 @@ contract CallLibTest is Test {
         assertEq(value, 999);
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_execute_delegateCall_revertWithValue() public {
         Call memory call = Call({
             ty: CallType.DelegateCall,
@@ -91,13 +92,8 @@ contract CallLibTest is Test {
         });
 
         // This should revert with DelegateCallCannotHaveValue
-        bool success = false;
-        try this.executeCallExternal(call) {
-            success = true;
-        } catch {
-            // Expected to fail
-        }
-        assertFalse(success, "DelegateCall with value should have reverted");
+        vm.expectRevert(CallLib.DelegateCallCannotHaveValue.selector);
+        call.execute();
     }
 
     function test_execute_delegateCall_revertOnFailure() public {
@@ -112,10 +108,7 @@ contract CallLibTest is Test {
         call.execute();
     }
 
-    // Helper function to test reverts at the correct depth
-    function executeCallExternal(Call memory call) external {
-        call.execute();
-    }
+
 
     //////////////////////////////////////////////////////////////
     ///                  Create Type Tests                     ///
@@ -137,8 +130,24 @@ contract CallLibTest is Test {
             data: bytecode
         });
 
+        // Use Foundry's utility to compute the expected CREATE address
+        address expectedAddress = vm.computeCreateAddress(address(this), vm.getNonce(address(this)));
+
+        // Check code size of expected address is zero before deployment
+        uint256 beforeDeployedCodeSize;
+        assembly {
+            beforeDeployedCodeSize := extcodesize(expectedAddress)
+        }
+        assertEq(beforeDeployedCodeSize, 0, "Code size of expected CREATE address should be zero");
+
         call.execute();
-        // If we get here without reverting, the create was successful
+
+        // Verify that code was actually deployed at the deterministic address
+        uint256 afterDeployedCodeSize;
+        assembly {
+            afterDeployedCodeSize := extcodesize(expectedAddress)
+        }
+        assertGt(afterDeployedCodeSize, 0, "No code deployed at expected CREATE address");
     }
 
     function test_execute_create_withValue() public {
@@ -163,13 +172,13 @@ contract CallLibTest is Test {
     }
 
     function test_execute_create_revertOnZeroResult() public {
-        // Test that covers line 57: if iszero(result) { revert(0, 0) }
-        // Use bytecode that reverts in constructor - this should cause CREATE to return 0
+        /// @dev Test that covers CREATE zero result handling.
+        /// Use bytecode that reverts in constructor - this should cause CREATE to return 0.
         bytes memory revertingConstructor = hex"6000600060006000600060006000fd"; // Assembly that immediately reverts
 
         Call memory call = Call({ty: CallType.Create, to: address(0), value: 0, data: revertingConstructor});
 
-        // This should trigger line 57: if iszero(result) { revert(0, 0) }
+        /// @dev This should trigger the zero result revert condition in CREATE assembly.
         vm.expectRevert();
         call.execute();
     }
@@ -192,8 +201,24 @@ contract CallLibTest is Test {
             data: abi.encode(salt, bytecode)
         });
 
+        // Use Foundry's utility to compute the expected CREATE2 address
+        address expectedAddress = vm.computeCreate2Address(salt, keccak256(bytecode), address(this));
+
+        // Check code size of expected address is zero before deployment
+        uint256 beforeDeployedCodeSize;
+        assembly {
+            beforeDeployedCodeSize := extcodesize(expectedAddress)
+        }
+        assertEq(beforeDeployedCodeSize, 0, "Code size of expected CREATE2 address should be zero");
+
         call.execute();
-        // If we get here without reverting, the create2 was successful
+
+        // Verify that code was actually deployed at the deterministic address
+        uint256 afterDeployedCodeSize;
+        assembly {
+            afterDeployedCodeSize := extcodesize(expectedAddress)
+        }
+        assertGt(afterDeployedCodeSize, 0, "No code deployed at expected CREATE2 address");
     }
 
     function test_execute_create2_withValue() public {
@@ -219,6 +244,7 @@ contract CallLibTest is Test {
         call.execute();
     }
 
+    /// forge-config: default.allow_internal_expect_revert = true
     function test_execute_create2_duplicateSalt() public {
         bytes32 salt = keccak256("duplicate_salt");
         bytes memory bytecode = hex"600a600c600039600a6000f3602a60805260206080f3";
@@ -229,12 +255,7 @@ contract CallLibTest is Test {
         call.execute();
 
         // Second deployment with same salt should fail due to address collision
-        bool success = false;
-        try this.executeCallExternal(call) {
-            success = true;
-        } catch {
-            // Expected to fail due to address collision
-        }
-        assertFalse(success, "Create2 with duplicate salt should have reverted");
+        vm.expectRevert();
+        call.execute();
     }
 }

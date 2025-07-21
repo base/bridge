@@ -661,9 +661,9 @@ contract MessageStorageLibTest is Test {
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_GenerateProof_SiblingNodeOutOfBounds() public {
-        // Lines 126-127: Test SiblingNodeOutOfBounds error
-        // This is extremely difficult to trigger legitimately since the MMR is self-consistent
-        // We need to create a corrupted state where siblingNodePos >= nodes.length
+        /// @dev Test SiblingNodeOutOfBounds error condition.
+        /// This is extremely difficult to trigger legitimately since the MMR is self-consistent.
+        /// We need to create a corrupted state where siblingNodePos >= nodes.length.
 
         // Add a single leaf to create basic MMR structure
         MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("leaf1")});
@@ -680,7 +680,7 @@ contract MessageStorageLibTest is Test {
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_GenerateProof_LeafNotFound() public {
-        // Line 284: Test LeafNotFound error in _findLeafMountain
+        /// @dev Test LeafNotFound error in _findLeafMountain when leaf index is invalid.
         // This is defensive code that should never trigger in normal operation
         // since leafIndex should always be within MMR bounds
 
@@ -697,7 +697,7 @@ contract MessageStorageLibTest is Test {
     }
 
     function test_GenerateProof_WithOtherPeaksInProof() public {
-        // Line 143: Test proof[proofIndex++] = otherPeaks[i];
+        /// @dev Test the inclusion of other mountain peaks in the proof array.
         // Create MMR with multiple peaks to ensure other peaks are included in proof
 
         // Add 5 leaves to create multiple peaks
@@ -715,7 +715,7 @@ contract MessageStorageLibTest is Test {
     }
 
     function test_GenerateProof_FindLeafMountainSuccess() public {
-        // Lines 279-280: Test successful leaf mountain finding and local position calculation
+        /// @dev Test successful leaf mountain finding and local position calculation.
         // uint256 localNodePos = 2 * uint256(localLeafIdx) - _popcount(localLeafIdx);
         // return (nodeOffset + localNodePos, height, localLeafIdx);
 
@@ -736,7 +736,7 @@ contract MessageStorageLibTest is Test {
     }
 
     function test_GenerateProof_NodeOffsetCalculation() public {
-        // Line 284: Test nodeOffset += (1 << (height + 1)) - 1;
+        /// @dev Test node offset calculation for navigating between mountains.
         // Create MMR with specific structure to exercise node offset calculations
 
         // Add 7 leaves to create multiple mountains of different heights
@@ -758,7 +758,7 @@ contract MessageStorageLibTest is Test {
     }
 
     function test_GenerateProof_CollectOtherPeaks() public {
-        // Lines 309-311: Test collection of other mountain peaks
+        /// @dev Test collection of other mountain peaks for proof generation.
         // if (!isLeafMountain) {
         //     uint256 peakPos = nodeOffset + (1 << (height + 1)) - 2;
         //     tempPeaks[peakCount++] = $.nodes[peakPos];
@@ -785,7 +785,7 @@ contract MessageStorageLibTest is Test {
     //////////////////////////////////////////////////////////////
 
     function test_CalculateRoot_EmptyMMR() public view {
-        // Lines 335-336: Test empty MMR case
+        /// @dev Test empty MMR case where no nodes exist.
         // if (nodeCount == 0) {
         //     return bytes32(0);
         // }
@@ -796,7 +796,7 @@ contract MessageStorageLibTest is Test {
     }
 
     function test_CalculateRoot_NoPeakIndices() public view {
-        // Lines 341-342: Test case where peak indices length is 0
+        /// @dev Test case where peak indices array is empty.
         // if (peakIndices.length == 0) {
         //     return bytes32(0);
         // }
@@ -813,7 +813,7 @@ contract MessageStorageLibTest is Test {
     }
 
     function test_CalculateRoot_SinglePeak() public {
-        // Test single peak case (lines after 342)
+        /// @dev Test single peak case in root calculation.
         // if (peakIndices.length == 1) {
         //     return $.nodes[peakIndices[0]];
         // }
@@ -832,7 +832,7 @@ contract MessageStorageLibTest is Test {
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_GetPeakNodeIndices_EmptyLeafCount() public {
-        // Lines 376-378: Test empty leaf count case
+        /// @dev Test edge case where leaf count is zero in peak index calculation.
         // if (leafCount == 0) {
         //     return new uint256[](0);
         // }
@@ -847,7 +847,7 @@ contract MessageStorageLibTest is Test {
     }
 
     function test_GetPeakNodeIndices_PeakIndexCalculation() public {
-        // Lines 387-388: Test peak index array building
+        /// @dev Test peak index array building logic for various MMR sizes.
         // tempPeakIndices[peakCount] = peakIndex;
         // peakCount++;
 
@@ -947,7 +947,7 @@ contract MessageStorageLibTest is Test {
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_CalculateRoot_DirectlyWithZeroLeafCount() public view {
-        // Lines 335-336 and 341-342: Test _calculateRoot with edge cases
+        /// @dev Test _calculateRoot with edge cases for empty MMR and empty peak indices.
         // The current implementation only calls _calculateRoot with (originalLeafCount + 1)
         // but we need to test the defensive code paths directly
 
@@ -959,7 +959,7 @@ contract MessageStorageLibTest is Test {
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_DefensiveCode_SiblingNodeBounds() public {
-        // Lines 126-127: Test SiblingNodeOutOfBounds defensive code
+        /// @dev Test SiblingNodeOutOfBounds defensive code that handles corrupted MMR state.
         // This is extremely difficult to trigger because MMR maintains consistency
         // The defensive check: if (siblingNodePos >= $.nodes.length)
 
@@ -978,7 +978,7 @@ contract MessageStorageLibTest is Test {
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_DefensiveCode_LeafNotFound() public {
-        // Line 284: Test LeafNotFound defensive code in _findLeafMountain
+        /// @dev Test LeafNotFound defensive code in _findLeafMountain for invalid leaf indices.
         // This is defensive code that should never execute in normal operation
         // The check is at the end of _findLeafMountain when no mountain contains the leaf
 
@@ -999,11 +999,12 @@ contract MessageStorageLibTest is Test {
 
     /// forge-config: default.allow_internal_expect_revert = true
     function test_DefensiveCode_EmptyPeakIndices() public view {
-        // Lines 376-378: Test leafCount == 0 in _getPeakNodeIndicesForLeafCount
-        // This is only called from _calculateRoot with (originalLeafCount + 1)
-        // So leafCount is never 0 in current implementation
+        /// @dev Test edge case where leafCount == 0 in _getPeakNodeIndicesForLeafCount.
+        /// Note: This function is only called from _calculateRoot with (originalLeafCount + 1),
+        /// so leafCount is never 0 in the current implementation, but we test this edge case
+        /// for completeness and potential future changes.
 
-        // Lines 341-342: Test peakIndices.length == 0 in _calculateRoot
+        /// @dev Test empty peak indices case in _calculateRoot function.
         // This would only happen if _getPeakNodeIndicesForLeafCount returns empty array
         // which only happens when leafCount == 0, but that's never passed to _calculateRoot
 
@@ -1012,7 +1013,7 @@ contract MessageStorageLibTest is Test {
         assertEq(_getLeafCount(), 0, "Should have 0 leaves");
         assertEq(_getNodeCount(), 0, "Should have 0 nodes");
 
-        // The root calculation for empty MMR goes through the nodeCount == 0 path (lines 335-336)
+        /// @dev The root calculation for empty MMR goes through the nodeCount == 0 path.
         bytes32 emptyRoot = _getRoot();
         assertEq(emptyRoot, bytes32(0), "Empty MMR returns zero root");
     }
