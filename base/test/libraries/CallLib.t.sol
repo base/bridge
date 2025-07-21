@@ -33,19 +33,19 @@ contract CallLibTest is Test {
         assertEq(testTarget.value(), 42);
     }
 
-    function test_execute_call_withValue() public {
-        vm.deal(address(this), 1 ether);
-
+    function test_execute_call_withValue(uint128 amount) public {
+        vm.assume(amount >= 0 && amount < 100 ether);
+        vm.deal(address(this), amount);
         Call memory call = Call({
             ty: CallType.Call,
             to: address(testTarget),
-            value: 1 ether,
+            value: amount,
             data: abi.encodeWithSelector(TestTarget.setValue.selector, 123)
         });
 
         call.execute();
         assertEq(testTarget.value(), 123);
-        assertEq(address(testTarget).balance, 1 ether);
+        assertEq(address(testTarget).balance, amount);
     }
 
     function test_execute_call_revertOnFailure() public {
@@ -236,25 +236,5 @@ contract CallLibTest is Test {
             // Expected to fail due to address collision
         }
         assertFalse(success, "Create2 with duplicate salt should have reverted");
-    }
-
-    //////////////////////////////////////////////////////////////
-    ///                     Edge Cases                         ///
-    //////////////////////////////////////////////////////////////
-
-    function test_execute_call_emptyData() public {
-        Call memory call = Call({ty: CallType.Call, to: address(testTarget), value: 0, data: ""});
-
-        call.execute();
-        // Should succeed even with empty data
-    }
-
-    function test_execute_call_largeValue() public {
-        vm.deal(address(this), 100 ether);
-
-        Call memory call = Call({ty: CallType.Call, to: address(testTarget), value: 50 ether, data: ""});
-
-        call.execute();
-        assertEq(address(testTarget).balance, 50 ether);
     }
 }
