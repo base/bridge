@@ -26,4 +26,3 @@ contract TestDelegateTarget {
         revert("Delegate reverts");
     }
 }
-

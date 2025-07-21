@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test} from "forge-std/Test.sol";
 import {SVMBridgeLib} from "../../src/libraries/SVMBridgeLib.sol";
-import {SolanaTokenType, Transfer} from "../../src/libraries/TokenLib.sol";
+
 import {Ix, Pubkey, SVMLib} from "../../src/libraries/SVMLib.sol";
+import {SolanaTokenType, Transfer} from "../../src/libraries/TokenLib.sol";
+import {Test} from "forge-std/Test.sol";
 
 contract SVMBridgeLibTest is Test {
     // Test constants
@@ -19,15 +20,15 @@ contract SVMBridgeLibTest is Test {
 
     function test_serializeCall_emptyInstructions() public pure {
         Ix[] memory ixs = new Ix[](0);
-        
+
         bytes memory result = SVMBridgeLib.serializeCall(ixs);
-        
+
         // Expected: variant discriminator (0) + empty instructions array
         bytes memory expected = abi.encodePacked(
             uint8(0), // Call variant
             uint32(0) // Empty array length
         );
-        
+
         assertEq(result, expected, "Empty instructions serialization failed");
     }
 
@@ -35,47 +36,35 @@ contract SVMBridgeLibTest is Test {
         Ix[] memory ixs = new Ix[](1);
         bytes[] memory accounts = new bytes[](1);
         accounts[0] = hex"deadbeef";
-        ixs[0] = Ix({
-            programId: TEST_REMOTE_TOKEN,
-            serializedAccounts: accounts,
-            data: hex"cafebabe"
-        });
-        
+        ixs[0] = Ix({programId: TEST_REMOTE_TOKEN, serializedAccounts: accounts, data: hex"cafebabe"});
+
         bytes memory result = SVMBridgeLib.serializeCall(ixs);
-        
+
         // Expected: variant discriminator (0) + serialized instructions
         bytes memory expected = abi.encodePacked(
             uint8(0), // Call variant
             SVMLib.serializeIxs(ixs)
         );
-        
+
         assertEq(result, expected, "Single instruction serialization failed");
     }
 
-    function test_serializeCall_multipleInstructions() public pure{
+    function test_serializeCall_multipleInstructions() public pure {
         Ix[] memory ixs = new Ix[](2);
         bytes[] memory accounts0 = new bytes[](1);
         accounts0[0] = hex"dead";
-        ixs[0] = Ix({
-            programId: TEST_REMOTE_TOKEN,
-            serializedAccounts: accounts0,
-            data: hex"beef"
-        });
+        ixs[0] = Ix({programId: TEST_REMOTE_TOKEN, serializedAccounts: accounts0, data: hex"beef"});
         bytes[] memory accounts1 = new bytes[](1);
         accounts1[0] = hex"cafe";
-        ixs[1] = Ix({
-            programId: TEST_NATIVE_SOL,
-            serializedAccounts: accounts1,
-            data: hex"babe"
-        });
-        
+        ixs[1] = Ix({programId: TEST_NATIVE_SOL, serializedAccounts: accounts1, data: hex"babe"});
+
         bytes memory result = SVMBridgeLib.serializeCall(ixs);
-        
+
         bytes memory expected = abi.encodePacked(
             uint8(0), // Call variant
             SVMLib.serializeIxs(ixs)
         );
-        
+
         assertEq(result, expected, "Multiple instructions serialization failed");
     }
 
@@ -90,11 +79,11 @@ contract SVMBridgeLibTest is Test {
             to: TEST_TO,
             remoteAmount: 1000000000 // 1 SOL in lamports
         });
-        
+
         Ix[] memory ixs = new Ix[](0);
-        
+
         bytes memory result = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.Sol, ixs);
-        
+
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(0), // Sol token type
@@ -103,7 +92,7 @@ contract SVMBridgeLibTest is Test {
             SVMLib.toU64LittleEndian(transfer.remoteAmount), // amount (8 bytes)
             SVMLib.serializeIxs(ixs) // instructions
         );
-        
+
         assertEq(result, expected, "Sol transfer serialization failed");
     }
 
@@ -114,18 +103,14 @@ contract SVMBridgeLibTest is Test {
             to: TEST_TO,
             remoteAmount: 500000000 // 0.5 SOL
         });
-        
+
         Ix[] memory ixs = new Ix[](1);
         bytes[] memory accounts = new bytes[](1);
         accounts[0] = hex"1234";
-        ixs[0] = Ix({
-            programId: TEST_REMOTE_TOKEN,
-            serializedAccounts: accounts,
-            data: hex"5678"
-        });
-        
+        ixs[0] = Ix({programId: TEST_REMOTE_TOKEN, serializedAccounts: accounts, data: hex"5678"});
+
         bytes memory result = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.Sol, ixs);
-        
+
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(0), // Sol token type
@@ -134,7 +119,7 @@ contract SVMBridgeLibTest is Test {
             SVMLib.toU64LittleEndian(transfer.remoteAmount),
             SVMLib.serializeIxs(ixs)
         );
-        
+
         assertEq(result, expected, "Sol transfer with instructions failed");
     }
 
@@ -149,11 +134,11 @@ contract SVMBridgeLibTest is Test {
             to: TEST_TO,
             remoteAmount: 1000000 // 1 token with 6 decimals
         });
-        
+
         Ix[] memory ixs = new Ix[](0);
-        
+
         bytes memory result = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.Spl, ixs);
-        
+
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(1), // Spl token type
@@ -163,36 +148,24 @@ contract SVMBridgeLibTest is Test {
             SVMLib.toU64LittleEndian(transfer.remoteAmount), // amount (8 bytes)
             SVMLib.serializeIxs(ixs) // instructions
         );
-        
+
         assertEq(result, expected, "SPL transfer serialization failed");
     }
 
     function test_serializeTransfer_spl_withInstructions() public {
-        Transfer memory transfer = Transfer({
-            localToken: TEST_LOCAL_TOKEN,
-            remoteToken: TEST_REMOTE_TOKEN,
-            to: TEST_TO,
-            remoteAmount: 999999
-        });
-        
+        Transfer memory transfer =
+            Transfer({localToken: TEST_LOCAL_TOKEN, remoteToken: TEST_REMOTE_TOKEN, to: TEST_TO, remoteAmount: 999999});
+
         Ix[] memory ixs = new Ix[](2);
         bytes[] memory accounts0 = new bytes[](1);
         accounts0[0] = hex"abcd";
-        ixs[0] = Ix({
-            programId: TEST_REMOTE_TOKEN,
-            serializedAccounts: accounts0,
-            data: hex"ef01"
-        });
+        ixs[0] = Ix({programId: TEST_REMOTE_TOKEN, serializedAccounts: accounts0, data: hex"ef01"});
         bytes[] memory accounts1 = new bytes[](1);
         accounts1[0] = hex"1111";
-        ixs[1] = Ix({
-            programId: TEST_NATIVE_SOL,
-            serializedAccounts: accounts1,
-            data: hex"2222"
-        });
-        
+        ixs[1] = Ix({programId: TEST_NATIVE_SOL, serializedAccounts: accounts1, data: hex"2222"});
+
         bytes memory result = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.Spl, ixs);
-        
+
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(1), // Spl token type
@@ -202,7 +175,7 @@ contract SVMBridgeLibTest is Test {
             SVMLib.toU64LittleEndian(transfer.remoteAmount),
             SVMLib.serializeIxs(ixs)
         );
-        
+
         assertEq(result, expected, "SPL transfer with instructions failed");
     }
 
@@ -217,11 +190,11 @@ contract SVMBridgeLibTest is Test {
             to: TEST_TO,
             remoteAmount: 1000000000000000000 // 1 ETH in wei
         });
-        
+
         Ix[] memory ixs = new Ix[](0);
-        
+
         bytes memory result = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.WrappedToken, ixs);
-        
+
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(2), // WrappedToken token type
@@ -230,7 +203,7 @@ contract SVMBridgeLibTest is Test {
             SVMLib.toU64LittleEndian(transfer.remoteAmount), // amount (8 bytes)
             SVMLib.serializeIxs(ixs) // instructions
         );
-        
+
         assertEq(result, expected, "Wrapped token transfer serialization failed");
     }
 
@@ -241,22 +214,14 @@ contract SVMBridgeLibTest is Test {
             to: TEST_TO,
             remoteAmount: 123456789
         });
-        
+
         Ix[] memory ixs = new Ix[](3);
         bytes[] memory accounts0 = new bytes[](1);
         accounts0[0] = hex"aa";
-        ixs[0] = Ix({
-            programId: TEST_REMOTE_TOKEN,
-            serializedAccounts: accounts0,
-            data: hex"bb"
-        });
+        ixs[0] = Ix({programId: TEST_REMOTE_TOKEN, serializedAccounts: accounts0, data: hex"bb"});
         bytes[] memory accounts1 = new bytes[](1);
         accounts1[0] = hex"cc";
-        ixs[1] = Ix({
-            programId: TEST_NATIVE_SOL,
-            serializedAccounts: accounts1,
-            data: hex"dd"
-        });
+        ixs[1] = Ix({programId: TEST_NATIVE_SOL, serializedAccounts: accounts1, data: hex"dd"});
         bytes[] memory accounts2 = new bytes[](1);
         accounts2[0] = hex"ee";
         ixs[2] = Ix({
@@ -264,9 +229,9 @@ contract SVMBridgeLibTest is Test {
             serializedAccounts: accounts2,
             data: hex"ff"
         });
-        
+
         bytes memory result = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.WrappedToken, ixs);
-        
+
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(2), // WrappedToken token type
@@ -275,7 +240,7 @@ contract SVMBridgeLibTest is Test {
             SVMLib.toU64LittleEndian(transfer.remoteAmount),
             SVMLib.serializeIxs(ixs)
         );
-        
+
         assertEq(result, expected, "Wrapped token transfer with instructions failed");
     }
 
@@ -290,11 +255,11 @@ contract SVMBridgeLibTest is Test {
             to: TEST_TO,
             remoteAmount: type(uint64).max
         });
-        
+
         Ix[] memory ixs = new Ix[](0);
-        
+
         bytes memory result = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.Sol, ixs);
-        
+
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(0), // Sol token type
@@ -303,22 +268,18 @@ contract SVMBridgeLibTest is Test {
             SVMLib.toU64LittleEndian(type(uint64).max),
             SVMLib.serializeIxs(ixs)
         );
-        
+
         assertEq(result, expected, "Max amount serialization failed");
     }
 
     function test_serializeTransfer_zeroAmount() public {
-        Transfer memory transfer = Transfer({
-            localToken: TEST_LOCAL_TOKEN,
-            remoteToken: TEST_REMOTE_TOKEN,
-            to: TEST_TO,
-            remoteAmount: 0
-        });
-        
+        Transfer memory transfer =
+            Transfer({localToken: TEST_LOCAL_TOKEN, remoteToken: TEST_REMOTE_TOKEN, to: TEST_TO, remoteAmount: 0});
+
         Ix[] memory ixs = new Ix[](0);
-        
+
         bytes memory result = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.Spl, ixs);
-        
+
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(1), // Spl token type
@@ -328,7 +289,7 @@ contract SVMBridgeLibTest is Test {
             SVMLib.toU64LittleEndian(0),
             SVMLib.serializeIxs(ixs)
         );
-        
+
         assertEq(result, expected, "Zero amount serialization failed");
     }
 
@@ -338,18 +299,18 @@ contract SVMBridgeLibTest is Test {
         tokenAddresses[1] = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE); // ETH_ADDRESS
         tokenAddresses[2] = address(0xA0B86A33E6441081B86e8cA99B83cf64e95e5015); // Random address
 
-        for (uint i = 0; i < tokenAddresses.length; i++) {
+        for (uint256 i = 0; i < tokenAddresses.length; i++) {
             Transfer memory transfer = Transfer({
                 localToken: tokenAddresses[i],
                 remoteToken: TEST_REMOTE_TOKEN,
                 to: TEST_TO,
                 remoteAmount: 1000
             });
-            
+
             Ix[] memory ixs = new Ix[](0);
-            
+
             bytes memory result = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.WrappedToken, ixs);
-            
+
             bytes memory expected = abi.encodePacked(
                 uint8(1), // Transfer variant
                 uint8(2), // WrappedToken token type
@@ -358,8 +319,10 @@ contract SVMBridgeLibTest is Test {
                 SVMLib.toU64LittleEndian(1000),
                 SVMLib.serializeIxs(ixs)
             );
-            
-            assertEq(result, expected, string(abi.encodePacked("Token address ", vm.toString(tokenAddresses[i]), " failed")));
+
+            assertEq(
+                result, expected, string(abi.encodePacked("Token address ", vm.toString(tokenAddresses[i]), " failed"))
+            );
         }
     }
 
@@ -370,49 +333,41 @@ contract SVMBridgeLibTest is Test {
     function test_serialize_emptyInstructionData() public {
         Ix[] memory ixs = new Ix[](1);
         bytes[] memory emptyAccounts = new bytes[](0);
-        ixs[0] = Ix({
-            programId: TEST_REMOTE_TOKEN,
-            serializedAccounts: emptyAccounts,
-            data: hex""
-        });
-        
+        ixs[0] = Ix({programId: TEST_REMOTE_TOKEN, serializedAccounts: emptyAccounts, data: hex""});
+
         bytes memory callResult = SVMBridgeLib.serializeCall(ixs);
         bytes memory expectedCall = abi.encodePacked(uint8(0), SVMLib.serializeIxs(ixs));
         assertEq(callResult, expectedCall, "Empty instruction data in call failed");
-        
-        Transfer memory transfer = Transfer({
-            localToken: TEST_LOCAL_TOKEN,
-            remoteToken: TEST_REMOTE_TOKEN,
-            to: TEST_TO,
-            remoteAmount: 1000
-        });
-        
+
+        Transfer memory transfer =
+            Transfer({localToken: TEST_LOCAL_TOKEN, remoteToken: TEST_REMOTE_TOKEN, to: TEST_TO, remoteAmount: 1000});
+
         bytes memory transferResult = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.Sol, ixs);
         bytes memory expectedTransfer = abi.encodePacked(
-            uint8(1), uint8(0), transfer.localToken, transfer.to,
-            SVMLib.toU64LittleEndian(1000), SVMLib.serializeIxs(ixs)
+            uint8(1),
+            uint8(0),
+            transfer.localToken,
+            transfer.to,
+            SVMLib.toU64LittleEndian(1000),
+            SVMLib.serializeIxs(ixs)
         );
         assertEq(transferResult, expectedTransfer, "Empty instruction data in transfer failed");
     }
 
     function test_serialize_largeInstructionData() public {
         bytes memory largeData = new bytes(1024);
-        for (uint i = 0; i < 1024; i++) {
+        for (uint256 i = 0; i < 1024; i++) {
             largeData[i] = bytes1(uint8(i % 256));
         }
-        
+
         Ix[] memory ixs = new Ix[](1);
         bytes[] memory largeAccounts = new bytes[](1);
         largeAccounts[0] = largeData;
-        ixs[0] = Ix({
-            programId: TEST_REMOTE_TOKEN,
-            serializedAccounts: largeAccounts,
-            data: largeData
-        });
-        
+        ixs[0] = Ix({programId: TEST_REMOTE_TOKEN, serializedAccounts: largeAccounts, data: largeData});
+
         bytes memory result = SVMBridgeLib.serializeCall(ixs);
         bytes memory expected = abi.encodePacked(uint8(0), SVMLib.serializeIxs(ixs));
-        
+
         assertEq(result, expected, "Large instruction data failed");
     }
-} 
+}

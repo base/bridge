@@ -119,17 +119,17 @@ contract ISMVerificationTest is Test {
         // This test verifies that lines 105, 108, 109 success paths were executed in setUp()
         // Line 105: require(threshold > 0 && threshold <= validators.length, InvalidThreshold());
         // Lines 108-109: Loop through validators checking for zero address and duplicates
-        
+
         // Verify the successful initialization from setUp()
         assertEq(bridge.getISMThreshold(), 2, "Threshold should be 2 (line 105 success)");
         assertEq(bridge.getISMValidatorCount(), 4, "Should have 4 validators (lines 108-109 success)");
-        
+
         // Verify all validators were processed successfully (lines 108-109 success paths)
         assertTrue(bridge.isISMValidator(validator1), "validator1 should be registered");
         assertTrue(bridge.isISMValidator(validator2), "validator2 should be registered");
         assertTrue(bridge.isISMValidator(validator3), "validator3 should be registered");
         assertTrue(bridge.isISMValidator(validator4), "validator4 should be registered");
-        
+
         // Verify owner was set correctly
         assertEq(bridge.owner(), owner, "Owner should be set correctly");
     }
@@ -308,7 +308,7 @@ contract ISMVerificationTest is Test {
         // Set threshold to 4 so removing any validator would violate it
         vm.prank(owner);
         bridge.setISMThreshold(4);
-        
+
         // Try to remove a validator when it would make count < threshold
         vm.prank(owner);
         vm.expectRevert(); // Library will revert with ValidatorCountLessThanThreshold

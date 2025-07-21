@@ -397,7 +397,8 @@ contract BridgeTest is Test {
         bridge.relayMessages(messages, ismData);
 
         // Verify the message is marked as failed
-        bytes32 messageHash = keccak256(abi.encode(messages[0].nonce, messages[0].sender, messages[0].ty, messages[0].data));
+        bytes32 messageHash =
+            keccak256(abi.encode(messages[0].nonce, messages[0].sender, messages[0].ty, messages[0].data));
         assertTrue(bridge.failures(messageHash), "Message should be marked as failed");
 
         // Create a message with nonce 1 but mark it as failed manually to test the edge case
@@ -419,8 +420,9 @@ contract BridgeTest is Test {
         });
 
         // Calculate new message hash
-        bytes32 newMessageHash = keccak256(abi.encode(newMessages[0].nonce, newMessages[0].sender, newMessages[0].ty, newMessages[0].data));
-        
+        bytes32 newMessageHash =
+            keccak256(abi.encode(newMessages[0].nonce, newMessages[0].sender, newMessages[0].ty, newMessages[0].data));
+
         // Manually mark this new message as failed to test the edge case
         // failures mapping slot calculation: keccak256(abi.encode(key, slot))
         bytes32 slot = keccak256(abi.encode(newMessageHash, uint256(1)));
@@ -453,7 +455,8 @@ contract BridgeTest is Test {
         });
 
         // Verify the message is not marked as failed initially
-        bytes32 messageHash = keccak256(abi.encode(messages[0].nonce, messages[0].sender, messages[0].ty, messages[0].data));
+        bytes32 messageHash =
+            keccak256(abi.encode(messages[0].nonce, messages[0].sender, messages[0].ty, messages[0].data));
         assertFalse(bridge.failures(messageHash), "Message should not be marked as failed initially");
 
         // Try to relay with non-trusted relayer without the message having failed first
@@ -1117,63 +1120,72 @@ contract BridgeTest is Test {
 
     function test_scalars() public {
         // Test scalars function returns correct conversion values for token pairs
-        
+
         // Test initial state - scalars should be 0 for unregistered pairs
         assertEq(bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN), 0, "Initial scalar should be 0");
-        
+
         // Test scalar calculation for 12 decimal difference (18 -> 6)
         _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
-        assertEq(bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN), 1e12, 
-                "Scalar should be 10^12 for 12 decimal difference");
-        
-        // Test scalar for 9 decimal difference 
+        assertEq(
+            bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN),
+            1e12,
+            "Scalar should be 10^12 for 12 decimal difference"
+        );
+
+        // Test scalar for 9 decimal difference
         Pubkey remoteToken2 = Pubkey.wrap(bytes32(uint256(0x777)));
         _registerTokenPair(address(mockToken), remoteToken2, 9);
-        assertEq(bridge.scalars(address(mockToken), remoteToken2), 1e9, 
-                "Scalar should be 10^9 for 9 decimal difference");
-        
+        assertEq(
+            bridge.scalars(address(mockToken), remoteToken2), 1e9, "Scalar should be 10^9 for 9 decimal difference"
+        );
+
         // Test scalar for same decimals (no conversion)
         Pubkey remoteToken3 = Pubkey.wrap(bytes32(uint256(0x888)));
         _registerTokenPair(address(mockToken), remoteToken3, 0);
-        assertEq(bridge.scalars(address(mockToken), remoteToken3), 1, 
-                "Scalar should be 1 for same decimals");
-        
+        assertEq(bridge.scalars(address(mockToken), remoteToken3), 1, "Scalar should be 1 for same decimals");
+
         // Test ETH-SOL pair scalar
         _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9);
-        assertEq(bridge.scalars(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY), 1e9,
-                "ETH-SOL scalar should be 10^9");
-        
+        assertEq(bridge.scalars(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY), 1e9, "ETH-SOL scalar should be 10^9");
+
         // Test unregistered token pair returns 0
-        assertEq(bridge.scalars(makeAddr("unregistered"), Pubkey.wrap(bytes32(uint256(0x999)))), 0,
-                "Scalars for unregistered token pair should be 0");
-        
+        assertEq(
+            bridge.scalars(makeAddr("unregistered"), Pubkey.wrap(bytes32(uint256(0x999)))),
+            0,
+            "Scalars for unregistered token pair should be 0"
+        );
+
         // Test updating scalar by re-registering
         _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 6);
-        assertEq(bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN), 1e6,
-                "Scalar should be updated when re-registering token pair");
-        
+        assertEq(
+            bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN),
+            1e6,
+            "Scalar should be updated when re-registering token pair"
+        );
+
         // Test large scalar exponent
         Pubkey remoteToken4 = Pubkey.wrap(bytes32(uint256(0xaaa)));
         _registerTokenPair(address(mockToken), remoteToken4, 18);
-        assertEq(bridge.scalars(address(mockToken), remoteToken4), 1e18,
-                "Should handle large scalar exponents correctly");
+        assertEq(
+            bridge.scalars(address(mockToken), remoteToken4), 1e18, "Should handle large scalar exponents correctly"
+        );
     }
 
     function test_deposits() public {
         // Test deposits function returns correct values for token pairs
-        
+
         // Setup: Register a token pair and perform a bridge operation
         address localToken = address(mockToken);
         Pubkey remoteToken = TEST_REMOTE_TOKEN;
         uint256 bridgeAmount = 100e18; // 100 tokens with 18 decimals
         uint64 expectedRemoteAmount = 100e6; // 100 tokens with 6 decimals (12 decimal difference)
-        
+
         // Register the token pair with 12 decimal difference (18 -> 6)
         _registerTokenPair(localToken, remoteToken, 12);
-        
+
         // Initial deposits should be 0
         assertEq(bridge.deposits(localToken, remoteToken), 0, "Initial deposits should be 0");
-        
+
         // Perform a bridge token operation to create deposits
         Transfer memory transfer = Transfer({
             localToken: localToken,
@@ -1181,55 +1193,55 @@ contract BridgeTest is Test {
             to: bytes32(uint256(uint160(user))),
             remoteAmount: expectedRemoteAmount
         });
-        
+
         Ix[] memory ixs = new Ix[](0);
-        
+
         vm.startPrank(user);
         mockToken.approve(address(bridge), bridgeAmount);
         bridge.bridgeToken(transfer, ixs);
         vm.stopPrank();
-        
+
         // Now deposits should reflect the bridged amount
         uint256 actualDeposits = bridge.deposits(localToken, remoteToken);
         assertEq(actualDeposits, bridgeAmount, "Deposits should equal the bridged local token amount");
-        
+
         // Test multiple deposits accumulate
         vm.startPrank(user);
         mockToken.approve(address(bridge), bridgeAmount);
         bridge.bridgeToken(transfer, ixs);
         vm.stopPrank();
-        
+
         uint256 finalDeposits = bridge.deposits(localToken, remoteToken);
         assertEq(finalDeposits, bridgeAmount * 2, "Deposits should accumulate across multiple bridge operations");
-        
+
         // Test deposits for different token pair
         address secondToken = makeAddr("secondToken");
         Pubkey secondRemoteToken = Pubkey.wrap(bytes32(uint256(0x777)));
-        
+
         // Register another token pair
         _registerTokenPair(secondToken, secondRemoteToken, 6);
-        
+
         // Initial deposits should be 0 for the new pair
         assertEq(bridge.deposits(secondToken, secondRemoteToken), 0, "Initial deposits should be 0 for new pair");
-        
+
         // Test deposits for unregistered token pair returns 0
         address unregisteredToken = makeAddr("unregisteredToken");
         Pubkey unregisteredRemote = Pubkey.wrap(bytes32(uint256(0x999)));
-        
+
         assertEq(
-            bridge.deposits(unregisteredToken, unregisteredRemote), 
-            0, 
+            bridge.deposits(unregisteredToken, unregisteredRemote),
+            0,
             "Deposits for unregistered token pair should be 0"
         );
-        
+
         // Test deposits for registered pair but with no bridge operations
         address registeredButUnused = makeAddr("registeredButUnused");
         Pubkey remoteButUnused = Pubkey.wrap(bytes32(uint256(0x888)));
-        
+
         _registerTokenPair(registeredButUnused, remoteButUnused, 6);
         assertEq(
-            bridge.deposits(registeredButUnused, remoteButUnused), 
-            0, 
+            bridge.deposits(registeredButUnused, remoteButUnused),
+            0,
             "Deposits for registered but unused token pair should be 0"
         );
     }
@@ -1465,10 +1477,8 @@ contract BridgeTest is Test {
 
         // Get the actual deployed address
         vm.prank(address(bridge));
-        address deployed = LibClone.deployDeterministicERC1967BeaconProxy(
-            address(twinBeacon),
-            Pubkey.unwrap(userPubkey)
-        );
+        address deployed =
+            LibClone.deployDeterministicERC1967BeaconProxy(address(twinBeacon), Pubkey.unwrap(userPubkey));
 
         assertEq(deployed, predicted, "Predicted twin address should match deployed instance");
     }

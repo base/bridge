@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test} from "forge-std/Test.sol";
-import {TestTarget, TestDelegateTarget} from "../mocks/MockCallLib.sol";
 import {Call, CallLib, CallType} from "../../src/libraries/CallLib.sol";
+import {TestDelegateTarget, TestTarget} from "../mocks/MockCallLib.sol";
+import {Test} from "forge-std/Test.sol";
 
 contract CallLibTest is Test {
     using CallLib for Call;
@@ -35,7 +35,7 @@ contract CallLibTest is Test {
 
     function test_execute_call_withValue() public {
         vm.deal(address(this), 1 ether);
-        
+
         Call memory call = Call({
             ty: CallType.Call,
             to: address(testTarget),
@@ -73,7 +73,7 @@ contract CallLibTest is Test {
         });
 
         call.execute();
-        
+
         // Check that the storage was modified in this contract's context
         uint256 value;
         assembly {
@@ -124,7 +124,7 @@ contract CallLibTest is Test {
     function test_execute_create_success() public {
         // Bytecode for a simple contract that stores a value
         bytes memory bytecode = abi.encodePacked(
-            hex"608060405234801561001057600080fd5b506040516020806100ed8339810180604052810190808051906020019092919050505080600081905550506100ac806100416000396000f300608060405260043610603f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633fa4f245146044575b600080fd5b348015604f57600080fd5b506056606c565b6040518082815260200191505060405180910390f35b600054815600a165627a7a72305820", 
+            hex"608060405234801561001057600080fd5b506040516020806100ed8339810180604052810190808051906020019092919050505080600081905550506100ac806100416000396000f300608060405260043610603f576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680633fa4f245146044575b600080fd5b348015604f57600080fd5b506056606c565b6040518082815260200191505060405180910390f35b600054815600a165627a7a72305820",
             abi.encode(uint256(42))
         );
 
@@ -147,12 +147,7 @@ contract CallLibTest is Test {
 
         vm.deal(address(this), 1 ether);
 
-        Call memory call = Call({
-            ty: CallType.Create,
-            to: address(0),
-            value: 0.5 ether,
-            data: bytecode
-        });
+        Call memory call = Call({ty: CallType.Create, to: address(0), value: 0.5 ether, data: bytecode});
 
         call.execute();
     }
@@ -161,12 +156,7 @@ contract CallLibTest is Test {
         // Invalid bytecode that will cause create to fail
         bytes memory invalidBytecode = hex"ff";
 
-        Call memory call = Call({
-            ty: CallType.Create,
-            to: address(0),
-            value: 0,
-            data: invalidBytecode
-        });
+        Call memory call = Call({ty: CallType.Create, to: address(0), value: 0, data: invalidBytecode});
 
         vm.expectRevert();
         call.execute();
@@ -176,13 +166,8 @@ contract CallLibTest is Test {
         // Test that covers line 57: if iszero(result) { revert(0, 0) }
         // Use bytecode that reverts in constructor - this should cause CREATE to return 0
         bytes memory revertingConstructor = hex"6000600060006000600060006000fd"; // Assembly that immediately reverts
-        
-        Call memory call = Call({
-            ty: CallType.Create,
-            to: address(0),
-            value: 0,
-            data: revertingConstructor
-        });
+
+        Call memory call = Call({ty: CallType.Create, to: address(0), value: 0, data: revertingConstructor});
 
         // This should trigger line 57: if iszero(result) { revert(0, 0) }
         vm.expectRevert();
@@ -195,8 +180,9 @@ contract CallLibTest is Test {
 
     function test_execute_create2_success() public {
         bytes32 salt = keccak256("test_salt");
-        bytes memory bytecode = hex"60806040526000805534801561001457600080fd5b50603f806100236000396000f3fe6080604052600080fd";
-        
+        bytes memory bytecode =
+            hex"60806040526000805534801561001457600080fd5b50603f806100236000396000f3fe6080604052600080fd";
+
         vm.deal(address(this), 1 ether);
 
         Call memory call = Call({
@@ -213,15 +199,11 @@ contract CallLibTest is Test {
     function test_execute_create2_withValue() public {
         bytes32 salt = keccak256("test_salt_value");
         bytes memory bytecode = hex"600a600c600039600a6000f3602a60805260206080f3";
-        
+
         vm.deal(address(this), 1 ether);
 
-        Call memory call = Call({
-            ty: CallType.Create2,
-            to: address(0),
-            value: 0.3 ether,
-            data: abi.encode(salt, bytecode)
-        });
+        Call memory call =
+            Call({ty: CallType.Create2, to: address(0), value: 0.3 ether, data: abi.encode(salt, bytecode)});
 
         call.execute();
     }
@@ -229,13 +211,9 @@ contract CallLibTest is Test {
     function test_execute_create2_revertOnFailure() public {
         bytes32 salt = keccak256("fail_salt");
         bytes memory invalidBytecode = hex"ff"; // Invalid bytecode
-        
-        Call memory call = Call({
-            ty: CallType.Create2,
-            to: address(0),
-            value: 0,
-            data: abi.encode(salt, invalidBytecode)
-        });
+
+        Call memory call =
+            Call({ty: CallType.Create2, to: address(0), value: 0, data: abi.encode(salt, invalidBytecode)});
 
         vm.expectRevert();
         call.execute();
@@ -244,13 +222,8 @@ contract CallLibTest is Test {
     function test_execute_create2_duplicateSalt() public {
         bytes32 salt = keccak256("duplicate_salt");
         bytes memory bytecode = hex"600a600c600039600a6000f3602a60805260206080f3";
-        
-        Call memory call = Call({
-            ty: CallType.Create2,
-            to: address(0),
-            value: 0,
-            data: abi.encode(salt, bytecode)
-        });
+
+        Call memory call = Call({ty: CallType.Create2, to: address(0), value: 0, data: abi.encode(salt, bytecode)});
 
         // First deployment should succeed
         call.execute();
@@ -270,12 +243,7 @@ contract CallLibTest is Test {
     //////////////////////////////////////////////////////////////
 
     function test_execute_call_emptyData() public {
-        Call memory call = Call({
-            ty: CallType.Call,
-            to: address(testTarget),
-            value: 0,
-            data: ""
-        });
+        Call memory call = Call({ty: CallType.Call, to: address(testTarget), value: 0, data: ""});
 
         call.execute();
         // Should succeed even with empty data
@@ -283,17 +251,10 @@ contract CallLibTest is Test {
 
     function test_execute_call_largeValue() public {
         vm.deal(address(this), 100 ether);
-        
-        Call memory call = Call({
-            ty: CallType.Call,
-            to: address(testTarget),
-            value: 50 ether,
-            data: ""
-        });
+
+        Call memory call = Call({ty: CallType.Call, to: address(testTarget), value: 50 ether, data: ""});
 
         call.execute();
         assertEq(address(testTarget).balance, 50 ether);
     }
 }
-
- 
