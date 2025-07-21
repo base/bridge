@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
+import {TestTarget, TestDelegateTarget} from "../mocks/MockCallLib.sol";
 import {Call, CallLib, CallType} from "../../src/libraries/CallLib.sol";
 
 contract CallLibTest is Test {
@@ -292,39 +293,6 @@ contract CallLibTest is Test {
 
         call.execute();
         assertEq(address(testTarget).balance, 50 ether);
-    }
-
-    //////////////////////////////////////////////////////////////
-    ///                   Receive Functions                    ///
-    //////////////////////////////////////////////////////////////
-
-    receive() external payable {}
-}
-
-// Test contracts for CallLib testing
-contract TestTarget {
-    uint256 public value;
-
-    receive() external payable {}
-
-    function setValue(uint256 _value) external payable {
-        value = _value;
-    }
-
-    function alwaysReverts() external pure {
-        revert("Always reverts");
-    }
-}
-
-contract TestDelegateTarget {
-    function setStorageValue(uint256 _value) external {
-        assembly {
-            sstore(0, _value)
-        }
-    }
-
-    function alwaysReverts() external pure {
-        revert("Delegate reverts");
     }
 }
 
