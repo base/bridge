@@ -24,14 +24,12 @@ contract TokenLibTest is Test {
     address public bob = makeAddr("bob");
 
     // Deployed contracts (following Bridge.t.sol pattern)
-    Twin public twinBeacon;
     Bridge public bridge;
     CrossChainERC20Factory public factory;
     HelperConfig public helperConfig;
 
     // Config variables
     address public trustedRelayer;
-    address public initialOwner;
     Pubkey public remoteBridge;
 
     // Test tokens
@@ -43,7 +41,6 @@ contract TokenLibTest is Test {
     // Test validator keys (for ISM signatures)
     uint256 constant VALIDATOR1_KEY = 0x1;
     uint256 constant VALIDATOR2_KEY = 0x2;
-    uint256 constant VALIDATOR3_KEY = 0x3;
 
     // Test Solana pubkeys
     Pubkey public constant TEST_REMOTE_TOKEN =
@@ -63,12 +60,11 @@ contract TokenLibTest is Test {
     function setUp() public {
         // Use the DeployScript normally - now it uses deterministic validator keys
         DeployScript deployer = new DeployScript();
-        (twinBeacon, bridge, factory, helperConfig) = deployer.run();
+        (, bridge, factory, helperConfig) = deployer.run();
 
         HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
 
         trustedRelayer = cfg.trustedRelayer;
-        initialOwner = cfg.initialOwner;
         remoteBridge = cfg.remoteBridge;
 
         // Deploy CrossChainERC20 for testing SPL tokens
