@@ -72,7 +72,7 @@ contract SVMBridgeLibTest is Test {
     ///            SerializeTransfer Sol Tests                 ///
     //////////////////////////////////////////////////////////////
 
-    function test_serializeTransfer_sol_noInstructions() public {
+    function test_serializeTransfer_sol_noInstructions() public pure {
         Transfer memory transfer = Transfer({
             localToken: TEST_LOCAL_TOKEN,
             remoteToken: TEST_REMOTE_TOKEN,
@@ -96,7 +96,7 @@ contract SVMBridgeLibTest is Test {
         assertEq(result, expected, "Sol transfer serialization failed");
     }
 
-    function test_serializeTransfer_sol_withInstructions() public {
+    function test_serializeTransfer_sol_withInstructions() public pure {
         Transfer memory transfer = Transfer({
             localToken: TEST_LOCAL_TOKEN,
             remoteToken: TEST_REMOTE_TOKEN,
@@ -127,7 +127,7 @@ contract SVMBridgeLibTest is Test {
     ///            SerializeTransfer Spl Tests                 ///
     //////////////////////////////////////////////////////////////
 
-    function test_serializeTransfer_spl_noInstructions() public {
+    function test_serializeTransfer_spl_noInstructions() public pure {
         Transfer memory transfer = Transfer({
             localToken: TEST_LOCAL_TOKEN,
             remoteToken: TEST_REMOTE_TOKEN,
@@ -152,7 +152,7 @@ contract SVMBridgeLibTest is Test {
         assertEq(result, expected, "SPL transfer serialization failed");
     }
 
-    function test_serializeTransfer_spl_withInstructions() public {
+    function test_serializeTransfer_spl_withInstructions() public pure {
         Transfer memory transfer =
             Transfer({localToken: TEST_LOCAL_TOKEN, remoteToken: TEST_REMOTE_TOKEN, to: TEST_TO, remoteAmount: 999999});
 
@@ -183,7 +183,7 @@ contract SVMBridgeLibTest is Test {
     ///         SerializeTransfer WrappedToken Tests           ///
     //////////////////////////////////////////////////////////////
 
-    function test_serializeTransfer_wrappedToken_noInstructions() public {
+    function test_serializeTransfer_wrappedToken_noInstructions() public pure {
         Transfer memory transfer = Transfer({
             localToken: TEST_LOCAL_TOKEN,
             remoteToken: TEST_REMOTE_TOKEN,
@@ -207,7 +207,7 @@ contract SVMBridgeLibTest is Test {
         assertEq(result, expected, "Wrapped token transfer serialization failed");
     }
 
-    function test_serializeTransfer_wrappedToken_withInstructions() public {
+    function test_serializeTransfer_wrappedToken_withInstructions() public pure {
         Transfer memory transfer = Transfer({
             localToken: TEST_LOCAL_TOKEN,
             remoteToken: TEST_REMOTE_TOKEN,
@@ -248,7 +248,7 @@ contract SVMBridgeLibTest is Test {
     ///                    Edge Cases                          ///
     //////////////////////////////////////////////////////////////
 
-    function test_serializeTransfer_maxAmount() public {
+    function test_serializeTransfer_maxAmount() public pure {
         Transfer memory transfer = Transfer({
             localToken: TEST_LOCAL_TOKEN,
             remoteToken: TEST_REMOTE_TOKEN,
@@ -272,7 +272,7 @@ contract SVMBridgeLibTest is Test {
         assertEq(result, expected, "Max amount serialization failed");
     }
 
-    function test_serializeTransfer_zeroAmount() public {
+    function test_serializeTransfer_zeroAmount() public pure {
         Transfer memory transfer =
             Transfer({localToken: TEST_LOCAL_TOKEN, remoteToken: TEST_REMOTE_TOKEN, to: TEST_TO, remoteAmount: 0});
 
@@ -293,7 +293,7 @@ contract SVMBridgeLibTest is Test {
         assertEq(result, expected, "Zero amount serialization failed");
     }
 
-    function test_serializeTransfer_differentTokenAddresses() public {
+    function test_serializeTransfer_differentTokenAddresses() public pure {
         address[] memory tokenAddresses = new address[](3);
         tokenAddresses[0] = address(0);
         tokenAddresses[1] = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE); // ETH_ADDRESS
@@ -330,7 +330,7 @@ contract SVMBridgeLibTest is Test {
     ///                  Instruction Edge Cases               ///
     //////////////////////////////////////////////////////////////
 
-    function test_serialize_emptyInstructionData() public {
+    function test_serialize_emptyInstructionData() public pure {
         Ix[] memory ixs = new Ix[](1);
         bytes[] memory emptyAccounts = new bytes[](0);
         ixs[0] = Ix({programId: TEST_REMOTE_TOKEN, serializedAccounts: emptyAccounts, data: hex""});
@@ -354,7 +354,7 @@ contract SVMBridgeLibTest is Test {
         assertEq(transferResult, expectedTransfer, "Empty instruction data in transfer failed");
     }
 
-    function test_serialize_largeInstructionData() public {
+    function test_serialize_largeInstructionData() public pure {
         bytes memory largeData = new bytes(1024);
         for (uint256 i = 0; i < 1024; i++) {
             largeData[i] = bytes1(uint8(i % 256));

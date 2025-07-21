@@ -784,7 +784,7 @@ contract MessageStorageLibTest is Test {
     ///                 Root Calculation Tests                 ///
     //////////////////////////////////////////////////////////////
 
-    function test_CalculateRoot_EmptyMMR() public {
+    function test_CalculateRoot_EmptyMMR() public view {
         // Lines 335-336: Test empty MMR case
         // if (nodeCount == 0) {
         //     return bytes32(0);
@@ -795,7 +795,7 @@ contract MessageStorageLibTest is Test {
         assertEq(emptyRoot, bytes32(0), "Empty MMR should have zero root");
     }
 
-    function test_CalculateRoot_NoPeakIndices() public {
+    function test_CalculateRoot_NoPeakIndices() public view {
         // Lines 341-342: Test case where peak indices length is 0
         // if (peakIndices.length == 0) {
         //     return bytes32(0);
@@ -946,7 +946,7 @@ contract MessageStorageLibTest is Test {
     }
 
     /// forge-config: default.allow_internal_expect_revert = true
-    function test_CalculateRoot_DirectlyWithZeroLeafCount() public {
+    function test_CalculateRoot_DirectlyWithZeroLeafCount() public view {
         // Lines 335-336 and 341-342: Test _calculateRoot with edge cases
         // The current implementation only calls _calculateRoot with (originalLeafCount + 1)
         // but we need to test the defensive code paths directly
@@ -970,7 +970,7 @@ contract MessageStorageLibTest is Test {
 
         // Generate proofs for various leaf positions to exercise sibling calculations
         for (uint64 leafIdx = 0; leafIdx < 15; leafIdx++) {
-            (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(leafIdx);
+            (, uint64 totalLeafCount) = MessageStorageLib.generateProof(leafIdx);
             assertEq(totalLeafCount, 15);
             // The defensive code should not trigger in normal operation
         }
@@ -991,14 +991,14 @@ contract MessageStorageLibTest is Test {
 
         // Generate proofs for all valid leaf indices
         for (uint64 i = 0; i < 5; i++) {
-            (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(i);
+            (, uint64 totalLeafCount) = MessageStorageLib.generateProof(i);
             assertEq(totalLeafCount, 5);
             // The defensive LeafNotFound should not trigger for valid indices
         }
     }
 
     /// forge-config: default.allow_internal_expect_revert = true
-    function test_DefensiveCode_EmptyPeakIndices() public {
+    function test_DefensiveCode_EmptyPeakIndices() public view {
         // Lines 376-378: Test leafCount == 0 in _getPeakNodeIndicesForLeafCount
         // This is only called from _calculateRoot with (originalLeafCount + 1)
         // So leafCount is never 0 in current implementation

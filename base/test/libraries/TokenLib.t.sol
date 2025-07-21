@@ -653,7 +653,7 @@ contract TokenLibTest is Test {
     ///                 Constants Tests                        ///
     //////////////////////////////////////////////////////////////
 
-    function test_constants() public {
+    function test_constants() public pure {
         assertEq(TokenLib.ETH_ADDRESS, 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE, "ETH address constant incorrect");
         assertEq(
             Pubkey.unwrap(TokenLib.NATIVE_SOL_PUBKEY),
