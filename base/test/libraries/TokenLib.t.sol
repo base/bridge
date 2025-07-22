@@ -16,7 +16,8 @@ import {IncomingMessage, MessageType} from "../../src/libraries/MessageLib.sol";
 import {Ix, Pubkey} from "../../src/libraries/SVMLib.sol";
 import {SolanaTokenType, TokenLib, Transfer} from "../../src/libraries/TokenLib.sol";
 
-import {MockERC20, MockFeeERC20} from "../mocks/MockERC20.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {MockFeeERC20} from "../mocks/MockFeeERC20.sol";
 
 contract TokenLibTest is Test {
     // Test addresses and constants
@@ -130,8 +131,6 @@ contract TokenLibTest is Test {
         vm.prank(trustedRelayer);
         bridge.relayMessages(messages, ismData);
     }
-
-
 
     function _finalizeTransfer(Transfer memory transfer) internal {
         // Simulate message relay from Solana to finalize transfer

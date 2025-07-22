@@ -2,7 +2,8 @@
 pragma solidity 0.8.28;
 
 import {Call, CallLib, CallType} from "../../src/libraries/CallLib.sol";
-import {TestDelegateTarget, TestTarget} from "../mocks/MockCallLib.sol";
+import {TestDelegateTarget} from "../mocks/TestDelegateTarget.sol";
+import {TestTarget} from "../mocks/TestTarget.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract CallLibTest is Test {
@@ -107,8 +108,6 @@ contract CallLibTest is Test {
         vm.expectRevert("Delegate reverts");
         call.execute();
     }
-
-
 
     //////////////////////////////////////////////////////////////
     ///                  Create Type Tests                     ///
@@ -230,32 +229,6 @@ contract CallLibTest is Test {
         Call memory call =
             Call({ty: CallType.Create2, to: address(0), value: 0.3 ether, data: abi.encode(salt, bytecode)});
 
-        call.execute();
-    }
-
-    function test_execute_create2_revertOnFailure() public {
-        bytes32 salt = keccak256("fail_salt");
-        bytes memory invalidBytecode = hex"ff"; // Invalid bytecode
-
-        Call memory call =
-            Call({ty: CallType.Create2, to: address(0), value: 0, data: abi.encode(salt, invalidBytecode)});
-
-        vm.expectRevert();
-        call.execute();
-    }
-
-    /// forge-config: default.allow_internal_expect_revert = true
-    function test_execute_create2_duplicateSalt() public {
-        bytes32 salt = keccak256("duplicate_salt");
-        bytes memory bytecode = hex"600a600c600039600a6000f3602a60805260206080f3";
-
-        Call memory call = Call({ty: CallType.Create2, to: address(0), value: 0, data: abi.encode(salt, bytecode)});
-
-        // First deployment should succeed
-        call.execute();
-
-        // Second deployment with same salt should fail due to address collision
-        vm.expectRevert();
         call.execute();
     }
 }

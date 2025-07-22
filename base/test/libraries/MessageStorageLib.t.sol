@@ -759,10 +759,7 @@ contract MessageStorageLibTest is Test {
 
     function test_GenerateProof_CollectOtherPeaks() public {
         /// @dev Test collection of other mountain peaks for proof generation.
-        // if (!isLeafMountain) {
-        //     uint256 peakPos = nodeOffset + (1 << (height + 1)) - 2;
-        //     tempPeaks[peakCount++] = $.nodes[peakPos];
-        // }
+        /// @dev Tests the branch that collects peaks from complete mountains that don't contain the target leaf.
 
         // Create MMR with 6 leaves to have multiple peaks
         for (uint256 i = 0; i < 6; i++) {
@@ -786,9 +783,7 @@ contract MessageStorageLibTest is Test {
 
     function test_CalculateRoot_EmptyMMR() public view {
         /// @dev Test empty MMR case where no nodes exist.
-        // if (nodeCount == 0) {
-        //     return bytes32(0);
-        // }
+        /// @dev Tests the branch that returns zero hash when MMR is completely empty.
 
         // Get root of empty MMR
         bytes32 emptyRoot = _getRoot();
@@ -797,9 +792,7 @@ contract MessageStorageLibTest is Test {
 
     function test_CalculateRoot_NoPeakIndices() public view {
         /// @dev Test case where peak indices array is empty.
-        // if (peakIndices.length == 0) {
-        //     return bytes32(0);
-        // }
+        /// @dev Tests the branch that returns zero hash when no peak indices are found.
 
         // This is defensive code that's unreachable in current implementation
         // _calculateRoot is only called with (originalLeafCount + 1) where originalLeafCount >= 0
@@ -814,9 +807,7 @@ contract MessageStorageLibTest is Test {
 
     function test_CalculateRoot_SinglePeak() public {
         /// @dev Test single peak case in root calculation.
-        // if (peakIndices.length == 1) {
-        //     return $.nodes[peakIndices[0]];
-        // }
+        /// @dev Tests the branch that directly returns the single peak node when only one peak exists.
 
         // Add single leaf to create single peak
         MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("single")});
@@ -833,9 +824,7 @@ contract MessageStorageLibTest is Test {
     /// forge-config: default.allow_internal_expect_revert = true
     function test_GetPeakNodeIndices_EmptyLeafCount() public {
         /// @dev Test edge case where leaf count is zero in peak index calculation.
-        // if (leafCount == 0) {
-        //     return new uint256[](0);
-        // }
+        /// @dev Tests the branch that returns empty array when there are no leaves to calculate peaks for.
 
         // This function _getPeakNodeIndicesForLeafCount is private and only called from _calculateRoot
         // _calculateRoot is only called with (originalLeafCount + 1), so never with 0
@@ -961,7 +950,7 @@ contract MessageStorageLibTest is Test {
     function test_DefensiveCode_SiblingNodeBounds() public {
         /// @dev Test SiblingNodeOutOfBounds defensive code that handles corrupted MMR state.
         // This is extremely difficult to trigger because MMR maintains consistency
-        // The defensive check: if (siblingNodePos >= $.nodes.length)
+        /// @dev Tests the defensive branch that catches when sibling node position exceeds available nodes.
 
         // Create a complex MMR structure that might stress the sibling calculations
         for (uint256 i = 0; i < 15; i++) {
