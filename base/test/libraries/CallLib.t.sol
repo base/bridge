@@ -171,13 +171,12 @@ contract CallLibTest is Test {
     }
 
     function test_execute_create_revertOnZeroResult() public {
-        /// @dev Test that covers CREATE zero result handling.
-        /// Use bytecode that reverts in constructor - this should cause CREATE to return 0.
+        // Use bytecode that reverts in constructor - this should cause CREATE to return 0.
         bytes memory revertingConstructor = hex"6000600060006000600060006000fd"; // Assembly that immediately reverts
 
         Call memory call = Call({ty: CallType.Create, to: address(0), value: 0, data: revertingConstructor});
 
-        /// @dev This should trigger the zero result revert condition in CREATE assembly.
+        // This should trigger the zero result revert condition in CREATE assembly.
         vm.expectRevert();
         call.execute();
     }
