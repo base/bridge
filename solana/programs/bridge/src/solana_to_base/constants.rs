@@ -3,10 +3,6 @@ use anchor_lang::prelude::*;
 use crate::base_to_solana::TRUSTED_ORACLE;
 
 #[constant]
-pub const MESSAGE_HEADER_SEED: &[u8] = b"message_header";
-#[constant]
-pub const OPERATION_SEED: &[u8] = b"operation";
-#[constant]
 pub const NATIVE_SOL_PUBKEY: Pubkey = pubkey!("SoL1111111111111111111111111111111111111111");
 #[constant]
 pub const MAX_GAS_LIMIT_PER_MESSAGE: u64 = 100_000_000;
