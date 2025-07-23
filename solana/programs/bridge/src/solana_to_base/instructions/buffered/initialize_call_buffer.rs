@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::solana_to_base::{CallBuffer, CallType};
+use crate::solana_to_base::{CallBuffer, CallType, MAX_CALL_BUFFER_SIZE};
 
 /// Accounts struct for initializing a call buffer account that can store large call data.
 /// This account can be used to build up call data over multiple transactions before bridging.
@@ -30,8 +30,14 @@ pub fn initialize_call_buffer_handler(
     to: [u8; 20],
     value: u128,
     initial_data: Vec<u8>,
-    _max_data_len: usize,
+    max_data_len: usize,
 ) -> Result<()> {
+    // Verify that the max data length doesn't exceed the 64KB limit
+    require!(
+        max_data_len <= MAX_CALL_BUFFER_SIZE,
+        InitializeCallBufferError::MaxSizeExceeded
+    );
+
     *ctx.accounts.call_buffer = CallBuffer {
         owner: ctx.accounts.payer.key(),
         ty,
@@ -41,4 +47,10 @@ pub fn initialize_call_buffer_handler(
     };
 
     Ok(())
+}
+
+#[error_code]
+pub enum InitializeCallBufferError {
+    #[msg("Call buffer size exceeds maximum allowed size of 64KB")]
+    MaxSizeExceeded,
 }

@@ -26,6 +26,9 @@ pub const SCALER_EXPONENT_METADATA_KEY: &str = "scaler_exponent";
 #[constant]
 pub const GAS_FEE_RECEIVER: Pubkey = TRUSTED_ORACLE;
 
+#[constant]
+pub const MAX_CALL_BUFFER_SIZE: usize = 64 * 1024; // 64KB max size for call buffer data
+
 #[cfg(test)]
 mod tests {
     use alloy_sol_types::{SolInterface, SolValue};
