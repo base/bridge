@@ -6,17 +6,16 @@ use anchor_lang::{
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, SOL_VAULT_SEED},
     solana_to_base::{
-        check_and_pay_for_gas, check_call, Call, OutgoingMessage, Transfer as TransferOp,
-        GAS_FEE_RECEIVER, NATIVE_SOL_PUBKEY,
+        check_and_pay_for_gas, check_call, Call, CallBuffer, OutgoingMessage,
+        Transfer as TransferOp, GAS_FEE_RECEIVER, NATIVE_SOL_PUBKEY,
     },
 };
 
-/// Accounts struct for the bridge_sol instruction that transfers native SOL from Solana to Base.
-/// This instruction locks SOL in a vault on Solana and creates an outgoing message to mint
-/// corresponding tokens on the Base blockchain.
-#[derive(Accounts)]
-#[instruction(_gas_limit: u64, _to: [u8; 20], remote_token: [u8; 20], _amount: u64, call: Option<Call>)]
-pub struct BridgeSol<'info> {
+/// Common accounts struct for the bridge_sol and bridge_sol_with_buffered_call instructions that
+/// transfers native SOL from Solana to Base.
+#[derive(Accounts, Clone)]
+#[instruction(_gas_limit: u64, _to: [u8; 20], remote_token: [u8; 20])]
+pub struct BridgeSolCommon<'info> {
     /// The account that pays for transaction fees and account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees.
     #[account(mut)]
@@ -52,6 +51,18 @@ pub struct BridgeSol<'info> {
     /// - Mutable to increment nonce and update EIP1559 fee data
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
+}
+
+/// Accounts struct for the bridge_sol instruction that transfers native SOL from Solana to Base
+/// along with an optional call that can be executed on Base.
+///
+/// The bridged SOLs are locked in a vault on Solana and an outgoing message is created to mint
+/// the corresponding tokens and execute the optional call on Base.
+#[derive(Accounts)]
+#[instruction(_gas_limit: u64, _to: [u8; 20], remote_token: [u8; 20], _amount: u64, call: Option<Call>)]
+pub struct BridgeSol<'info> {
+    /// Common accounts for the bridge_sol used by the instruction.
+    pub common: BridgeSolCommon<'info>,
 
     /// The outgoing message account that stores cross-chain transfer details.
     /// - Created fresh for each bridge operation
@@ -59,13 +70,45 @@ pub struct BridgeSol<'info> {
     /// - Space allocated dynamically based on optional call data size
     #[account(
         init,
-        payer = payer,
+        payer = common.payer,
         space = 8 + OutgoingMessage::space(call.map(|c| c.data.len())),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
     /// System program required for SOL transfers and account creation.
     /// Used for transferring SOL from user to vault and creating outgoing message account.
+    pub system_program: Program<'info, System>,
+}
+
+/// Accounts struct for the bridge_sol_with_buffered_call instruction that transfers native SOL
+/// from Solana to Base along with a call (read from a call buffer account) to execute on Base.
+///
+/// The bridged SOLs are locked in a vault on Solana and an outgoing message is created to mint
+/// the corresponding tokens and execute the call on Base. The call buffer account is closed and
+/// rent returned to the owner.
+#[derive(Accounts)]
+pub struct BridgeSolWithBufferedCall<'info> {
+    /// Common accounts used by the instruction.
+    pub common: BridgeSolCommon<'info>,
+
+    /// The owner of the call buffer who will receive the rent refund.
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    /// The call buffer account that stores the call data.
+    /// This account will be closed and rent returned to the owner.
+    #[account(
+        mut,
+        close = owner,
+        has_one = owner @ BridgeSolError::Unauthorized,
+    )]
+    pub call_buffer: Account<'info, CallBuffer>,
+
+    /// The outgoing message account that stores the cross-chain transfer details.
+    #[account(init, payer = common.payer, space = 8 + OutgoingMessage::space(Some(call_buffer.data.len())))]
+    pub outgoing_message: Account<'info, OutgoingMessage>,
+
+    /// System program required for SOL transfers and account creation.
     pub system_program: Program<'info, System>,
 }
 
@@ -82,9 +125,9 @@ pub fn bridge_sol_handler(
     }
 
     let message = OutgoingMessage::new_transfer(
-        ctx.accounts.bridge.nonce,
-        ctx.accounts.payer.key(),
-        ctx.accounts.from.key(),
+        ctx.accounts.common.bridge.nonce,
+        ctx.accounts.common.payer.key(),
+        ctx.accounts.common.from.key(),
         gas_limit,
         TransferOp {
             to,
@@ -97,9 +140,9 @@ pub fn bridge_sol_handler(
 
     check_and_pay_for_gas(
         &ctx.accounts.system_program,
-        &ctx.accounts.payer,
-        &ctx.accounts.gas_fee_receiver,
-        &mut ctx.accounts.bridge.eip1559,
+        &ctx.accounts.common.payer,
+        &ctx.accounts.common.gas_fee_receiver,
+        &mut ctx.accounts.common.bridge.eip1559,
         gas_limit,
         message.relay_messages_tx_size(),
     )?;
@@ -108,20 +151,53 @@ pub fn bridge_sol_handler(
     let cpi_ctx = CpiContext::new(
         ctx.accounts.system_program.to_account_info(),
         Transfer {
-            from: ctx.accounts.from.to_account_info(),
-            to: ctx.accounts.sol_vault.to_account_info(),
+            from: ctx.accounts.common.from.to_account_info(),
+            to: ctx.accounts.common.sol_vault.to_account_info(),
         },
     );
     system_program::transfer(cpi_ctx, amount)?;
 
     *ctx.accounts.outgoing_message = message;
-    ctx.accounts.bridge.nonce += 1;
+    ctx.accounts.common.bridge.nonce += 1;
 
     Ok(())
+}
+
+pub fn bridge_sol_with_buffered_call_handler<'a, 'b, 'c, 'info>(
+    ctx: Context<'a, 'b, 'c, 'info, BridgeSolWithBufferedCall<'info>>,
+    gas_limit: u64,
+    to: [u8; 20],
+    remote_token: [u8; 20],
+    amount: u64,
+) -> Result<()> {
+    let call_buffer = &ctx.accounts.call_buffer;
+    let call = Call {
+        ty: call_buffer.ty,
+        to: call_buffer.to,
+        value: call_buffer.value,
+        data: call_buffer.data.clone(),
+    };
+
+    let mut accounts = BridgeSol {
+        common: ctx.accounts.common.clone(),
+        outgoing_message: ctx.accounts.outgoing_message.clone(),
+        system_program: ctx.accounts.system_program.clone(),
+    };
+
+    let bumps = BridgeSolBumps {
+        common: ctx.bumps.common,
+    };
+
+    let ctx =
+        Context::<BridgeSol>::new(ctx.program_id, &mut accounts, ctx.remaining_accounts, bumps);
+
+    bridge_sol_handler(ctx, gas_limit, to, remote_token, amount, Some(call))
 }
 
 #[error_code]
 pub enum BridgeSolError {
     #[msg("Incorrect gas fee receiver")]
     IncorrectGasFeeReceiver,
+    #[msg("Only the owner can close this call buffer")]
+    Unauthorized,
 }
