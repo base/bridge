@@ -30,6 +30,11 @@ pub mod bridge {
         initialize_handler(ctx)
     }
 
+    /// Closes an outgoing message account after it has been relayed to Base.
+    /// This function is used to close an outgoing message account after it has been relayed to Base.
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing accounts for closing the outgoing message
     pub fn close_outgoing_message(ctx: Context<CloseOutgoingMessage>) -> Result<()> {
         close_outgoing_message_handler(ctx)
     }
