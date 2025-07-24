@@ -58,8 +58,10 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///      upgradeability of all Twin contract implementations simultaneously.
     address public immutable TWIN_BEACON;
 
-    /// @notice Address of the CrossChainERC20Factory. It's primarily used to check if a local token was deployed by the
-    ///         bridge. If so, we know we can mint / burn. Otherwise the token interaction is a transfer.
+    /// @notice Address of the CrossChainERC20Factory.
+    ///
+    /// @dev It's primarily used to check if a local token was deployed by the bridge. If so, we know we can mint /
+    ///      burn. Otherwise the token interaction is a transfer.
     address public immutable CROSS_CHAIN_ERC20_FACTORY;
 
     /// @notice Guardian Role to pause the bridge.
@@ -70,30 +72,34 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @dev Simulated via a forge test performing a call to `relayMessages` with a single message where:
     ///      - The execution and the execution epilogue sections were commented out to isolate the execution section.
     ///      - `isTrustedRelayer` was true to estimate the worst case scenario of doing an additional SSTORE.
-    ///      - The `message.data` field was 4KB large which is sufficient given that the message has to be built from a
-    ///        single Solana transaction (which currently is 1232 bytes).
-    ///      - The metered gas was 30,252 gas.
-    uint256 private constant _EXECUTION_PROLOGUE_GAS_BUFFER = 35_000;
+    ///      - The `message.data` field was 64Kb large which is the maximum size allowed for the data field of an
+    ///        `OutgoingMessage` on the Solana side.
+    ///      - The metered gas was 61,543 gas.
+    uint256 private constant _EXECUTION_PROLOGUE_GAS_BUFFER = 65_000;
 
     /// @notice Gas required to run the execution section of `__validateAndRelay`.
     ///
     /// @dev Simulated via a forge test performing a single call to `__validateAndRelay` where:
-    ///      - The execution epilogue section was commented out to isolate the execution section.
-    ///      - The `message.data` field was 4KB large which is sufficient given that the message has to be built from a
-    ///        single Solana transaction (which currently is 1232 bytes).
-    ///      - The metered gas (including the execution prologue section) was 32,858 gas thus the isolated
-    ///        execution section was 32,858 - 30,252 = 2,606 gas.
+    ///      - The execution epilogue section was commented out to isolate the execution section. The execution section
+    ///        (body of the `__relayMessage` function) was commented out to isolate the cost of performing the public
+    ///        call to `this.__relayMessage` specifically.
+    ///      - The `message.data` field was 64Kb large which is the maximum size allowed for the data field of an
+    ///        `OutgoingMessage` on the Solana side.
+    ///      - The metered gas (including the execution prologue section) was 100,674 gas thus the isolated
+    ///        execution section was 100,674 - 61,543 = 39,131 gas.
     ///      - No buffer is strictly needed as the `_EXECUTION_PROLOGUE_GAS_BUFFER` is already rounded up and above
     ///        that.
-    uint256 private constant _EXECUTION_GAS_BUFFER = 3_000;
+    uint256 private constant _EXECUTION_GAS_BUFFER = 40_000;
 
     /// @notice Gas required to run the execution epilogue section of `__validateAndRelay`.
     ///
     /// @dev Simulated via a forge test performing a single call to `__validateAndRelay` where:
-    ///      - The `message.data` field was 4KB large which is sufficient given that the message has to be built from a
-    ///        single Solana transaction (which currently is 1232 bytes).
-    ///      - The metered gas (including the execution prologue and execution sections) was 54,481 gas thus the
-    ///        isolated execution epilogue section was 54,481 - 32,858 = 21,623 gas.
+    ///      - The execution section (body of the `__relayMessage` function) was commented out to isolate the cost of
+    ///        performing the public call to `this.__relayMessage` and the success / failure bookkeeping specifically.
+    ///      - The `message.data` field was 64Kb large which is the maximum size allowed for the data field of an
+    ///        `OutgoingMessage` on the Solana side.
+    ///      - The metered gas (including the execution prologue and execution sections) was 121,996 gas thus the
+    ///        isolated execution epilogue section was 121,996 - 100,674 = 21,322 gas.
     uint256 private constant _EXECUTION_EPILOGUE_GAS_BUFFER = 25_000;
 
     //////////////////////////////////////////////////////////////

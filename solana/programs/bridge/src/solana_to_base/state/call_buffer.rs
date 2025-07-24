@@ -32,7 +32,6 @@ impl CallBuffer {
     /// Calculate space needed for a CallBuffer account
     /// We allocate extra space upfront for the data that will be appended
     pub fn space(max_data_len: usize) -> usize {
-        8 + // discriminator
         32 + // owner
         1 + // ty (CallType enum)
         20 + // to
