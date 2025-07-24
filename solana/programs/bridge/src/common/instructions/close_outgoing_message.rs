@@ -14,7 +14,6 @@ pub struct CloseOutgoingMessage<'info> {
     pub payer: Signer<'info>,
 
     /// The account that is the original payer of the outgoing message.
-    /// It is set as the original payer of the outgoing message.
     #[account(mut)]
     pub original_payer: AccountInfo<'info>,
 

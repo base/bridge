@@ -31,7 +31,6 @@ pub mod bridge {
     }
 
     /// Closes an outgoing message account after it has been relayed to Base.
-    /// This function is used to close an outgoing message account after it has been relayed to Base.
     ///
     /// # Arguments
     /// * `ctx` - The context containing accounts for closing the outgoing message
