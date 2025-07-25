@@ -9,10 +9,30 @@ use crate::{
     ID,
 };
 
+/// Instruction data for finalizing a wrapped token transfer from Base to Solana.
+///
+/// This struct represents the final step in a cross-chain bridge operation where tokens
+/// that were originally on Base are being bridged to Solana as wrapped tokens. The
+/// finalization process mints the appropriate amount of wrapped tokens to the recipient's
+/// token account on Solana.
+///
+/// The wrapped token mint is derived deterministically from the original token's metadata
+/// and decimals, ensuring consistency across bridge operations.
 #[derive(Debug, Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct FinalizeBridgeWrappedToken {
+    /// The mint address of the wrapped token on Solana.
+    /// This is a PDA that represents the Solana version
+    /// of a token that originally exists on Base. The mint address is derived
+    /// deterministically from the original token's metadata and decimals.
     pub local_token: Pubkey,
+
+    /// The destination token account that will receive the wrapped tokens.
+    /// This must be a valid token account that is associated with the wrapped
+    /// token mint and owned by the intended recipient of the bridged tokens.
     pub to: Pubkey,
+
+    /// The amount of wrapped tokens to mint to the recipient.
+    /// The amount is specified in the token's smallest unit.
     pub amount: u64,
 }
 

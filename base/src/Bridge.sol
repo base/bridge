@@ -19,9 +19,7 @@ import {ISMVerificationLib} from "./libraries/ISMVerificationLib.sol";
 
 /// @title Bridge
 ///
-/// @notice The Bridge enables sending calls from Solana to Base.
-///
-/// @dev Calls sent from Solana to Base are relayed via a Twin contract that is specific per Solana sender pubkey.
+/// @notice Cross-chain bridge enabling bidirectional communication and token transfers between Solana and Base.
 contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
@@ -35,16 +33,33 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///      chain.
     address public constant ESTIMATION_ADDRESS = address(1);
 
-    /// @notice Pubkey of the remote bridge on Solana.
+    /// @notice Pubkey of the remote bridge program on Solana.
+    ///
+    /// @dev Used to identify messages originating directly from the Solana bridge program itself (rather than from
+    ///      user Twin contracts). When a message's sender equals this pubkey, it indicates the message contains
+    ///      bridge-level operations such as wrapped token registration that require special handling.
     Pubkey public immutable REMOTE_BRIDGE;
 
-    /// @notice Address of the trusted relayer.
+    /// @notice Address of the trusted relayer that processes new messages from Solana.
+    ///
+    /// @dev The trusted relayer is the primary relayer with special privileges:
+    ///      - Must provide valid ISM verification data when relaying messages
+    ///      - Must relay messages in sequential order (incremental nonces)
+    ///      - Cannot retry messages that have already failed
+    ///      Non-trusted relayers serve as backup and can only retry messages that have already
+    ///      been marked as failed by the trusted relayer, without requiring ISM verification.
     address public immutable TRUSTED_RELAYER;
 
-    /// @notice Address of the Twin beacon.
+    /// @notice Address of the Twin beacon used for deploying upgradeable Twin contract proxies.
+    ///
+    /// @dev Each Solana user gets their own deterministic Twin contract deployed via beacon proxy using their
+    ///      Solana pubkey as the salt. Twin contracts act as execution contexts for Solana users on Base,
+    ///      allowing them to execute arbitrary calls and receive tokens. The beacon pattern enables
+    ///      upgradeability of all Twin contract implementations simultaneously.
     address public immutable TWIN_BEACON;
 
-    /// @notice Address of the CrossChainERC20Factory.
+    /// @notice Address of the CrossChainERC20Factory. It's primarily used to check if a local token was deployed by the bridge.
+    ///         If so, we know we can mint / burn. Otherwise the token interaction is a transfer.
     address public immutable CROSS_CHAIN_ERC20_FACTORY;
 
     /// @notice Guardian Role to pause the bridge.
@@ -58,7 +73,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///      - The `message.data` field was 4KB large which is sufficient given that the message has to be built from a
     ///        single Solana transaction (which currently is 1232 bytes).
     ///      - The metered gas was 30,252 gas.
-    ///
     uint256 private constant _EXECUTION_PROLOGUE_GAS_BUFFER = 35_000;
 
     /// @notice Gas required to run the execution section of `__validateAndRelay`.
@@ -195,6 +209,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @param validators Array of validator addresses for ISM verification.
     /// @param threshold The ISM verification threshold.
     /// @param ismOwner The owner of the ISM verification system.
+    /// @param guardians An array of guardian addresses approved to pause the Bridge.
     function initialize(
         address[] calldata validators,
         uint128 threshold,

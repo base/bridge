@@ -7,14 +7,27 @@ use crate::base_to_solana::{
     Message,
 };
 
+/// Accounts struct for the prove_message instruction that verifies a message exists on Base.
+/// This instruction creates a proven message account after validating the message against an MMR proof
+/// and an output root. The proven message can later be relayed/executed on Solana.
 #[derive(Accounts)]
 #[instruction(nonce: u64, sender: [u8; 20], data: Vec<u8>, _proof: Proof, message_hash: [u8; 32])]
 pub struct ProveMessage<'info> {
+    /// The account that pays for the transaction and incoming message account creation.
+    /// Must be mutable to deduct lamports for account rent.
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// The output root account containing the merkle root from Base.
+    /// Used to verify that the message proof is valid against the committed state.
+    /// This root must have been previously registered via register_output_root instruction.
     pub output_root: Account<'info, OutputRoot>,
 
+    /// The incoming message account being created to store the proven message.
+    /// - Uses PDA with INCOMING_MESSAGE_SEED and message hash for deterministic address
+    /// - Payer funds the account creation
+    /// - Space dynamically allocated based on message data length
+    /// - Once created, this account can be used by relay instructions to execute the message
     #[account(
         init,
         payer = payer,
@@ -24,6 +37,8 @@ pub struct ProveMessage<'info> {
     )]
     pub message: Account<'info, IncomingMessage>,
 
+    /// System program required for creating new accounts.
+    /// Used internally by Anchor for account initialization.
     pub system_program: Program<'info, System>,
 }
 

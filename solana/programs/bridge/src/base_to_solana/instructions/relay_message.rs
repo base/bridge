@@ -7,11 +7,20 @@ use crate::base_to_solana::{
     constants::BRIDGE_CPI_AUTHORITY_SEED, state::IncomingMessage, Message, Transfer,
 };
 
+/// Accounts struct for the relay message instruction that executes cross-chain messages from Base to Solana.
+/// This instruction processes incoming messages that contain either pure instruction calls or token transfers
+/// with additional instructions. The message execution is performed through CPI calls using a bridge authority.
 #[derive(Accounts)]
 pub struct RelayMessage<'info> {
+    /// The account that pays for the transaction execution fees.
+    /// Must be mutable to deduct lamports for transaction costs.
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// The incoming message account containing the cross-chain message to be executed.
+    /// - Contains either a pure call message or a transfer message with additional instructions
+    /// - Must be mutable to mark the message as executed after processing
+    /// - Prevents replay attacks by tracking execution status
     #[account(mut)]
     pub message: Account<'info, IncomingMessage>,
 }

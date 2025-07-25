@@ -5,11 +5,20 @@ use crate::common::{
     BRIDGE_SEED,
 };
 
+/// Accounts struct for the initialize instruction that sets up the bridge program's initial state.
+/// This instruction creates the main bridge account with default values for cross-chain operations
+/// between Base and Solana.
 #[derive(Accounts)]
 pub struct Initialize<'info> {
+    /// The account that pays for the transaction and bridge account creation.
+    /// Must be mutable to deduct lamports for account rent.
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// The bridge state account being initialized.
+    /// - Uses PDA with BRIDGE_SEED for deterministic address
+    /// - Payer funds the account creation
+    /// - Space allocated for bridge state (8-byte discriminator + Bridge::INIT_SPACE)
     #[account(
         init,
         payer = payer,
@@ -19,6 +28,8 @@ pub struct Initialize<'info> {
     )]
     pub bridge: Account<'info, Bridge>,
 
+    /// System program required for creating new accounts.
+    /// Used internally by Anchor for account initialization.
     pub system_program: Program<'info, System>,
 }
 
@@ -27,7 +38,8 @@ pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
 
     *ctx.accounts.bridge = Bridge {
         base_block_number: 0,
-        nonce: 0,
+        base_last_relayed_nonce: 0,
+        nonce: 1, // Starts the first nonce at 1 so that 0 can safely be used to initialize `base_last_relayed_nonce`
         eip1559: Eip1559::new(current_timestamp),
     };
 
@@ -107,7 +119,8 @@ mod tests {
             bridge,
             Bridge {
                 base_block_number: 0,
-                nonce: 0,
+                base_last_relayed_nonce: 0,
+                nonce: 1,
                 eip1559: Eip1559::new(timestamp),
             }
         );

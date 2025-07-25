@@ -39,7 +39,7 @@ library ISMVerificationLib {
     ///
     ///      Follows ERC-7201 (see https://eips.ethereum.org/EIPS/eip-7201).
     bytes32 private constant _ISM_VERIFICATION_LIB_STORAGE_LOCATION =
-        0x5c4e6f8b5a3b8e9a2c1f4d7e8a9b6c3d2e1f0a8b7c4d5e6f9a2b3c4d5e6f7a8b;
+        0x1582f9f697ded5d43fefcc3b17d32db62bed76de33f6333a7eef286277528a00;
 
     //////////////////////////////////////////////////////////////
     ///                       Events                           ///
