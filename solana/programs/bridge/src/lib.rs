@@ -45,9 +45,10 @@ pub mod bridge {
     /// which is required before any messages from that block can be proven and relayed.
     ///
     /// # Arguments
-    /// * `ctx`          - The context containing accounts for storing the output root
-    /// * `output_root`  - The 32-byte MMR root of Base messages for the given block
-    /// * `block_number` - The Base block number this output root corresponds to
+    /// * `ctx`                     - The context containing accounts for storing the output root
+    /// * `output_root`             - The 32-byte MMR root of Base messages for the given block
+    /// * `base_block_number`       - The Base block number this output root corresponds to
+    /// * `base_last_relayed_nonce` - The most recent nonce received on Base
     pub fn register_output_root(
         ctx: Context<RegisterOutputRoot>,
         output_root: [u8; 32],
