@@ -115,6 +115,24 @@ contract ISMVerificationTest is Test {
     ///                   Constructor Tests                    ///
     //////////////////////////////////////////////////////////////
 
+    function test_constructor_successfulInitializationInSetup() public view {
+        /// @dev This test verifies that constructor validation success paths were executed in setUp().
+        /// Tests threshold validation requirement and validator loop that checks for zero addresses and duplicates.
+
+        // Verify the successful initialization from setUp()
+        assertEq(bridge.getISMThreshold(), 2, "Threshold should be 2 (constructor validation success)");
+        assertEq(bridge.getISMValidatorCount(), 4, "Should have 4 validators (constructor validation success)");
+
+        /// @dev Verify all validators were processed successfully during constructor validation.
+        assertTrue(bridge.isISMValidator(validator1), "validator1 should be registered");
+        assertTrue(bridge.isISMValidator(validator2), "validator2 should be registered");
+        assertTrue(bridge.isISMValidator(validator3), "validator3 should be registered");
+        assertTrue(bridge.isISMValidator(validator4), "validator4 should be registered");
+
+        // Verify owner was set correctly
+        assertEq(bridge.owner(), owner, "Owner should be set correctly");
+    }
+
     function test_constructor_setsCorrectThreshold() public view {
         assertEq(bridge.getISMThreshold(), 2);
     }
@@ -194,10 +212,12 @@ contract ISMVerificationTest is Test {
         testBridge3.initialize({validators: validators, threshold: 1, ismOwner: owner, guardians: new address[](0)});
     }
 
-    function test_constructor_allowsEmptyValidatorsWithZeroThreshold() public {
-        address[] memory validators = new address[](0);
+    function test_constructor_revertsWithZeroAddressValidator() public {
+        /// @dev Test validator zero address validation in constructor.
+        address[] memory validators = new address[](2);
+        validators[0] = validator1;
+        validators[1] = address(0); // Zero address should trigger error
 
-        // Deploy supporting contracts first
         Pubkey remoteBridge = Pubkey.wrap(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
         address twinImpl = address(new Twin(address(0)));
         address twinBeacon = address(new UpgradeableBeacon(owner, twinImpl));
@@ -205,16 +225,39 @@ contract ISMVerificationTest is Test {
         address erc20Beacon = address(new UpgradeableBeacon(owner, erc20Impl));
         CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
 
-        // This should actually fail based on the current validation logic
-        Bridge testBridge4 = new Bridge({
+        Bridge testBridge = new Bridge({
             remoteBridge: remoteBridge,
             trustedRelayer: trustedRelayer,
             twinBeacon: twinBeacon,
             crossChainErc20Factory: address(factory)
         });
 
-        vm.expectRevert(); // Library will revert with InvalidThreshold
-        testBridge4.initialize({validators: validators, threshold: 0, ismOwner: owner, guardians: new address[](0)});
+        vm.expectRevert(); // Library will revert with InvalidValidatorAddress
+        testBridge.initialize({validators: validators, threshold: 1, ismOwner: owner, guardians: new address[](0)});
+    }
+
+    function test_constructor_revertsWithDuplicateValidators() public {
+        /// @dev Test duplicate validator detection in constructor.
+        address[] memory validators = new address[](2);
+        validators[0] = validator1;
+        validators[1] = validator1; // Duplicate validator should trigger error
+
+        Pubkey remoteBridge = Pubkey.wrap(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+        address twinImpl = address(new Twin(address(0)));
+        address twinBeacon = address(new UpgradeableBeacon(owner, twinImpl));
+        address erc20Impl = address(new CrossChainERC20(address(0)));
+        address erc20Beacon = address(new UpgradeableBeacon(owner, erc20Impl));
+        CrossChainERC20Factory factory = new CrossChainERC20Factory(erc20Beacon);
+
+        Bridge testBridge = new Bridge({
+            remoteBridge: remoteBridge,
+            trustedRelayer: trustedRelayer,
+            twinBeacon: twinBeacon,
+            crossChainErc20Factory: address(factory)
+        });
+
+        vm.expectRevert(); // Library will revert with ValidatorAlreadyAdded
+        testBridge.initialize({validators: validators, threshold: 1, ismOwner: owner, guardians: new address[](0)});
     }
 
     //////////////////////////////////////////////////////////////
@@ -237,6 +280,13 @@ contract ISMVerificationTest is Test {
         bridge.addISMValidator(validator1);
     }
 
+    function test_addValidator_revertsWithZeroAddress() public {
+        /// @dev Test zero address validation when adding a validator.
+        vm.prank(owner);
+        vm.expectRevert(); // Library will revert with InvalidValidatorAddress
+        bridge.addISMValidator(address(0));
+    }
+
     function test_removeValidator_removesValidatorCorrectly() public {
         vm.prank(owner);
         bridge.removeISMValidator(validator1);
@@ -249,6 +299,19 @@ contract ISMVerificationTest is Test {
         vm.prank(owner);
         vm.expectRevert(); // Library will revert with ValidatorNotExisted
         bridge.removeISMValidator(nonValidator);
+    }
+
+    function test_removeValidator_revertsWithThresholdViolation() public {
+        /// @dev Test threshold validation when removing a validator.
+        // Current setup has 4 validators with threshold 3
+        // Set threshold to 4 so removing any validator would violate it
+        vm.prank(owner);
+        bridge.setISMThreshold(4);
+
+        // Try to remove a validator when it would make count < threshold
+        vm.prank(owner);
+        vm.expectRevert(); // Library will revert with ValidatorCountLessThanThreshold
+        bridge.removeISMValidator(validator1);
     }
 
     //////////////////////////////////////////////////////////////

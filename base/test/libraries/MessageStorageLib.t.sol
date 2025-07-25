@@ -240,7 +240,6 @@ contract MessageStorageLibTest is Test {
         assertNotEq(root, bytes32(0), "Root should be calculated properly for 2+ leaves");
     }
 
-    /// @notice Debug test to examine the 2-leaf MMR issue in detail
     function test_MMR_DebugTwoLeafIssue() public {
         console2.log("=== Debugging 2-leaf MMR Issue ===");
 
@@ -656,6 +655,152 @@ contract MessageStorageLibTest is Test {
     }
 
     //////////////////////////////////////////////////////////////
+    ///                 generateProof Tests                   ///
+    //////////////////////////////////////////////////////////////
+
+    function test_GenerateProof_WithOtherPeaksInProof() public {
+        // Create MMR with multiple peaks to ensure other peaks are included in proof
+
+        // Add 5 leaves to create multiple peaks
+        for (uint256 i = 0; i < 5; i++) {
+            MessageStorageLib.sendMessage({
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("leaf", i)))
+            });
+        }
+
+        // Generate proof for first leaf - should include other peaks
+        (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(0);
+        assertEq(totalLeafCount, 5);
+        assertTrue(proof.length > 1, "Proof should include other peaks");
+    }
+
+    function test_GenerateProof_FindLeafMountainSuccess() public {
+        // uint256 localNodePos = 2 * uint256(localLeafIdx) - _popcount(localLeafIdx);
+        // return (nodeOffset + localNodePos, height, localLeafIdx);
+
+        // Add 4 leaves to create a complete binary tree
+        for (uint256 i = 0; i < 4; i++) {
+            MessageStorageLib.sendMessage({
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("leaf", i)))
+            });
+        }
+
+        // Generate proof for each leaf to exercise different mountain positions
+        for (uint64 leafIdx = 0; leafIdx < 4; leafIdx++) {
+            (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(leafIdx);
+            assertEq(totalLeafCount, 4);
+            assertGt(proof.length, 0, "Each leaf should have a valid proof");
+        }
+    }
+
+    function test_GenerateProof_NodeOffsetCalculation() public {
+        // Create MMR with specific structure to exercise node offset calculations
+
+        // Add 7 leaves to create multiple mountains of different heights
+        for (uint256 i = 0; i < 7; i++) {
+            MessageStorageLib.sendMessage({
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("mountain", i)))
+            });
+        }
+
+        // Generate proofs for leaves in different mountains
+        (bytes32[] memory proof1,) = MessageStorageLib.generateProof(0);
+        (bytes32[] memory proof2,) = MessageStorageLib.generateProof(3);
+        (bytes32[] memory proof3,) = MessageStorageLib.generateProof(6);
+
+        assertTrue(proof1.length > 0);
+        assertTrue(proof2.length > 0);
+        assertTrue(proof3.length > 0);
+    }
+
+    function test_GenerateProof_CollectOtherPeaks() public {
+        // Create MMR with 6 leaves to have multiple peaks
+        for (uint256 i = 0; i < 6; i++) {
+            MessageStorageLib.sendMessage({
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("peak", i)))
+            });
+        }
+
+        // Generate proof for a leaf that will require collecting other peaks
+        (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(1);
+        assertEq(totalLeafCount, 6);
+
+        // The proof should contain peaks from other mountains
+        assertTrue(proof.length >= 2, "Proof should include other mountain peaks");
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                 Root Calculation Tests                 ///
+    //////////////////////////////////////////////////////////////
+
+    function test_CalculateRoot_EmptyMMR() public view {
+        // Get root of empty MMR
+        bytes32 emptyRoot = _getRoot();
+        assertEq(emptyRoot, bytes32(0), "Empty MMR should have zero root");
+    }
+
+    function test_CalculateRoot_SinglePeak() public {
+        // Add single leaf to create single peak
+        MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("single")});
+
+        bytes32 root = _getRoot();
+        assertNotEq(root, bytes32(0), "Single peak should have non-zero root");
+        assertEq(_getLeafCount(), 1, "Should have one leaf");
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                Peak Indices Tests                      ///
+    //////////////////////////////////////////////////////////////
+
+    function test_GetPeakNodeIndices_PeakIndexCalculation() public {
+        // tempPeakIndices[peakCount] = peakIndex;
+        // peakCount++;
+
+        // Add leaves to create multiple peaks
+        for (uint256 i = 0; i < 3; i++) {
+            MessageStorageLib.sendMessage({
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("peak_test", i)))
+            });
+        }
+
+        // Generate proof to exercise peak index calculation
+        (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(0);
+        assertEq(totalLeafCount, 3);
+        assertTrue(proof.length > 0, "Should have valid proof with calculated peak indices");
+    }
+
+    function test_GenerateProof_ComplexMMRStructure() public {
+        // Test complex scenario that exercises multiple edge cases
+
+        // Create MMR with 15 leaves (complex structure with multiple mountains)
+        for (uint256 i = 0; i < 15; i++) {
+            MessageStorageLib.sendMessage({
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("complex", i)))
+            });
+        }
+
+        // Test proof generation for leaves at different positions
+        uint64[] memory testLeaves = new uint64[](5);
+        testLeaves[0] = 0; // First leaf
+        testLeaves[1] = 7; // Middle leaf
+        testLeaves[2] = 14; // Last leaf
+        testLeaves[3] = 3; // Random position
+        testLeaves[4] = 10; // Another random position
+
+        for (uint256 i = 0; i < testLeaves.length; i++) {
+            (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(testLeaves[i]);
+            assertEq(totalLeafCount, 15);
+            assertTrue(proof.length > 0, string(abi.encodePacked("Proof should exist for leaf ", testLeaves[i])));
+        }
+    }
+
+    //////////////////////////////////////////////////////////////
     ///               Gas Efficiency Tests                     ///
     //////////////////////////////////////////////////////////////
 
@@ -707,5 +852,15 @@ contract MessageStorageLibTest is Test {
         }
 
         assertEq(_getLeafCount(), iterations, "Final leaf count should match iterations");
+    }
+
+    function test_CalculateRoot_DirectlyWithZeroLeafCount() public view {
+        // The current implementation only calls _calculateRoot with (originalLeafCount + 1)
+        // but we need to test the defensive code paths directly
+
+        // Test empty MMR state which exercises the nodeCount == 0 path
+        assertEq(_getNodeCount(), 0, "Should start with no nodes");
+        bytes32 root = _getRoot();
+        assertEq(root, bytes32(0), "Empty MMR should return zero root");
     }
 }
