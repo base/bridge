@@ -31,7 +31,11 @@ pub struct Transfer {
 
 impl Transfer {
     pub fn space(data_len: Option<usize>) -> usize {
-        20 + 32 + 20 + 8 + 1 + Call::space(data_len.unwrap_or_default())
+        20 + // to
+        32 + // local_token
+        20 + // remote_token
+        8 + // amount
+        1 + Call::space(data_len.unwrap_or_default()) // option_flag + call
     }
 }
 
@@ -52,8 +56,8 @@ pub struct Call {
     /// Determines how the call will be executed on the Base side.
     pub ty: CallType,
 
-    /// The target contract address on Base (20 bytes for Ethereum-compatible address).
-    /// For Create and Create2 operations, this may be used differently or ignored.
+    /// The target address on Base (20 bytes for Ethereum-compatible address).
+    /// Must be set to zero for Create and Create2 operations.
     pub to: [u8; 20],
 
     /// The amount of native currency (ETH) to send with this call, in wei.
@@ -67,7 +71,10 @@ pub struct Call {
 
 impl Call {
     pub fn space(data_len: usize) -> usize {
-        CallType::INIT_SPACE + 20 + 16 + (4 + data_len)
+        CallType::INIT_SPACE + // call type
+        20 + // to
+        16 + // value
+        4 + data_len // len_prefix + data
     }
 }
 
@@ -140,8 +147,13 @@ impl OutgoingMessage {
     }
 
     pub fn space(data_len: Option<usize>) -> usize {
-        // The transfer variant is always bigger than the call variant (as it embeds an optional call)
-        16 + 32 + 8 + (1 + Transfer::space(data_len))
+        8 + // nonce
+        32 + // original_payer
+        32 + // sender
+        8 + // gas_limit
+
+        // TODO: Accept the message type as a parameter, so we can use the correct space calculation.
+        1 + Transfer::space(data_len) // variant + transfer (the transfer variant is always bigger as it embeds an optional call)
     }
 
     pub fn relay_messages_tx_size(&self) -> usize {
@@ -151,6 +163,7 @@ impl OutgoingMessage {
                     + call.data.len().div_ceil(32) * 32
             }
             Message::Transfer(transfer) => {
+                // TODO: Fix this, seems like it should use RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD if a call exists.
                 RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD as usize
                     + transfer
                         .call

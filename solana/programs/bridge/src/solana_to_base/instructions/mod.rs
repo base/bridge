@@ -7,17 +7,28 @@ use crate::{
     },
 };
 
-pub mod bridge_call;
-pub mod bridge_sol;
-pub mod bridge_spl;
-pub mod bridge_wrapped_token;
 pub mod wrap_token;
-
-pub use bridge_call::*;
-pub use bridge_sol::*;
-pub use bridge_spl::*;
-pub use bridge_wrapped_token::*;
 pub use wrap_token::*;
+
+pub mod bridge_call;
+pub use bridge_call::*;
+pub mod bridge_sol;
+pub use bridge_sol::*;
+pub mod bridge_spl;
+pub use bridge_spl::*;
+pub mod bridge_wrapped_token;
+pub use bridge_wrapped_token::*;
+
+pub mod buffered;
+pub use buffered::*;
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct TransferParams {
+    pub to: [u8; 20],
+    pub remote_token: [u8; 20],
+    pub amount: u64,
+    pub call: Option<Call>,
+}
 
 pub fn check_call(call: &Call) -> Result<()> {
     require!(
@@ -86,8 +97,8 @@ fn min_gas_limit(tx_size: usize) -> u64 {
 
     // Buffers to account for the gas used in the `Bridge.__validateAndRelay` function.
     // See `Bridge.sol` for more details.
-    const EXECUTION_PROLOGUE_GAS_BUFFER: u64 = 35_000;
-    const EXECUTION_GAS_BUFFER: u64 = 3_000;
+    const EXECUTION_PROLOGUE_GAS_BUFFER: u64 = 65_000;
+    const EXECUTION_GAS_BUFFER: u64 = 40_000;
     const EXECUTION_EPILOGUE_GAS_BUFFER: u64 = 25_000;
 
     tx_size as u64 * 40

@@ -125,6 +125,20 @@ pub mod bridge {
         bridge_call_handler(ctx, gas_limit, call)
     }
 
+    /// Bridges a call using data from a call buffer account.
+    /// This instruction consumes the call buffer and creates an outgoing message
+    /// for execution on Base.
+    ///
+    /// # Arguments
+    /// * `ctx`       - The context containing accounts for the bridge operation
+    /// * `gas_limit` - Maximum gas to use for the function call on Base
+    pub fn bridge_call_buffered<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, BridgeCallBuffered<'info>>,
+        gas_limit: u64,
+    ) -> Result<()> {
+        bridge_call_buffered_handler(ctx, gas_limit)
+    }
+
     /// Bridges native SOL tokens from Solana to Base.
     /// This function locks SOL on Solana and initiates a message to mint equivalent
     /// tokens on Base for the specified recipient.
@@ -145,6 +159,26 @@ pub mod bridge {
         call: Option<Call>,
     ) -> Result<()> {
         bridge_sol_handler(ctx, gas_limit, to, remote_token, amount, call)
+    }
+
+    /// Bridges native SOL tokens from Solana to Base with a call using buffered data.
+    /// This function locks SOL on Solana and initiates a message to mint equivalent
+    /// tokens on Base, then executes a call using data from a call buffer.
+    ///
+    /// # Arguments
+    /// * `ctx`          - The context containing accounts for the SOL bridge operation
+    /// * `gas_limit`    - Maximum gas to use for the transaction on Base
+    /// * `to`           - The 20-byte Ethereum address that will receive tokens on Base
+    /// * `remote_token` - The 20-byte address of the token contract on Base
+    /// * `amount`       - Amount of SOL to bridge (in lamports)
+    pub fn bridge_sol_with_buffered_call<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, BridgeSolWithBufferedCall<'info>>,
+        gas_limit: u64,
+        to: [u8; 20],
+        remote_token: [u8; 20],
+        amount: u64,
+    ) -> Result<()> {
+        bridge_sol_with_buffered_call_handler(ctx, gas_limit, to, remote_token, amount)
     }
 
     /// Bridges SPL tokens from Solana to Base.
@@ -169,6 +203,26 @@ pub mod bridge {
         bridge_spl_handler(ctx, gas_limit, to, remote_token, amount, call)
     }
 
+    /// Bridges SPL tokens from Solana to Base with a call using buffered data.
+    /// This function locks SPL tokens on Solana and initiates a message to mint equivalent
+    /// tokens on Base, then executes a call using data from a call buffer.
+    ///
+    /// # Arguments
+    /// * `ctx`          - The context containing accounts for the SPL token bridge operation
+    /// * `gas_limit`    - Maximum gas to use for the transaction on Base
+    /// * `to`           - The 20-byte Ethereum address that will receive tokens on Base
+    /// * `remote_token` - The 20-byte address of the ERC20 token contract on Base
+    /// * `amount`       - Amount of SPL tokens to bridge (in lamports)
+    pub fn bridge_spl_with_buffered_call<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, BridgeSplWithBufferedCall<'info>>,
+        gas_limit: u64,
+        to: [u8; 20],
+        remote_token: [u8; 20],
+        amount: u64,
+    ) -> Result<()> {
+        bridge_spl_with_buffered_call_handler(ctx, gas_limit, to, remote_token, amount)
+    }
+
     /// Bridges wrapped tokens from Solana back to their native form on Base.
     /// This function burns wrapped tokens on Solana and initiates a message to release
     /// or mint the original tokens on Base for the specified recipient.
@@ -187,5 +241,65 @@ pub mod bridge {
         call: Option<Call>,
     ) -> Result<()> {
         bridge_wrapped_token_handler(ctx, gas_limit, to, amount, call)
+    }
+
+    /// Bridges wrapped tokens from Solana back to Base with a call using buffered data.
+    /// This function burns wrapped tokens on Solana and initiates a message to release
+    /// the original tokens on Base, then executes a call using data from a call buffer.
+    ///
+    /// # Arguments
+    /// * `ctx`       - The context containing accounts for the wrapped token bridge operation
+    /// * `gas_limit` - Maximum gas to use for the transaction on Base
+    /// * `to`        - The 20-byte Ethereum address that will receive tokens on Base
+    /// * `amount`    - Amount of wrapped tokens to bridge back (in lamports)
+    pub fn bridge_wrapped_token_with_buffered_call<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, BridgeWrappedTokenWithBufferedCall<'info>>,
+        gas_limit: u64,
+        to: [u8; 20],
+        amount: u64,
+    ) -> Result<()> {
+        bridge_wrapped_token_with_buffered_call_handler(ctx, gas_limit, to, amount)
+    }
+
+    /// Initializes a call buffer account that can store large call data.
+    /// This account can be used to build up call data over multiple transactions
+    /// before using it in a bridge operation.
+    ///
+    /// # Arguments
+    /// * `ctx`          - The context containing accounts for initialization
+    /// * `ty`           - The type of call (Call, DelegateCall, Create, Create2)
+    /// * `to`           - The target contract address on Base
+    /// * `value`        - The amount of ETH to send with the call (in wei)
+    /// * `initial_data` - Initial call data to store
+    /// * `max_data_len` - Maximum total length of data that will be stored
+    pub fn initialize_call_buffer(
+        ctx: Context<InitializeCallBuffer>,
+        ty: CallType,
+        to: [u8; 20],
+        value: u128,
+        initial_data: Vec<u8>,
+        max_data_len: usize,
+    ) -> Result<()> {
+        initialize_call_buffer_handler(ctx, ty, to, value, initial_data, max_data_len)
+    }
+
+    /// Appends data to an existing call buffer account.
+    /// Only the owner of the call buffer can append data to it.
+    ///
+    /// # Arguments
+    /// * `ctx`  - The context containing the call buffer account
+    /// * `data` - Additional data to append to the buffer
+    pub fn append_to_call_buffer(ctx: Context<AppendToCallBuffer>, data: Vec<u8>) -> Result<()> {
+        append_to_call_buffer_handler(ctx, data)
+    }
+
+    /// Closes a call buffer account and returns the rent to the specified receiver.
+    /// Only the owner of the call buffer can close it. This is useful if the user
+    /// changed their mind or made a mistake and wants to recover the rent.
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the call buffer to close and rent receiver
+    pub fn close_call_buffer(ctx: Context<CloseCallBuffer>) -> Result<()> {
+        close_call_buffer_handler(ctx)
     }
 }
