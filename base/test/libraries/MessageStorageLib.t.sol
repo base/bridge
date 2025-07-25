@@ -658,41 +658,6 @@ contract MessageStorageLibTest is Test {
     ///                 generateProof Tests                   ///
     //////////////////////////////////////////////////////////////
 
-    /// forge-config: default.allow_internal_expect_revert = true
-    function test_GenerateProof_SiblingNodeOutOfBounds() public {
-        /// This is extremely difficult to trigger legitimately since the MMR is self-consistent.
-        /// We need to create a corrupted state where siblingNodePos >= nodes.length.
-
-        // Add a single leaf to create basic MMR structure
-        MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("leaf1")});
-
-        // In practice, this error is defensive code that's nearly impossible to reach
-        // in normal operation since the MMR maintains internal consistency
-        // The sibling position calculations are bounded by the MMR structure
-
-        // Generate valid proof to ensure normal operation works
-        (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(0);
-        assertEq(totalLeafCount, 1);
-        assertEq(proof.length, 0); // Single leaf has empty proof
-    }
-
-    /// forge-config: default.allow_internal_expect_revert = true
-    function test_GenerateProof_LeafNotFound() public {
-        // This is defensive code that should never trigger in normal operation
-        // since leafIndex should always be within MMR bounds
-
-        // Add some leaves
-        MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("leaf1")});
-        MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("leaf2")});
-
-        // This error is extremely difficult to trigger legitimately
-        // The MMR structure ensures leafIndex is always findable within mountains
-        // Generate valid proof to show normal operation
-        (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(0);
-        assertEq(totalLeafCount, 2);
-        assertTrue(proof.length >= 0);
-    }
-
     function test_GenerateProof_WithOtherPeaksInProof() public {
         // Create MMR with multiple peaks to ensure other peaks are included in proof
 
@@ -778,18 +743,6 @@ contract MessageStorageLibTest is Test {
         assertEq(emptyRoot, bytes32(0), "Empty MMR should have zero root");
     }
 
-    function test_CalculateRoot_NoPeakIndices() public view {
-        // This is defensive code that's unreachable in current implementation
-        // _calculateRoot is only called with (originalLeafCount + 1) where originalLeafCount >= 0
-        // So it's never called with 0, which is the only case that returns empty peakIndices
-
-        // Test the closest scenario - empty MMR state
-        assertEq(_getLeafCount(), 0, "Should start with empty MMR");
-        assertEq(_getNodeCount(), 0, "Should have no nodes");
-        bytes32 root = _getRoot();
-        assertEq(root, bytes32(0), "Empty MMR should return zero root");
-    }
-
     function test_CalculateRoot_SinglePeak() public {
         // Add single leaf to create single peak
         MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("single")});
@@ -802,17 +755,6 @@ contract MessageStorageLibTest is Test {
     //////////////////////////////////////////////////////////////
     ///                Peak Indices Tests                      ///
     //////////////////////////////////////////////////////////////
-
-    /// forge-config: default.allow_internal_expect_revert = true
-    function test_GetPeakNodeIndices_EmptyLeafCount() public {
-        // This function _getPeakNodeIndicesForLeafCount is private and only called from _calculateRoot
-        // _calculateRoot is only called with (originalLeafCount + 1), so never with 0
-        // The leafCount == 0 case is defensive code that's unreachable in current implementation
-
-        // Test the closest scenario - attempting generateProof on empty MMR triggers EmptyMMR error
-        vm.expectRevert(MessageStorageLib.EmptyMMR.selector);
-        MessageStorageLib.generateProof(0);
-    }
 
     function test_GetPeakNodeIndices_PeakIndexCalculation() public {
         // tempPeakIndices[peakCount] = peakIndex;
@@ -912,7 +854,6 @@ contract MessageStorageLibTest is Test {
         assertEq(_getLeafCount(), iterations, "Final leaf count should match iterations");
     }
 
-    /// forge-config: default.allow_internal_expect_revert = true
     function test_CalculateRoot_DirectlyWithZeroLeafCount() public view {
         // The current implementation only calls _calculateRoot with (originalLeafCount + 1)
         // but we need to test the defensive code paths directly
@@ -921,60 +862,5 @@ contract MessageStorageLibTest is Test {
         assertEq(_getNodeCount(), 0, "Should start with no nodes");
         bytes32 root = _getRoot();
         assertEq(root, bytes32(0), "Empty MMR should return zero root");
-    }
-
-    /// forge-config: default.allow_internal_expect_revert = true
-    function test_DefensiveCode_SiblingNodeBounds() public {
-        // This is extremely difficult to trigger because MMR maintains consistency
-        // Create a complex MMR structure that might stress the sibling calculations
-        for (uint256 i = 0; i < 15; i++) {
-            MessageStorageLib.sendMessage({sender: address(this), data: abi.encodePacked("complex_leaf_", i)});
-        }
-
-        // Generate proofs for various leaf positions to exercise sibling calculations
-        for (uint64 leafIdx = 0; leafIdx < 15; leafIdx++) {
-            (, uint64 totalLeafCount) = MessageStorageLib.generateProof(leafIdx);
-            assertEq(totalLeafCount, 15);
-            // The defensive code should not trigger in normal operation
-        }
-    }
-
-    /// forge-config: default.allow_internal_expect_revert = true
-    function test_DefensiveCode_LeafNotFound() public {
-        // This is defensive code that should never execute in normal operation
-        // The check is at the end of _findLeafMountain when no mountain contains the leaf
-
-        // Create MMR with various structures
-        MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("1")});
-        MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("2")});
-        MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("3")});
-        MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("4")});
-        MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("5")});
-
-        // Generate proofs for all valid leaf indices
-        for (uint64 i = 0; i < 5; i++) {
-            (, uint64 totalLeafCount) = MessageStorageLib.generateProof(i);
-            assertEq(totalLeafCount, 5);
-            // The defensive LeafNotFound should not trigger for valid indices
-        }
-    }
-
-    /// forge-config: default.allow_internal_expect_revert = true
-    function test_DefensiveCode_EmptyPeakIndices() public view {
-        // Note: This function is only called from _calculateRoot with (originalLeafCount + 1),
-        // so leafCount is never 0 in the current implementation, but we test this edge case
-        // for completeness and potential future changes.
-
-        // This would only happen if _getPeakNodeIndicesForLeafCount returns empty array
-        // which only happens when leafCount == 0, but that's never passed to _calculateRoot
-
-        // Test the closest reachable scenario - empty MMR
-        assertTrue(_isEmpty(), "Should start empty");
-        assertEq(_getLeafCount(), 0, "Should have 0 leaves");
-        assertEq(_getNodeCount(), 0, "Should have 0 nodes");
-
-        // The root calculation for empty MMR goes through the nodeCount == 0 path.
-        bytes32 emptyRoot = _getRoot();
-        assertEq(emptyRoot, bytes32(0), "Empty MMR returns zero root");
     }
 }

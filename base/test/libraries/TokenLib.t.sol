@@ -453,7 +453,7 @@ contract TokenLibTest is Test {
         Transfer memory transfer = Transfer({
             localToken: TokenLib.ETH_ADDRESS,
             remoteToken: TokenLib.NATIVE_SOL_PUBKEY,
-            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            to: bytes32(bytes20(alice)),
             remoteAmount: 1e9 // 1 SOL
         });
 
@@ -476,7 +476,7 @@ contract TokenLibTest is Test {
         Transfer memory transfer = Transfer({
             localToken: address(mockToken),
             remoteToken: TEST_REMOTE_TOKEN,
-            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            to: bytes32(bytes20(alice)), // 
             remoteAmount: 100e6 // 100 tokens on Solana
         });
 
@@ -503,7 +503,7 @@ contract TokenLibTest is Test {
         Transfer memory transfer = Transfer({
             localToken: address(crossChainSOLToken),
             remoteToken: TEST_NATIVE_SOL,
-            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            to: bytes32(bytes20(alice)), // 
             remoteAmount: 1e9 // 1 SOL
         });
 
@@ -521,7 +521,7 @@ contract TokenLibTest is Test {
         Transfer memory transfer = Transfer({
             localToken: address(crossChainToken),
             remoteToken: TEST_SPL_TOKEN,
-            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            to: bytes32(bytes20(alice)), // 
             remoteAmount: 100e9 // 100 SPL tokens
         });
 
@@ -603,7 +603,7 @@ contract TokenLibTest is Test {
         Transfer memory transfer = Transfer({
             localToken: address(crossChainToken),
             remoteToken: TEST_REMOTE_TOKEN, // Wrong remote token (crossChainToken expects TEST_SPL_TOKEN)
-            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            to: bytes32(bytes20(alice)), // 
             remoteAmount: 100e9
         });
 
@@ -720,7 +720,7 @@ contract TokenLibTest is Test {
         Transfer memory incomingTransfer = Transfer({
             localToken: address(crossChainToken),
             remoteToken: TEST_SPL_TOKEN,
-            to: bytes32(bytes20(bob)), // Fix: address should be in first 20 bytes
+            to: bytes32(bytes20(bob)), // 
             remoteAmount: 200e9
         });
 
@@ -734,7 +734,7 @@ contract TokenLibTest is Test {
         Transfer memory outgoingTransfer = Transfer({
             localToken: address(crossChainToken),
             remoteToken: TEST_SPL_TOKEN,
-            to: bytes32(bytes20(alice)), // Fix: address should be in first 20 bytes
+            to: bytes32(bytes20(alice)), // 
             remoteAmount: 150e9
         });
 
