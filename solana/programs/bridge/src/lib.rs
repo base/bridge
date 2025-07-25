@@ -125,6 +125,20 @@ pub mod bridge {
         bridge_call_handler(ctx, gas_limit, call)
     }
 
+    /// Bridges a call using data from a call buffer account.
+    /// This instruction consumes the call buffer and creates an outgoing message
+    /// for execution on Base.
+    ///
+    /// # Arguments
+    /// * `ctx`       - The context containing accounts for the bridge operation
+    /// * `gas_limit` - Maximum gas to use for the function call on Base
+    pub fn bridge_call_buffered<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, BridgeCallBuffered<'info>>,
+        gas_limit: u64,
+    ) -> Result<()> {
+        bridge_call_buffered_handler(ctx, gas_limit)
+    }
+
     /// Bridges native SOL tokens from Solana to Base.
     /// This function locks SOL on Solana and initiates a message to mint equivalent
     /// tokens on Base for the specified recipient.
@@ -252,12 +266,12 @@ pub mod bridge {
     /// before using it in a bridge operation.
     ///
     /// # Arguments
-    /// * `ctx`           - The context containing accounts for initialization
-    /// * `ty`            - The type of call (Call, DelegateCall, Create, Create2)
-    /// * `to`            - The target contract address on Base
-    /// * `value`         - The amount of ETH to send with the call (in wei)
-    /// * `initial_data`  - Initial call data to store
-    /// * `max_data_len`  - Maximum total length of data that will be stored
+    /// * `ctx`          - The context containing accounts for initialization
+    /// * `ty`           - The type of call (Call, DelegateCall, Create, Create2)
+    /// * `to`           - The target contract address on Base
+    /// * `value`        - The amount of ETH to send with the call (in wei)
+    /// * `initial_data` - Initial call data to store
+    /// * `max_data_len` - Maximum total length of data that will be stored
     pub fn initialize_call_buffer(
         ctx: Context<InitializeCallBuffer>,
         ty: CallType,
@@ -273,7 +287,7 @@ pub mod bridge {
     /// Only the owner of the call buffer can append data to it.
     ///
     /// # Arguments
-    /// * `ctx`            - The context containing the call buffer account
+    /// * `ctx`  - The context containing the call buffer account
     /// * `data` - Additional data to append to the buffer
     pub fn append_to_call_buffer(ctx: Context<AppendToCallBuffer>, data: Vec<u8>) -> Result<()> {
         append_to_call_buffer_handler(ctx, data)
@@ -287,19 +301,5 @@ pub mod bridge {
     /// * `ctx` - The context containing the call buffer to close and rent receiver
     pub fn close_call_buffer(ctx: Context<CloseCallBuffer>) -> Result<()> {
         close_call_buffer_handler(ctx)
-    }
-
-    /// Bridges a call using data from a call buffer account.
-    /// This instruction consumes the call buffer and creates an outgoing message
-    /// for execution on Base.
-    ///
-    /// # Arguments
-    /// * `ctx`       - The context containing accounts for the bridge operation
-    /// * `gas_limit` - Maximum gas to use for the function call on Base
-    pub fn bridge_call_buffered<'a, 'b, 'c, 'info>(
-        ctx: Context<'a, 'b, 'c, 'info, BridgeCallBuffered<'info>>,
-        gas_limit: u64,
-    ) -> Result<()> {
-        bridge_call_buffered_handler(ctx, gas_limit)
     }
 }
