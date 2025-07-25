@@ -39,9 +39,7 @@ mod private {
         use super::*;
 
         #[constant]
-        // This is for registering output roots test
-        // pub const TRUSTED_ORACLE: Pubkey = pubkey!("6FfuqkJTptvr6dCZnyp3tq3M4HkvyTE5DHyvqC537Lqt");
-        pub const TRUSTED_ORACLE: Pubkey = pubkey!("CB8GXDdZDSD5uqfeow1qfp48ouayxXGpw7ycmoovuQMX");
+        pub const TRUSTED_ORACLE: Pubkey = pubkey!("eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt");
 
         #[constant]
         pub const TRUSTED_VALIDATOR: Pubkey =

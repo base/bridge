@@ -2,19 +2,18 @@ use anchor_lang::prelude::*;
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, SOL_VAULT_SEED},
-    solana_to_base::{
-        internal::bridge_sol::bridge_sol_internal, Call, OutgoingMessage, GAS_FEE_RECEIVER,
-    },
+    solana_to_base::{Call, CallBuffer, OutgoingMessage, GAS_FEE_RECEIVER},
 };
 
-/// Accounts struct for the bridge_sol instruction that transfers native SOL from Solana to Base
-/// along with an optional call that can be executed on Base.
+/// Accounts struct for the bridge_sol_with_buffered_call instruction that transfers native SOL
+/// from Solana to Base along with a call (read from a call buffer account) to execute on Base.
 ///
 /// The bridged SOLs are locked in a vault on Solana and an outgoing message is created to mint
-/// the corresponding tokens and execute the optional call on Base.
+/// the corresponding tokens and execute the call on Base. The call buffer account is closed and
+/// rent returned to the owner.
 #[derive(Accounts)]
-#[instruction(_gas_limit: u64, _to: [u8; 20], remote_token: [u8; 20], _amount: u64, call: Option<Call>)]
-pub struct BridgeSol<'info> {
+#[instruction(_gas_limit: u64, _to: [u8; 20], remote_token: [u8; 20])]
+pub struct BridgeSolWithBufferedCall<'info> {
     /// The account that pays for transaction fees and account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees.
     #[account(mut)]
@@ -30,7 +29,7 @@ pub struct BridgeSol<'info> {
     /// - Mutable to receive gas fee payments
     ///
     /// CHECK: This is the hardcoded gas fee receiver account.
-    #[account(mut, address = GAS_FEE_RECEIVER @ BridgeSolError::IncorrectGasFeeReceiver)]
+    #[account(mut, address = GAS_FEE_RECEIVER @ BridgeSolWithBufferedCallError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SOL vault account that holds locked tokens for the specific remote token.
@@ -52,31 +51,43 @@ pub struct BridgeSol<'info> {
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
 
-    /// The outgoing message account that stores cross-chain transfer details.
-    /// - Created fresh for each bridge operation
-    /// - Payer funds the account creation
-    /// - Space allocated dynamically based on optional call data size
+    /// The owner of the call buffer who will receive the rent refund.
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    /// The call buffer account that stores the call data.
+    /// This account will be closed and rent returned to the owner.
     #[account(
-        init,
-        payer = payer,
-        space = 8 + OutgoingMessage::space(call.as_ref().map(|c| c.data.len())),
+        mut,
+        close = owner,
+        has_one = owner @ BridgeSolWithBufferedCallError::Unauthorized,
     )]
+    pub call_buffer: Account<'info, CallBuffer>,
+
+    /// The outgoing message account that stores the cross-chain transfer details.
+    #[account(init, payer = payer, space = 8 + OutgoingMessage::space(Some(call_buffer.data.len())))]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
     /// System program required for SOL transfers and account creation.
-    /// Used for transferring SOL from user to vault and creating outgoing message account.
     pub system_program: Program<'info, System>,
 }
 
-pub fn bridge_sol_handler(
-    ctx: Context<BridgeSol>,
+pub fn bridge_sol_with_buffered_call_handler<'a, 'b, 'c, 'info>(
+    ctx: Context<'a, 'b, 'c, 'info, BridgeSolWithBufferedCall<'info>>,
     gas_limit: u64,
     to: [u8; 20],
     remote_token: [u8; 20],
     amount: u64,
-    call: Option<Call>,
 ) -> Result<()> {
-    bridge_sol_internal(
+    let call_buffer = &ctx.accounts.call_buffer;
+    let call = Some(Call {
+        ty: call_buffer.ty,
+        to: call_buffer.to,
+        value: call_buffer.value,
+        data: call_buffer.data.clone(),
+    });
+
+    crate::solana_to_base::internal::bridge_sol::bridge_sol_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
         &ctx.accounts.gas_fee_receiver,
@@ -93,7 +104,7 @@ pub fn bridge_sol_handler(
 }
 
 #[error_code]
-pub enum BridgeSolError {
+pub enum BridgeSolWithBufferedCallError {
     #[msg("Incorrect gas fee receiver")]
     IncorrectGasFeeReceiver,
     #[msg("Only the owner can close this call buffer")]
@@ -116,65 +127,112 @@ mod tests {
     use crate::{
         accounts,
         common::{bridge::Bridge, SOL_VAULT_SEED},
-        instruction::BridgeSol as BridgeSolIx,
-        solana_to_base::{Call, CallType, GAS_FEE_RECEIVER, NATIVE_SOL_PUBKEY},
+        instruction::{
+            BridgeSolWithBufferedCall as BridgeSolWithBufferedCallIx, InitializeCallBuffer,
+        },
+        solana_to_base::{CallType, GAS_FEE_RECEIVER, NATIVE_SOL_PUBKEY},
         test_utils::setup_bridge_and_svm,
         ID,
     };
 
     #[test]
-    fn test_bridge_sol_success_without_call() {
+    fn test_bridge_sol_with_buffered_call_success() {
         let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
 
         // Create from account
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
 
+        // Create owner account (who owns the call buffer)
+        let owner = Keypair::new();
+        svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
+
         // Airdrop to gas fee receiver
         svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
-        // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        // Create call buffer account
+        let call_buffer = Keypair::new();
 
         // Test parameters
         let gas_limit = 1_000_000u64;
-        let to = [1u8; 20]; // Base address
-        let remote_token = [2u8; 20]; // Remote token address
-        let amount = LAMPORTS_PER_SOL; // 1 SOL
+        let to = [1u8; 20];
+        let remote_token = [2u8; 20];
+        let amount = LAMPORTS_PER_SOL;
+
+        // Create test call data
+        let call_ty = CallType::Call;
+        let call_to = [3u8; 20];
+        let call_value = 200u128;
+        let call_data = vec![0x11, 0x22, 0x33, 0x44];
+        let max_data_len = 1024;
+
+        // First, initialize the call buffer
+        let init_accounts = accounts::InitializeCallBuffer {
+            payer: owner.pubkey(),
+            call_buffer: call_buffer.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        let init_ix = Instruction {
+            program_id: ID,
+            accounts: init_accounts,
+            data: InitializeCallBuffer {
+                ty: call_ty,
+                to: call_to,
+                value: call_value,
+                initial_data: call_data.clone(),
+                max_data_len,
+            }
+            .data(),
+        };
+
+        let init_tx = Transaction::new(
+            &[&owner, &call_buffer],
+            Message::new(&[init_ix], Some(&owner.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        svm.send_transaction(init_tx)
+            .expect("Failed to initialize call buffer");
+
+        // Now create the bridge_sol_with_buffered_call instruction
+        let outgoing_message = Keypair::new();
 
         // Find SOL vault PDA
         let sol_vault =
             Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
 
-        // Build the BridgeSol instruction accounts
-        let accounts = accounts::BridgeSol {
+        // Build the BridgeSolWithBufferedCall instruction accounts
+        let accounts = accounts::BridgeSolWithBufferedCall {
             payer: payer.pubkey(),
             from: from.pubkey(),
             gas_fee_receiver: GAS_FEE_RECEIVER,
             sol_vault,
             bridge: bridge_pda,
+            owner: owner.pubkey(),
+            call_buffer: call_buffer.pubkey(),
             outgoing_message: outgoing_message.pubkey(),
             system_program: system_program::ID,
         }
         .to_account_metas(None);
 
-        // Build the BridgeSol instruction
+        // Build the BridgeSolWithBufferedCall instruction
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeSolIx {
+            data: BridgeSolWithBufferedCallIx {
                 gas_limit,
                 to,
                 remote_token,
                 amount,
-                call: None,
             }
             .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from, &owner, &outgoing_message],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
@@ -188,7 +246,7 @@ mod tests {
 
         // Send the transaction
         svm.send_transaction(tx)
-            .expect("Failed to send bridge_sol transaction");
+            .expect("Failed to send bridge_sol_with_buffered_call transaction");
 
         // Verify the OutgoingMessage account was created correctly
         let outgoing_message_account = svm.get_account(&outgoing_message.pubkey()).unwrap();
@@ -203,14 +261,19 @@ mod tests {
         assert_eq!(outgoing_message_data.sender, from.pubkey());
         assert_eq!(outgoing_message_data.gas_limit, gas_limit);
 
-        // Verify the message content
+        // Verify the message content matches the call buffer data
         match outgoing_message_data.message {
             crate::solana_to_base::Message::Transfer(transfer) => {
                 assert_eq!(transfer.to, to);
                 assert_eq!(transfer.local_token, NATIVE_SOL_PUBKEY);
                 assert_eq!(transfer.remote_token, remote_token);
                 assert_eq!(transfer.amount, amount);
-                assert!(transfer.call.is_none());
+
+                let transfer_call = transfer.call.expect("Expected call to be present");
+                assert_eq!(transfer_call.ty, call_ty);
+                assert_eq!(transfer_call.to, call_to);
+                assert_eq!(transfer_call.value, call_value);
+                assert_eq!(transfer_call.data, call_data);
             }
             _ => panic!("Expected Transfer message"),
         }
@@ -222,6 +285,23 @@ mod tests {
         assert_eq!(from_final_balance, from_initial_balance - amount);
         assert_eq!(vault_final_balance, vault_initial_balance + amount);
 
+        // Verify the call buffer account was closed (should have 0 lamports and 0 data)
+        let call_buffer_account = svm.get_account(&call_buffer.pubkey()).unwrap();
+        assert_eq!(
+            call_buffer_account.lamports, 0,
+            "Call buffer should have 0 lamports after being closed"
+        );
+        assert_eq!(
+            call_buffer_account.data.len(),
+            0,
+            "Call buffer should have 0 data length after being closed"
+        );
+        assert_eq!(
+            call_buffer_account.owner,
+            system_program::ID,
+            "Call buffer should be owned by system program after being closed"
+        );
+
         // Verify bridge nonce was incremented
         let bridge_account = svm.get_account(&bridge_pda).unwrap();
         let bridge_data = Bridge::try_deserialize(&mut &bridge_account.data[..]).unwrap();
@@ -229,114 +309,60 @@ mod tests {
     }
 
     #[test]
-    fn test_bridge_sol_success_with_call() {
+    fn test_bridge_sol_with_buffered_call_unauthorized() {
         let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
 
         // Create from account
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
+
+        // Create owner account (who owns the call buffer)
+        let owner = Keypair::new();
+        svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
+
+        // Create unauthorized account (not the owner)
+        let unauthorized = Keypair::new();
+        svm.airdrop(&unauthorized.pubkey(), LAMPORTS_PER_SOL)
+            .unwrap();
 
         // Airdrop to gas fee receiver
         svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
-        // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        // Create call buffer account
+        let call_buffer = Keypair::new();
 
-        // Test parameters
-        let gas_limit = 1_000_000u64;
-        let to = [1u8; 20];
-        let remote_token = [2u8; 20];
-        let amount = LAMPORTS_PER_SOL / 2; // 0.5 SOL
-
-        // Create test call data
-        let call = Call {
-            ty: CallType::Call,
-            to: [3u8; 20],
-            value: 100,
-            data: vec![0xaa, 0xbb, 0xcc, 0xdd],
-        };
-
-        // Find SOL vault PDA
-        let sol_vault =
-            Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
-
-        // Build the BridgeSol instruction accounts
-        let accounts = accounts::BridgeSol {
-            payer: payer.pubkey(),
-            from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
-            sol_vault,
-            bridge: bridge_pda,
-            outgoing_message: outgoing_message.pubkey(),
+        // First, initialize the call buffer with owner
+        let init_accounts = accounts::InitializeCallBuffer {
+            payer: owner.pubkey(),
+            call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }
         .to_account_metas(None);
 
-        // Build the BridgeSol instruction
-        let ix = Instruction {
+        let init_ix = Instruction {
             program_id: ID,
-            accounts,
-            data: BridgeSolIx {
-                gas_limit,
-                to,
-                remote_token,
-                amount,
-                call: Some(call.clone()),
+            accounts: init_accounts,
+            data: InitializeCallBuffer {
+                ty: CallType::Call,
+                to: [1u8; 20],
+                value: 0,
+                initial_data: vec![0x12, 0x34],
+                max_data_len: 1024,
             }
             .data(),
         };
 
-        // Build the transaction
-        let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
-            Message::new(&[ix], Some(&payer.pubkey())),
+        let init_tx = Transaction::new(
+            &[&owner, &call_buffer],
+            Message::new(&[init_ix], Some(&owner.pubkey())),
             svm.latest_blockhash(),
         );
 
-        // Send the transaction
-        svm.send_transaction(tx)
-            .expect("Failed to send bridge_sol transaction with call");
+        svm.send_transaction(init_tx)
+            .expect("Failed to initialize call buffer");
 
-        // Verify the OutgoingMessage account was created correctly
-        let outgoing_message_account = svm.get_account(&outgoing_message.pubkey()).unwrap();
-        let outgoing_message_data =
-            OutgoingMessage::try_deserialize(&mut &outgoing_message_account.data[..]).unwrap();
-
-        // Verify the message content including call
-        match outgoing_message_data.message {
-            crate::solana_to_base::Message::Transfer(transfer) => {
-                assert_eq!(transfer.to, to);
-                assert_eq!(transfer.local_token, NATIVE_SOL_PUBKEY);
-                assert_eq!(transfer.remote_token, remote_token);
-                assert_eq!(transfer.amount, amount);
-
-                let transfer_call = transfer.call.expect("Expected call to be present");
-                assert_eq!(transfer_call.ty, call.ty);
-                assert_eq!(transfer_call.to, call.to);
-                assert_eq!(transfer_call.value, call.value);
-                assert_eq!(transfer_call.data, call.data);
-            }
-            _ => panic!("Expected Transfer message"),
-        }
-    }
-
-    #[test]
-    fn test_bridge_sol_incorrect_gas_fee_receiver() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
-
-        // Create from account
-        let from = Keypair::new();
-        svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
-
-        // Create wrong gas fee receiver
-        let wrong_gas_fee_receiver = Keypair::new();
-        svm.airdrop(&wrong_gas_fee_receiver.pubkey(), LAMPORTS_PER_SOL)
-            .unwrap();
-
-        // Create outgoing message account
+        // Now try to use bridge_sol_with_buffered_call with unauthorized account as owner
         let outgoing_message = Keypair::new();
-
-        // Test parameters
         let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
         let remote_token = [2u8; 20];
@@ -346,35 +372,147 @@ mod tests {
         let sol_vault =
             Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
 
-        // Build the BridgeSol instruction accounts with wrong gas fee receiver
-        let accounts = accounts::BridgeSol {
+        // Build the BridgeSolWithBufferedCall instruction accounts with unauthorized owner
+        let accounts = accounts::BridgeSolWithBufferedCall {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: wrong_gas_fee_receiver.pubkey(), // Wrong receiver
+            gas_fee_receiver: GAS_FEE_RECEIVER,
             sol_vault,
             bridge: bridge_pda,
+            owner: unauthorized.pubkey(), // Wrong owner
+            call_buffer: call_buffer.pubkey(),
             outgoing_message: outgoing_message.pubkey(),
             system_program: system_program::ID,
         }
         .to_account_metas(None);
 
-        // Build the BridgeSol instruction
+        // Build the BridgeSolWithBufferedCall instruction
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeSolIx {
+            data: BridgeSolWithBufferedCallIx {
                 gas_limit,
                 to,
                 remote_token,
                 amount,
-                call: None,
             }
             .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from, &unauthorized, &outgoing_message],
+            Message::new(&[ix], Some(&payer.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        // Send the transaction - should fail
+        let result = svm.send_transaction(tx);
+        assert!(
+            result.is_err(),
+            "Expected transaction to fail with unauthorized owner"
+        );
+
+        // Check that the error contains the expected error message
+        let error_string = format!("{:?}", result.unwrap_err());
+        assert!(
+            error_string.contains("Unauthorized"),
+            "Expected Unauthorized error, got: {}",
+            error_string
+        );
+    }
+
+    #[test]
+    fn test_bridge_sol_with_buffered_call_incorrect_gas_fee_receiver() {
+        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+
+        // Create from account
+        let from = Keypair::new();
+        svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
+
+        // Create owner account
+        let owner = Keypair::new();
+        svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
+
+        // Create wrong gas fee receiver
+        let wrong_gas_fee_receiver = Keypair::new();
+        svm.airdrop(&wrong_gas_fee_receiver.pubkey(), LAMPORTS_PER_SOL)
+            .unwrap();
+
+        // Create call buffer account
+        let call_buffer = Keypair::new();
+
+        // Initialize the call buffer
+        let init_accounts = accounts::InitializeCallBuffer {
+            payer: owner.pubkey(),
+            call_buffer: call_buffer.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        let init_ix = Instruction {
+            program_id: ID,
+            accounts: init_accounts,
+            data: InitializeCallBuffer {
+                ty: CallType::Call,
+                to: [1u8; 20],
+                value: 0,
+                initial_data: vec![0x12, 0x34],
+                max_data_len: 1024,
+            }
+            .data(),
+        };
+
+        let init_tx = Transaction::new(
+            &[&owner, &call_buffer],
+            Message::new(&[init_ix], Some(&owner.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        svm.send_transaction(init_tx)
+            .expect("Failed to initialize call buffer");
+
+        // Now try bridge_sol_with_buffered_call with wrong gas fee receiver
+        let outgoing_message = Keypair::new();
+        let gas_limit = 1_000_000u64;
+        let to = [1u8; 20];
+        let remote_token = [2u8; 20];
+        let amount = LAMPORTS_PER_SOL;
+
+        // Find SOL vault PDA
+        let sol_vault =
+            Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
+
+        // Build the BridgeSolWithBufferedCall instruction accounts with wrong gas fee receiver
+        let accounts = accounts::BridgeSolWithBufferedCall {
+            payer: payer.pubkey(),
+            from: from.pubkey(),
+            gas_fee_receiver: wrong_gas_fee_receiver.pubkey(), // Wrong receiver
+            sol_vault,
+            bridge: bridge_pda,
+            owner: owner.pubkey(),
+            call_buffer: call_buffer.pubkey(),
+            outgoing_message: outgoing_message.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        // Build the BridgeSolWithBufferedCall instruction
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: BridgeSolWithBufferedCallIx {
+                gas_limit,
+                to,
+                remote_token,
+                amount,
+            }
+            .data(),
+        };
+
+        // Build the transaction
+        let tx = Transaction::new(
+            &[&payer, &from, &owner, &outgoing_message],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );

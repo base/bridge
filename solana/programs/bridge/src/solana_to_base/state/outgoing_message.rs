@@ -148,6 +148,7 @@ impl OutgoingMessage {
 
     pub fn space(data_len: Option<usize>) -> usize {
         8 + // nonce
+        32 + // original_payer
         32 + // sender
         8 + // gas_limit
 

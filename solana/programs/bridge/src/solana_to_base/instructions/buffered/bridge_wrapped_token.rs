@@ -6,20 +6,18 @@ use anchor_spl::{
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
-    solana_to_base::{
-        internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, OutgoingMessage, 
-        GAS_FEE_RECEIVER,
-    },
+    solana_to_base::{Call, CallBuffer, OutgoingMessage, GAS_FEE_RECEIVER},
 };
 
-/// Accounts struct for the bridge wrapped token instruction that transfers wrapped tokens from Solana to Base
-/// along with an optional call that can be executed on Base.
+/// Accounts struct for the bridge_wrapped_token_with_buffered_call instruction that transfers wrapped tokens
+/// from Solana to Base with a call using buffered data.
 ///
-/// This instruction burns wrapped tokens on Solana and creates an outgoing message to transfer equivalent
-/// tokens and execute the optional call on Base.
+/// The wrapped tokens are burned on Solana and an outgoing message is created to transfer
+/// the equivalent tokens and execute the call on Base. The call buffer account is closed and
+/// rent returned to the owner.
 #[derive(Accounts)]
-#[instruction(_gas_limit: u64, _to: [u8; 20], _amount: u64, call: Option<Call>)]
-pub struct BridgeWrappedToken<'info> {
+#[instruction(_gas_limit: u64, _to: [u8; 20], _amount: u64)]
+pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     /// The account that pays for transaction fees and outgoing message account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees.
     #[account(mut)]
@@ -32,9 +30,9 @@ pub struct BridgeWrappedToken<'info> {
     /// The hardcoded account that receives gas fees for Base operations.
     /// - Must match the predefined GAS_FEE_RECEIVER address
     /// - Receives lamports to cover gas costs on Base
-    /// 
+    ///
     /// CHECK: This is the hardcoded gas fee receiver account.
-    #[account(mut, address = GAS_FEE_RECEIVER @ BridgeWrappedTokenError::IncorrectGasFeeReceiver)]
+    #[account(mut, address = GAS_FEE_RECEIVER @ BridgeWrappedTokenWithBufferedCallError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The wrapped token mint account representing the original Base token.
@@ -55,14 +53,24 @@ pub struct BridgeWrappedToken<'info> {
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
 
-    /// The outgoing message account being created to store bridge transfer data.
-    /// - Contains transfer details and optional call data for Base execution
-    /// - Space allocated based on call data size
-    /// - Will be read by Base relayers to complete the bridge operation
+    /// The owner of the call buffer who will receive the rent refund.
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    /// The call buffer account that stores the call data.
+    /// This account will be closed and rent returned to the owner.
     #[account(
-        init,       
+        mut,
+        close = owner,
+        has_one = owner @ BridgeWrappedTokenWithBufferedCallError::Unauthorized,
+    )]
+    pub call_buffer: Account<'info, CallBuffer>,
+
+    /// The outgoing message account that stores the cross-chain transfer details.
+    #[account(
+        init,
         payer = payer,
-        space = 8 + OutgoingMessage::space(call.as_ref().map(|c| c.data.len())),
+        space = 8 + OutgoingMessage::space(Some(call_buffer.data.len())),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
@@ -74,14 +82,21 @@ pub struct BridgeWrappedToken<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn bridge_wrapped_token_handler(
-    ctx: Context<BridgeWrappedToken>,
+pub fn bridge_wrapped_token_with_buffered_call_handler<'a, 'b, 'c, 'info>(
+    ctx: Context<'a, 'b, 'c, 'info, BridgeWrappedTokenWithBufferedCall<'info>>,
     gas_limit: u64,
     to: [u8; 20],
     amount: u64,
-    call: Option<Call>,
 ) -> Result<()> {
-    bridge_wrapped_token_internal(
+    let call_buffer = &ctx.accounts.call_buffer;
+    let call = Some(Call {
+        ty: call_buffer.ty,
+        to: call_buffer.to,
+        value: call_buffer.value,
+        data: call_buffer.data.clone(),
+    });
+
+    crate::solana_to_base::internal::bridge_wrapped_token::bridge_wrapped_token_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
         &ctx.accounts.gas_fee_receiver,
@@ -99,11 +114,9 @@ pub fn bridge_wrapped_token_handler(
 }
 
 #[error_code]
-pub enum BridgeWrappedTokenError {
+pub enum BridgeWrappedTokenWithBufferedCallError {
     #[msg("Incorrect gas fee receiver")]
     IncorrectGasFeeReceiver,
-    #[msg("Mint is a wrapped token")]
-    MintIsWrappedToken,
     #[msg("Only the owner can close this call buffer")]
     Unauthorized,
 }
@@ -125,19 +138,26 @@ mod tests {
     use crate::{
         accounts,
         common::{bridge::Bridge, PartialTokenMetadata},
-        instruction::BridgeWrappedToken as BridgeWrappedTokenIx,
-        solana_to_base::{Call, CallType, GAS_FEE_RECEIVER},
-        test_utils::{create_mock_wrapped_mint, create_mock_token_account, setup_bridge_and_svm},
+        instruction::{
+            BridgeWrappedTokenWithBufferedCall as BridgeWrappedTokenWithBufferedCallIx,
+            InitializeCallBuffer,
+        },
+        solana_to_base::{CallType, GAS_FEE_RECEIVER},
+        test_utils::{create_mock_token_account, create_mock_wrapped_mint, setup_bridge_and_svm},
         ID,
     };
 
     #[test]
-    fn test_bridge_wrapped_token_success_without_call() {
+    fn test_bridge_wrapped_token_with_buffered_call_success() {
         let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
 
         // Create from account
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
+
+        // Create owner account (who owns the call buffer)
+        let owner = Keypair::new();
+        svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         // Airdrop to gas fee receiver
         svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
@@ -152,7 +172,8 @@ mod tests {
 
         // Create wrapped token mint
         let initial_amount = 1_000_000u64; // 1 token with 6 decimals
-        let wrapped_mint = create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
+        let wrapped_mint =
+            create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
 
         // Create token account for the from user
         let from_token_account = Keypair::new().pubkey();
@@ -164,51 +185,92 @@ mod tests {
             initial_amount,
         );
 
-        // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        // Create call buffer account
+        let call_buffer = Keypair::new();
 
         // Test parameters
         let gas_limit = 1_000_000u64;
-        let to = [1u8; 20]; // Base address
+        let to = [1u8; 20];
         let amount = 500_000u64; // 0.5 tokens
 
-        // Build the BridgeWrappedToken instruction accounts
-        let accounts = accounts::BridgeWrappedToken {
+        // Create test call data
+        let call_ty = CallType::Call;
+        let call_to = [3u8; 20];
+        let call_value = 200u128;
+        let call_data = vec![0x11, 0x22, 0x33, 0x44];
+        let max_data_len = 1024;
+
+        // First, initialize the call buffer
+        let init_accounts = accounts::InitializeCallBuffer {
+            payer: owner.pubkey(),
+            call_buffer: call_buffer.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        let init_ix = Instruction {
+            program_id: ID,
+            accounts: init_accounts,
+            data: InitializeCallBuffer {
+                ty: call_ty,
+                to: call_to,
+                value: call_value,
+                initial_data: call_data.clone(),
+                max_data_len,
+            }
+            .data(),
+        };
+
+        let init_tx = Transaction::new(
+            &[&owner, &call_buffer],
+            Message::new(&[init_ix], Some(&owner.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        svm.send_transaction(init_tx)
+            .expect("Failed to initialize call buffer");
+
+        // Now create the bridge_wrapped_token_with_buffered_call instruction
+        let outgoing_message = Keypair::new();
+
+        // Build the BridgeWrappedTokenWithBufferedCall instruction accounts
+        let accounts = accounts::BridgeWrappedTokenWithBufferedCall {
             payer: payer.pubkey(),
             from: from.pubkey(),
             gas_fee_receiver: GAS_FEE_RECEIVER,
             mint: wrapped_mint,
             from_token_account,
             bridge: bridge_pda,
+            owner: owner.pubkey(),
+            call_buffer: call_buffer.pubkey(),
             outgoing_message: outgoing_message.pubkey(),
             token_program: anchor_spl::token_2022::ID,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
 
-        // Build the BridgeWrappedToken instruction
+        // Build the BridgeWrappedTokenWithBufferedCall instruction
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeWrappedTokenIx {
+            data: BridgeWrappedTokenWithBufferedCallIx {
                 gas_limit,
                 to,
                 amount,
-                call: None,
             }
             .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from, &owner, &outgoing_message],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
 
         // Send the transaction
         svm.send_transaction(tx)
-            .expect("Failed to send bridge_wrapped_token transaction");
+            .expect("Failed to send bridge_wrapped_token_with_buffered_call transaction");
 
         // Verify the OutgoingMessage account was created correctly
         let outgoing_message_account = svm.get_account(&outgoing_message.pubkey()).unwrap();
@@ -223,14 +285,18 @@ mod tests {
         assert_eq!(outgoing_message_data.sender, from.pubkey());
         assert_eq!(outgoing_message_data.gas_limit, gas_limit);
 
-        // Verify the message content
+        // Verify the message content matches the call buffer data
         match outgoing_message_data.message {
             crate::solana_to_base::Message::Transfer(transfer) => {
                 assert_eq!(transfer.to, to);
                 assert_eq!(transfer.local_token, wrapped_mint);
-                assert_eq!(transfer.remote_token, partial_token_metadata.remote_token);
                 assert_eq!(transfer.amount, amount);
-                assert!(transfer.call.is_none());
+
+                let transfer_call = transfer.call.expect("Expected call to be present");
+                assert_eq!(transfer_call.ty, call_ty);
+                assert_eq!(transfer_call.to, call_to);
+                assert_eq!(transfer_call.value, call_value);
+                assert_eq!(transfer_call.data, call_data);
             }
             _ => panic!("Expected Transfer message"),
         }
@@ -242,6 +308,23 @@ mod tests {
             .amount;
         assert_eq!(from_final_amount, initial_amount - amount);
 
+        // Verify the call buffer account was closed (should have 0 lamports and 0 data)
+        let call_buffer_account = svm.get_account(&call_buffer.pubkey()).unwrap();
+        assert_eq!(
+            call_buffer_account.lamports, 0,
+            "Call buffer should have 0 lamports after being closed"
+        );
+        assert_eq!(
+            call_buffer_account.data.len(),
+            0,
+            "Call buffer should have 0 data length after being closed"
+        );
+        assert_eq!(
+            call_buffer_account.owner,
+            system_program::ID,
+            "Call buffer should be owned by system program after being closed"
+        );
+
         // Verify bridge nonce was incremented
         let bridge_account = svm.get_account(&bridge_pda).unwrap();
         let bridge_data = Bridge::try_deserialize(&mut &bridge_account.data[..]).unwrap();
@@ -249,12 +332,21 @@ mod tests {
     }
 
     #[test]
-    fn test_bridge_wrapped_token_success_with_call() {
+    fn test_bridge_wrapped_token_with_buffered_call_unauthorized() {
         let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
 
         // Create from account
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
+
+        // Create owner account (who owns the call buffer)
+        let owner = Keypair::new();
+        svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
+
+        // Create unauthorized account (not the owner)
+        let unauthorized = Keypair::new();
+        svm.airdrop(&unauthorized.pubkey(), LAMPORTS_PER_SOL)
+            .unwrap();
 
         // Airdrop to gas fee receiver
         svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
@@ -263,16 +355,18 @@ mod tests {
         let partial_token_metadata = PartialTokenMetadata {
             name: "Test Token".to_string(),
             symbol: "TEST".to_string(),
-            remote_token: [2u8; 20], // Different remote token
+            remote_token: [1u8; 20],
             scaler_exponent: 0,
         };
 
         // Create wrapped token mint
         let initial_amount = 1_000_000u64; // 1 token with 6 decimals
-        let wrapped_mint = create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
+        let wrapped_mint =
+            create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
 
         // Create token account for the from user
         let from_token_account = Keypair::new().pubkey();
+        let initial_amount = 1_000_000u64;
         create_mock_token_account(
             &mut svm,
             from_token_account,
@@ -281,90 +375,107 @@ mod tests {
             initial_amount,
         );
 
-        // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        // Create call buffer account
+        let call_buffer = Keypair::new();
 
-        // Test parameters
-        let gas_limit = 1_000_000u64;
-        let to = [1u8; 20];
-        let amount = 250_000u64; // 0.25 tokens
+        // First, initialize the call buffer with owner
+        let init_accounts = accounts::InitializeCallBuffer {
+            payer: owner.pubkey(),
+            call_buffer: call_buffer.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
 
-        // Create test call data
-        let call = Call {
-            ty: CallType::Call,
-            to: [3u8; 20],
-            value: 100,
-            data: vec![0xaa, 0xbb, 0xcc, 0xdd],
+        let init_ix = Instruction {
+            program_id: ID,
+            accounts: init_accounts,
+            data: InitializeCallBuffer {
+                ty: CallType::Call,
+                to: [1u8; 20],
+                value: 0,
+                initial_data: vec![0x12, 0x34],
+                max_data_len: 1024,
+            }
+            .data(),
         };
 
-        // Build the BridgeWrappedToken instruction accounts
-        let accounts = accounts::BridgeWrappedToken {
+        let init_tx = Transaction::new(
+            &[&owner, &call_buffer],
+            Message::new(&[init_ix], Some(&owner.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        svm.send_transaction(init_tx)
+            .expect("Failed to initialize call buffer");
+
+        // Now try to use bridge_wrapped_token_with_buffered_call with unauthorized account as owner
+        let outgoing_message = Keypair::new();
+        let gas_limit = 1_000_000u64;
+        let to = [1u8; 20];
+        let amount = 500_000u64;
+
+        // Build the BridgeWrappedTokenWithBufferedCall instruction accounts with unauthorized owner
+        let accounts = accounts::BridgeWrappedTokenWithBufferedCall {
             payer: payer.pubkey(),
             from: from.pubkey(),
             gas_fee_receiver: GAS_FEE_RECEIVER,
             mint: wrapped_mint,
             from_token_account,
             bridge: bridge_pda,
+            owner: unauthorized.pubkey(), // Wrong owner
+            call_buffer: call_buffer.pubkey(),
             outgoing_message: outgoing_message.pubkey(),
             token_program: anchor_spl::token_2022::ID,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
 
-        // Build the BridgeWrappedToken instruction
+        // Build the BridgeWrappedTokenWithBufferedCall instruction
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeWrappedTokenIx {
+            data: BridgeWrappedTokenWithBufferedCallIx {
                 gas_limit,
                 to,
                 amount,
-                call: Some(call.clone()),
             }
             .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from, &unauthorized, &outgoing_message],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
 
-        // Send the transaction
-        svm.send_transaction(tx)
-            .expect("Failed to send bridge_wrapped_token transaction with call");
+        // Send the transaction - should fail
+        let result = svm.send_transaction(tx);
+        assert!(
+            result.is_err(),
+            "Expected transaction to fail with unauthorized owner"
+        );
 
-        // Verify the OutgoingMessage account was created correctly
-        let outgoing_message_account = svm.get_account(&outgoing_message.pubkey()).unwrap();
-        let outgoing_message_data =
-            OutgoingMessage::try_deserialize(&mut &outgoing_message_account.data[..]).unwrap();
-
-        // Verify the message content including call
-        match outgoing_message_data.message {
-            crate::solana_to_base::Message::Transfer(transfer) => {
-                assert_eq!(transfer.to, to);
-                assert_eq!(transfer.local_token, wrapped_mint);
-                assert_eq!(transfer.remote_token, partial_token_metadata.remote_token);
-                assert_eq!(transfer.amount, amount);
-
-                let transfer_call = transfer.call.expect("Expected call to be present");
-                assert_eq!(transfer_call.ty, call.ty);
-                assert_eq!(transfer_call.to, call.to);
-                assert_eq!(transfer_call.value, call.value);
-                assert_eq!(transfer_call.data, call.data);
-            }
-            _ => panic!("Expected Transfer message"),
-        }
+        // Check that the error contains the expected error message
+        let error_string = format!("{:?}", result.unwrap_err());
+        assert!(
+            error_string.contains("Unauthorized"),
+            "Expected Unauthorized error, got: {}",
+            error_string
+        );
     }
 
     #[test]
-    fn test_bridge_wrapped_token_incorrect_gas_fee_receiver() {
+    fn test_bridge_wrapped_token_with_buffered_call_incorrect_gas_fee_receiver() {
         let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
 
         // Create from account
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
+
+        // Create owner account
+        let owner = Keypair::new();
+        svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         // Create wrong gas fee receiver
         let wrong_gas_fee_receiver = Keypair::new();
@@ -381,7 +492,8 @@ mod tests {
 
         // Create wrapped token mint
         let initial_amount = 1_000_000u64; // 1 token with 6 decimals
-        let wrapped_mint = create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
+        let wrapped_mint =
+            create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
 
         // Create token account for the from user
         let from_token_account = Keypair::new().pubkey();
@@ -393,44 +505,76 @@ mod tests {
             initial_amount,
         );
 
-        // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        // Create call buffer account
+        let call_buffer = Keypair::new();
 
-        // Test parameters
+        // Initialize the call buffer
+        let init_accounts = accounts::InitializeCallBuffer {
+            payer: owner.pubkey(),
+            call_buffer: call_buffer.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        let init_ix = Instruction {
+            program_id: ID,
+            accounts: init_accounts,
+            data: InitializeCallBuffer {
+                ty: CallType::Call,
+                to: [1u8; 20],
+                value: 0,
+                initial_data: vec![0x12, 0x34],
+                max_data_len: 1024,
+            }
+            .data(),
+        };
+
+        let init_tx = Transaction::new(
+            &[&owner, &call_buffer],
+            Message::new(&[init_ix], Some(&owner.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        svm.send_transaction(init_tx)
+            .expect("Failed to initialize call buffer");
+
+        // Now try bridge_wrapped_token_with_buffered_call with wrong gas fee receiver
+        let outgoing_message = Keypair::new();
         let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
         let amount = 500_000u64;
 
-        // Build the BridgeWrappedToken instruction accounts with wrong gas fee receiver
-        let accounts = accounts::BridgeWrappedToken {
+        // Build the BridgeWrappedTokenWithBufferedCall instruction accounts with wrong gas fee receiver
+        let accounts = accounts::BridgeWrappedTokenWithBufferedCall {
             payer: payer.pubkey(),
             from: from.pubkey(),
             gas_fee_receiver: wrong_gas_fee_receiver.pubkey(), // Wrong receiver
             mint: wrapped_mint,
             from_token_account,
             bridge: bridge_pda,
+            owner: owner.pubkey(),
+            call_buffer: call_buffer.pubkey(),
             outgoing_message: outgoing_message.pubkey(),
             token_program: anchor_spl::token_2022::ID,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
 
-        // Build the BridgeWrappedToken instruction
+        // Build the BridgeWrappedTokenWithBufferedCall instruction
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeWrappedTokenIx {
+            data: BridgeWrappedTokenWithBufferedCallIx {
                 gas_limit,
                 to,
                 amount,
-                call: None,
             }
             .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from, &owner, &outgoing_message],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
