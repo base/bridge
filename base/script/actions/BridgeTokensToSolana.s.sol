@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {console} from "forge-std/console.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
@@ -9,8 +8,9 @@ import {ERC20} from "solady/tokens/ERC20.sol";
 import {Bridge} from "../../src/Bridge.sol";
 import {Ix, Pubkey} from "../../src/libraries/SVMLib.sol";
 import {Transfer} from "../../src/libraries/TokenLib.sol";
+import {DevOps} from "../DevOps.s.sol";
 
-contract BridgeTokensToSolanaScript is Script {
+contract BridgeTokensToSolanaScript is DevOps {
     using stdJson for string;
 
     address public constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -24,13 +24,7 @@ contract BridgeTokensToSolanaScript is Script {
     Bridge public bridge;
 
     function setUp() public {
-        Chain memory chain = getChain(block.chainid);
-        console.log("Bridging token on chain: %s", chain.name);
-
-        string memory rootPath = vm.projectRoot();
-        string memory path = string.concat(rootPath, "/deployments/", chain.chainAlias, ".json");
-        address bridgeAddress = vm.readFile(path).readAddress(".Bridge");
-        bridge = Bridge(bridgeAddress);
+        bridge = Bridge(_getAddress("Bridge"));
     }
 
     function run() public payable {

@@ -63,7 +63,7 @@ contract HelperConfig is Script {
             trustedRelayer: BASE_ORACLE,
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             initialValidators: validators,
-            initialThreshold: 2,
+            initialThreshold: 1,
             guardians: guardians
         });
     }

@@ -58,8 +58,8 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///      upgradeability of all Twin contract implementations simultaneously.
     address public immutable TWIN_BEACON;
 
-    /// @notice Address of the CrossChainERC20Factory. It's primarily used to check if a local token was deployed by the bridge.
-    ///         If so, we know we can mint / burn. Otherwise the token interaction is a transfer.
+    /// @notice Address of the CrossChainERC20Factory. It's primarily used to check if a local token was deployed by the
+    ///         bridge. If so, we know we can mint / burn. Otherwise the token interaction is a transfer.
     address public immutable CROSS_CHAIN_ERC20_FACTORY;
 
     /// @notice Guardian Role to pause the bridge.

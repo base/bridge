@@ -64,11 +64,11 @@ contract Twin {
     ///
     /// @dev This is the core function that enables Solana users to interact with Base contracts.
     ///      The call can be a regular call, delegate call, or contract creation (CREATE/CREATE2).
-    ///      
+    ///
     ///      **Authorization:**
     ///      - Only the Bridge contract can call this when relaying messages from Solana
     ///      - The Twin itself can call this for complex multi-step operations
-    ///      
+    ///
     ///      **Call Types Supported:**
     ///      - `CallType.Call`: Regular external call to another contract
     ///      - `CallType.DelegateCall`: Delegate call (executes in Twin's context)

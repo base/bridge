@@ -70,7 +70,10 @@ make coverage
 
 Deploy all core contracts:
 
+Set `ENV_NAME` in [`Makefile`](./Makefile), then:
+
 ```bash
+# Deploy to alpha environment (saves to deployments/{network}_{environment}.json)
 make deploy
 ```
 
@@ -79,7 +82,6 @@ This will deploy:
 - Bridge contract
 - Twin beacon (for proxy patterns)
 - CrossChainERC20Factory
-- Save deployment addresses to `deployments/{network}.json`
 
 ### Creating Wrapped Tokens
 
@@ -89,13 +91,13 @@ Create wrapped versions of Solana tokens:
 # Create wrapped SPL token (requires setting environment variables first)
 # Set REMOTE_SPL as bytes32 representation of SPL mint pubkey on Solana
 # Set TOKEN_NAME and TOKEN_SYMBOL for the wrapped token
-REMOTE_SPL=0x... TOKEN_NAME="MyToken" TOKEN_SYMBOL="MTK" make create-wrapped-spl
+make create-wrapped-spl
 ```
 
 Custom token creation:
 
 ```bash
-TOKEN_NAME="MyToken" TOKEN_SYMBOL="MTK" REMOTE_TOKEN=0x1234... forge script CreateTokenScript --account testnet-admin --rpc-url $BASE_RPC --broadcast -vvvv
+BRIDGE_ENVIRONMENT=alpha TOKEN_NAME="MyToken" TOKEN_SYMBOL="MTK" REMOTE_TOKEN=0x1234... forge script CreateTokenScript --account testnet-admin --rpc-url $BASE_RPC --broadcast -vvvv
 ```
 
 ## Operations
@@ -121,7 +123,7 @@ make bridge-eth-to-solana
 Custom bridging:
 
 ```bash
-LOCAL_TOKEN=0x123... REMOTE_TOKEN=0x456... TO=0x789... AMOUNT=1000000 forge script BridgeTokensToSolanaScript --account testnet-admin --rpc-url $BASE_RPC --broadcast -vvvv
+BRIDGE_ENVIRONMENT=alpha LOCAL_TOKEN=0x123... REMOTE_TOKEN=0x456... TO=0x789... AMOUNT=1000000 forge script BridgeTokensToSolanaScript --account testnet-admin --rpc-url $BASE_RPC --broadcast -vvvv
 ```
 
 - `LOCAL_TOKEN`: address of ERC20 token on Base

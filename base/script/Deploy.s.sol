@@ -1,27 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
 import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
+import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
 import {Bridge} from "../src/Bridge.sol";
-
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
-
 import {Twin} from "../src/Twin.sol";
+import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
-contract DeployScript is Script {
+contract DeployScript is DevOps {
     function run() public returns (Twin, Bridge, CrossChainERC20Factory, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
-
-        Chain memory chain = getChain(block.chainid);
-        console.log("Deploying on chain: %s", chain.name);
 
         address precomputedBridgeAddress =
             ERC1967Factory(cfg.erc1967Factory).predictDeterministicAddress({salt: _salt("bridge15")});
@@ -38,11 +33,10 @@ contract DeployScript is Script {
         console.log("Deployed Bridge at: %s", bridge);
         console.log("Deployed CrossChainERC20Factory at: %s", factory);
 
-        string memory obj = "root";
-        string memory json = vm.serializeAddress({objectKey: obj, valueKey: "Bridge", value: bridge});
-        json = vm.serializeAddress({objectKey: obj, valueKey: "CrossChainERC20Factory", value: factory});
-        json = vm.serializeAddress({objectKey: obj, valueKey: "Twin", value: twinBeacon});
-        vm.writeJson(json, string.concat("deployments/", chain.chainAlias, ".json"));
+        _serializeAddress({key: "Bridge", value: bridge});
+        _serializeAddress({key: "CrossChainERC20Factory", value: factory});
+        _serializeAddress({key: "Twin", value: twinBeacon});
+        _writeJsonFile();
 
         return (Twin(payable(twinBeacon)), Bridge(bridge), CrossChainERC20Factory(factory), helperConfig);
     }

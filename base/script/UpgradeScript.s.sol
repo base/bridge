@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Script} from "forge-std/Script.sol";
 import {stdJson} from "forge-std/StdJson.sol";
 import {console} from "forge-std/console.sol";
-
 import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
@@ -12,9 +10,10 @@ import {Bridge} from "../src/Bridge.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {Twin} from "../src/Twin.sol";
+import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
-contract UpgradeScript is Script {
+contract UpgradeScript is DevOps {
     using stdJson for string;
 
     // Upgrade Config:
@@ -32,11 +31,8 @@ contract UpgradeScript is Script {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
 
-        Chain memory chain = getChain(block.chainid);
-        console.log("Upgrading contracts on chain: %s", chain.name);
-
         // Read existing deployment addresses
-        (bridgeAddress, erc20FactoryAddress, twinAddress) = _readDeploymentFile(chain);
+        (bridgeAddress, erc20FactoryAddress, twinAddress) = _readAndParseDeploymentFile();
 
         vm.startBroadcast();
 
@@ -64,12 +60,8 @@ contract UpgradeScript is Script {
         vm.stopBroadcast();
     }
 
-    function _readDeploymentFile(Chain memory chain) internal view returns (address, address, address) {
-        string memory rootPath = vm.projectRoot();
-        string memory path = string.concat(rootPath, "/deployments/", chain.chainAlias, ".json");
-        string memory json = vm.readFile(path);
-
-        return (json.readAddress(".Bridge"), json.readAddress(".CrossChainERC20Factory"), json.readAddress(".Twin"));
+    function _readAndParseDeploymentFile() internal view returns (address, address, address) {
+        return (_getAddress("Bridge"), _getAddress("CrossChainERC20Factory"), _getAddress("Twin"));
     }
 
     function _upgradeTwinBeacon(address currentBridgeAddress, address twinBeacon) internal {
