@@ -2,7 +2,10 @@ use anchor_lang::prelude::*;
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, SOL_VAULT_SEED},
-    solana_to_base::{Call, CallBuffer, OutgoingMessage, GAS_FEE_RECEIVER},
+    solana_to_base::{
+        internal::bridge_sol::bridge_sol_internal, Call, CallBuffer, OutgoingMessage,
+        GAS_FEE_RECEIVER,
+    },
 };
 
 /// Accounts struct for the bridge_sol_with_buffered_call instruction that transfers native SOL
@@ -87,7 +90,7 @@ pub fn bridge_sol_with_buffered_call_handler<'a, 'b, 'c, 'info>(
         data: call_buffer.data.clone(),
     });
 
-    crate::solana_to_base::internal::bridge_sol::bridge_sol_internal(
+    bridge_sol_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
         &ctx.accounts.gas_fee_receiver,
