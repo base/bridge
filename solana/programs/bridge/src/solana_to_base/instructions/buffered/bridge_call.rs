@@ -2,7 +2,10 @@ use anchor_lang::prelude::*;
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
-    solana_to_base::{Call, CallBuffer, OutgoingMessage, GAS_FEE_RECEIVER},
+    solana_to_base::{
+        internal::bridge_call::bridge_call_internal, Call, CallBuffer, OutgoingMessage,
+        GAS_FEE_RECEIVER,
+    },
 };
 
 /// Accounts struct for the bridge_call_buffered instruction that enables arbitrary function calls
@@ -77,7 +80,7 @@ pub fn bridge_call_buffered_handler<'a, 'b, 'c, 'info>(
         data: call_buffer.data.clone(),
     };
 
-    crate::solana_to_base::internal::bridge_call::bridge_call_internal(
+    bridge_call_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
         &ctx.accounts.gas_fee_receiver,

@@ -2,7 +2,9 @@ use anchor_lang::prelude::*;
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
-    solana_to_base::{Call, OutgoingMessage, GAS_FEE_RECEIVER},
+    solana_to_base::{
+        internal::bridge_call::bridge_call_internal, Call, OutgoingMessage, GAS_FEE_RECEIVER,
+    },
 };
 
 /// Accounts struct for the bridge_call instruction that enables arbitrary function calls
@@ -54,7 +56,7 @@ pub struct BridgeCall<'info> {
 }
 
 pub fn bridge_call_handler(ctx: Context<BridgeCall>, gas_limit: u64, call: Call) -> Result<()> {
-    crate::solana_to_base::internal::bridge_call::bridge_call_internal(
+    bridge_call_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
         &ctx.accounts.gas_fee_receiver,
