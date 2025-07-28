@@ -119,7 +119,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     mapping(Pubkey owner => address twinAddress) public twins;
 
     /// @notice The nonce used for the next incoming message relayed.
-    uint64 public nextIncomingNonce;
+    uint64 public nextIncomingNonce = 1;
 
     /// @notice Whether the bridge is paused.
     bool public paused;
