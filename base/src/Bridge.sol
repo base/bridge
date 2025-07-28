@@ -150,10 +150,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Thrown when the ISM verification fails.
     error ISMVerificationFailed();
 
-    /// @notice Thrown when doing gas estimation and the call's gas left is insufficient to cover the `minGas` plus the
-    ///         `reservedGas`.
-    error EstimationInsufficientGas();
-
     /// @notice Thrown when the call execution fails.
     error ExecutionFailed();
 
@@ -172,9 +168,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Thrown when a message has not been marked as failed by the relayer but a user tries to relay it
     /// manually.
     error MessageNotAlreadyFailedToRelay();
-
-    /// @notice Thrown when an Anchor instruction is invalid.
-    error UnsafeIxTarget();
 
     /// @notice Thrown when the bridge is paused.
     error Paused();
