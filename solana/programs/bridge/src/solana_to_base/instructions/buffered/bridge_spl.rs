@@ -3,7 +3,10 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, TOKEN_VAULT_SEED},
-    solana_to_base::{Call, CallBuffer, OutgoingMessage, GAS_FEE_RECEIVER},
+    solana_to_base::{
+        internal::bridge_spl::bridge_spl_internal, Call, CallBuffer, OutgoingMessage,
+        GAS_FEE_RECEIVER,
+    },
 };
 
 /// Accounts struct for the bridge_spl_with_buffered_call instruction that transfers SPL tokens
@@ -110,7 +113,7 @@ pub fn bridge_spl_with_buffered_call_handler<'a, 'b, 'c, 'info>(
         data: call_buffer.data.clone(),
     });
 
-    crate::solana_to_base::internal::bridge_spl::bridge_spl_internal(
+    bridge_spl_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
         &ctx.accounts.gas_fee_receiver,
