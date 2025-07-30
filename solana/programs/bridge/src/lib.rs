@@ -271,16 +271,14 @@ pub mod bridge {
     /// * `to`           - The target contract address on Base
     /// * `value`        - The amount of ETH to send with the call (in wei)
     /// * `initial_data` - Initial call data to store
-    /// * `max_data_len` - Maximum total length of data that will be stored
     pub fn initialize_call_buffer(
         ctx: Context<InitializeCallBuffer>,
         ty: CallType,
         to: [u8; 20],
         value: u128,
         initial_data: Vec<u8>,
-        max_data_len: usize,
     ) -> Result<()> {
-        initialize_call_buffer_handler(ctx, ty, to, value, initial_data, max_data_len)
+        initialize_call_buffer_handler(ctx, ty, to, value, initial_data)
     }
 
     /// Appends data to an existing call buffer account.

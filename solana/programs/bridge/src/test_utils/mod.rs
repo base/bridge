@@ -1,4 +1,10 @@
-use anchor_lang::{prelude::*, solana_program::native_token::LAMPORTS_PER_SOL};
+use anchor_lang::{
+    prelude::*,
+    solana_program::{
+        instruction::Instruction, native_token::LAMPORTS_PER_SOL, system_instruction,
+    },
+    system_program, InstructionData,
+};
 use anchor_spl::{
     token_2022::spl_token_2022::{
         extension::{
@@ -17,21 +23,18 @@ use anchor_spl::{
 };
 use litesvm::LiteSVM;
 use solana_account::Account;
+use solana_keypair::Keypair;
+use solana_message::Message;
+use solana_signer::Signer;
+use solana_transaction::Transaction;
 
-use crate::common::{PartialTokenMetadata, WRAPPED_TOKEN_SEED};
+use crate::{
+    accounts,
+    common::{PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED},
+    ID,
+};
 
 pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
-    use anchor_lang::{
-        solana_program::{instruction::Instruction, native_token::LAMPORTS_PER_SOL},
-        system_program, InstructionData,
-    };
-    use solana_keypair::Keypair;
-    use solana_message::Message;
-    use solana_signer::Signer;
-    use solana_transaction::Transaction;
-
-    use crate::{accounts, common::BRIDGE_SEED, ID};
-
     let mut svm = LiteSVM::new();
     svm.add_program_from_file(ID, "../../target/deploy/bridge.so")
         .unwrap();
@@ -202,4 +205,31 @@ pub fn create_mock_wrapped_mint(
     .unwrap();
 
     wrapped_mint
+}
+
+pub fn create_call_buffer(svm: &mut LiteSVM, owner: &Keypair, size: usize) -> Keypair {
+    let call_buffer = Keypair::new();
+
+    // Pre-allocate the account using System Program
+    let rent = svm.minimum_balance_for_rent_exemption(size);
+    let ix = system_instruction::create_account(
+        &owner.pubkey(),
+        &call_buffer.pubkey(),
+        rent,
+        size as u64,
+        &crate::ID,
+    );
+
+    // Build the transaction
+    let tx = Transaction::new(
+        &[owner, &call_buffer],
+        Message::new(&[ix], Some(&owner.pubkey())),
+        svm.latest_blockhash(),
+    );
+
+    // Send the transaction
+    svm.send_transaction(tx)
+        .expect("Failed to create call buffer account");
+
+    call_buffer
 }

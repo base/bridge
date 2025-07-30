@@ -46,17 +46,21 @@ mod tests {
         accounts,
         instruction::{CloseCallBuffer as CloseCallBufferIx, InitializeCallBuffer},
         solana_to_base::CallType,
-        test_utils::setup_bridge_and_svm,
+        test_utils::{create_call_buffer, setup_bridge_and_svm},
         ID,
     };
 
     fn setup_call_buffer(
         svm: &mut litesvm::LiteSVM,
         owner: &solana_keypair::Keypair,
-        call_buffer: &solana_keypair::Keypair,
         initial_data: Vec<u8>,
-    ) {
-        // Initialize the call buffer first
+        remaining_space: Option<usize>,
+    ) -> solana_keypair::Keypair {
+        // Create and initialize the call buffer
+        let required_space =
+            8 + CallBuffer::space(initial_data.len() + remaining_space.unwrap_or_default());
+        let call_buffer = create_call_buffer(svm, owner, required_space);
+
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
@@ -72,19 +76,20 @@ mod tests {
                 to: [1u8; 20],
                 value: 0u128,
                 initial_data,
-                max_data_len: 1024,
             }
             .data(),
         };
 
         let init_tx = Transaction::new(
-            &[owner, call_buffer],
+            &[owner],
             Message::new(&[init_ix], Some(&owner.pubkey())),
             svm.latest_blockhash(),
         );
 
         svm.send_transaction(init_tx)
             .expect("Failed to initialize call buffer");
+
+        call_buffer
     }
 
     #[test]
@@ -96,11 +101,8 @@ mod tests {
         svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         // Create call buffer account
-        let call_buffer = Keypair::new();
-
-        // Setup call buffer with initial data
         let initial_data = vec![0x12, 0x34, 0x56, 0x78];
-        setup_call_buffer(&mut svm, &owner, &call_buffer, initial_data);
+        let call_buffer = setup_call_buffer(&mut svm, &owner, initial_data, None);
 
         // Get initial owner balance
         let initial_owner_balance = svm.get_account(&owner.pubkey()).unwrap().lamports;
@@ -169,11 +171,8 @@ mod tests {
             .unwrap();
 
         // Create call buffer account
-        let call_buffer = Keypair::new();
-
-        // Setup call buffer with owner
         let initial_data = vec![0x12, 0x34];
-        setup_call_buffer(&mut svm, &owner, &call_buffer, initial_data);
+        let call_buffer = setup_call_buffer(&mut svm, &owner, initial_data, None);
 
         // Try to close call buffer with unauthorized account
         // Build the CloseCallBuffer instruction accounts with wrong owner

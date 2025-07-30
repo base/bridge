@@ -109,7 +109,7 @@ mod tests {
         system_program, InstructionData,
     };
     use solana_keypair::Keypair;
-    use solana_message::Message;
+    use solana_message::Message as SolanaMessage;
     use solana_signer::Signer;
     use solana_transaction::Transaction;
 
@@ -117,8 +117,8 @@ mod tests {
         accounts,
         common::bridge::Bridge,
         instruction::{BridgeCallBuffered as BridgeCallBufferedIx, InitializeCallBuffer},
-        solana_to_base::{CallType, GAS_FEE_RECEIVER},
-        test_utils::setup_bridge_and_svm,
+        solana_to_base::{CallBuffer, CallType, Message, GAS_FEE_RECEIVER},
+        test_utils::{create_call_buffer, setup_bridge_and_svm},
         ID,
     };
 
@@ -133,17 +133,15 @@ mod tests {
         // Airdrop to gas fee receiver
         svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
-        // Create call buffer account
-        let call_buffer = Keypair::new();
-
         // Create test call data
         let call_ty = CallType::Call;
         let call_to = [1u8; 20];
         let call_value = 0u128;
         let call_data = vec![0x12, 0x34, 0x56, 0x78];
-        let max_data_len = 1024;
 
-        // First, initialize the call buffer
+        // Create and initialize the call buffer
+        let required_space = 8 + CallBuffer::space(call_data.len());
+        let call_buffer = create_call_buffer(&mut svm, &owner, required_space);
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
@@ -159,14 +157,13 @@ mod tests {
                 to: call_to,
                 value: call_value,
                 initial_data: call_data.clone(),
-                max_data_len,
             }
             .data(),
         };
 
         let init_tx = Transaction::new(
-            &[&owner, &call_buffer],
-            Message::new(&[init_ix], Some(&owner.pubkey())),
+            &[&owner],
+            SolanaMessage::new(&[init_ix], Some(&owner.pubkey())),
             svm.latest_blockhash(),
         );
 
@@ -203,7 +200,7 @@ mod tests {
         // Build the transaction
         let tx = Transaction::new(
             &[&payer, &from, &owner, &outgoing_message],
-            Message::new(&[ix], Some(&payer.pubkey())),
+            SolanaMessage::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
 
@@ -226,7 +223,7 @@ mod tests {
 
         // Verify the message content matches the call buffer data
         match outgoing_message_data.message {
-            crate::solana_to_base::Message::Call(message_call) => {
+            Message::Call(message_call) => {
                 assert_eq!(message_call.ty, call_ty);
                 assert_eq!(message_call.to, call_to);
                 assert_eq!(message_call.value, call_value);
@@ -274,10 +271,10 @@ mod tests {
         // Airdrop to gas fee receiver
         svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
-        // Create call buffer account
-        let call_buffer = Keypair::new();
-
-        // First, initialize the call buffer with owner
+        // Create and initialize the call buffer with owner
+        let call_data = vec![0x12, 0x34];
+        let required_space = 8 + CallBuffer::space(call_data.len());
+        let call_buffer = create_call_buffer(&mut svm, &owner, required_space);
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
@@ -292,15 +289,14 @@ mod tests {
                 ty: CallType::Call,
                 to: [1u8; 20],
                 value: 0,
-                initial_data: vec![0x12, 0x34],
-                max_data_len: 1024,
+                initial_data: call_data,
             }
             .data(),
         };
 
         let init_tx = Transaction::new(
-            &[&owner, &call_buffer],
-            Message::new(&[init_ix], Some(&owner.pubkey())),
+            &[&owner],
+            SolanaMessage::new(&[init_ix], Some(&owner.pubkey())),
             svm.latest_blockhash(),
         );
 
@@ -337,7 +333,7 @@ mod tests {
         // Build the transaction
         let tx = Transaction::new(
             &[&payer, &from, &unauthorized, &outgoing_message],
-            Message::new(&[ix], Some(&payer.pubkey())),
+            SolanaMessage::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
 
@@ -370,10 +366,10 @@ mod tests {
         svm.airdrop(&wrong_gas_fee_receiver.pubkey(), LAMPORTS_PER_SOL)
             .unwrap();
 
-        // Create call buffer account
-        let call_buffer = Keypair::new();
-
-        // Initialize the call buffer
+        // Create and initialize the call buffer
+        let call_data = vec![0x12, 0x34];
+        let required_space = 8 + CallBuffer::space(call_data.len());
+        let call_buffer = create_call_buffer(&mut svm, &owner, required_space);
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
@@ -388,15 +384,14 @@ mod tests {
                 ty: CallType::Call,
                 to: [1u8; 20],
                 value: 0,
-                initial_data: vec![0x12, 0x34],
-                max_data_len: 1024,
+                initial_data: call_data,
             }
             .data(),
         };
 
         let init_tx = Transaction::new(
-            &[&owner, &call_buffer],
-            Message::new(&[init_ix], Some(&owner.pubkey())),
+            &[&owner],
+            SolanaMessage::new(&[init_ix], Some(&owner.pubkey())),
             svm.latest_blockhash(),
         );
 
@@ -433,7 +428,7 @@ mod tests {
         // Build the transaction
         let tx = Transaction::new(
             &[&payer, &from, &owner, &outgoing_message],
-            Message::new(&[ix], Some(&payer.pubkey())),
+            SolanaMessage::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
 

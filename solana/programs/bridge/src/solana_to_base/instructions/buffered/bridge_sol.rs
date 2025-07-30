@@ -133,8 +133,8 @@ mod tests {
         instruction::{
             BridgeSolWithBufferedCall as BridgeSolWithBufferedCallIx, InitializeCallBuffer,
         },
-        solana_to_base::{CallType, GAS_FEE_RECEIVER, NATIVE_SOL_PUBKEY},
-        test_utils::setup_bridge_and_svm,
+        solana_to_base::{CallBuffer, CallType, GAS_FEE_RECEIVER, NATIVE_SOL_PUBKEY},
+        test_utils::{create_call_buffer, setup_bridge_and_svm},
         ID,
     };
 
@@ -153,9 +153,6 @@ mod tests {
         // Airdrop to gas fee receiver
         svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
-        // Create call buffer account
-        let call_buffer = Keypair::new();
-
         // Test parameters
         let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
@@ -167,9 +164,11 @@ mod tests {
         let call_to = [3u8; 20];
         let call_value = 200u128;
         let call_data = vec![0x11, 0x22, 0x33, 0x44];
-        let max_data_len = 1024;
 
-        // First, initialize the call buffer
+        // Create and initialize the call buffer
+        let required_space = 8 + CallBuffer::space(call_data.len());
+        let call_buffer = create_call_buffer(&mut svm, &owner, required_space);
+
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
@@ -185,13 +184,12 @@ mod tests {
                 to: call_to,
                 value: call_value,
                 initial_data: call_data.clone(),
-                max_data_len,
             }
             .data(),
         };
 
         let init_tx = Transaction::new(
-            &[&owner, &call_buffer],
+            &[&owner],
             Message::new(&[init_ix], Some(&owner.pubkey())),
             svm.latest_blockhash(),
         );
@@ -331,10 +329,11 @@ mod tests {
         // Airdrop to gas fee receiver
         svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
-        // Create call buffer account
-        let call_buffer = Keypair::new();
+        // Create and initialize the call buffer with owner
+        let call_data = vec![0x12, 0x34];
+        let required_space = 8 + CallBuffer::space(call_data.len());
+        let call_buffer = create_call_buffer(&mut svm, &owner, required_space);
 
-        // First, initialize the call buffer with owner
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
@@ -349,14 +348,13 @@ mod tests {
                 ty: CallType::Call,
                 to: [1u8; 20],
                 value: 0,
-                initial_data: vec![0x12, 0x34],
-                max_data_len: 1024,
+                initial_data: call_data,
             }
             .data(),
         };
 
         let init_tx = Transaction::new(
-            &[&owner, &call_buffer],
+            &[&owner],
             Message::new(&[init_ix], Some(&owner.pubkey())),
             svm.latest_blockhash(),
         );
@@ -442,10 +440,11 @@ mod tests {
         svm.airdrop(&wrong_gas_fee_receiver.pubkey(), LAMPORTS_PER_SOL)
             .unwrap();
 
-        // Create call buffer account
-        let call_buffer = Keypair::new();
+        // Create and initialize the call buffer
+        let call_data = vec![0x12, 0x34];
+        let required_space = 8 + CallBuffer::space(call_data.len());
+        let call_buffer = create_call_buffer(&mut svm, &owner, required_space);
 
-        // Initialize the call buffer
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
@@ -460,14 +459,13 @@ mod tests {
                 ty: CallType::Call,
                 to: [1u8; 20],
                 value: 0,
-                initial_data: vec![0x12, 0x34],
-                max_data_len: 1024,
+                initial_data: call_data,
             }
             .data(),
         };
 
         let init_tx = Transaction::new(
-            &[&owner, &call_buffer],
+            &[&owner],
             Message::new(&[init_ix], Some(&owner.pubkey())),
             svm.latest_blockhash(),
         );
