@@ -51,7 +51,7 @@ mod tests {
     use crate::{
         accounts,
         instruction::{AppendToCallBuffer as AppendToCallBufferIx, InitializeCallBuffer},
-        solana_to_base::{CallBuffer, CallType},
+        solana_to_base::{CallBuffer, CallType, MAX_CALL_BUFFER_SIZE},
         test_utils::{create_call_buffer, setup_bridge_and_svm},
         ID,
     };
@@ -107,48 +107,50 @@ mod tests {
         svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         // Setup call buffer with initial data
-        let initial_data = vec![0x12, 0x34];
-        let call_buffer = setup_call_buffer(&mut svm, &owner, initial_data.clone(), Some(3));
+        let call_buffer = setup_call_buffer(&mut svm, &owner, vec![], Some(MAX_CALL_BUFFER_SIZE));
 
-        // Append additional data
-        let append_data = vec![0x56, 0x78, 0x9a];
+        let chunk_size = 1000;
+        let chunks = MAX_CALL_BUFFER_SIZE / chunk_size;
 
-        // Build the AppendToCallBuffer instruction accounts
-        let accounts = accounts::AppendToCallBuffer {
-            owner: owner.pubkey(),
-            call_buffer: call_buffer.pubkey(),
-        }
-        .to_account_metas(None);
+        let mut expected_data = vec![];
+        for i in 0..chunks {
+            let append_data = vec![i as u8; chunk_size];
+            expected_data.extend_from_slice(&append_data);
 
-        // Build the AppendToCallBuffer instruction
-        let ix = Instruction {
-            program_id: ID,
-            accounts,
-            data: AppendToCallBufferIx {
-                data: append_data.clone(),
+            // Build the AppendToCallBuffer instruction accounts
+            let accounts = accounts::AppendToCallBuffer {
+                owner: owner.pubkey(),
+                call_buffer: call_buffer.pubkey(),
             }
-            .data(),
-        };
+            .to_account_metas(None);
 
-        // Build the transaction
-        let tx = Transaction::new(
-            &[&owner],
-            Message::new(&[ix], Some(&owner.pubkey())),
-            svm.latest_blockhash(),
-        );
+            // Build the AppendToCallBuffer instruction
+            let ix = Instruction {
+                program_id: ID,
+                accounts,
+                data: AppendToCallBufferIx {
+                    data: append_data.clone(),
+                }
+                .data(),
+            };
 
-        // Send the transaction
-        svm.send_transaction(tx)
-            .expect("Failed to send append_to_call_buffer transaction");
+            // Build the transaction
+            let tx = Transaction::new(
+                &[&owner],
+                Message::new(&[ix], Some(&owner.pubkey())),
+                svm.latest_blockhash(),
+            );
 
-        // Verify the data was appended correctly
-        let call_buffer_account = svm.get_account(&call_buffer.pubkey()).unwrap();
-        let call_buffer_data =
-            CallBuffer::try_deserialize(&mut &call_buffer_account.data[..]).unwrap();
+            // Send the transaction
+            svm.send_transaction(tx)
+                .expect("Failed to send append_to_call_buffer transaction");
 
-        let mut expected_data = initial_data;
-        expected_data.extend_from_slice(&append_data);
-        assert_eq!(call_buffer_data.data, expected_data);
+            // Verify the data was appended correctly
+            let call_buffer_account = svm.get_account(&call_buffer.pubkey()).unwrap();
+            let call_buffer_data =
+                CallBuffer::try_deserialize(&mut &call_buffer_account.data[..]).unwrap();
+            assert_eq!(call_buffer_data.data, expected_data);
+        }
     }
 
     #[test]
