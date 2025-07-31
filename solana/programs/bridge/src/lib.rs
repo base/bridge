@@ -2,16 +2,49 @@
 
 use anchor_lang::prelude::*;
 
-pub mod base_to_solana;
-pub mod common;
-pub mod solana_to_base;
-
-#[cfg(test)]
-mod test_utils;
+mod base_to_solana;
+mod common;
+mod solana_to_base;
 
 use base_to_solana::*;
 use common::*;
+use common::{
+    config::{
+        // EIP-1559 Configuration
+        set_minimum_base_fee as set_minimum_base_fee_handler,
+        set_window_duration as set_window_duration_handler,
+        set_gas_target as set_gas_target_handler,
+        set_adjustment_denominator as set_adjustment_denominator_handler,
+        // Gas and Fee Management
+        set_max_gas_limit_per_message as set_max_gas_limit_per_message_handler,
+        set_gas_cost_scaler as set_gas_cost_scaler_handler,
+        set_gas_cost_scaler_dp as set_gas_cost_scaler_dp_handler,
+        set_gas_fee_receiver as set_gas_fee_receiver_handler,
+        set_extra_buffer as set_extra_buffer_handler,
+        set_execution_prologue_gas_buffer as set_execution_prologue_gas_buffer_handler,
+        set_execution_gas_buffer as set_execution_gas_buffer_handler,
+        set_execution_epilogue_gas_buffer as set_execution_epilogue_gas_buffer_handler,
+        set_base_transaction_cost as set_base_transaction_cost_handler,
+        //  Token Metadata Keys
+        set_remote_token_metadata_key as set_remote_token_metadata_key_handler,
+        set_scaler_exponent_metadata_key as set_scaler_exponent_metadata_key_handler,
+        // Protocol Configuration
+        set_block_interval_requirement as set_block_interval_requirement_handler,
+        // Buffer and Size Limits Configuration
+        set_max_call_buffer_size as set_max_call_buffer_size_handler,
+        set_max_data_len as set_max_data_len_handler,
+        // ABI Configuration
+        set_relay_messages_call_overhead as set_relay_messages_call_overhead_handler,
+        set_relay_messages_transfer_overhead as set_relay_messages_transfer_overhead_handler,
+        set_relay_messages_transfer_and_call_overhead as set_relay_messages_transfer_and_call_overhead_handler,
+    },
+    guardian::transfer_guardian as transfer_guardian_handler,
+    initialize::initialize_handler,
+};
 use solana_to_base::*;
+
+#[cfg(test)]
+mod test_utils;
 
 declare_id!("4L8cUU2DXTzEaa5C8MWLTyEV8dpmpDbCjg8DNgUuGedc");
 
@@ -26,8 +59,9 @@ pub mod bridge {
     ///
     /// # Arguments
     /// * `ctx` - The context containing all accounts needed for initialization
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize_handler(ctx)
+    /// * `guardian` - The pubkey that will have authority to update EIP-1559 configuration
+    pub fn initialize(ctx: Context<Initialize>, guardian: Pubkey) -> Result<()> {
+        initialize_handler(ctx, guardian)
     }
 
     /// Closes an outgoing message account after it has been relayed to Base.
@@ -278,7 +312,7 @@ pub mod bridge {
         to: [u8; 20],
         value: u128,
         initial_data: Vec<u8>,
-        max_data_len: usize,
+        max_data_len: u64,
     ) -> Result<()> {
         initialize_call_buffer_handler(ctx, ty, to, value, initial_data, max_data_len)
     }
@@ -301,5 +335,131 @@ pub mod bridge {
     /// * `ctx` - The context containing the call buffer to close and rent receiver
     pub fn close_call_buffer(ctx: Context<CloseCallBuffer>) -> Result<()> {
         close_call_buffer_handler(ctx)
+    }
+
+    /// Transfer guardian authority to a new pubkey
+    /// Only the current guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and current guardian
+    /// * `new_guardian` - The pubkey of the new guardian
+    pub fn transfer_guardian(ctx: Context<TransferGuardian>, new_guardian: Pubkey) -> Result<()> {
+        transfer_guardian_handler(ctx, new_guardian)
+    }
+
+    // EIP-1559 Configuration Management
+
+    /// Set the minimum base fee for EIP-1559 pricing
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_fee` - The new minimum base fee value (must be > 0 and <= 1,000,000,000)
+    pub fn set_minimum_base_fee(ctx: Context<SetEip1559Config>, new_fee: u64) -> Result<()> {
+        set_minimum_base_fee_handler(ctx, new_fee)
+    }
+
+    /// Set the window duration for EIP-1559 pricing
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_duration` - The new window duration in seconds (must be > 0 and <= 3600)
+    pub fn set_window_duration(ctx: Context<SetEip1559Config>, new_duration: u64) -> Result<()> {
+        set_window_duration_handler(ctx, new_duration)
+    }
+
+    /// Set the gas target for EIP-1559 pricing
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_target` - The new gas target value (must be > 0 and <= 1,000,000,000)
+    pub fn set_gas_target(ctx: Context<SetEip1559Config>, new_target: u64) -> Result<()> {
+        set_gas_target_handler(ctx, new_target)
+    }
+
+    /// Set the adjustment denominator for EIP-1559 pricing
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_denominator` - The new adjustment denominator (must be >= 1 and <= 100)
+    pub fn set_adjustment_denominator(ctx: Context<SetEip1559Config>, new_denominator: u64) -> Result<()> {
+        set_adjustment_denominator_handler(ctx, new_denominator)
+    }
+
+    // Gas configuration setters
+    pub fn set_max_gas_limit_per_message(ctx: Context<SetBridgeConfig>, new_limit: u64) -> Result<()> {
+        set_max_gas_limit_per_message_handler(ctx, new_limit)
+    }
+
+    pub fn set_gas_cost_scaler(ctx: Context<SetBridgeConfig>, new_scaler: u64) -> Result<()> {
+        set_gas_cost_scaler_handler(ctx, new_scaler)
+    }
+
+    pub fn set_gas_cost_scaler_dp(ctx: Context<SetBridgeConfig>, new_dp: u64) -> Result<()> {
+        set_gas_cost_scaler_dp_handler(ctx, new_dp)
+    }
+
+    pub fn set_gas_fee_receiver(ctx: Context<SetBridgeConfig>, new_receiver: Pubkey) -> Result<()> {
+        set_gas_fee_receiver_handler(ctx, new_receiver)
+    }
+
+    // Buffer configuration setters
+    pub fn set_extra_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
+        set_extra_buffer_handler(ctx, new_buffer)
+    }
+
+    pub fn set_execution_prologue_gas_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
+        set_execution_prologue_gas_buffer_handler(ctx, new_buffer)
+    }
+
+    pub fn set_execution_gas_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
+        set_execution_gas_buffer_handler(ctx, new_buffer)
+    }
+
+    pub fn set_execution_epilogue_gas_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
+        set_execution_epilogue_gas_buffer_handler(ctx, new_buffer)
+    }
+
+    pub fn set_base_transaction_cost(ctx: Context<SetBridgeConfig>, new_cost: u64) -> Result<()> {
+        set_base_transaction_cost_handler(ctx, new_cost)
+    }
+
+    // Metadata configuration setters
+    pub fn set_remote_token_metadata_key(ctx: Context<SetBridgeConfig>, new_key: String) -> Result<()> {
+        set_remote_token_metadata_key_handler(ctx, new_key)
+    }
+
+    pub fn set_scaler_exponent_metadata_key(ctx: Context<SetBridgeConfig>, new_key: String) -> Result<()> {
+        set_scaler_exponent_metadata_key_handler(ctx, new_key)
+    }
+
+    // Protocol configuration setters
+    pub fn set_block_interval_requirement(ctx: Context<SetBridgeConfig>, new_interval: u64) -> Result<()> {
+        set_block_interval_requirement_handler(ctx, new_interval)
+    }
+
+    // Limits configuration setters
+    pub fn set_max_call_buffer_size(ctx: Context<SetBridgeConfig>, new_size: u64) -> Result<()> {
+        set_max_call_buffer_size_handler(ctx, new_size)
+    }
+
+    pub fn set_max_data_len(ctx: Context<SetBridgeConfig>, new_len: u64) -> Result<()> {
+        set_max_data_len_handler(ctx, new_len)
+    }
+
+    // ABI configuration setters
+    pub fn set_relay_messages_call_overhead(ctx: Context<SetBridgeConfig>, new_overhead: u64) -> Result<()> {
+        set_relay_messages_call_overhead_handler(ctx, new_overhead)
+    }
+
+    pub fn set_relay_messages_transfer_overhead(ctx: Context<SetBridgeConfig>, new_overhead: u64) -> Result<()> {
+        set_relay_messages_transfer_overhead_handler(ctx, new_overhead)
+    }
+
+    pub fn set_relay_messages_transfer_and_call_overhead(ctx: Context<SetBridgeConfig>, new_overhead: u64) -> Result<()> {
+        set_relay_messages_transfer_and_call_overhead_handler(ctx, new_overhead)
     }
 }

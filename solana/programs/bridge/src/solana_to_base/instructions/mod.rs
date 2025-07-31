@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    common::bridge::Eip1559,
+    common::bridge::{Bridge},
     solana_to_base::{
-        Call, CallType, GAS_COST_SCALER, GAS_COST_SCALER_DP, MAX_GAS_LIMIT_PER_MESSAGE,
+        Call, CallType,
     },
 };
 
@@ -42,21 +42,21 @@ pub fn check_and_pay_for_gas<'info>(
     system_program: &Program<'info, System>,
     payer: &Signer<'info>,
     gas_fee_receiver: &AccountInfo<'info>,
-    eip1559: &mut Eip1559,
+    bridge: &mut Bridge,
     gas_limit: u64,
     tx_size: usize,
 ) -> Result<()> {
-    check_gas_limit(gas_limit, tx_size)?;
-    pay_for_gas(system_program, payer, gas_fee_receiver, eip1559, gas_limit)
+    check_gas_limit(gas_limit, tx_size, bridge)?;
+    pay_for_gas(system_program, payer, gas_fee_receiver, bridge, gas_limit)
 }
 
-fn check_gas_limit(gas_limit: u64, tx_size: usize) -> Result<()> {
+fn check_gas_limit(gas_limit: u64, tx_size: usize, bridge: &Bridge) -> Result<()> {
     require!(
-        gas_limit >= min_gas_limit(tx_size),
+        gas_limit >= min_gas_limit(tx_size, bridge),
         SolanaToBaseError::GasLimitTooLow
     );
     require!(
-        gas_limit <= MAX_GAS_LIMIT_PER_MESSAGE,
+        gas_limit <= bridge.gas_config.max_gas_limit_per_message,
         SolanaToBaseError::GasLimitExceeded
     );
 
@@ -67,46 +67,38 @@ fn pay_for_gas<'info>(
     system_program: &Program<'info, System>,
     payer: &Signer<'info>,
     gas_fee_receiver: &AccountInfo<'info>,
-    eip1559: &mut Eip1559,
+    bridge: &mut Bridge,
     gas_limit: u64,
 ) -> Result<()> {
     // Get the base fee for the current window
     let current_timestamp = Clock::get()?.unix_timestamp;
-    let base_fee = eip1559.refresh_base_fee(current_timestamp);
+    let base_fee = bridge.eip1559.refresh_base_fee(current_timestamp);
 
     // Record gas usage for this transaction
-    eip1559.add_gas_usage(gas_limit);
+    bridge.eip1559.add_gas_usage(gas_limit);
 
-    let gas_cost = gas_limit * base_fee * GAS_COST_SCALER / GAS_COST_SCALER_DP;
+    let gas_cost = gas_limit * base_fee * bridge.gas_config.gas_cost_scaler / bridge.gas_config.gas_cost_scaler_dp;
 
     let cpi_ctx = CpiContext::new(
         system_program.to_account_info(),
         anchor_lang::system_program::Transfer {
             from: payer.to_account_info(),
-            to: gas_fee_receiver.clone(),
+            to: gas_fee_receiver.to_account_info(),
         },
     );
+
     anchor_lang::system_program::transfer(cpi_ctx, gas_cost)?;
 
     Ok(())
 }
 
-fn min_gas_limit(tx_size: usize) -> u64 {
-    // Additional buffer to account for the gas used in the `Bridge.relayMessages` function.
-    const EXTRA_BUFFER: u64 = 10_000;
-
-    // Buffers to account for the gas used in the `Bridge.__validateAndRelay` function.
-    // See `Bridge.sol` for more details.
-    const EXECUTION_PROLOGUE_GAS_BUFFER: u64 = 65_000;
-    const EXECUTION_GAS_BUFFER: u64 = 40_000;
-    const EXECUTION_EPILOGUE_GAS_BUFFER: u64 = 25_000;
-
+fn min_gas_limit(tx_size: usize, bridge: &Bridge) -> u64 {
     tx_size as u64 * 40
-        + 21_000
-        + EXTRA_BUFFER
-        + EXECUTION_PROLOGUE_GAS_BUFFER
-        + EXECUTION_GAS_BUFFER
-        + EXECUTION_EPILOGUE_GAS_BUFFER
+        + bridge.buffer_config.base_transaction_cost
+        + bridge.buffer_config.extra_buffer
+        + bridge.buffer_config.execution_prologue_gas_buffer
+        + bridge.buffer_config.execution_gas_buffer
+        + bridge.buffer_config.execution_epilogue_gas_buffer
 }
 
 #[error_code]

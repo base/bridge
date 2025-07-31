@@ -59,7 +59,9 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
     let ix = Instruction {
         program_id: ID,
         accounts,
-        data: crate::instruction::Initialize {}.data(),
+        data: crate::instruction::Initialize { 
+            guardian: Pubkey::new_unique() 
+        }.data(),
     };
 
     let tx = Transaction::new(

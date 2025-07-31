@@ -1,26 +1,31 @@
 use anchor_lang::prelude::*;
 
-use crate::solana_to_base::{CallBuffer, CallType, MAX_CALL_BUFFER_SIZE};
+use crate::solana_to_base::{CallBuffer, CallType};
 
 /// Accounts struct for initializing a call buffer account that can store large call data.
 /// This account can be used to build up call data over multiple transactions before bridging.
 #[derive(Accounts)]
-#[instruction(_ty: CallType, _to: [u8; 20], _value: u128, _initial_data: Vec<u8>, max_data_len: usize)]
+#[instruction(_ty: CallType, _to: [u8; 20], _value: u128, _initial_data: Vec<u8>, _max_data_len: u64)]
 pub struct InitializeCallBuffer<'info> {
-    /// The account paying for the transaction fees and the call buffer account creation.
-    /// It is set as the owner of the call buffer account.
+    /// The account that pays for the transaction and call buffer account creation
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// The call buffer account being created.
+    /// The call buffer account being initialized
     #[account(
         init,
         payer = payer,
-        space = CallBuffer::space(max_data_len),
+        space = CallBuffer::space(_max_data_len as usize),
     )]
     pub call_buffer: Account<'info, CallBuffer>,
 
-    /// System program for account creation.
+    /// The bridge account to check the max buffer size limit
+    #[account(
+        constraint = _max_data_len <= bridge.limits_config.max_call_buffer_size @ InitializeCallBufferError::InvalidBufferSize
+    )]
+    pub bridge: Account<'info, crate::common::bridge::Bridge>,
+
+    /// System program required for creating new accounts
     pub system_program: Program<'info, System>,
 }
 
@@ -30,14 +35,8 @@ pub fn initialize_call_buffer_handler(
     to: [u8; 20],
     value: u128,
     initial_data: Vec<u8>,
-    max_data_len: usize,
+    _max_data_len: u64,
 ) -> Result<()> {
-    // Verify that the max data length doesn't exceed the max allowed size.
-    require!(
-        max_data_len <= MAX_CALL_BUFFER_SIZE,
-        InitializeCallBufferError::MaxSizeExceeded
-    );
-
     *ctx.accounts.call_buffer = CallBuffer {
         owner: ctx.accounts.payer.key(),
         ty,
@@ -53,6 +52,8 @@ pub fn initialize_call_buffer_handler(
 pub enum InitializeCallBufferError {
     #[msg("Call buffer size exceeds maximum allowed size of 64KB")]
     MaxSizeExceeded,
+    #[msg("Invalid buffer size provided")]
+    InvalidBufferSize,
 }
 
 #[cfg(test)]
@@ -89,12 +90,13 @@ mod tests {
         let to = [1u8; 20];
         let value = 100u128;
         let initial_data = vec![0x12, 0x34, 0x56, 0x78];
-        let max_data_len = 1024;
+        let max_data_len = 1024u64;
 
         // Build the InitializeCallBuffer instruction accounts
         let accounts = accounts::InitializeCallBuffer {
             payer: payer.pubkey(),
             call_buffer: call_buffer.pubkey(),
+            bridge: _bridge_pda.pubkey(),
             system_program: system_program::ID,
         }
         .to_account_metas(None);
