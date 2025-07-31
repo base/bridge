@@ -72,10 +72,10 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @dev Simulated via a forge test performing a call to `relayMessages` with a single message where:
     ///      - The execution and the execution epilogue sections were commented out to isolate the execution section.
     ///      - `isTrustedRelayer` was true to estimate the worst case scenario of doing an additional SSTORE.
-    ///      - The `message.data` field was 64Kb large which is the maximum size allowed for the data field of an
+    ///      - The `message.data` field was 8Kb large which is the maximum size allowed for the data field of an
     ///        `OutgoingMessage` on the Solana side.
-    ///      - The metered gas was 61,543 gas.
-    uint256 private constant _EXECUTION_PROLOGUE_GAS_BUFFER = 65_000;
+    ///      - The metered gas was 14,798 gas.
+    uint256 private constant _EXECUTION_PROLOGUE_GAS_BUFFER = 20_000;
 
     /// @notice Gas required to run the execution section of `__validateAndRelay`.
     ///
@@ -83,23 +83,23 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///      - The execution epilogue section was commented out to isolate the execution section. The execution section
     ///        (body of the `__relayMessage` function) was commented out to isolate the cost of performing the public
     ///        call to `this.__relayMessage` specifically.
-    ///      - The `message.data` field was 64Kb large which is the maximum size allowed for the data field of an
+    ///      - The `message.data` field was 8Kb large which is the maximum size allowed for the data field of an
     ///        `OutgoingMessage` on the Solana side.
-    ///      - The metered gas (including the execution prologue section) was 100,674 gas thus the isolated
-    ///        execution section was 100,674 - 61,543 = 39,131 gas.
+    ///      - The metered gas (including the execution prologue section) was 18,495 gas thus the isolated
+    ///        execution section was 18,495 - 14,798 = 3,697 gas.
     ///      - No buffer is strictly needed as the `_EXECUTION_PROLOGUE_GAS_BUFFER` is already rounded up and above
     ///        that.
-    uint256 private constant _EXECUTION_GAS_BUFFER = 40_000;
+    uint256 private constant _EXECUTION_GAS_BUFFER = 5_000;
 
     /// @notice Gas required to run the execution epilogue section of `__validateAndRelay`.
     ///
     /// @dev Simulated via a forge test performing a single call to `__validateAndRelay` where:
     ///      - The execution section (body of the `__relayMessage` function) was commented out to isolate the cost of
     ///        performing the public call to `this.__relayMessage` and the success / failure bookkeeping specifically.
-    ///      - The `message.data` field was 64Kb large which is the maximum size allowed for the data field of an
+    ///      - The `message.data` field was 8kb large which is the maximum size allowed for the data field of an
     ///        `OutgoingMessage` on the Solana side.
-    ///      - The metered gas (including the execution prologue and execution sections) was 121,996 gas thus the
-    ///        isolated execution epilogue section was 121,996 - 100,674 = 21,322 gas.
+    ///      - The metered gas (including the execution prologue and execution sections) was 40,118 gas thus the
+    ///        isolated execution epilogue section was 40,118 - 18,495 = 21,623 gas.
     uint256 private constant _EXECUTION_EPILOGUE_GAS_BUFFER = 25_000;
 
     //////////////////////////////////////////////////////////////
@@ -119,7 +119,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     mapping(Pubkey owner => address twinAddress) public twins;
 
     /// @notice The nonce used for the next incoming message relayed.
-    uint64 public nextIncomingNonce = 1;
+    uint64 public nextIncomingNonce;
 
     /// @notice Whether the bridge is paused.
     bool public paused;
@@ -196,6 +196,8 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         TRUSTED_RELAYER = trustedRelayer;
         TWIN_BEACON = twinBeacon;
         CROSS_CHAIN_ERC20_FACTORY = crossChainErc20Factory;
+
+        nextIncomingNonce = 1;
 
         _disableInitializers();
     }
