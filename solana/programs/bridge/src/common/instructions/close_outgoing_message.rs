@@ -14,7 +14,7 @@ pub struct CloseOutgoingMessage<'info> {
     pub payer: Signer<'info>,
 
     /// The account that is the original payer of the outgoing message.
-    /// CHECK: This account is validated through the `has_one = original_payer` constraint on the outgoing_message account
+    /// CHECK: Validated by `has_one = original_payer` constraint below
     #[account(mut)]
     pub original_payer: AccountInfo<'info>,
 

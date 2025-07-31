@@ -18,27 +18,11 @@ pub struct SetBridgeConfig<'info> {
     pub guardian: Signer<'info>,
 }
 
-/// Accounts struct for EIP-1559 configuration setter instructions
-/// Only the guardian can update these parameters
-#[derive(Accounts)]
-pub struct SetEip1559Config<'info> {
-    #[account(
-        mut,
-        has_one = guardian @ ConfigError::UnauthorizedConfigUpdate,
-        seeds = [BRIDGE_SEED],
-        bump
-    )]
-    pub bridge: Account<'info, Bridge>,
-    
-    /// The guardian account authorized to update configuration
-    pub guardian: Signer<'info>,
-}
-
 // ===== EIP-1559 CONFIGURATION SETTERS =====
 
 /// Set the minimum base fee parameter
 pub fn set_minimum_base_fee(
-    ctx: Context<SetEip1559Config>, 
+    ctx: Context<SetBridgeConfig>, 
     new_fee: u64
 ) -> Result<()> {
     // Validate the new value
@@ -62,7 +46,7 @@ pub fn set_minimum_base_fee(
 
 /// Set the window duration parameter
 pub fn set_window_duration(
-    ctx: Context<SetEip1559Config>, 
+    ctx: Context<SetBridgeConfig>, 
     new_duration: u64
 ) -> Result<()> {
     require!(
@@ -86,7 +70,7 @@ pub fn set_window_duration(
 
 /// Set the gas target parameter
 pub fn set_gas_target(
-    ctx: Context<SetEip1559Config>, 
+    ctx: Context<SetBridgeConfig>, 
     new_target: u64
 ) -> Result<()> {
     require!(
@@ -110,7 +94,7 @@ pub fn set_gas_target(
 
 /// Set the adjustment denominator parameter
 pub fn set_adjustment_denominator(
-    ctx: Context<SetEip1559Config>, 
+    ctx: Context<SetBridgeConfig>, 
     new_denominator: u64
 ) -> Result<()> {
     require!(

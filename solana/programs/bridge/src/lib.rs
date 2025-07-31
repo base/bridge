@@ -306,6 +306,7 @@ pub mod bridge {
     /// * `value`        - The amount of ETH to send with the call (in wei)
     /// * `initial_data` - Initial call data to store
     /// * `max_data_len` - Maximum total length of data that will be stored
+    /// * `max_buffer_size` - Configured maximum buffer size from bridge state
     pub fn initialize_call_buffer(
         ctx: Context<InitializeCallBuffer>,
         ty: CallType,
@@ -313,8 +314,9 @@ pub mod bridge {
         value: u128,
         initial_data: Vec<u8>,
         max_data_len: u64,
+        max_buffer_size: u64,
     ) -> Result<()> {
-        initialize_call_buffer_handler(ctx, ty, to, value, initial_data, max_data_len)
+        initialize_call_buffer_handler(ctx, ty, to, value, initial_data, max_data_len as usize, max_buffer_size)
     }
 
     /// Appends data to an existing call buffer account.
@@ -355,7 +357,7 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_fee` - The new minimum base fee value (must be > 0 and <= 1,000,000,000)
-    pub fn set_minimum_base_fee(ctx: Context<SetEip1559Config>, new_fee: u64) -> Result<()> {
+    pub fn set_minimum_base_fee(ctx: Context<SetBridgeConfig>, new_fee: u64) -> Result<()> {
         set_minimum_base_fee_handler(ctx, new_fee)
     }
 
@@ -365,7 +367,7 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_duration` - The new window duration in seconds (must be > 0 and <= 3600)
-    pub fn set_window_duration(ctx: Context<SetEip1559Config>, new_duration: u64) -> Result<()> {
+    pub fn set_window_duration(ctx: Context<SetBridgeConfig>, new_duration: u64) -> Result<()> {
         set_window_duration_handler(ctx, new_duration)
     }
 
@@ -375,7 +377,7 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_target` - The new gas target value (must be > 0 and <= 1,000,000,000)
-    pub fn set_gas_target(ctx: Context<SetEip1559Config>, new_target: u64) -> Result<()> {
+    pub fn set_gas_target(ctx: Context<SetBridgeConfig>, new_target: u64) -> Result<()> {
         set_gas_target_handler(ctx, new_target)
     }
 
@@ -385,7 +387,7 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_denominator` - The new adjustment denominator (must be >= 1 and <= 100)
-    pub fn set_adjustment_denominator(ctx: Context<SetEip1559Config>, new_denominator: u64) -> Result<()> {
+    pub fn set_adjustment_denominator(ctx: Context<SetBridgeConfig>, new_denominator: u64) -> Result<()> {
         set_adjustment_denominator_handler(ctx, new_denominator)
     }
 

@@ -63,15 +63,7 @@ pub struct Eip1559 {
 
 impl Default for Eip1559 {
     fn default() -> Self {
-        Self {
-            target: EIP1559_DEFAULT_GAS_TARGET_PER_WINDOW,
-            denominator: EIP1559_DEFAULT_ADJUSTMENT_DENOMINATOR,
-            window_duration_seconds: EIP1559_DEFAULT_WINDOW_DURATION_SECONDS,
-            minimum_base_fee: EIP1559_MINIMUM_BASE_FEE,
-            current_base_fee: EIP1559_MINIMUM_BASE_FEE,
-            current_window_gas_used: 0,
-            window_start_time: 0,
-        }
+        Self::new(0)
     }
 }
 
