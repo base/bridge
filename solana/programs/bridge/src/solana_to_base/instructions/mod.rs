@@ -97,8 +97,8 @@ fn min_gas_limit(tx_size: usize) -> u64 {
 
     // Buffers to account for the gas used in the `Bridge.__validateAndRelay` function.
     // See `Bridge.sol` for more details.
-    const EXECUTION_PROLOGUE_GAS_BUFFER: u64 = 65_000;
-    const EXECUTION_GAS_BUFFER: u64 = 40_000;
+    const EXECUTION_PROLOGUE_GAS_BUFFER: u64 = 20_000;
+    const EXECUTION_GAS_BUFFER: u64 = 5_000;
     const EXECUTION_EPILOGUE_GAS_BUFFER: u64 = 25_000;
 
     tx_size as u64 * 40

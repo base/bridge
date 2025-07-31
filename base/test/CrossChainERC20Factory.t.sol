@@ -214,14 +214,11 @@ contract CrossChainERC20FactoryTest is Test {
         bytes32 remoteToken,
         string memory name,
         string memory symbol,
-        uint8 decimals,
-        address randomDeployer1,
-        address randomDeployer2
+        uint8 decimals
     ) public {
-        // Ensure deployers are different and valid
-        vm.assume(randomDeployer1 != randomDeployer2);
-        vm.assume(randomDeployer1 != address(0));
-        vm.assume(randomDeployer2 != address(0));
+        // Generate 2 random deployer addresses.
+        address randomDeployer1 = makeAddr(string.concat("deployer1", vm.toString(remoteToken)));
+        address randomDeployer2 = makeAddr(string.concat("deployer2", vm.toString(remoteToken)));
 
         // Calculate expected address
         bytes32 salt = keccak256(abi.encode(remoteToken, name, symbol, decimals));
@@ -309,21 +306,5 @@ contract CrossChainERC20FactoryTest is Test {
         vm.prank(deployer);
         address token = factory.deploy(REMOTE_TOKEN, TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS);
         assertTrue(token != address(0), "Factory should continue working after implementation changes");
-    }
-
-    //////////////////////////////////////////////////////////////
-    ///                   Helper Functions                    ///
-    //////////////////////////////////////////////////////////////
-
-    /// @dev Helper function to generate unique test parameters
-    function generateUniqueParams(uint256 seed)
-        internal
-        pure
-        returns (bytes32 remoteToken, string memory name, string memory symbol, uint8 decimals)
-    {
-        remoteToken = bytes32(seed);
-        name = string(abi.encodePacked("Token", vm.toString(seed)));
-        symbol = string(abi.encodePacked("TK", vm.toString(seed)));
-        decimals = uint8(seed % 19); // 0-18 decimals
     }
 }

@@ -51,7 +51,7 @@ pub fn initialize_call_buffer_handler(
 
 #[error_code]
 pub enum InitializeCallBufferError {
-    #[msg("Call buffer size exceeds maximum allowed size of 64KB")]
+    #[msg("Call buffer size exceeds maximum allowed size")]
     MaxSizeExceeded,
 }
 
@@ -139,68 +139,66 @@ mod tests {
         assert_eq!(call_buffer_data.data, initial_data);
     }
 
-    // TODO: Uncomment once we implemented proper realloc to allow reaching the max size
-    //       https://stackoverflow.com/a/70156099
-    // #[test]
-    // fn test_initialize_call_buffer_max_size_exceeded() {
-    //     let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+    #[test]
+    fn test_initialize_call_buffer_max_size_exceeded() {
+        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
 
-    //     // Create payer account
-    //     let payer = Keypair::new();
-    //     svm.airdrop(&payer.pubkey(), LAMPORTS_PER_SOL).unwrap();
+        // Create payer account
+        let payer = Keypair::new();
+        svm.airdrop(&payer.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
-    //     // Create call buffer account
-    //     let call_buffer = Keypair::new();
+        // Create call buffer account
+        let call_buffer = Keypair::new();
 
-    //     // Test parameters with max_data_len exceeding MAX_CALL_BUFFER_SIZE
-    //     let ty = CallType::Call;
-    //     let to = [1u8; 20];
-    //     let value = 0u128;
-    //     let initial_data = vec![0x12, 0x34];
-    //     let max_data_len = MAX_CALL_BUFFER_SIZE + 1; // Exceed the limit
+        // Test parameters with max_data_len exceeding MAX_CALL_BUFFER_SIZE
+        let ty = CallType::Call;
+        let to = [1u8; 20];
+        let value = 0u128;
+        let initial_data = vec![0x12, 0x34];
+        let max_data_len = MAX_CALL_BUFFER_SIZE + 1; // Exceed the limit
 
-    //     // Build the InitializeCallBuffer instruction accounts
-    //     let accounts = accounts::InitializeCallBuffer {
-    //         payer: payer.pubkey(),
-    //         call_buffer: call_buffer.pubkey(),
-    //         system_program: system_program::ID,
-    //     }
-    //     .to_account_metas(None);
+        // Build the InitializeCallBuffer instruction accounts
+        let accounts = accounts::InitializeCallBuffer {
+            payer: payer.pubkey(),
+            call_buffer: call_buffer.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
 
-    //     // Build the InitializeCallBuffer instruction
-    //     let ix = Instruction {
-    //         program_id: ID,
-    //         accounts,
-    //         data: InitializeCallBufferIx {
-    //             ty,
-    //             to,
-    //             value,
-    //             initial_data,
-    //             max_data_len,
-    //         }
-    //         .data(),
-    //     };
+        // Build the InitializeCallBuffer instruction
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: InitializeCallBufferIx {
+                ty,
+                to,
+                value,
+                initial_data,
+                max_data_len,
+            }
+            .data(),
+        };
 
-    //     // Build the transaction
-    //     let tx = Transaction::new(
-    //         &[&payer, &call_buffer],
-    //         Message::new(&[ix], Some(&payer.pubkey())),
-    //         svm.latest_blockhash(),
-    //     );
+        // Build the transaction
+        let tx = Transaction::new(
+            &[&payer, &call_buffer],
+            Message::new(&[ix], Some(&payer.pubkey())),
+            svm.latest_blockhash(),
+        );
 
-    //     // Send the transaction - should fail
-    //     let result = svm.send_transaction(tx);
-    //     assert!(
-    //         result.is_err(),
-    //         "Expected transaction to fail with max size exceeded"
-    //     );
+        // Send the transaction - should fail
+        let result = svm.send_transaction(tx);
+        assert!(
+            result.is_err(),
+            "Expected transaction to fail with max size exceeded"
+        );
 
-    //     // Check that the error contains the expected error message
-    //     let error_string = format!("{:?}", result.unwrap_err());
-    //     assert!(
-    //         error_string.contains("MaxSizeExceeded"),
-    //         "Expected MaxSizeExceeded error, got: {}",
-    //         error_string
-    //     );
-    // }
+        // Check that the error contains the expected error message
+        let error_string = format!("{:?}", result.unwrap_err());
+        assert!(
+            error_string.contains("MaxSizeExceeded"),
+            "Expected MaxSizeExceeded error, got: {}",
+            error_string
+        );
+    }
 }
