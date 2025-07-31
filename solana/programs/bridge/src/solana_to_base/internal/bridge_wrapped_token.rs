@@ -51,7 +51,7 @@ pub fn bridge_wrapped_token_internal<'info>(
         system_program,
         payer,
         gas_fee_receiver,
-        &mut bridge.eip1559,
+        &mut **bridge,
         gas_limit,
         message.relay_messages_tx_size(),
     )?;

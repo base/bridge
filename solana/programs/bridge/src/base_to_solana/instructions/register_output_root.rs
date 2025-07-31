@@ -62,7 +62,8 @@ pub fn register_output_root_handler(
     base_last_relayed_nonce: u64,
 ) -> Result<()> {
     require!(
-        base_block_number > ctx.accounts.bridge.base_block_number && base_block_number % 300 == 0,
+        base_block_number > ctx.accounts.bridge.base_block_number 
+            && base_block_number % ctx.accounts.bridge.protocol_config.block_interval_requirement == 0,
         RegisterOutputRootError::IncorrectBlockNumber
     );
     require!(

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::common::{
-    bridge::{Bridge, Eip1559},
+    bridge::{Bridge, Eip1559, GasConfig, BufferConfig, MetadataConfig, ProtocolConfig, LimitsConfig, AbiConfig},
     BRIDGE_SEED,
 };
 
@@ -33,7 +33,7 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
+pub fn initialize_handler(ctx: Context<Initialize>, guardian: Pubkey) -> Result<()> {
     let current_timestamp = Clock::get()?.unix_timestamp;
 
     *ctx.accounts.bridge = Bridge {
@@ -41,6 +41,13 @@ pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
         base_last_relayed_nonce: 0,
         nonce: 1, // Starts the first nonce at 1 so that 0 can safely be used to initialize `base_last_relayed_nonce`
         eip1559: Eip1559::new(current_timestamp),
+        guardian,
+        gas_config: GasConfig::default(),
+        buffer_config: BufferConfig::default(),
+        metadata_config: MetadataConfig::default(),
+        protocol_config: ProtocolConfig::default(),
+        limits_config: LimitsConfig::default(),
+        abi_config: AbiConfig::default(),
     };
 
     Ok(())
@@ -62,6 +69,7 @@ mod tests {
     use solana_message::Message;
     use solana_signer::Signer;
     use solana_transaction::Transaction;
+    use solana_instruction::AccountMeta;
 
     use crate::{accounts, instruction::Initialize, test_utils::mock_clock, ID};
 
@@ -91,11 +99,14 @@ mod tests {
         }
         .to_account_metas(None);
 
+        // Create a dummy guardian for testing
+        let guardian = Pubkey::new_unique();
+
         // Build the Initialize instruction
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: Initialize {}.data(),
+            data: crate::instruction::Initialize { guardian }.data(),
         };
 
         // Build the transaction
@@ -122,6 +133,13 @@ mod tests {
                 base_last_relayed_nonce: 0,
                 nonce: 1,
                 eip1559: Eip1559::new(timestamp),
+                guardian,
+                gas_config: GasConfig::default(),
+                buffer_config: BufferConfig::default(),
+                metadata_config: MetadataConfig::default(),
+                protocol_config: ProtocolConfig::default(),
+                limits_config: LimitsConfig::default(),
+                abi_config: AbiConfig::default(),
             }
         );
     }

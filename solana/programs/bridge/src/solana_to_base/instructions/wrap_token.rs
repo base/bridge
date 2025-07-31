@@ -224,7 +224,7 @@ fn register_remote_token(
         &ctx.accounts.system_program,
         &ctx.accounts.payer,
         &ctx.accounts.gas_fee_receiver,
-        &mut ctx.accounts.bridge.eip1559,
+        &mut ctx.accounts.bridge,
         gas_limit,
         message.relay_messages_tx_size(),
     )?;
