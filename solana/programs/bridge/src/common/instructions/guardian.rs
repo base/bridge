@@ -12,9 +12,6 @@ pub struct TransferGuardian<'info> {
         bump
     )]
     pub bridge: Account<'info, Bridge>,
-    
-    /// Current guardian
-    #[account(constraint = guardian.key() == bridge.guardian)]
     pub guardian: Signer<'info>,
 }
 
@@ -30,7 +27,6 @@ pub fn transfer_guardian(
     emit!(GuardianTransferred {
         old_guardian,
         new_guardian,
-        transferred_by: ctx.accounts.guardian.key(),
     });
     
     Ok(())
@@ -41,7 +37,6 @@ pub fn transfer_guardian(
 pub struct GuardianTransferred {
     pub old_guardian: Pubkey,
     pub new_guardian: Pubkey,
-    pub transferred_by: Pubkey,
 }
 
 /// Error codes for guardian operations

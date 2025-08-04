@@ -24,7 +24,7 @@ pub fn bridge_call_internal<'info>(
         system_program,
         payer,
         gas_fee_receiver,
-        &mut **bridge,
+        bridge,
         gas_limit,
         message.relay_messages_tx_size(),
     )?;

@@ -1,15 +1,25 @@
 use anchor_lang::prelude::*;
 
-use crate::solana_to_base::{CallBuffer, CallType};
+use crate::{
+    common::{bridge::Bridge, BRIDGE_SEED},
+    solana_to_base::{CallBuffer, CallType},
+};
 
 /// Accounts struct for initializing a call buffer account that can store large call data.
 /// This account can be used to build up call data over multiple transactions before bridging.
 #[derive(Accounts)]
-#[instruction(_ty: CallType, _to: [u8; 20], _value: u128, _initial_data: Vec<u8>, max_data_len: usize, max_buffer_size: u64)]
+#[instruction(_ty: CallType, _to: [u8; 20], _value: u128, _initial_data: Vec<u8>, max_data_len: usize)]
 pub struct InitializeCallBuffer<'info> {
     /// The account that pays for the transaction and call buffer account creation
     #[account(mut)]
     pub payer: Signer<'info>,
+
+    /// The bridge account containing configuration including max buffer size
+    #[account(
+        seeds = [BRIDGE_SEED],
+        bump
+    )]
+    pub bridge: Account<'info, Bridge>,
 
     /// The call buffer account being initialized
     #[account(
@@ -30,8 +40,10 @@ pub fn initialize_call_buffer_handler(
     value: u128,
     initial_data: Vec<u8>,
     max_data_len: usize,
-    max_buffer_size: u64,
 ) -> Result<()> {
+    // Get the max buffer size from bridge configuration
+    let max_buffer_size = ctx.accounts.bridge.limits_config.max_call_buffer_size;
+    
     // Verify that the max data length doesn't exceed the configured max allowed size
     require!(
         max_data_len <= max_buffer_size as usize,
@@ -92,11 +104,11 @@ mod tests {
         let value = 100u128;
         let initial_data = vec![0x12, 0x34, 0x56, 0x78];
         let max_data_len = 1024;
-        let max_buffer_size = 64 * 1024; // 64KB - same as default MAX_CALL_BUFFER_SIZE
 
         // Build the InitializeCallBuffer instruction accounts
         let accounts = accounts::InitializeCallBuffer {
             payer: payer.pubkey(),
+            bridge: _bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }
@@ -112,7 +124,6 @@ mod tests {
                 value,
                 initial_data: initial_data.clone(),
                 max_data_len,
-                max_buffer_size,
             }
             .data(),
         };
@@ -162,11 +173,12 @@ mod tests {
     //     let value = 0u128;
     //     let initial_data = vec![0x12, 0x34];
     //     let max_data_len = 1024;
-    //     let max_buffer_size = 512; // Set buffer size smaller than max_data_len to trigger error
+    //     // Note: max_buffer_size now comes from bridge configuration
 
     //     // Build the InitializeCallBuffer instruction accounts
     //     let accounts = accounts::InitializeCallBuffer {
     //         payer: payer.pubkey(),
+    //         bridge: _bridge_pda,
     //         call_buffer: call_buffer.pubkey(),
     //         system_program: system_program::ID,
     //     }
@@ -182,7 +194,6 @@ mod tests {
     //             value,
     //             initial_data,
     //             max_data_len,
-    //             max_buffer_size,
     //         }
     //         .data(),
     //     };

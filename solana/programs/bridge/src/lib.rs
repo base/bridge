@@ -11,32 +11,32 @@ use common::*;
 use common::{
     config::{
         // EIP-1559 Configuration
-        set_minimum_base_fee as set_minimum_base_fee_handler,
-        set_window_duration as set_window_duration_handler,
-        set_gas_target as set_gas_target_handler,
-        set_adjustment_denominator as set_adjustment_denominator_handler,
+        set_minimum_base_fee_handler,
+        set_window_duration_handler,
+        set_gas_target_handler,
+        set_adjustment_denominator_handler,
         // Gas and Fee Management
-        set_max_gas_limit_per_message as set_max_gas_limit_per_message_handler,
-        set_gas_cost_scaler as set_gas_cost_scaler_handler,
-        set_gas_cost_scaler_dp as set_gas_cost_scaler_dp_handler,
-        set_gas_fee_receiver as set_gas_fee_receiver_handler,
-        set_extra_buffer as set_extra_buffer_handler,
-        set_execution_prologue_gas_buffer as set_execution_prologue_gas_buffer_handler,
-        set_execution_gas_buffer as set_execution_gas_buffer_handler,
-        set_execution_epilogue_gas_buffer as set_execution_epilogue_gas_buffer_handler,
-        set_base_transaction_cost as set_base_transaction_cost_handler,
+        set_max_gas_limit_per_message_handler,
+        set_gas_cost_scaler_handler,
+        set_gas_cost_scaler_dp_handler,
+        set_gas_fee_receiver_handler,
+        set_extra_buffer_handler,
+        set_execution_prologue_gas_buffer_handler,
+        set_execution_gas_buffer_handler,
+        set_execution_epilogue_gas_buffer_handler,
+        set_base_transaction_cost_handler,
         //  Token Metadata Keys
-        set_remote_token_metadata_key as set_remote_token_metadata_key_handler,
-        set_scaler_exponent_metadata_key as set_scaler_exponent_metadata_key_handler,
+        set_remote_token_metadata_key_handler,
+        set_scaler_exponent_metadata_key_handler,
         // Protocol Configuration
-        set_block_interval_requirement as set_block_interval_requirement_handler,
+        set_block_interval_requirement_handler,
         // Buffer and Size Limits Configuration
-        set_max_call_buffer_size as set_max_call_buffer_size_handler,
-        set_max_data_len as set_max_data_len_handler,
+        set_max_call_buffer_size_handler,
+        set_max_data_len_handler,
         // ABI Configuration
-        set_relay_messages_call_overhead as set_relay_messages_call_overhead_handler,
-        set_relay_messages_transfer_overhead as set_relay_messages_transfer_overhead_handler,
-        set_relay_messages_transfer_and_call_overhead as set_relay_messages_transfer_and_call_overhead_handler,
+        set_relay_messages_call_overhead_handler,
+        set_relay_messages_transfer_overhead_handler,
+        set_relay_messages_transfer_and_call_overhead_handler,
     },
     guardian::transfer_guardian as transfer_guardian_handler,
     initialize::initialize_handler,
@@ -58,10 +58,9 @@ pub mod bridge {
     /// This function sets up the initial bridge configuration and must be called once during deployment.
     ///
     /// # Arguments
-    /// * `ctx` - The context containing all accounts needed for initialization
-    /// * `guardian` - The pubkey that will have authority to update EIP-1559 configuration
-    pub fn initialize(ctx: Context<Initialize>, guardian: Pubkey) -> Result<()> {
-        initialize_handler(ctx, guardian)
+    /// * `ctx` - The context containing all accounts needed for initialization, including the guardian signer
+    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+        initialize_handler(ctx)
     }
 
     /// Closes an outgoing message account after it has been relayed to Base.
@@ -300,13 +299,12 @@ pub mod bridge {
     /// before using it in a bridge operation.
     ///
     /// # Arguments
-    /// * `ctx`          - The context containing accounts for initialization
+    /// * `ctx`          - The context containing accounts for initialization (including bridge config)
     /// * `ty`           - The type of call (Call, DelegateCall, Create, Create2)
     /// * `to`           - The target contract address on Base
     /// * `value`        - The amount of ETH to send with the call (in wei)
     /// * `initial_data` - Initial call data to store
     /// * `max_data_len` - Maximum total length of data that will be stored
-    /// * `max_buffer_size` - Configured maximum buffer size from bridge state
     pub fn initialize_call_buffer(
         ctx: Context<InitializeCallBuffer>,
         ty: CallType,
@@ -314,9 +312,8 @@ pub mod bridge {
         value: u128,
         initial_data: Vec<u8>,
         max_data_len: u64,
-        max_buffer_size: u64,
     ) -> Result<()> {
-        initialize_call_buffer_handler(ctx, ty, to, value, initial_data, max_data_len as usize, max_buffer_size)
+        initialize_call_buffer_handler(ctx, ty, to, value, initial_data, max_data_len as usize)
     }
 
     /// Appends data to an existing call buffer account.

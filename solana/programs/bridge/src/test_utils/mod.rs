@@ -30,7 +30,7 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
     use solana_signer::Signer;
     use solana_transaction::Transaction;
 
-    use crate::{accounts, common::BRIDGE_SEED, ID};
+    use crate::{accounts, common::BRIDGE_SEED, instruction::Initialize, ID};
 
     let mut svm = LiteSVM::new();
     svm.add_program_from_file(ID, "../../target/deploy/bridge.so")
@@ -59,7 +59,7 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
     let ix = Instruction {
         program_id: ID,
         accounts,
-        data: crate::instruction::Initialize { 
+        data: Initialize { 
             guardian: Pubkey::new_unique() 
         }.data(),
     };

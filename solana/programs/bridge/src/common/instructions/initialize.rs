@@ -1,8 +1,11 @@
 use anchor_lang::prelude::*;
 
-use crate::common::{
-    bridge::{Bridge, Eip1559, GasConfig, BufferConfig, MetadataConfig, ProtocolConfig, LimitsConfig, AbiConfig},
-    BRIDGE_SEED,
+use crate::{
+    common::{
+        bridge::{Bridge, Eip1559, GasConfig, BufferConfig, MetadataConfig, ProtocolConfig, LimitsConfig, AbiConfig},
+        BRIDGE_SEED,
+    },
+    instruction::Initialize as InitializeInstruction,
 };
 
 /// Accounts struct for the initialize instruction that sets up the bridge program's initial state.
@@ -28,12 +31,16 @@ pub struct Initialize<'info> {
     )]
     pub bridge: Account<'info, Bridge>,
 
+    /// The guardian account that will have administrative authority over the bridge.
+    /// Must be a signer to ensure the initializer controls this account.
+    pub guardian: Signer<'info>,
+
     /// System program required for creating new accounts.
     /// Used internally by Anchor for account initialization.
     pub system_program: Program<'info, System>,
 }
 
-pub fn initialize_handler(ctx: Context<Initialize>, guardian: Pubkey) -> Result<()> {
+pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
     let current_timestamp = Clock::get()?.unix_timestamp;
 
     *ctx.accounts.bridge = Bridge {
@@ -41,7 +48,7 @@ pub fn initialize_handler(ctx: Context<Initialize>, guardian: Pubkey) -> Result<
         base_last_relayed_nonce: 0,
         nonce: 1, // Starts the first nonce at 1 so that 0 can safely be used to initialize `base_last_relayed_nonce`
         eip1559: Eip1559::new(current_timestamp),
-        guardian,
+        guardian: ctx.accounts.guardian.key(),
         gas_config: GasConfig::default(),
         buffer_config: BufferConfig::default(),
         metadata_config: MetadataConfig::default(),
@@ -84,6 +91,10 @@ mod tests {
         let payer_pk = payer.pubkey();
         svm.airdrop(&payer_pk, LAMPORTS_PER_SOL).unwrap();
 
+        // Create guardian keypair
+        let guardian = Keypair::new();
+        let guardian_pk = guardian.pubkey();
+
         // Mock the clock to ensure we get a proper timestamp
         let timestamp = 1747440000; // May 16th, 2025
         mock_clock(&mut svm, timestamp);
@@ -95,23 +106,21 @@ mod tests {
         let accounts = accounts::Initialize {
             payer: payer_pk,
             bridge: bridge_pda,
+            guardian: guardian_pk,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
 
-        // Create a dummy guardian for testing
-        let guardian = Pubkey::new_unique();
-
-        // Build the Initialize instruction
+        // Build the Initialize instruction (no guardian parameter needed)
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: crate::instruction::Initialize { guardian }.data(),
+            data: InitializeInstruction {}.data(),
         };
 
-        // Build the transaction
+        // Build the transaction with both payer and guardian as signers
         let tx = Transaction::new(
-            &[payer],
+            &[&payer, &guardian],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
@@ -133,7 +142,7 @@ mod tests {
                 base_last_relayed_nonce: 0,
                 nonce: 1,
                 eip1559: Eip1559::new(timestamp),
-                guardian,
+                guardian: guardian_pk,
                 gas_config: GasConfig::default(),
                 buffer_config: BufferConfig::default(),
                 metadata_config: MetadataConfig::default(),

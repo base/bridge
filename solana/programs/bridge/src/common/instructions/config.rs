@@ -21,7 +21,7 @@ pub struct SetBridgeConfig<'info> {
 // ===== EIP-1559 CONFIGURATION SETTERS =====
 
 /// Set the minimum base fee parameter
-pub fn set_minimum_base_fee(
+pub fn set_minimum_base_fee_handler(
     ctx: Context<SetBridgeConfig>, 
     new_fee: u64
 ) -> Result<()> {
@@ -45,7 +45,7 @@ pub fn set_minimum_base_fee(
 }
 
 /// Set the window duration parameter
-pub fn set_window_duration(
+pub fn set_window_duration_handler(
     ctx: Context<SetBridgeConfig>, 
     new_duration: u64
 ) -> Result<()> {
@@ -69,7 +69,7 @@ pub fn set_window_duration(
 }
 
 /// Set the gas target parameter
-pub fn set_gas_target(
+pub fn set_gas_target_handler(
     ctx: Context<SetBridgeConfig>, 
     new_target: u64
 ) -> Result<()> {
@@ -93,7 +93,7 @@ pub fn set_gas_target(
 }
 
 /// Set the adjustment denominator parameter
-pub fn set_adjustment_denominator(
+pub fn set_adjustment_denominator_handler(
     ctx: Context<SetBridgeConfig>, 
     new_denominator: u64
 ) -> Result<()> {
@@ -119,7 +119,7 @@ pub fn set_adjustment_denominator(
 // ===== GAS CONFIGURATION SETTERS =====
 
 /// Set the maximum gas limit per cross-chain message
-pub fn set_max_gas_limit_per_message(
+pub fn set_max_gas_limit_per_message_handler(
     ctx: Context<SetBridgeConfig>, 
     new_limit: u64
 ) -> Result<()> {
@@ -140,7 +140,7 @@ pub fn set_max_gas_limit_per_message(
 }
 
 /// Set the gas cost scaler
-pub fn set_gas_cost_scaler(
+pub fn set_gas_cost_scaler_handler(
     ctx: Context<SetBridgeConfig>, 
     new_scaler: u64
 ) -> Result<()> {
@@ -161,7 +161,7 @@ pub fn set_gas_cost_scaler(
 }
 
 /// Set the gas cost scaler decimal precision
-pub fn set_gas_cost_scaler_dp(
+pub fn set_gas_cost_scaler_dp_handler(
     ctx: Context<SetBridgeConfig>, 
     new_dp: u64
 ) -> Result<()> {
@@ -182,7 +182,7 @@ pub fn set_gas_cost_scaler_dp(
 }
 
 /// Set the gas fee receiver
-pub fn set_gas_fee_receiver(
+pub fn set_gas_fee_receiver_handler(
     ctx: Context<SetBridgeConfig>, 
     new_receiver: Pubkey
 ) -> Result<()> {
@@ -203,7 +203,7 @@ pub fn set_gas_fee_receiver(
 // ===== BUFFER CONFIGURATION SETTERS =====
 
 /// Set the extra relay buffer
-pub fn set_extra_buffer(
+pub fn set_extra_buffer_handler(
     ctx: Context<SetBridgeConfig>, 
     new_buffer: u64
 ) -> Result<()> {
@@ -224,7 +224,7 @@ pub fn set_extra_buffer(
 }
 
 /// Set the execution prologue gas buffer
-pub fn set_execution_prologue_gas_buffer(
+pub fn set_execution_prologue_gas_buffer_handler(
     ctx: Context<SetBridgeConfig>, 
     new_buffer: u64
 ) -> Result<()> {
@@ -245,7 +245,7 @@ pub fn set_execution_prologue_gas_buffer(
 }
 
 /// Set the execution gas buffer
-pub fn set_execution_gas_buffer(
+pub fn set_execution_gas_buffer_handler(
     ctx: Context<SetBridgeConfig>, 
     new_buffer: u64
 ) -> Result<()> {
@@ -266,7 +266,7 @@ pub fn set_execution_gas_buffer(
 }
 
 /// Set the execution epilogue gas buffer
-pub fn set_execution_epilogue_gas_buffer(
+pub fn set_execution_epilogue_gas_buffer_handler(
     ctx: Context<SetBridgeConfig>, 
     new_buffer: u64
 ) -> Result<()> {
@@ -287,7 +287,7 @@ pub fn set_execution_epilogue_gas_buffer(
 }
 
 /// Set the base transaction cost
-pub fn set_base_transaction_cost(
+pub fn set_base_transaction_cost_handler(
     ctx: Context<SetBridgeConfig>, 
     new_cost: u64
 ) -> Result<()> {
@@ -310,7 +310,7 @@ pub fn set_base_transaction_cost(
 // ===== METADATA CONFIGURATION SETTERS =====
 
 /// Set the remote token metadata key
-pub fn set_remote_token_metadata_key(
+pub fn set_remote_token_metadata_key_handler(
     ctx: Context<SetBridgeConfig>, 
     new_key: String
 ) -> Result<()> {
@@ -331,7 +331,7 @@ pub fn set_remote_token_metadata_key(
 }
 
 /// Set the scaler exponent metadata key
-pub fn set_scaler_exponent_metadata_key(
+pub fn set_scaler_exponent_metadata_key_handler(
     ctx: Context<SetBridgeConfig>, 
     new_key: String
 ) -> Result<()> {
@@ -354,7 +354,7 @@ pub fn set_scaler_exponent_metadata_key(
 // ===== PROTOCOL CONFIGURATION SETTERS =====
 
 /// Set the block interval requirement
-pub fn set_block_interval_requirement(
+pub fn set_block_interval_requirement_handler(
     ctx: Context<SetBridgeConfig>, 
     new_interval: u64
 ) -> Result<()> {
@@ -377,7 +377,7 @@ pub fn set_block_interval_requirement(
 // ===== LIMITS CONFIGURATION SETTERS =====
 
 /// Set the maximum call buffer size
-pub fn set_max_call_buffer_size(
+pub fn set_max_call_buffer_size_handler(
     ctx: Context<SetBridgeConfig>, 
     new_size: u64
 ) -> Result<()> {
@@ -398,7 +398,7 @@ pub fn set_max_call_buffer_size(
 }
 
 /// Set the maximum data length
-pub fn set_max_data_len(
+pub fn set_max_data_len_handler(
     ctx: Context<SetBridgeConfig>, 
     new_len: u64
 ) -> Result<()> {
@@ -421,7 +421,7 @@ pub fn set_max_data_len(
 // ===== ABI CONFIGURATION SETTERS =====
 
 /// Set the relay messages call ABI encoding overhead
-pub fn set_relay_messages_call_overhead(
+pub fn set_relay_messages_call_overhead_handler(
     ctx: Context<SetBridgeConfig>, 
     new_overhead: u64
 ) -> Result<()> {
@@ -442,7 +442,7 @@ pub fn set_relay_messages_call_overhead(
 }
 
 /// Set the relay messages transfer ABI encoding overhead
-pub fn set_relay_messages_transfer_overhead(
+pub fn set_relay_messages_transfer_overhead_handler(
     ctx: Context<SetBridgeConfig>, 
     new_overhead: u64
 ) -> Result<()> {
@@ -463,7 +463,7 @@ pub fn set_relay_messages_transfer_overhead(
 }
 
 /// Set the relay messages transfer and call ABI encoding overhead
-pub fn set_relay_messages_transfer_and_call_overhead(
+pub fn set_relay_messages_transfer_and_call_overhead_handler(
     ctx: Context<SetBridgeConfig>, 
     new_overhead: u64
 ) -> Result<()> {
