@@ -98,7 +98,7 @@ pub fn set_adjustment_denominator(
     new_denominator: u64
 ) -> Result<()> {
     require!(
-        new_denominator >= 1 && new_denominator <= 100, 
+        (1..=100).contains(&new_denominator),
         ConfigError::InvalidAdjustmentDenominator
     );
     
