@@ -197,8 +197,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         TWIN_BEACON = twinBeacon;
         CROSS_CHAIN_ERC20_FACTORY = crossChainErc20Factory;
 
-        nextIncomingNonce = 1;
-
         _disableInitializers();
     }
 
@@ -227,6 +225,8 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
 
         // Initialize ISM verification library
         ISMVerificationLib.initialize(validators, threshold);
+
+        nextIncomingNonce = 1;
     }
 
     /// @notice Get the current root of the MMR.
