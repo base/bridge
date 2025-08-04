@@ -4,7 +4,6 @@ use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, SOL_VAULT_SEED},
     solana_to_base::{
         internal::bridge_sol::bridge_sol_internal, Call, CallBuffer, OutgoingMessage,
-        GAS_FEE_RECEIVER,
     },
 };
 

@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, SOL_VAULT_SEED},
     solana_to_base::{
-        internal::bridge_sol::bridge_sol_internal, Call, OutgoingMessage, GAS_FEE_RECEIVER,
+        internal::bridge_sol::bridge_sol_internal, Call, OutgoingMessage,
     },
 };
 

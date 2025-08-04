@@ -4,7 +4,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, TOKEN_VAULT_SEED},
     solana_to_base::{
-        internal::bridge_spl::bridge_spl_internal, Call, OutgoingMessage, GAS_FEE_RECEIVER,
+        internal::bridge_spl::bridge_spl_internal, Call, OutgoingMessage,
     },
 };
 

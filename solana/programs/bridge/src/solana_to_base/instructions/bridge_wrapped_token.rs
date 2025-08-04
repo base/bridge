@@ -7,8 +7,7 @@ use anchor_spl::{
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
     solana_to_base::{
-        internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, OutgoingMessage, 
-        GAS_FEE_RECEIVER,
+        internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, OutgoingMessage,
     },
 };
 

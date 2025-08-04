@@ -6,7 +6,7 @@ use anchor_spl::{
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
-    solana_to_base::{Call, CallBuffer, OutgoingMessage, GAS_FEE_RECEIVER},
+    solana_to_base::{Call, CallBuffer, OutgoingMessage},
 };
 
 /// Accounts struct for the bridge_wrapped_token_with_buffered_call instruction that transfers wrapped tokens

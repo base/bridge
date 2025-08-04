@@ -1,12 +1,9 @@
 use anchor_lang::prelude::*;
 
-use crate::{
-    common::{
+use crate::common::{
         bridge::{Bridge, Eip1559, GasConfig, BufferConfig, MetadataConfig, ProtocolConfig, LimitsConfig, AbiConfig},
         BRIDGE_SEED,
-    },
-    instruction::Initialize as InitializeInstruction,
-};
+    };
 
 /// Accounts struct for the initialize instruction that sets up the bridge program's initial state.
 /// This instruction creates the main bridge account with default values for cross-chain operations

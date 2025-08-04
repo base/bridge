@@ -5,7 +5,6 @@ use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, TOKEN_VAULT_SEED},
     solana_to_base::{
         internal::bridge_spl::bridge_spl_internal, Call, CallBuffer, OutgoingMessage,
-        GAS_FEE_RECEIVER,
     },
 };
 
