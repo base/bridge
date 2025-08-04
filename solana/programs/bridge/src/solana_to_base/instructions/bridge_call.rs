@@ -27,8 +27,8 @@ pub struct BridgeCall<'info> {
     /// - Receives lamports calculated based on gas_limit and current gas pricing
     /// - Mutable to receive the gas fee payment
     ///
-    /// CHECK: This is the hardcoded gas fee receiver account.
-    #[account(mut, address = GAS_FEE_RECEIVER @ BridgeCallError::IncorrectGasFeeReceiver)]
+    /// CHECK: This account is validated at runtime to match bridge.gas_config.gas_fee_receiver
+    #[account(mut)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The main bridge state account containing global bridge configuration.
@@ -56,6 +56,12 @@ pub struct BridgeCall<'info> {
 }
 
 pub fn bridge_call_handler(ctx: Context<BridgeCall>, gas_limit: u64, call: Call) -> Result<()> {
+    // Validate gas fee receiver matches bridge configuration
+    require!(
+        ctx.accounts.gas_fee_receiver.key() == ctx.accounts.bridge.gas_config.gas_fee_receiver,
+        BridgeCallError::IncorrectGasFeeReceiver
+    );
+
     bridge_call_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,

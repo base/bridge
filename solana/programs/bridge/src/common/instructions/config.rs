@@ -308,48 +308,7 @@ pub fn set_base_transaction_cost_handler(
 }
 
 // ===== METADATA CONFIGURATION SETTERS =====
-
-/// Set the remote token metadata key
-pub fn set_remote_token_metadata_key_handler(
-    ctx: Context<SetBridgeConfig>, 
-    new_key: String
-) -> Result<()> {
-    require!(!new_key.is_empty() && new_key.len() <= 32, ConfigError::InvalidMetadataKey);
-    
-    let old_value = ctx.accounts.bridge.metadata_config.remote_token_metadata_key.clone();
-    ctx.accounts.bridge.metadata_config.remote_token_metadata_key = new_key.clone();
-    
-    emit!(BridgeConfigUpdated {
-        category: "metadata".to_string(),
-        parameter: "remote_token_metadata_key".to_string(),
-        old_value,
-        new_value: new_key,
-        guardian: ctx.accounts.guardian.key(),
-    });
-    
-    Ok(())
-}
-
-/// Set the scaler exponent metadata key
-pub fn set_scaler_exponent_metadata_key_handler(
-    ctx: Context<SetBridgeConfig>, 
-    new_key: String
-) -> Result<()> {
-    require!(!new_key.is_empty() && new_key.len() <= 32, ConfigError::InvalidMetadataKey);
-    
-    let old_value = ctx.accounts.bridge.metadata_config.scaler_exponent_metadata_key.clone();
-    ctx.accounts.bridge.metadata_config.scaler_exponent_metadata_key = new_key.clone();
-    
-    emit!(BridgeConfigUpdated {
-        category: "metadata".to_string(),
-        parameter: "scaler_exponent_metadata_key".to_string(),
-        old_value,
-        new_value: new_key,
-        guardian: ctx.accounts.guardian.key(),
-    });
-    
-    Ok(())
-}
+// Note: Token metadata keys use constants since they're needed in trait implementations
 
 // ===== PROTOCOL CONFIGURATION SETTERS =====
 
@@ -419,69 +378,7 @@ pub fn set_max_data_len_handler(
 }
 
 // ===== ABI CONFIGURATION SETTERS =====
-
-/// Set the relay messages call ABI encoding overhead
-pub fn set_relay_messages_call_overhead_handler(
-    ctx: Context<SetBridgeConfig>, 
-    new_overhead: u64
-) -> Result<()> {
-    require!(new_overhead > 0 && new_overhead <= 10_000, ConfigError::InvalidAbiOverhead);
-    
-    let old_value = ctx.accounts.bridge.abi_config.relay_messages_call_overhead;
-    ctx.accounts.bridge.abi_config.relay_messages_call_overhead = new_overhead;
-    
-    emit!(BridgeConfigUpdated {
-        category: "abi".to_string(),
-        parameter: "relay_messages_call_overhead".to_string(),
-        old_value: old_value.to_string(),
-        new_value: new_overhead.to_string(),
-        guardian: ctx.accounts.guardian.key(),
-    });
-    
-    Ok(())
-}
-
-/// Set the relay messages transfer ABI encoding overhead
-pub fn set_relay_messages_transfer_overhead_handler(
-    ctx: Context<SetBridgeConfig>, 
-    new_overhead: u64
-) -> Result<()> {
-    require!(new_overhead > 0 && new_overhead <= 10_000, ConfigError::InvalidAbiOverhead);
-    
-    let old_value = ctx.accounts.bridge.abi_config.relay_messages_transfer_overhead;
-    ctx.accounts.bridge.abi_config.relay_messages_transfer_overhead = new_overhead;
-    
-    emit!(BridgeConfigUpdated {
-        category: "abi".to_string(),
-        parameter: "relay_messages_transfer_overhead".to_string(),
-        old_value: old_value.to_string(),
-        new_value: new_overhead.to_string(),
-        guardian: ctx.accounts.guardian.key(),
-    });
-    
-    Ok(())
-}
-
-/// Set the relay messages transfer and call ABI encoding overhead
-pub fn set_relay_messages_transfer_and_call_overhead_handler(
-    ctx: Context<SetBridgeConfig>, 
-    new_overhead: u64
-) -> Result<()> {
-    require!(new_overhead > 0 && new_overhead <= 10_000, ConfigError::InvalidAbiOverhead);
-    
-    let old_value = ctx.accounts.bridge.abi_config.relay_messages_transfer_and_call_overhead;
-    ctx.accounts.bridge.abi_config.relay_messages_transfer_and_call_overhead = new_overhead;
-    
-    emit!(BridgeConfigUpdated {
-        category: "abi".to_string(),
-        parameter: "relay_messages_transfer_and_call_overhead".to_string(),
-        old_value: old_value.to_string(),
-        new_value: new_overhead.to_string(),
-        guardian: ctx.accounts.guardian.key(),
-    });
-    
-    Ok(())
-}
+// Note: ABI encoding overheads use constants since they're needed in state struct methods
 
 // ===== EVENTS =====
 
@@ -533,14 +430,12 @@ pub enum ConfigError {
     InvalidBuffer,
     #[msg("Invalid transaction cost")]
     InvalidTransactionCost,
-    #[msg("Invalid metadata key")]
-    InvalidMetadataKey,
+
     #[msg("Invalid block interval")]
     InvalidBlockInterval,
     #[msg("Invalid buffer size")]
     InvalidBufferSize,
     #[msg("Invalid data length")]
     InvalidDataLength,
-    #[msg("Invalid ABI overhead")]
-    InvalidAbiOverhead,
+
 } 

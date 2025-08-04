@@ -25,18 +25,11 @@ use common::{
         set_execution_gas_buffer_handler,
         set_execution_epilogue_gas_buffer_handler,
         set_base_transaction_cost_handler,
-        //  Token Metadata Keys
-        set_remote_token_metadata_key_handler,
-        set_scaler_exponent_metadata_key_handler,
         // Protocol Configuration
         set_block_interval_requirement_handler,
         // Buffer and Size Limits Configuration
         set_max_call_buffer_size_handler,
         set_max_data_len_handler,
-        // ABI Configuration
-        set_relay_messages_call_overhead_handler,
-        set_relay_messages_transfer_overhead_handler,
-        set_relay_messages_transfer_and_call_overhead_handler,
     },
     guardian::transfer_guardian as transfer_guardian_handler,
     initialize::initialize_handler,
@@ -427,13 +420,7 @@ pub mod bridge {
     }
 
     // Metadata configuration setters
-    pub fn set_remote_token_metadata_key(ctx: Context<SetBridgeConfig>, new_key: String) -> Result<()> {
-        set_remote_token_metadata_key_handler(ctx, new_key)
-    }
-
-    pub fn set_scaler_exponent_metadata_key(ctx: Context<SetBridgeConfig>, new_key: String) -> Result<()> {
-        set_scaler_exponent_metadata_key_handler(ctx, new_key)
-    }
+    // Note: Token metadata keys use constants since they're needed in trait implementations
 
     // Protocol configuration setters
     pub fn set_block_interval_requirement(ctx: Context<SetBridgeConfig>, new_interval: u64) -> Result<()> {
@@ -450,15 +437,5 @@ pub mod bridge {
     }
 
     // ABI configuration setters
-    pub fn set_relay_messages_call_overhead(ctx: Context<SetBridgeConfig>, new_overhead: u64) -> Result<()> {
-        set_relay_messages_call_overhead_handler(ctx, new_overhead)
-    }
-
-    pub fn set_relay_messages_transfer_overhead(ctx: Context<SetBridgeConfig>, new_overhead: u64) -> Result<()> {
-        set_relay_messages_transfer_overhead_handler(ctx, new_overhead)
-    }
-
-    pub fn set_relay_messages_transfer_and_call_overhead(ctx: Context<SetBridgeConfig>, new_overhead: u64) -> Result<()> {
-        set_relay_messages_transfer_and_call_overhead_handler(ctx, new_overhead)
-    }
+    // Note: ABI encoding overheads use constants since they're needed in state struct methods
 }

@@ -31,8 +31,8 @@ pub struct BridgeSolWithBufferedCall<'info> {
     /// - Must match the predefined GAS_FEE_RECEIVER address
     /// - Mutable to receive gas fee payments
     ///
-    /// CHECK: This is the hardcoded gas fee receiver account.
-    #[account(mut, address = GAS_FEE_RECEIVER @ BridgeSolWithBufferedCallError::IncorrectGasFeeReceiver)]
+    /// CHECK: This account is validated at runtime to match bridge.gas_config.gas_fee_receiver
+    #[account(mut)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SOL vault account that holds locked tokens for the specific remote token.
@@ -82,6 +82,12 @@ pub fn bridge_sol_with_buffered_call_handler<'a, 'b, 'c, 'info>(
     remote_token: [u8; 20],
     amount: u64,
 ) -> Result<()> {
+    // Validate gas fee receiver matches bridge configuration
+    require!(
+        ctx.accounts.gas_fee_receiver.key() == ctx.accounts.bridge.gas_config.gas_fee_receiver,
+        BridgeSolWithBufferedCallError::IncorrectGasFeeReceiver
+    );
+
     let call_buffer = &ctx.accounts.call_buffer;
     let call = Some(Call {
         ty: call_buffer.ty,

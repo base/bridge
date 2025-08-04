@@ -30,8 +30,8 @@ pub struct BridgeSpl<'info> {
     /// - Must match the predefined GAS_FEE_RECEIVER address
     /// - Receives SOL payment for gas costs on the destination chain
     ///
-    /// CHECK: This is the hardcoded gas fee receiver account.
-    #[account(mut, address = GAS_FEE_RECEIVER @ BridgeSplError::IncorrectGasFeeReceiver)]
+    /// CHECK: This account is validated at runtime to match bridge.gas_config.gas_fee_receiver
+    #[account(mut)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SPL token mint account for the token being bridged.
@@ -94,6 +94,12 @@ pub fn bridge_spl_handler(
     amount: u64,
     call: Option<Call>,
 ) -> Result<()> {
+    // Validate gas fee receiver matches bridge configuration
+    require!(
+        ctx.accounts.gas_fee_receiver.key() == ctx.accounts.bridge.gas_config.gas_fee_receiver,
+        BridgeSplError::IncorrectGasFeeReceiver
+    );
+
     bridge_spl_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
