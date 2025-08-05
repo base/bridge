@@ -12,11 +12,11 @@ pub const GAS_COST_SCALER_DP: u64 = 10u64.pow(6);
 pub const GAS_COST_SCALER: u64 = 1_000_000;
 
 #[constant]
-pub const RELAY_MESSAGES_CALL_ABI_ENCODING_OVERHEAD: u64 = 544; // Fix bytes overhead for calling Bridge.relayMessages for a single call
+pub const RELAY_MESSAGES_CALL_ABI_ENCODING_OVERHEAD: u64 = 512; // Fix bytes overhead for calling Bridge.relayMessages for a single call
 #[constant]
-pub const RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD: u64 = 480; // Fix bytes overhead for calling Bridge.relayMessages for a single transfer
+pub const RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD: u64 = 448; // Fix bytes overhead for calling Bridge.relayMessages for a single transfer
 #[constant]
-pub const RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD: u64 = 704; // Fix bytes overhead for calling Bridge.relayMessages for a single transfer and call
+pub const RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD: u64 = 672; // Fix bytes overhead for calling Bridge.relayMessages for a single transfer and call
 
 #[constant]
 pub const REMOTE_TOKEN_METADATA_KEY: &str = "remote_token";
