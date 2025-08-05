@@ -15,7 +15,7 @@ use crate::{
 /// the corresponding tokens and execute the call on Base. The call buffer account is closed and
 /// rent returned to the owner.
 #[derive(Accounts)]
-#[instruction(_gas_limit: u64, _to: [u8; 20], remote_token: [u8; 20])]
+#[instruction(_to: [u8; 20], remote_token: [u8; 20])]
 pub struct BridgeSolWithBufferedCall<'info> {
     /// The account that pays for transaction fees and account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees.

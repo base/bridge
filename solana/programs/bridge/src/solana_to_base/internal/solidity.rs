@@ -28,7 +28,6 @@ sol! {
     ///
     /// @custom:field ty The type of call.
     /// @custom:field to The target address to call.
-    /// @custom:field gasLimit The gas limit for the call.
     /// @custom:field value The value to send with the call.
     /// @custom:field data The data to pass to the call.
     struct Call {
@@ -49,12 +48,11 @@ sol! {
     ///
     /// @custom:field nonce Unique nonce for the message.
     /// @custom:field sender The Solana sender's pubkey.
-    /// @custom:field gasLimit The gas limit for the message execution.
+    /// @custom:field ty The message type.
     /// @custom:field operations The operations to be executed.
     struct IncomingMessage {
         uint64 nonce;
         Pubkey sender;
-        uint64 gasLimit;
         MessageType ty;
         bytes data;
     }

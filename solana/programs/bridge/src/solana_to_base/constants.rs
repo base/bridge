@@ -52,7 +52,6 @@ mod tests {
         let incoming_msg = IncomingMessage {
             nonce: 0,
             sender: [0; 32].into(),
-            gasLimit: 0,
             ty: MessageType::Call,
             data: call.abi_encode().into(),
         };
@@ -80,7 +79,6 @@ mod tests {
         let incoming_msg = IncomingMessage {
             nonce: 0,
             sender: [0; 32].into(),
-            gasLimit: 0,
             ty: MessageType::Transfer,
             data: transfer.abi_encode().into(),
         };
@@ -115,7 +113,6 @@ mod tests {
         let incoming_msg = IncomingMessage {
             nonce: 0,
             sender: [0; 32].into(),
-            gasLimit: 0,
             ty: MessageType::TransferAndCall,
             data: (transfer, call).abi_encode().into(),
         };

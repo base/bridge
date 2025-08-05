@@ -18,7 +18,7 @@ use crate::{
 /// This instruction burns wrapped tokens on Solana and creates an outgoing message to transfer equivalent
 /// tokens and execute the optional call on Base.
 #[derive(Accounts)]
-#[instruction(_gas_limit: u64, _to: [u8; 20], _amount: u64, call: Option<Call>)]
+#[instruction(_to: [u8; 20], _amount: u64, call: Option<Call>)]
 pub struct BridgeWrappedToken<'info> {
     /// The account that pays for transaction fees and outgoing message account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees.

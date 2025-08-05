@@ -14,7 +14,7 @@ use crate::{
 /// This instruction locks SPL tokens in a vault on Solana and creates an outgoing message
 /// to mint corresponding tokens and execute the optional call on Base.
 #[derive(Accounts)]
-#[instruction(_gas_limit: u64, _to: [u8; 20], remote_token: [u8; 20], _amount: u64, call: Option<Call>)]
+#[instruction(_to: [u8; 20], remote_token: [u8; 20], _amount: u64, call: Option<Call>)]
 pub struct BridgeSpl<'info> {
     /// The account that pays for transaction fees and account creation.
     /// Must be mutable to deduct lamports for gas fees and new account rent.

@@ -11,7 +11,7 @@ use crate::{
 /// from Solana to Base. This instruction creates an outgoing message containing
 /// the call data and handles gas fee payment for cross-chain execution.
 #[derive(Accounts)]
-#[instruction(_gas_limit: u64, call: Call)]
+#[instruction(call: Call)]
 pub struct BridgeCall<'info> {
     /// The account that pays for the transaction fees and outgoing message account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees.
