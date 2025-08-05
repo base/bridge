@@ -73,7 +73,6 @@ mod tests {
     use solana_message::Message;
     use solana_signer::Signer;
     use solana_transaction::Transaction;
-    use solana_instruction::AccountMeta;
 
     use crate::{accounts, instruction::Initialize, test_utils::mock_clock, ID};
 
@@ -112,7 +111,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: InitializeInstruction {}.data(),
+            data: Initialize.data(),
         };
 
         // Build the transaction with both payer and guardian as signers

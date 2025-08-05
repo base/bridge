@@ -49,9 +49,11 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
     let bridge_pda = Pubkey::find_program_address(&[BRIDGE_SEED], &ID).0;
 
     // Initialize the bridge first
+    let guardian = Keypair::new();
     let accounts = accounts::Initialize {
         payer: payer_pk,
         bridge: bridge_pda,
+        guardian: guardian.pubkey(),
         system_program: system_program::ID,
     }
     .to_account_metas(None);
@@ -59,13 +61,11 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
     let ix = Instruction {
         program_id: ID,
         accounts,
-        data: Initialize { 
-            guardian: Pubkey::new_unique() 
-        }.data(),
+        data: Initialize.data(),
     };
 
     let tx = Transaction::new(
-        &[&payer],
+        &[&payer, &guardian],
         Message::new(&[ix], Some(&payer_pk)),
         svm.latest_blockhash(),
     );

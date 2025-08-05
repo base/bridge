@@ -8,7 +8,7 @@ use crate::{
 /// Accounts struct for initializing a call buffer account that can store large call data.
 /// This account can be used to build up call data over multiple transactions before bridging.
 #[derive(Accounts)]
-#[instruction(_ty: CallType, _to: [u8; 20], _value: u128, _initial_data: Vec<u8>, max_data_len: usize)]
+#[instruction(_ty: CallType, _to: [u8; 20], _value: u128, _initial_data: Vec<u8>, max_data_len: u64)]
 pub struct InitializeCallBuffer<'info> {
     /// The account that pays for the transaction and call buffer account creation
     #[account(mut)]
@@ -25,7 +25,7 @@ pub struct InitializeCallBuffer<'info> {
     #[account(
         init,
         payer = payer,
-        space = CallBuffer::space(max_data_len),
+        space = CallBuffer::space(max_data_len as usize),
     )]
     pub call_buffer: Account<'info, CallBuffer>,
 
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_initialize_call_buffer_max_size_exceeded() {
-        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+        let (mut svm, _payer, bridge_pda) = setup_bridge_and_svm();
 
         // Create payer account
         let payer = Keypair::new();
@@ -165,16 +165,17 @@ mod tests {
         // Create call buffer account
         let call_buffer = Keypair::new();
 
-        // Test parameters with max_data_len exceeding MAX_CALL_BUFFER_SIZE
+        // Test parameters with max_data_len exceeding the configured limit
         let ty = CallType::Call;
         let to = [1u8; 20];
         let value = 0u128;
         let initial_data = vec![0x12, 0x34];
-        let max_data_len = MAX_CALL_BUFFER_SIZE + 1; // Exceed the limit
+        let max_data_len = 9000u64; // Exceeds bridge limit (8KB) but under Solana limit (10KB)
 
         // Build the InitializeCallBuffer instruction accounts
         let accounts = accounts::InitializeCallBuffer {
             payer: payer.pubkey(),
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }

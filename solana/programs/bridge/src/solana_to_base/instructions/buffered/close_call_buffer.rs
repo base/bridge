@@ -37,6 +37,7 @@ mod tests {
         solana_program::{instruction::Instruction, native_token::LAMPORTS_PER_SOL},
         system_program, InstructionData,
     };
+    use crate::common::BRIDGE_SEED;
     use solana_keypair::Keypair;
     use solana_message::Message;
     use solana_signer::Signer;
@@ -57,8 +58,10 @@ mod tests {
         initial_data: Vec<u8>,
     ) {
         // Initialize the call buffer first
+        let bridge_pda = Pubkey::find_program_address(&[BRIDGE_SEED], &ID).0;
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }
