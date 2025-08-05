@@ -111,7 +111,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: Initialize.data(),
+            data: Initialize {}.data(),
         };
 
         // Build the transaction with both payer and guardian as signers

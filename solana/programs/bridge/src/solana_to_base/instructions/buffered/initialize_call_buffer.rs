@@ -26,6 +26,7 @@ pub struct InitializeCallBuffer<'info> {
         init,
         payer = payer,
         space = CallBuffer::space(max_data_len as usize),
+        constraint = bridge.limits_config.max_call_buffer_size >= max_data_len @ InitializeCallBufferError::MaxSizeExceeded,
     )]
     pub call_buffer: Account<'info, CallBuffer>,
 
@@ -41,15 +42,6 @@ pub fn initialize_call_buffer_handler(
     initial_data: Vec<u8>,
     max_data_len: usize,
 ) -> Result<()> {
-    // Get the max buffer size from bridge configuration
-    let max_buffer_size = ctx.accounts.bridge.limits_config.max_call_buffer_size;
-    
-    // Verify that the max data length doesn't exceed the configured max allowed size
-    require!(
-        max_data_len <= max_buffer_size as usize,
-        InitializeCallBufferError::MaxSizeExceeded
-    );
-
     *ctx.accounts.call_buffer = CallBuffer {
         owner: ctx.accounts.payer.key(),
         ty,
@@ -89,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_initialize_call_buffer_success() {
-        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+        let (mut svm, _payer, bridge_pda) = setup_bridge_and_svm();
 
         // Create payer account
         let payer = Keypair::new();
@@ -108,7 +100,7 @@ mod tests {
         // Build the InitializeCallBuffer instruction accounts
         let accounts = accounts::InitializeCallBuffer {
             payer: payer.pubkey(),
-            bridge: _bridge_pda,
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }

@@ -26,9 +26,7 @@ pub struct BridgeCall<'info> {
     /// - Must match the hardcoded GAS_FEE_RECEIVER address
     /// - Receives lamports calculated based on gas_limit and current gas pricing
     /// - Mutable to receive the gas fee payment
-    ///
-    /// CHECK: This account is validated at runtime to match bridge.gas_config.gas_fee_receiver
-    #[account(mut)]
+    #[account(mut, address = bridge.gas_config.gas_fee_receiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The main bridge state account containing global bridge configuration.
@@ -56,12 +54,6 @@ pub struct BridgeCall<'info> {
 }
 
 pub fn bridge_call_handler(ctx: Context<BridgeCall>, gas_limit: u64, call: Call) -> Result<()> {
-    // Validate gas fee receiver matches bridge configuration
-    require!(
-        ctx.accounts.gas_fee_receiver.key() == ctx.accounts.bridge.gas_config.gas_fee_receiver,
-        BridgeCallError::IncorrectGasFeeReceiver
-    );
-
     bridge_call_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
@@ -252,8 +244,8 @@ mod tests {
         // Check that the error contains the expected error message
         let error_string = format!("{:?}", result.unwrap_err());
         assert!(
-            error_string.contains("IncorrectGasFeeReceiver"),
-            "Expected IncorrectGasFeeReceiver error, got: {}",
+            error_string.contains("ConstraintAddress") || error_string.contains("2012"),
+            "Expected ConstraintAddress error (code 2012), got: {}",
             error_string
         );
     }
