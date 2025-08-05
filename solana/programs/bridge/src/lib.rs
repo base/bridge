@@ -53,7 +53,7 @@ pub mod bridge {
         ctx: Context<RegisterOutputRoot>,
         output_root: [u8; 32],
         base_block_number: u64,
-        base_last_relayed_nonce: u64,
+        base_last_relayed_nonce: u64, // TODO: this no longer works if we aren't enforcing strict transaction ordering on Base. Will address in a separate PR
     ) -> Result<()> {
         register_output_root_handler(ctx, output_root, base_block_number, base_last_relayed_nonce)
     }
