@@ -1,9 +1,5 @@
 use anchor_lang::prelude::*;
 
-use crate::solana_to_base::{
-    RELAY_MESSAGES_CALL_ABI_ENCODING_OVERHEAD, RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD,
-};
-
 /// Represents a token transfer from Solana to Base with optional contract execution.
 /// This struct contains all the information needed to bridge tokens between chains
 /// and optionally execute additional logic on the destination chain after the transfer.
@@ -141,23 +137,5 @@ impl OutgoingMessage {
 
         // TODO: Accept the message type as a parameter, so we can use the correct space calculation.
         1 + Transfer::space(data_len) // variant + transfer (the transfer variant is always bigger as it embeds an optional call)
-    }
-
-    pub fn relay_messages_tx_size(&self) -> usize {
-        match &self.message {
-            Message::Call(call) => {
-                RELAY_MESSAGES_CALL_ABI_ENCODING_OVERHEAD as usize
-                    + call.data.len().div_ceil(32) * 32
-            }
-            Message::Transfer(transfer) => {
-                // TODO: Fix this, seems like it should use RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD if a call exists.
-                RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD as usize
-                    + transfer
-                        .call
-                        .as_ref()
-                        .map(|call| call.data.len().div_ceil(32) * 32)
-                        .unwrap_or_default()
-            }
-        }
     }
 }
