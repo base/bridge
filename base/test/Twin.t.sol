@@ -1,36 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {Test, console} from "forge-std/Test.sol";
+
 import {Twin} from "../src/Twin.sol";
 import {Call, CallLib, CallType} from "../src/libraries/CallLib.sol";
-import {Test, console} from "forge-std/Test.sol";
+import {TestTarget} from "./mocks/TestTarget.sol";
 
 contract TwinTest is Test {
     Twin public twin;
-    address public bridge;
-    address public unauthorized;
+    address public bridge = makeAddr("bridge");
 
     // Mock contracts for testing
-    MockTarget public mockTarget;
-    MockRevertingTarget public mockRevertingTarget;
+    TestTarget public mockTarget;
 
     // Events (Twin doesn't emit any, but CallLib operations might trigger events from targets)
     event MockEvent(uint256 value);
 
     function setUp() public {
-        bridge = makeAddr("bridge");
-        unauthorized = makeAddr("unauthorized");
-
         // Deploy Twin with bridge address
         twin = new Twin(bridge);
 
         // Deploy mock contracts for testing
-        mockTarget = new MockTarget();
-        mockRevertingTarget = new MockRevertingTarget();
+        mockTarget = new TestTarget();
 
         // Fund the twin contract with some ETH for testing
         vm.deal(address(twin), 10 ether);
-        vm.deal(address(this), 10 ether);
     }
 
     //////////////////////////////////////////////////////////////
@@ -77,7 +72,7 @@ contract TwinTest is Test {
             ty: CallType.Call,
             to: address(mockTarget),
             value: 0,
-            data: abi.encodeWithSelector(MockTarget.setValue.selector, 42)
+            data: abi.encodeWithSelector(TestTarget.setValue.selector, 42)
         });
 
         vm.prank(bridge);
@@ -92,7 +87,7 @@ contract TwinTest is Test {
             ty: CallType.Call,
             to: address(mockTarget),
             value: 0,
-            data: abi.encodeWithSelector(MockTarget.setValue.selector, 123)
+            data: abi.encodeWithSelector(TestTarget.setValue.selector, 123)
         });
 
         // Create a call to execute the above call (recursive call)
@@ -114,11 +109,10 @@ contract TwinTest is Test {
             ty: CallType.Call,
             to: address(mockTarget),
             value: 0,
-            data: abi.encodeWithSelector(MockTarget.setValue.selector, 42)
+            data: abi.encodeWithSelector(TestTarget.setValue.selector, 42)
         });
 
         vm.expectRevert(Twin.Unauthorized.selector);
-        vm.prank(unauthorized);
         twin.execute(call);
     }
 
@@ -131,7 +125,7 @@ contract TwinTest is Test {
             ty: CallType.Call,
             to: address(mockTarget),
             value: 0,
-            data: abi.encodeWithSelector(MockTarget.setValue.selector, 999)
+            data: abi.encodeWithSelector(TestTarget.setValue.selector, 999)
         });
 
         vm.prank(bridge);
@@ -148,7 +142,7 @@ contract TwinTest is Test {
             ty: CallType.Call,
             to: address(mockTarget),
             value: uint128(sendValue),
-            data: abi.encodeWithSelector(MockTarget.setValue.selector, 555)
+            data: abi.encodeWithSelector(TestTarget.setValue.selector, 555)
         });
 
         vm.prank(bridge);
@@ -161,9 +155,9 @@ contract TwinTest is Test {
     function test_execute_regularCall_revertsOnTargetRevert() public {
         Call memory call = Call({
             ty: CallType.Call,
-            to: address(mockRevertingTarget),
+            to: address(mockTarget),
             value: 0,
-            data: abi.encodeWithSelector(MockRevertingTarget.alwaysReverts.selector)
+            data: abi.encodeWithSelector(TestTarget.alwaysReverts.selector)
         });
 
         vm.prank(bridge);
@@ -172,14 +166,11 @@ contract TwinTest is Test {
     }
 
     function test_execute_delegateCall_success() public {
-        // Deploy a simple contract that sets a storage slot
-        MockDelegateTarget delegateTarget = new MockDelegateTarget();
-
         Call memory call = Call({
             ty: CallType.DelegateCall,
-            to: address(delegateTarget),
+            to: address(mockTarget),
             value: 0,
-            data: abi.encodeWithSelector(MockDelegateTarget.setStorageSlot.selector, 42)
+            data: abi.encodeWithSelector(TestTarget.setStorageSlot.selector, 42)
         });
 
         vm.prank(bridge);
@@ -191,13 +182,11 @@ contract TwinTest is Test {
     }
 
     function test_execute_delegateCall_revertsWithValue() public {
-        MockDelegateTarget delegateTarget = new MockDelegateTarget();
-
         Call memory call = Call({
             ty: CallType.DelegateCall,
-            to: address(delegateTarget),
+            to: address(mockTarget),
             value: 1, // This should cause a revert
-            data: abi.encodeWithSelector(MockDelegateTarget.setStorageSlot.selector, 42)
+            data: abi.encodeWithSelector(TestTarget.setStorageSlot.selector, 42)
         });
 
         vm.prank(bridge);
@@ -253,7 +242,7 @@ contract TwinTest is Test {
             ty: CallType.Call,
             to: address(mockTarget),
             value: type(uint128).max,
-            data: abi.encodeWithSelector(MockTarget.setValue.selector, 1)
+            data: abi.encodeWithSelector(TestTarget.setValue.selector, 1)
         });
 
         // This should revert due to insufficient balance
@@ -291,7 +280,7 @@ contract TwinTest is Test {
             ty: CallType.Call,
             to: address(mockTarget),
             value: 0,
-            data: abi.encodeWithSelector(MockTarget.setValue.selector, 42)
+            data: abi.encodeWithSelector(TestTarget.setValue.selector, 42)
         });
 
         uint256 gasBefore = gasleft();
@@ -314,7 +303,7 @@ contract TwinTest is Test {
             ty: CallType.Call,
             to: address(mockTarget),
             value: value,
-            data: abi.encodeWithSelector(MockTarget.setValue.selector, setValue)
+            data: abi.encodeWithSelector(TestTarget.setValue.selector, setValue)
         });
 
         uint256 initialBalance = address(mockTarget).balance;
@@ -324,36 +313,5 @@ contract TwinTest is Test {
 
         assertEq(mockTarget.value(), setValue);
         assertEq(address(mockTarget).balance, initialBalance + value);
-    }
-}
-
-//////////////////////////////////////////////////////////////
-///                    Mock Contracts                      ///
-//////////////////////////////////////////////////////////////
-
-contract MockTarget {
-    uint256 public value;
-
-    event MockEvent(uint256 value);
-
-    receive() external payable {}
-
-    function setValue(uint256 _value) external payable {
-        value = _value;
-        emit MockEvent(_value);
-    }
-}
-
-contract MockRevertingTarget {
-    function alwaysReverts() external pure {
-        revert("Always reverts");
-    }
-}
-
-contract MockDelegateTarget {
-    function setStorageSlot(uint256 _value) external {
-        assembly {
-            sstore(0, _value)
-        }
     }
 }

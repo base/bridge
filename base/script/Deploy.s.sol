@@ -7,6 +7,7 @@ import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
 import {Bridge} from "../src/Bridge.sol";
+import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {Twin} from "../src/Twin.sol";
@@ -14,7 +15,7 @@ import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployScript is DevOps {
-    function run() public returns (Twin, Bridge, CrossChainERC20Factory, HelperConfig) {
+    function run() public returns (Twin, BridgeValidator, Bridge, CrossChainERC20Factory, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
 
@@ -24,7 +25,13 @@ contract DeployScript is DevOps {
         vm.startBroadcast(msg.sender);
         address twinBeacon = _deployTwinBeacon({cfg: cfg, precomputedBridgeAddress: precomputedBridgeAddress});
         address factory = _deployFactory({cfg: cfg, precomputedBridgeAddress: precomputedBridgeAddress});
-        address bridge = _deployBridge({cfg: cfg, twinBeacon: twinBeacon, crossChainErc20Factory: factory});
+        address bridgeValidator = _deployBridgeValidator({cfg: cfg});
+        address bridge = _deployBridge({
+            cfg: cfg,
+            twinBeacon: twinBeacon,
+            crossChainErc20Factory: factory,
+            bridgeValidator: bridgeValidator
+        });
         vm.stopBroadcast();
 
         require(address(bridge) == precomputedBridgeAddress, "Bridge address mismatch");
@@ -38,7 +45,13 @@ contract DeployScript is DevOps {
         _serializeAddress({key: "Twin", value: twinBeacon});
         _writeJsonFile();
 
-        return (Twin(payable(twinBeacon)), Bridge(bridge), CrossChainERC20Factory(factory), helperConfig);
+        return (
+            Twin(payable(twinBeacon)),
+            BridgeValidator(bridgeValidator),
+            Bridge(bridge),
+            CrossChainERC20Factory(factory),
+            helperConfig
+        );
     }
 
     function _deployTwinBeacon(HelperConfig.NetworkConfig memory cfg, address precomputedBridgeAddress)
@@ -58,34 +71,33 @@ contract DeployScript is DevOps {
             address(new UpgradeableBeacon({initialOwner: cfg.initialOwner, initialImplementation: erc20Impl}));
 
         address xChainERC20FactoryImpl = address(new CrossChainERC20Factory(erc20Beacon));
-        return address(
-            CrossChainERC20Factory(
-                ERC1967Factory(cfg.erc1967Factory).deploy({
-                    implementation: xChainERC20FactoryImpl,
-                    admin: cfg.initialOwner
-                })
-            )
-        );
+        return
+            ERC1967Factory(cfg.erc1967Factory).deploy({implementation: xChainERC20FactoryImpl, admin: cfg.initialOwner});
     }
 
-    function _deployBridge(HelperConfig.NetworkConfig memory cfg, address twinBeacon, address crossChainErc20Factory)
-        private
-        returns (address)
-    {
+    function _deployBridgeValidator(HelperConfig.NetworkConfig memory cfg) private returns (address) {
+        address bridgeValidatorImpl = address(new BridgeValidator(cfg.trustedRelayer));
+        return ERC1967Factory(cfg.erc1967Factory).deploy({implementation: bridgeValidatorImpl, admin: cfg.initialOwner});
+    }
+
+    function _deployBridge(
+        HelperConfig.NetworkConfig memory cfg,
+        address twinBeacon,
+        address crossChainErc20Factory,
+        address bridgeValidator
+    ) private returns (address) {
         Bridge bridgeImpl = new Bridge({
             remoteBridge: cfg.remoteBridge,
-            trustedRelayer: cfg.trustedRelayer,
             twinBeacon: twinBeacon,
-            crossChainErc20Factory: crossChainErc20Factory
+            crossChainErc20Factory: crossChainErc20Factory,
+            bridgeValidator: bridgeValidator
         });
 
         return ERC1967Factory(cfg.erc1967Factory).deployDeterministicAndCall({
             implementation: address(bridgeImpl),
             admin: cfg.initialOwner,
             salt: _salt("bridge15"),
-            data: abi.encodeCall(
-                Bridge.initialize, (cfg.initialValidators, cfg.initialThreshold, cfg.initialOwner, cfg.guardians)
-            )
+            data: abi.encodeCall(Bridge.initialize, (cfg.initialOwner, cfg.guardians))
         });
     }
 

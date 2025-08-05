@@ -14,11 +14,9 @@ contract CrossChainERC20FactoryTest is Test {
     //////////////////////////////////////////////////////////////
     ///                       Test Setup                       ///
     //////////////////////////////////////////////////////////////
-
     Bridge public bridge;
     CrossChainERC20Factory public factory;
     address public beacon;
-    address public tokenBridge;
 
     // Test users
     address public deployer = makeAddr("deployer");
@@ -33,11 +31,10 @@ contract CrossChainERC20FactoryTest is Test {
 
     function setUp() public {
         DeployScript deployerScript = new DeployScript();
-        (, bridge, factory,) = deployerScript.run();
+        (,, bridge, factory,) = deployerScript.run();
 
         // Initialize the beacon and tokenBridge variables
         beacon = factory.BEACON();
-        tokenBridge = address(bridge);
     }
 
     //////////////////////////////////////////////////////////////
@@ -273,7 +270,7 @@ contract CrossChainERC20FactoryTest is Test {
         assertEq(token.symbol(), TOKEN_SYMBOL, "Token symbol should match");
         assertEq(token.decimals(), TOKEN_DECIMALS, "Token decimals should match");
         assertEq(token.remoteToken(), REMOTE_TOKEN, "Remote token should match");
-        assertEq(token.bridge(), tokenBridge, "Bridge address should match");
+        assertEq(token.bridge(), address(bridge), "Bridge address should match");
     }
 
     //////////////////////////////////////////////////////////////

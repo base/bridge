@@ -13,4 +13,10 @@ contract TestTarget {
     function alwaysReverts() external pure {
         revert("Always reverts");
     }
+
+    function setStorageSlot(uint256 _value) external {
+        assembly {
+            sstore(0, _value)
+        }
+    }
 }

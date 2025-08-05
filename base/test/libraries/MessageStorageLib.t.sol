@@ -3,71 +3,12 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
-import {console2} from "forge-std/console2.sol";
 
 import {Message, MessageStorageLib} from "../../src/libraries/MessageStorageLib.sol";
 
 contract MessageStorageLibTest is Test {
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
-
-    //////////////////////////////////////////////////////////////
-    ///                     Helper Functions                   ///
-    //////////////////////////////////////////////////////////////
-
-    function _createTestData(string memory suffix) internal pure returns (bytes memory) {
-        return abi.encodePacked("test data ", suffix);
-    }
-
-    function _sendMessagesFromSender(address sender, bytes memory data, uint256 count) internal {
-        for (uint256 i = 0; i < count; i++) {
-            if (sender != address(this)) {
-                vm.prank(sender);
-            }
-            MessageStorageLib.sendMessage({sender: sender, data: data});
-        }
-    }
-
-    function _getLeafCount() internal view returns (uint64) {
-        return MessageStorageLib.getMessageStorageLibStorage().lastOutgoingNonce;
-    }
-
-    function _getNodeCount() internal view returns (uint256) {
-        return MessageStorageLib.getMessageStorageLibStorage().nodes.length;
-    }
-
-    function _getRoot() internal view returns (bytes32) {
-        return MessageStorageLib.getMessageStorageLibStorage().root;
-    }
-
-    function _isEmpty() internal view returns (bool) {
-        return MessageStorageLib.getMessageStorageLibStorage().lastOutgoingNonce == 0;
-    }
-
-    function _getNode(uint256 index) internal view returns (bytes32) {
-        return MessageStorageLib.getMessageStorageLibStorage().nodes[index];
-    }
-
-    function _verifyMMRBasicStructure(uint256 expectedLeafCount, uint256 expectedNodeCount) internal view {
-        assertEq(_getLeafCount(), expectedLeafCount, "Leaf count mismatch");
-        assertEq(_getNodeCount(), expectedNodeCount, "Node count mismatch");
-        assertFalse(_isEmpty(), "MMR should not be empty");
-    }
-
-    function _verifyAllNodesExist(uint256 nodeCount) internal view {
-        for (uint256 i = 0; i < nodeCount; i++) {
-            bytes32 node = _getNode(i);
-            assertNotEq(node, bytes32(0), string(abi.encodePacked("Node at index ", i, " should not be zero")));
-        }
-    }
-
-    function _calculateExpectedMessageHash(uint64 nonce, address sender, bytes memory data)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encodePacked(nonce, sender, data));
-    }
 
     //////////////////////////////////////////////////////////////
     ///                   Initial State Tests                  ///
@@ -241,43 +182,19 @@ contract MessageStorageLibTest is Test {
     }
 
     function test_MMR_DebugTwoLeafIssue() public {
-        console2.log("=== Debugging 2-leaf MMR Issue ===");
-
         // Add first leaf
         bytes memory firstData = _createTestData("first");
         MessageStorageLib.sendMessage({sender: address(this), data: firstData});
 
-        console2.log("After 1st leaf:");
-        console2.log("  Leaf count:", _getLeafCount());
-        console2.log("  Node count:", _getNodeCount());
-        console2.log("  Root:", vm.toString(_getRoot()));
-        if (_getNodeCount() >= 1) {
-            console2.log("  Node[0]:", vm.toString(_getNode(0)));
-        }
-
         // Calculate expected first leaf hash
         bytes32 expectedLeaf1 = _calculateExpectedMessageHash(0, address(this), firstData);
-        console2.log("  Expected leaf1:", vm.toString(expectedLeaf1));
-        console2.log("  Root matches leaf1?", _getRoot() == expectedLeaf1);
 
         // Add second leaf
         bytes memory secondData = _createTestData("second");
         MessageStorageLib.sendMessage({sender: address(this), data: secondData});
 
-        console2.log("After 2nd leaf:");
-        console2.log("  Leaf count:", _getLeafCount());
-        console2.log("  Node count:", _getNodeCount());
-        console2.log("  Root:", vm.toString(_getRoot()));
-
-        // Log all nodes
-        for (uint256 i = 0; i < _getNodeCount(); i++) {
-            console2.log(string(abi.encodePacked("  Node[", vm.toString(i), "]:")), vm.toString(_getNode(i)));
-        }
-
         // Calculate expected hashes
         bytes32 expectedLeaf2 = _calculateExpectedMessageHash(1, address(this), secondData);
-        console2.log("  Expected leaf1:", vm.toString(expectedLeaf1));
-        console2.log("  Expected leaf2:", vm.toString(expectedLeaf2));
 
         // Calculate expected combined root
         bytes32 expectedCombinedRoot;
@@ -286,24 +203,9 @@ contract MessageStorageLibTest is Test {
         } else {
             expectedCombinedRoot = keccak256(abi.encodePacked(expectedLeaf2, expectedLeaf1));
         }
-        console2.log("  Expected combined root:", vm.toString(expectedCombinedRoot));
 
         // Check what the root actually is
         bytes32 actualRoot = _getRoot();
-        console2.log("  Actual root:", vm.toString(actualRoot));
-        console2.log("  Root matches leaf1?", actualRoot == expectedLeaf1);
-        console2.log("  Root matches leaf2?", actualRoot == expectedLeaf2);
-        console2.log("  Root matches expected combined?", actualRoot == expectedCombinedRoot);
-
-        // Check if node[2] exists and what it contains
-        if (_getNodeCount() >= 3) {
-            bytes32 node2 = _getNode(2);
-            console2.log("  Node[2] (should be parent):", vm.toString(node2));
-            console2.log("  Node[2] matches expected combined?", node2 == expectedCombinedRoot);
-            console2.log("  Root matches Node[2]?", actualRoot == node2);
-        } else {
-            console2.log("  ERROR: Node[2] doesn't exist!");
-        }
 
         // The actual assertion - this should pass if MMR is working correctly
         assertEq(actualRoot, expectedCombinedRoot, "Two leaves should produce combined root, not individual leaf hash");
@@ -814,7 +716,6 @@ contract MessageStorageLibTest is Test {
         uint256 gasUsed = gasBefore - gasleft();
 
         // Assert
-        console2.log("Gas used for single sendMessage:", gasUsed);
         assertLt(gasUsed, 200000, "Single message should use less than 200k gas");
     }
 
@@ -829,7 +730,6 @@ contract MessageStorageLibTest is Test {
             MessageStorageLib.sendMessage({sender: address(this), data: testData});
             uint256 gasUsed = gasBefore - gasleft();
 
-            console2.log("Gas used for message", i + 1, ":", gasUsed);
             assertLt(gasUsed, 300000, "Each message should use less than 300k gas");
         }
     }
@@ -862,5 +762,63 @@ contract MessageStorageLibTest is Test {
         assertEq(_getNodeCount(), 0, "Should start with no nodes");
         bytes32 root = _getRoot();
         assertEq(root, bytes32(0), "Empty MMR should return zero root");
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                     Helper Functions                   ///
+    //////////////////////////////////////////////////////////////
+
+    function _createTestData(string memory suffix) internal pure returns (bytes memory) {
+        return abi.encodePacked("test data ", suffix);
+    }
+
+    function _sendMessagesFromSender(address sender, bytes memory data, uint256 count) internal {
+        for (uint256 i = 0; i < count; i++) {
+            if (sender != address(this)) {
+                vm.prank(sender);
+            }
+            MessageStorageLib.sendMessage({sender: sender, data: data});
+        }
+    }
+
+    function _getLeafCount() internal view returns (uint64) {
+        return MessageStorageLib.getMessageStorageLibStorage().lastOutgoingNonce;
+    }
+
+    function _getNodeCount() internal view returns (uint256) {
+        return MessageStorageLib.getMessageStorageLibStorage().nodes.length;
+    }
+
+    function _getRoot() internal view returns (bytes32) {
+        return MessageStorageLib.getMessageStorageLibStorage().root;
+    }
+
+    function _isEmpty() internal view returns (bool) {
+        return MessageStorageLib.getMessageStorageLibStorage().lastOutgoingNonce == 0;
+    }
+
+    function _getNode(uint256 index) internal view returns (bytes32) {
+        return MessageStorageLib.getMessageStorageLibStorage().nodes[index];
+    }
+
+    function _verifyMMRBasicStructure(uint256 expectedLeafCount, uint256 expectedNodeCount) internal view {
+        assertEq(_getLeafCount(), expectedLeafCount, "Leaf count mismatch");
+        assertEq(_getNodeCount(), expectedNodeCount, "Node count mismatch");
+        assertFalse(_isEmpty(), "MMR should not be empty");
+    }
+
+    function _verifyAllNodesExist(uint256 nodeCount) internal view {
+        for (uint256 i = 0; i < nodeCount; i++) {
+            bytes32 node = _getNode(i);
+            assertNotEq(node, bytes32(0), string(abi.encodePacked("Node at index ", i, " should not be zero")));
+        }
+    }
+
+    function _calculateExpectedMessageHash(uint64 nonce, address sender, bytes memory data)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(nonce, sender, data));
     }
 }

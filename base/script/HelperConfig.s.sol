@@ -14,8 +14,6 @@ contract HelperConfig is Script {
         Pubkey remoteBridge;
         address trustedRelayer;
         address erc1967Factory;
-        address[] initialValidators;
-        uint128 initialThreshold;
         address[] guardians;
     }
 
@@ -51,9 +49,6 @@ contract HelperConfig is Script {
         address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
         // Public version
-        address[] memory validators = new address[](1);
-        validators[0] = BASE_ORACLE;
-
         address[] memory guardians = new address[](1);
         guardians[0] = BRIDGE_ADMIN; // Same as initial owner
 
@@ -62,8 +57,6 @@ contract HelperConfig is Script {
             remoteBridge: Pubkey.wrap(0x9379502b8fd1d9f6feee747094a08cd0f9b79fbbc7e51a36e2da237ee1506460), // AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH
             trustedRelayer: BASE_ORACLE,
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
-            initialValidators: validators,
-            initialThreshold: 1,
             guardians: guardians
         });
     }
@@ -75,22 +68,14 @@ contract HelperConfig is Script {
 
         ERC1967Factory f = new ERC1967Factory();
 
-        // Use deterministic private keys for validators so tests can sign ISM data
-        address[] memory validators = new address[](3);
-        validators[0] = vm.addr(0x1); // VALIDATOR1_KEY
-        validators[1] = vm.addr(0x2); // VALIDATOR2_KEY
-        validators[2] = vm.addr(0x3); // VALIDATOR3_KEY
-
         address[] memory guardians = new address[](1);
-        guardians[0] = makeAddr("guardian"); // Single guardian for local testing
+        guardians[0] = makeAddr("guardian");
 
         return NetworkConfig({
             initialOwner: makeAddr("initialOwner"),
             remoteBridge: Pubkey.wrap(0xc4c16980efe2a570c1a7599fd2ebb40ca7f85daf897482b9c85d4b8933a61608),
             trustedRelayer: makeAddr("trustedRelayer"),
             erc1967Factory: address(f),
-            initialValidators: validators,
-            initialThreshold: 2,
             guardians: guardians
         });
     }

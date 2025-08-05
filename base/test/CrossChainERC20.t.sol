@@ -2,12 +2,12 @@
 pragma solidity 0.8.28;
 
 import {Test, console} from "forge-std/Test.sol";
-
 import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
 import {DeployScript} from "../script/Deploy.s.sol";
 import {Bridge} from "../src/Bridge.sol";
+import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 
@@ -15,14 +15,12 @@ contract CrossChainERC20Test is Test {
     //////////////////////////////////////////////////////////////
     ///                       Test Setup                       ///
     //////////////////////////////////////////////////////////////
-
     Bridge public bridge;
     CrossChainERC20Factory public factory;
     CrossChainERC20 public token;
 
     address public user1 = makeAddr("user1");
     address public user2 = makeAddr("user2");
-    address public unauthorized = makeAddr("unauthorized");
 
     bytes32 public constant REMOTE_TOKEN = bytes32("remote_token_address");
     string public constant TOKEN_NAME = "Cross Chain Token";
@@ -34,7 +32,7 @@ contract CrossChainERC20Test is Test {
 
     function setUp() public {
         DeployScript deployer = new DeployScript();
-        (, bridge, factory,) = deployer.run();
+        (,, bridge, factory,) = deployer.run();
         token = CrossChainERC20(factory.deploy(REMOTE_TOKEN, TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS));
     }
 
@@ -132,7 +130,7 @@ contract CrossChainERC20Test is Test {
     }
 
     function test_mint_revert_fromUnauthorizedAddress() public {
-        vm.prank(unauthorized);
+        vm.prank(user1);
         vm.expectRevert(CrossChainERC20.SenderIsNotBridge.selector);
         token.mint(user1, MINT_AMOUNT);
     }
@@ -235,7 +233,7 @@ contract CrossChainERC20Test is Test {
         token.mint(user1, MINT_AMOUNT);
 
         // Try to burn from unauthorized address
-        vm.prank(unauthorized);
+        vm.prank(user1);
         vm.expectRevert(CrossChainERC20.SenderIsNotBridge.selector);
         token.burn(user1, BURN_AMOUNT);
     }
@@ -292,10 +290,9 @@ contract CrossChainERC20Test is Test {
     }
 
     function test_onlyBridge_modifier_rejectsNonBridge() public {
-        address[] memory nonBridgeAddresses = new address[](3);
+        address[] memory nonBridgeAddresses = new address[](2);
         nonBridgeAddresses[0] = user1;
         nonBridgeAddresses[1] = user2;
-        nonBridgeAddresses[2] = unauthorized;
 
         for (uint256 i = 0; i < nonBridgeAddresses.length; i++) {
             vm.prank(nonBridgeAddresses[i]);

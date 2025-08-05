@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {Test} from "forge-std/Test.sol";
+
 import {Call, CallLib, CallType} from "../../src/libraries/CallLib.sol";
 import {TestDelegateTarget} from "../mocks/TestDelegateTarget.sol";
 import {TestTarget} from "../mocks/TestTarget.sol";
-import {Test} from "forge-std/Test.sol";
 
 contract CallLibTest is Test {
     using CallLib for Call;

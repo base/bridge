@@ -2,20 +2,18 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {console2} from "forge-std/console2.sol";
 
 import {DeployScript} from "../../script/Deploy.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
+
 import {Bridge} from "../../src/Bridge.sol";
+import {BridgeValidator} from "../../src/BridgeValidator.sol";
 import {CrossChainERC20} from "../../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../../src/CrossChainERC20Factory.sol";
-import {Twin} from "../../src/Twin.sol";
-
 import {Call, CallType} from "../../src/libraries/CallLib.sol";
 import {IncomingMessage, MessageType} from "../../src/libraries/MessageLib.sol";
 import {Ix, Pubkey} from "../../src/libraries/SVMLib.sol";
-import {SolanaTokenType, TokenLib, Transfer} from "../../src/libraries/TokenLib.sol";
-
+import {TokenLib, Transfer} from "../../src/libraries/TokenLib.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockFeeERC20} from "../mocks/MockFeeERC20.sol";
 
@@ -24,24 +22,18 @@ contract TokenLibTest is Test {
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
 
-    // Deployed contracts (following Bridge.t.sol pattern)
+    // Deployed contracts
+    BridgeValidator public bridgeValidator;
     Bridge public bridge;
     CrossChainERC20Factory public factory;
     HelperConfig public helperConfig;
-
-    // Config variables
-    address public trustedRelayer;
-    Pubkey public remoteBridge;
+    HelperConfig.NetworkConfig public cfg;
 
     // Test tokens
     MockERC20 public mockToken;
     MockFeeERC20 public feeToken;
     CrossChainERC20 public crossChainToken;
     CrossChainERC20 public crossChainSOLToken;
-
-    // Test validator keys (for ISM signatures)
-    uint256 constant VALIDATOR1_KEY = 0x1;
-    uint256 constant VALIDATOR2_KEY = 0x2;
 
     // Test Solana pubkeys
     Pubkey public constant TEST_REMOTE_TOKEN =
@@ -56,17 +48,13 @@ contract TokenLibTest is Test {
     // Events for testing
     event TransferInitialized(address localToken, Pubkey remoteToken, Pubkey to, uint256 amount);
     event TransferFinalized(address localToken, Pubkey remoteToken, address to, uint256 amount);
-    event FailedToRelayMessage(bytes32 indexed messageHash);
 
     function setUp() public {
         // Use the DeployScript normally - now it uses deterministic validator keys
         DeployScript deployer = new DeployScript();
-        (, bridge, factory, helperConfig) = deployer.run();
+        (, bridgeValidator, bridge, factory, helperConfig) = deployer.run();
 
-        HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
-
-        trustedRelayer = cfg.trustedRelayer;
-        remoteBridge = cfg.remoteBridge;
+        cfg = helperConfig.getConfig();
 
         // Deploy CrossChainERC20 for testing SPL tokens
         crossChainToken = CrossChainERC20(factory.deploy(Pubkey.unwrap(TEST_SPL_TOKEN), "Cross Chain Token", "CCT", 9));
@@ -79,129 +67,15 @@ contract TokenLibTest is Test {
         mockToken = new MockERC20("Mock Token", "MOCK", 18);
         feeToken = new MockFeeERC20("Fee Token", "FEE", 18);
 
-        console2.log("CrossChainERC20 deployed at", address(crossChainToken));
-
         // Set up balances
-        vm.deal(alice, 100 ether);
-        vm.deal(bob, 100 ether);
         vm.deal(address(bridge), 100 ether);
-        vm.deal(address(this), 100 ether);
-
         mockToken.mint(alice, 1000e18);
         mockToken.mint(bob, 1000e18);
-        mockToken.mint(address(this), 1000e18);
-        mockToken.mint(address(bridge), 1000e18);
         feeToken.mint(alice, 1000e18);
-        feeToken.mint(bob, 1000e18);
-        feeToken.mint(address(this), 1000e18);
-        feeToken.mint(address(bridge), 1000e18);
 
         // Mint cross-chain tokens to alice (bridge is the minter)
         vm.prank(address(bridge));
         crossChainToken.mint(alice, 1000e9);
-
-        vm.prank(address(bridge));
-        crossChainSOLToken.mint(alice, 1000e9);
-    }
-
-    //////////////////////////////////////////////////////////////
-    ///                Helper Functions                        ///
-    //////////////////////////////////////////////////////////////
-
-    function _registerTokenPair(address localToken, Pubkey remoteToken, uint8 scalarExponent) internal {
-        Call memory call = Call({
-            ty: CallType.Call,
-            to: address(0), // Not relevant for token registration
-            value: 0,
-            data: abi.encode(localToken, remoteToken, scalarExponent)
-        });
-        bytes memory data = abi.encode(call);
-
-        IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] = IncomingMessage({
-            nonce: bridge.nextIncomingNonce(),
-            sender: remoteBridge, // Only remote bridge can register tokens
-            gasLimit: 1000000,
-            ty: MessageType.Call,
-            data: data
-        });
-
-        bytes memory ismData = _generateValidISMData(messages);
-
-        vm.prank(trustedRelayer);
-        bridge.relayMessages(messages, ismData);
-    }
-
-    function _finalizeTransfer(Transfer memory transfer) internal {
-        // Simulate message relay from Solana to finalize transfer
-        // Use a different sender (NOT the remote bridge, that's only for token registration)
-        IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] = IncomingMessage({
-            nonce: bridge.nextIncomingNonce(),
-            sender: TEST_TRANSFER_SENDER, // Different sender for transfers
-            ty: MessageType.Transfer,
-            data: abi.encode(transfer),
-            gasLimit: 1000000
-        });
-
-        bytes memory ismData = _generateValidISMData(messages);
-
-        vm.prank(trustedRelayer);
-        bridge.relayMessages(messages, ismData);
-    }
-
-    function _setDeposits(address localToken, Pubkey remoteToken, uint256 amount) internal {
-        // Create deposits by actually bridging tokens (Base -> Solana)
-        // This is the realistic way deposits are created
-        uint256 scalar = bridge.scalars(localToken, remoteToken);
-        uint64 remoteAmount = uint64(amount / scalar);
-
-        Transfer memory setupTransfer = Transfer({
-            localToken: localToken,
-            remoteToken: remoteToken,
-            to: bytes32(bytes20(address(this))),
-            remoteAmount: remoteAmount
-        });
-
-        if (localToken != TokenLib.ETH_ADDRESS) {
-            // Make sure bridge has enough tokens to work with
-            MockERC20(localToken).mint(address(this), amount);
-            MockERC20(localToken).approve(address(bridge), amount);
-
-            Ix[] memory emptyIxs;
-            bridge.bridgeToken(setupTransfer, emptyIxs);
-        } else {
-            Ix[] memory emptyIxs;
-            bridge.bridgeToken{value: amount}(setupTransfer, emptyIxs);
-        }
-    }
-
-    /// @notice Generates valid ISM data for message relay (copied from Bridge.t.sol)
-    /// @param messages The messages to generate ISM data for
-    /// @return The ISM data containing the signatures of the validators.
-    function _generateValidISMData(IncomingMessage[] memory messages) internal pure returns (bytes memory) {
-        bytes32 messageHash = keccak256(abi.encode(messages));
-
-        // Create signatures from validators (threshold = 2, so we need 2 signatures)
-        bytes memory signatures = new bytes(0);
-
-        // Sort validators by address to ensure ascending order
-        uint256[] memory sortedKeys = new uint256[](2);
-        sortedKeys[0] = VALIDATOR1_KEY;
-        sortedKeys[1] = VALIDATOR2_KEY;
-
-        if (vm.addr(VALIDATOR1_KEY) > vm.addr(VALIDATOR2_KEY)) {
-            sortedKeys[0] = VALIDATOR2_KEY;
-            sortedKeys[1] = VALIDATOR1_KEY;
-        }
-
-        // Create signatures in ascending order
-        for (uint256 i = 0; i < 2; i++) {
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(sortedKeys[i], messageHash);
-            signatures = abi.encodePacked(signatures, r, s, v);
-        }
-
-        return signatures;
     }
 
     //////////////////////////////////////////////////////////////
@@ -220,11 +94,11 @@ contract TokenLibTest is Test {
 
     function test_registerRemoteToken_withDifferentExponents() public {
         // Test various exponents
-        for (uint8 i = 0; i <= 18; i++) {
+        for (uint256 i; i <= 18; i++) {
             address testToken = makeAddr(string(abi.encodePacked("token", i)));
-            Pubkey testRemote = Pubkey.wrap(bytes32(uint256(i + 1)));
+            Pubkey testRemote = Pubkey.wrap(bytes32(i + 1));
 
-            _registerTokenPair(testToken, testRemote, i);
+            _registerTokenPair(testToken, testRemote, uint8(i));
 
             uint256 expectedScalar = 10 ** i;
             uint256 actualScalar = bridge.scalars(testToken, testRemote);
@@ -460,10 +334,22 @@ contract TokenLibTest is Test {
         uint256 expectedLocalAmount = 1e18; // 1 ETH
         uint256 aliceInitialBalance = alice.balance;
 
+        // Simulate message relay from Solana to finalize transfer
+        // Use a different sender (NOT the remote bridge, that's only for token registration)
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
+            nonce: 100,
+            sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            ty: MessageType.Transfer,
+            data: abi.encode(transfer)
+        });
+
+        _registerMessage(messages[0]);
+
         vm.expectEmit(true, true, true, true);
         emit TransferFinalized(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, alice, expectedLocalAmount);
 
-        _finalizeTransfer(transfer);
+        bridge.relayMessages(messages);
 
         assertEq(alice.balance, aliceInitialBalance + expectedLocalAmount, "ETH should be transferred to recipient");
     }
@@ -483,10 +369,22 @@ contract TokenLibTest is Test {
         uint256 expectedLocalAmount = 100e18; // 100 tokens on Base
         uint256 aliceInitialBalance = mockToken.balanceOf(alice);
 
+        // Simulate message relay from Solana to finalize transfer
+        // Use a different sender (NOT the remote bridge, that's only for token registration)
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
+            nonce: 100,
+            sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            ty: MessageType.Transfer,
+            data: abi.encode(transfer)
+        });
+
+        _registerMessage(messages[0]);
+
         vm.expectEmit(true, true, true, true);
         emit TransferFinalized(address(mockToken), TEST_REMOTE_TOKEN, alice, expectedLocalAmount);
 
-        _finalizeTransfer(transfer);
+        bridge.relayMessages(messages);
 
         assertEq(
             mockToken.balanceOf(alice),
@@ -509,10 +407,22 @@ contract TokenLibTest is Test {
 
         uint256 aliceInitialBalance = crossChainSOLToken.balanceOf(alice);
 
+        // Simulate message relay from Solana to finalize transfer
+        // Use a different sender (NOT the remote bridge, that's only for token registration)
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
+            nonce: 100,
+            sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            ty: MessageType.Transfer,
+            data: abi.encode(transfer)
+        });
+
+        _registerMessage(messages[0]);
+
         vm.expectEmit(true, true, true, true);
         emit TransferFinalized(address(crossChainSOLToken), TEST_NATIVE_SOL, alice, 1e9);
 
-        _finalizeTransfer(transfer);
+        bridge.relayMessages(messages);
 
         assertEq(crossChainSOLToken.balanceOf(alice), aliceInitialBalance + 1e9, "Cross-chain tokens should be minted");
     }
@@ -527,10 +437,22 @@ contract TokenLibTest is Test {
 
         uint256 aliceInitialBalance = crossChainToken.balanceOf(alice);
 
+        // Simulate message relay from Solana to finalize transfer
+        // Use a different sender (NOT the remote bridge, that's only for token registration)
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
+            nonce: 100,
+            sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            ty: MessageType.Transfer,
+            data: abi.encode(transfer)
+        });
+
+        _registerMessage(messages[0]);
+
         vm.expectEmit(true, true, true, true);
         emit TransferFinalized(address(crossChainToken), TEST_SPL_TOKEN, alice, 100e9);
 
-        _finalizeTransfer(transfer);
+        bridge.relayMessages(messages);
 
         assertEq(crossChainToken.balanceOf(alice), aliceInitialBalance + 100e9, "Cross-chain tokens should be minted");
     }
@@ -549,22 +471,13 @@ contract TokenLibTest is Test {
             nonce: 0, // Use 0 since this is the first message
             sender: TEST_TRANSFER_SENDER,
             ty: MessageType.Transfer,
-            data: abi.encode(transfer),
-            gasLimit: 1000000
+            data: abi.encode(transfer)
         });
 
-        bytes memory ismData = _generateValidISMData(messages);
+        _registerMessage(messages[0]);
 
-        // Bridge catches reverts and emits FailedToRelayMessage instead of reverting
-        // This is correct behavior - message relay shouldn't fail entirely due to one bad message
-        // Hash calculation matches Bridge.sol: excludes gasLimit
-        bytes32 expectedMessageHash =
-            keccak256(abi.encode(messages[0].nonce, messages[0].sender, messages[0].ty, messages[0].data));
-        vm.expectEmit(true, false, false, false);
-        emit FailedToRelayMessage(expectedMessageHash);
-
-        vm.prank(trustedRelayer);
-        bridge.relayMessages(messages, ismData);
+        vm.expectRevert(TokenLib.WrappedSplRouteNotRegistered.selector);
+        bridge.relayMessages(messages);
     }
 
     function test_finalizeTransfer_revertsOnUnregisteredERC20Route() public {
@@ -581,22 +494,13 @@ contract TokenLibTest is Test {
             nonce: 0, // Use 0 since this is the first message
             sender: TEST_TRANSFER_SENDER,
             ty: MessageType.Transfer,
-            data: abi.encode(transfer),
-            gasLimit: 1000000
+            data: abi.encode(transfer)
         });
 
-        bytes memory ismData = _generateValidISMData(messages);
+        _registerMessage(messages[0]);
 
-        // Bridge catches reverts and emits FailedToRelayMessage instead of reverting
-        // This is correct behavior - message relay shouldn't fail entirely due to one bad message
-        // Hash calculation matches Bridge.sol: excludes gasLimit
-        bytes32 expectedMessageHash =
-            keccak256(abi.encode(messages[0].nonce, messages[0].sender, messages[0].ty, messages[0].data));
-        vm.expectEmit(true, false, false, false);
-        emit FailedToRelayMessage(expectedMessageHash);
-
-        vm.prank(trustedRelayer);
-        bridge.relayMessages(messages, ismData);
+        vm.expectRevert(TokenLib.WrappedSplRouteNotRegistered.selector);
+        bridge.relayMessages(messages);
     }
 
     function test_finalizeTransfer_crossChain_revertsOnIncorrectRemoteToken() public {
@@ -613,22 +517,13 @@ contract TokenLibTest is Test {
             nonce: 0, // Use 0 since this is the first message
             sender: TEST_TRANSFER_SENDER,
             ty: MessageType.Transfer,
-            data: abi.encode(transfer),
-            gasLimit: 1000000
+            data: abi.encode(transfer)
         });
 
-        bytes memory ismData = _generateValidISMData(messages);
+        _registerMessage(messages[0]);
 
-        // Bridge catches reverts and emits FailedToRelayMessage instead of reverting
-        // This is correct behavior - message relay shouldn't fail entirely due to one bad message
-        // Hash calculation matches Bridge.sol: excludes gasLimit
-        bytes32 expectedMessageHash =
-            keccak256(abi.encode(messages[0].nonce, messages[0].sender, messages[0].ty, messages[0].data));
-        vm.expectEmit(true, false, false, false);
-        emit FailedToRelayMessage(expectedMessageHash);
-
-        vm.prank(trustedRelayer);
-        bridge.relayMessages(messages, ismData);
+        vm.expectRevert(TokenLib.IncorrectRemoteToken.selector);
+        bridge.relayMessages(messages);
     }
 
     //////////////////////////////////////////////////////////////
@@ -701,12 +596,24 @@ contract TokenLibTest is Test {
         Transfer memory incomingTransfer = Transfer({
             localToken: address(mockToken),
             remoteToken: TEST_REMOTE_TOKEN,
-            to: bytes32(bytes20(bob)), // Fix: address conversion
-            remoteAmount: 50e6 // Different amount
+            to: bytes32(bytes20(bob)),
+            remoteAmount: 50e6
         });
 
         uint256 bobInitialBalance = mockToken.balanceOf(bob);
-        _finalizeTransfer(incomingTransfer);
+
+        // Simulate message relay from Solana to finalize transfer
+        // Use a different sender (NOT the remote bridge, that's only for token registration)
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
+            nonce: 100,
+            sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            ty: MessageType.Transfer,
+            data: abi.encode(incomingTransfer)
+        });
+
+        _registerMessage(messages[0]);
+        bridge.relayMessages(messages);
 
         // Verify bob received tokens and deposits decreased
         assertEq(mockToken.balanceOf(bob), bobInitialBalance + 50e18, "Bob should receive tokens");
@@ -726,7 +633,18 @@ contract TokenLibTest is Test {
 
         uint256 bobInitialBalance = crossChainToken.balanceOf(bob);
 
-        _finalizeTransfer(incomingTransfer);
+        // Simulate message relay from Solana to finalize transfer
+        // Use a different sender (NOT the remote bridge, that's only for token registration)
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
+            nonce: 100,
+            sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            ty: MessageType.Transfer,
+            data: abi.encode(incomingTransfer)
+        });
+
+        _registerMessage(messages[0]);
+        bridge.relayMessages(messages);
 
         assertEq(crossChainToken.balanceOf(bob), bobInitialBalance + 200e9, "Bob should receive cross-chain tokens");
 
@@ -749,5 +667,63 @@ contract TokenLibTest is Test {
         bridge.bridgeToken(outgoingTransfer, emptyIxs);
 
         assertEq(crossChainToken.balanceOf(bob), 50e9, "Bob's tokens should be burned");
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                Helper Functions                        ///
+    //////////////////////////////////////////////////////////////
+
+    function _registerTokenPair(address localToken, Pubkey remoteToken, uint8 scalarExponent) internal {
+        Call memory call = Call({
+            ty: CallType.Call,
+            to: address(0), // Not relevant for token registration
+            value: 0,
+            data: abi.encode(localToken, remoteToken, scalarExponent)
+        });
+        bytes memory data = abi.encode(call);
+
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({nonce: 100, sender: cfg.remoteBridge, ty: MessageType.Call, data: data});
+
+        _registerMessage(messages[0]);
+        bridge.relayMessages(messages);
+    }
+
+    function _setDeposits(address localToken, Pubkey remoteToken, uint256 amount) internal {
+        // Create deposits by actually bridging tokens (Base -> Solana)
+        // This is the realistic way deposits are created
+        uint256 scalar = bridge.scalars(localToken, remoteToken);
+        uint64 remoteAmount = uint64(amount / scalar);
+
+        Transfer memory setupTransfer = Transfer({
+            localToken: localToken,
+            remoteToken: remoteToken,
+            to: bytes32(bytes20(address(this))),
+            remoteAmount: remoteAmount
+        });
+
+        if (localToken != TokenLib.ETH_ADDRESS) {
+            // Make sure bridge has enough tokens to work with
+            MockERC20(localToken).mint(address(this), amount);
+            MockERC20(localToken).approve(address(bridge), amount);
+
+            Ix[] memory emptyIxs;
+            bridge.bridgeToken(setupTransfer, emptyIxs);
+        } else {
+            Ix[] memory emptyIxs;
+            bridge.bridgeToken{value: amount}(setupTransfer, emptyIxs);
+        }
+    }
+
+    function _registerMessage(IncomingMessage memory message) private {
+        vm.startPrank(cfg.trustedRelayer);
+        bridgeValidator.registerMessages(_messageToMessageHashes(message), "");
+        vm.stopPrank();
+    }
+
+    function _messageToMessageHashes(IncomingMessage memory message) private view returns (bytes32[] memory) {
+        bytes32[] memory messageHashes = new bytes32[](1);
+        messageHashes[0] = bridge.getMessageHash(message);
+        return messageHashes;
     }
 }
