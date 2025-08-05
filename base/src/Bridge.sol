@@ -255,10 +255,10 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     function _validateAndRelay(IncomingMessage calldata message) private {
         bytes32 messageHash = getMessageHash(message);
 
-        BridgeValidator(BRIDGE_VALIDATOR).validateMessage(messageHash);
-
         // Check that the message has not already been relayed.
         require(!successes[messageHash], MessageAlreadySuccessfullyRelayed());
+
+        BridgeValidator(BRIDGE_VALIDATOR).validateMessage(messageHash);
 
         _relayMessage(message);
 
