@@ -5,9 +5,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use crate::common::PartialTokenMetadata;
 use crate::{
     common::bridge::Bridge,
-    solana_to_base::{
-        check_and_pay_for_gas, check_call, Call, OutgoingMessage, Transfer as TransferOp,
-    },
+    solana_to_base::{check_call, pay_for_gas, Call, OutgoingMessage, Transfer as TransferOp},
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -22,7 +20,6 @@ pub fn bridge_spl_internal<'info>(
     outgoing_message: &mut Account<'info, OutgoingMessage>,
     token_program: &Interface<'info, TokenInterface>,
     system_program: &Program<'info, System>,
-    gas_limit: u64,
     to: [u8; 20],
     remote_token: [u8; 20],
     amount: u64,
@@ -65,7 +62,6 @@ pub fn bridge_spl_internal<'info>(
         bridge.nonce,
         payer.key(),
         from.key(),
-        gas_limit,
         TransferOp {
             to,
             local_token: mint.key(),
@@ -75,14 +71,7 @@ pub fn bridge_spl_internal<'info>(
         },
     );
 
-    check_and_pay_for_gas(
-        system_program,
-        payer,
-        gas_fee_receiver,
-        &mut bridge.eip1559,
-        gas_limit,
-        message.relay_messages_tx_size(),
-    )?;
+    pay_for_gas(system_program, payer, gas_fee_receiver, &mut bridge.eip1559)?;
 
     **outgoing_message = message;
     bridge.nonce += 1;

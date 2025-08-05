@@ -6,7 +6,10 @@ use anchor_spl::{
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
-    solana_to_base::{Call, CallBuffer, OutgoingMessage, GAS_FEE_RECEIVER},
+    solana_to_base::{
+        internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, CallBuffer,
+        OutgoingMessage, GAS_FEE_RECEIVER,
+    },
 };
 
 /// Accounts struct for the bridge_wrapped_token_with_buffered_call instruction that transfers wrapped tokens
@@ -84,7 +87,6 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
 
 pub fn bridge_wrapped_token_with_buffered_call_handler<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, BridgeWrappedTokenWithBufferedCall<'info>>,
-    gas_limit: u64,
     to: [u8; 20],
     amount: u64,
 ) -> Result<()> {
@@ -96,7 +98,7 @@ pub fn bridge_wrapped_token_with_buffered_call_handler<'a, 'b, 'c, 'info>(
         data: call_buffer.data.clone(),
     });
 
-    crate::solana_to_base::internal::bridge_wrapped_token::bridge_wrapped_token_internal(
+    bridge_wrapped_token_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
         &ctx.accounts.gas_fee_receiver,
@@ -106,7 +108,6 @@ pub fn bridge_wrapped_token_with_buffered_call_handler<'a, 'b, 'c, 'info>(
         &mut ctx.accounts.outgoing_message,
         &ctx.accounts.token_program,
         &ctx.accounts.system_program,
-        gas_limit,
         to,
         amount,
         call,
@@ -189,7 +190,6 @@ mod tests {
         let call_buffer = Keypair::new();
 
         // Test parameters
-        let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
         let amount = 500_000u64; // 0.5 tokens
 
@@ -253,12 +253,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeWrappedTokenWithBufferedCallIx {
-                gas_limit,
-                to,
-                amount,
-            }
-            .data(),
+            data: BridgeWrappedTokenWithBufferedCallIx { to, amount }.data(),
         };
 
         // Build the transaction
@@ -283,7 +278,6 @@ mod tests {
         assert_eq!(outgoing_message_data.nonce, 1);
         assert_eq!(outgoing_message_data.original_payer, payer.pubkey());
         assert_eq!(outgoing_message_data.sender, from.pubkey());
-        assert_eq!(outgoing_message_data.gas_limit, gas_limit);
 
         // Verify the message content matches the call buffer data
         match outgoing_message_data.message {
@@ -410,7 +404,6 @@ mod tests {
 
         // Now try to use bridge_wrapped_token_with_buffered_call with unauthorized account as owner
         let outgoing_message = Keypair::new();
-        let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
         let amount = 500_000u64;
 
@@ -434,12 +427,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeWrappedTokenWithBufferedCallIx {
-                gas_limit,
-                to,
-                amount,
-            }
-            .data(),
+            data: BridgeWrappedTokenWithBufferedCallIx { to, amount }.data(),
         };
 
         // Build the transaction
@@ -540,7 +528,6 @@ mod tests {
 
         // Now try bridge_wrapped_token_with_buffered_call with wrong gas fee receiver
         let outgoing_message = Keypair::new();
-        let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
         let amount = 500_000u64;
 
@@ -564,12 +551,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeWrappedTokenWithBufferedCallIx {
-                gas_limit,
-                to,
-                amount,
-            }
-            .data(),
+            data: BridgeWrappedTokenWithBufferedCallIx { to, amount }.data(),
         };
 
         // Build the transaction

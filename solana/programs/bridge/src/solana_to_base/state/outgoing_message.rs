@@ -110,38 +110,26 @@ pub struct OutgoingMessage {
     /// This is used for authentication and to identify the message originator on Base.
     pub sender: Pubkey,
 
-    /// Maximum amount of gas that can be consumed when executing this message on Base.
-    /// If execution exceeds this limit, the transaction will revert on the Base side.
-    pub gas_limit: u64,
-
     /// The actual message payload that will be executed on Base.
     /// Can be either a direct contract call or a token transfer (with optional call).
     pub message: Message,
 }
 
 impl OutgoingMessage {
-    pub fn new_call(nonce: u64, payer: Pubkey, sender: Pubkey, gas_limit: u64, call: Call) -> Self {
+    pub fn new_call(nonce: u64, payer: Pubkey, sender: Pubkey, call: Call) -> Self {
         Self {
             nonce,
             original_payer: payer,
             sender,
-            gas_limit,
             message: Message::Call(call),
         }
     }
 
-    pub fn new_transfer(
-        nonce: u64,
-        payer: Pubkey,
-        sender: Pubkey,
-        gas_limit: u64,
-        transfer: Transfer,
-    ) -> Self {
+    pub fn new_transfer(nonce: u64, payer: Pubkey, sender: Pubkey, transfer: Transfer) -> Self {
         Self {
             nonce,
             original_payer: payer,
             sender,
-            gas_limit,
             message: Message::Transfer(transfer),
         }
     }
@@ -150,7 +138,6 @@ impl OutgoingMessage {
         8 + // nonce
         32 + // original_payer
         32 + // sender
-        8 + // gas_limit
 
         // TODO: Accept the message type as a parameter, so we can use the correct space calculation.
         1 + Transfer::space(data_len) // variant + transfer (the transfer variant is always bigger as it embeds an optional call)

@@ -17,3 +17,7 @@ pub const EIP1559_DEFAULT_WINDOW_DURATION_SECONDS: u64 = 1;
 pub const EIP1559_DEFAULT_GAS_TARGET_PER_WINDOW: u64 = 5_000_000;
 #[constant]
 pub const EIP1559_DEFAULT_ADJUSTMENT_DENOMINATOR: u64 = 2;
+
+#[constant]
+// TODO: Confirm this amount
+pub const GAS_PER_CALL: u64 = 100_000;

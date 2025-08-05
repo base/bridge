@@ -15,9 +15,7 @@ use anchor_spl::token_interface::{
 use spl_type_length_value::variable_len_pack::VariableLenPack;
 
 use crate::common::{bridge::Bridge, PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED};
-use crate::solana_to_base::{
-    check_and_pay_for_gas, Call, CallType, OutgoingMessage, GAS_FEE_RECEIVER,
-};
+use crate::solana_to_base::{pay_for_gas, Call, CallType, OutgoingMessage, GAS_FEE_RECEIVER};
 use crate::solana_to_base::{REMOTE_TOKEN_METADATA_KEY, SCALER_EXPONENT_METADATA_KEY};
 use crate::ID;
 
@@ -95,7 +93,6 @@ pub fn wrap_token_handler(
     ctx: Context<WrapToken>,
     decimals: u8,
     partial_token_metadata: PartialTokenMetadata,
-    gas_limit: u64,
 ) -> Result<()> {
     initialize_metadata(&ctx, decimals, &partial_token_metadata)?;
 
@@ -103,7 +100,6 @@ pub fn wrap_token_handler(
         ctx,
         &partial_token_metadata.remote_token,
         partial_token_metadata.scaler_exponent,
-        gas_limit,
     )?;
 
     Ok(())
@@ -199,7 +195,6 @@ fn register_remote_token(
     ctx: Context<WrapToken>,
     remote_token: &[u8; 20],
     scaler_exponent: u8,
-    gas_limit: u64,
 ) -> Result<()> {
     let address = Address::from(remote_token);
     let local_token = FixedBytes::from(ctx.accounts.mint.key().to_bytes());
@@ -216,17 +211,14 @@ fn register_remote_token(
         ctx.accounts.bridge.nonce,
         ctx.accounts.payer.key(),
         ID,
-        gas_limit,
         call,
     );
 
-    check_and_pay_for_gas(
+    pay_for_gas(
         &ctx.accounts.system_program,
         &ctx.accounts.payer,
         &ctx.accounts.gas_fee_receiver,
         &mut ctx.accounts.bridge.eip1559,
-        gas_limit,
-        message.relay_messages_tx_size(),
     )?;
 
     *ctx.accounts.outgoing_message = message;

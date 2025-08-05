@@ -70,7 +70,6 @@ pub struct BridgeCallBuffered<'info> {
 
 pub fn bridge_call_buffered_handler<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, BridgeCallBuffered<'info>>,
-    gas_limit: u64,
 ) -> Result<()> {
     let call_buffer = &ctx.accounts.call_buffer;
     let call = Call {
@@ -87,7 +86,6 @@ pub fn bridge_call_buffered_handler<'a, 'b, 'c, 'info>(
         &mut ctx.accounts.bridge,
         &mut ctx.accounts.outgoing_message,
         &ctx.accounts.system_program,
-        gas_limit,
         call,
     )
 }
@@ -178,7 +176,6 @@ mod tests {
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         let outgoing_message = Keypair::new();
-        let gas_limit = 1_000_000u64;
 
         // Build the BridgeCallBuffered instruction accounts
         let accounts = accounts::BridgeCallBuffered {
@@ -197,7 +194,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeCallBufferedIx { gas_limit }.data(),
+            data: BridgeCallBufferedIx {}.data(),
         };
 
         // Build the transaction
@@ -222,7 +219,6 @@ mod tests {
         assert_eq!(outgoing_message_data.nonce, 1);
         assert_eq!(outgoing_message_data.original_payer, payer.pubkey());
         assert_eq!(outgoing_message_data.sender, from.pubkey());
-        assert_eq!(outgoing_message_data.gas_limit, gas_limit);
 
         // Verify the message content matches the call buffer data
         match outgoing_message_data.message {
@@ -312,7 +308,6 @@ mod tests {
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         let outgoing_message = Keypair::new();
-        let gas_limit = 1_000_000u64;
 
         // Build the BridgeCallBuffered instruction accounts with unauthorized owner
         let accounts = accounts::BridgeCallBuffered {
@@ -331,7 +326,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeCallBufferedIx { gas_limit }.data(),
+            data: BridgeCallBufferedIx {}.data(),
         };
 
         // Build the transaction
@@ -408,7 +403,6 @@ mod tests {
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         let outgoing_message = Keypair::new();
-        let gas_limit = 1_000_000u64;
 
         // Build the BridgeCallBuffered instruction accounts with wrong gas fee receiver
         let accounts = accounts::BridgeCallBuffered {
@@ -427,7 +421,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeCallBufferedIx { gas_limit }.data(),
+            data: BridgeCallBufferedIx {}.data(),
         };
 
         // Build the transaction

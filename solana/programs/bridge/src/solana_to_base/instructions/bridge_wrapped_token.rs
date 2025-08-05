@@ -76,7 +76,6 @@ pub struct BridgeWrappedToken<'info> {
 
 pub fn bridge_wrapped_token_handler(
     ctx: Context<BridgeWrappedToken>,
-    gas_limit: u64,
     to: [u8; 20],
     amount: u64,
     call: Option<Call>,
@@ -91,7 +90,6 @@ pub fn bridge_wrapped_token_handler(
         &mut ctx.accounts.outgoing_message,
         &ctx.accounts.token_program,
         &ctx.accounts.system_program,
-        gas_limit,
         to,
         amount,
         call,
@@ -168,7 +166,6 @@ mod tests {
         let outgoing_message = Keypair::new();
 
         // Test parameters
-        let gas_limit = 1_000_000u64;
         let to = [1u8; 20]; // Base address
         let amount = 500_000u64; // 0.5 tokens
 
@@ -191,7 +188,6 @@ mod tests {
             program_id: ID,
             accounts,
             data: BridgeWrappedTokenIx {
-                gas_limit,
                 to,
                 amount,
                 call: None,
@@ -221,7 +217,6 @@ mod tests {
         assert_eq!(outgoing_message_data.nonce, 1);
         assert_eq!(outgoing_message_data.original_payer, payer.pubkey());
         assert_eq!(outgoing_message_data.sender, from.pubkey());
-        assert_eq!(outgoing_message_data.gas_limit, gas_limit);
 
         // Verify the message content
         match outgoing_message_data.message {
@@ -285,7 +280,6 @@ mod tests {
         let outgoing_message = Keypair::new();
 
         // Test parameters
-        let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
         let amount = 250_000u64; // 0.25 tokens
 
@@ -316,7 +310,6 @@ mod tests {
             program_id: ID,
             accounts,
             data: BridgeWrappedTokenIx {
-                gas_limit,
                 to,
                 amount,
                 call: Some(call.clone()),
@@ -397,7 +390,6 @@ mod tests {
         let outgoing_message = Keypair::new();
 
         // Test parameters
-        let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
         let amount = 500_000u64;
 
@@ -420,7 +412,6 @@ mod tests {
             program_id: ID,
             accounts,
             data: BridgeWrappedTokenIx {
-                gas_limit,
                 to,
                 amount,
                 call: None,

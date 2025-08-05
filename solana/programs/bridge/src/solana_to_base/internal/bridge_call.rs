@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     common::bridge::Bridge,
-    solana_to_base::{check_and_pay_for_gas, check_call, Call, OutgoingMessage},
+    solana_to_base::{check_call, pay_for_gas, Call, OutgoingMessage},
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -13,21 +13,13 @@ pub fn bridge_call_internal<'info>(
     bridge: &mut Account<'info, Bridge>,
     outgoing_message: &mut Account<'info, OutgoingMessage>,
     system_program: &Program<'info, System>,
-    gas_limit: u64,
     call: Call,
 ) -> Result<()> {
     check_call(&call)?;
 
-    let message = OutgoingMessage::new_call(bridge.nonce, payer.key(), from.key(), gas_limit, call);
+    let message = OutgoingMessage::new_call(bridge.nonce, payer.key(), from.key(), call);
 
-    check_and_pay_for_gas(
-        system_program,
-        payer,
-        gas_fee_receiver,
-        &mut bridge.eip1559,
-        gas_limit,
-        message.relay_messages_tx_size(),
-    )?;
+    pay_for_gas(system_program, payer, gas_fee_receiver, &mut bridge.eip1559)?;
 
     **outgoing_message = message;
     bridge.nonce += 1;

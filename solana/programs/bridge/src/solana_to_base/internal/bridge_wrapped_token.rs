@@ -4,7 +4,7 @@ use anchor_spl::{
     token_interface::{self, BurnChecked, Mint, TokenAccount},
 };
 
-use crate::solana_to_base::{check_and_pay_for_gas, check_call};
+use crate::solana_to_base::{check_call, pay_for_gas};
 use crate::{
     common::{bridge::Bridge, PartialTokenMetadata},
     solana_to_base::{Call, OutgoingMessage, Transfer as TransferOp},
@@ -21,7 +21,6 @@ pub fn bridge_wrapped_token_internal<'info>(
     outgoing_message: &mut Account<'info, OutgoingMessage>,
     token_program: &Program<'info, Token2022>,
     system_program: &Program<'info, System>,
-    gas_limit: u64,
     to: [u8; 20],
     amount: u64,
     call: Option<Call>,
@@ -37,7 +36,6 @@ pub fn bridge_wrapped_token_internal<'info>(
         bridge.nonce,
         payer.key(),
         from.key(),
-        gas_limit,
         TransferOp {
             to,
             local_token: mint.key(),
@@ -47,14 +45,7 @@ pub fn bridge_wrapped_token_internal<'info>(
         },
     );
 
-    check_and_pay_for_gas(
-        system_program,
-        payer,
-        gas_fee_receiver,
-        &mut bridge.eip1559,
-        gas_limit,
-        message.relay_messages_tx_size(),
-    )?;
+    pay_for_gas(system_program, payer, gas_fee_receiver, &mut bridge.eip1559)?;
 
     // Burn the token from the user.
     let cpi_ctx = CpiContext::new(

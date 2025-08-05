@@ -6,8 +6,7 @@ use anchor_lang::{
 use crate::{
     common::bridge::Bridge,
     solana_to_base::{
-        check_and_pay_for_gas, check_call, Call, OutgoingMessage, Transfer as TransferOp,
-        NATIVE_SOL_PUBKEY,
+        check_call, pay_for_gas, Call, OutgoingMessage, Transfer as TransferOp, NATIVE_SOL_PUBKEY,
     },
 };
 
@@ -20,7 +19,6 @@ pub fn bridge_sol_internal<'info>(
     bridge: &mut Account<'info, Bridge>,
     outgoing_message: &mut Account<'info, OutgoingMessage>,
     system_program: &Program<'info, System>,
-    gas_limit: u64,
     to: [u8; 20],
     remote_token: [u8; 20],
     amount: u64,
@@ -34,7 +32,6 @@ pub fn bridge_sol_internal<'info>(
         bridge.nonce,
         payer.key(),
         from.key(),
-        gas_limit,
         TransferOp {
             to,
             local_token: NATIVE_SOL_PUBKEY,
@@ -44,14 +41,7 @@ pub fn bridge_sol_internal<'info>(
         },
     );
 
-    check_and_pay_for_gas(
-        system_program,
-        payer,
-        gas_fee_receiver,
-        &mut bridge.eip1559,
-        gas_limit,
-        message.relay_messages_tx_size(),
-    )?;
+    pay_for_gas(system_program, payer, gas_fee_receiver, &mut bridge.eip1559)?;
 
     // Lock the sol from the user into the SOL vault.
     let cpi_ctx = CpiContext::new(
