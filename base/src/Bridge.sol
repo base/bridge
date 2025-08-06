@@ -9,7 +9,7 @@ import {ReentrancyGuardTransient} from "solady/utils/ReentrancyGuardTransient.so
 import {BridgeValidator} from "./BridgeValidator.sol";
 import {Twin} from "./Twin.sol";
 import {Call} from "./libraries/CallLib.sol";
-import {IncomingMessage, MessageType} from "./libraries/MessageLib.sol";
+import {IncomingMessage, MessageLib, MessageType} from "./libraries/MessageLib.sol";
 import {MessageStorageLib} from "./libraries/MessageStorageLib.sol";
 import {SVMBridgeLib} from "./libraries/SVMBridgeLib.sol";
 import {Ix, Pubkey} from "./libraries/SVMLib.sol";
@@ -88,6 +88,9 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
 
     /// @notice Thrown when the bridge is paused.
     error Paused();
+
+    /// @notice Thrown when `validateMessage` is called with a message hash that has not been pre-validated.
+    error InvalidMessage();
 
     //////////////////////////////////////////////////////////////
     ///                       Modifiers                        ///
@@ -236,7 +239,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///
     /// @return messageHash The hash of `message`
     function getMessageHash(IncomingMessage calldata message) public pure returns (bytes32) {
-        return keccak256(abi.encode(message.nonce, message.sender, message.ty, message.data));
+        return MessageLib.getMessageHashCd(message);
     }
 
     //////////////////////////////////////////////////////////////
@@ -258,7 +261,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         // Check that the message has not already been relayed.
         require(!successes[messageHash], MessageAlreadySuccessfullyRelayed());
 
-        BridgeValidator(BRIDGE_VALIDATOR).validateMessage(messageHash);
+        require(BridgeValidator(BRIDGE_VALIDATOR).validMessages(messageHash), InvalidMessage());
 
         _relayMessage(message);
 

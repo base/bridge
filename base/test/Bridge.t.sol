@@ -109,7 +109,7 @@ contract BridgeTest is CommonTest {
         Ix[] memory ixs = new Ix[](0);
 
         // Register the token pair first
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
 
         vm.startPrank(user);
         mockToken.approve(address(bridge), 100e18);
@@ -131,7 +131,7 @@ contract BridgeTest is CommonTest {
         Ix[] memory ixs = new Ix[](0);
 
         // Register ETH-SOL pair
-        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9);
+        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9, 0);
 
         uint256 initialBalance = user.balance;
         vm.prank(user);
@@ -150,7 +150,7 @@ contract BridgeTest is CommonTest {
 
         Ix[] memory ixs = new Ix[](0);
 
-        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9);
+        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9, 0);
 
         vm.expectRevert(TokenLib.InvalidMsgValue.selector);
         vm.prank(user);
@@ -167,7 +167,7 @@ contract BridgeTest is CommonTest {
 
         Ix[] memory ixs = new Ix[](0);
 
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
 
         vm.expectRevert(TokenLib.InvalidMsgValue.selector);
         vm.prank(user);
@@ -408,7 +408,7 @@ contract BridgeTest is CommonTest {
         Ix[] memory ixs = new Ix[](0);
 
         // Register the token pair first (this processes an incoming message, doesn't affect MMR)
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
 
         // Send first bridge token transaction (1st outgoing message - root still 0)
         vm.startPrank(user);
@@ -470,7 +470,7 @@ contract BridgeTest is CommonTest {
 
         Ix[] memory ixs = new Ix[](0);
         // Register token pair (this processes an incoming message, doesn't affect outgoing MMR)
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
 
         // Track roots across mixed operations
         bytes32[] memory roots = new bytes32[](5);
@@ -777,7 +777,7 @@ contract BridgeTest is CommonTest {
         assertEq(bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN), 0, "Initial scalar should be 0");
 
         // Test scalar calculation for 12 decimal difference (18 -> 6)
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
         assertEq(
             bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN),
             1e12,
@@ -786,18 +786,18 @@ contract BridgeTest is CommonTest {
 
         // Test scalar for 9 decimal difference
         Pubkey remoteToken2 = Pubkey.wrap(bytes32(uint256(0x777)));
-        _registerTokenPair(address(mockToken), remoteToken2, 9);
+        _registerTokenPair(address(mockToken), remoteToken2, 9, 1);
         assertEq(
             bridge.scalars(address(mockToken), remoteToken2), 1e9, "Scalar should be 10^9 for 9 decimal difference"
         );
 
         // Test scalar for same decimals (no conversion)
         Pubkey remoteToken3 = Pubkey.wrap(bytes32(uint256(0x888)));
-        _registerTokenPair(address(mockToken), remoteToken3, 0);
+        _registerTokenPair(address(mockToken), remoteToken3, 0, 2);
         assertEq(bridge.scalars(address(mockToken), remoteToken3), 1, "Scalar should be 1 for same decimals");
 
         // Test ETH-SOL pair scalar
-        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9);
+        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9, 3);
         assertEq(bridge.scalars(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY), 1e9, "ETH-SOL scalar should be 10^9");
 
         // Test unregistered token pair returns 0
@@ -808,7 +808,7 @@ contract BridgeTest is CommonTest {
         );
 
         // Test updating scalar by re-registering
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 6);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 6, 4);
         assertEq(
             bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN),
             1e6,
@@ -817,7 +817,7 @@ contract BridgeTest is CommonTest {
 
         // Test large scalar exponent
         Pubkey remoteToken4 = Pubkey.wrap(bytes32(uint256(0xaaa)));
-        _registerTokenPair(address(mockToken), remoteToken4, 18);
+        _registerTokenPair(address(mockToken), remoteToken4, 18, 5);
         assertEq(
             bridge.scalars(address(mockToken), remoteToken4), 1e18, "Should handle large scalar exponents correctly"
         );
@@ -831,7 +831,7 @@ contract BridgeTest is CommonTest {
         uint64 expectedRemoteAmount = 100e6; // 100 tokens with 6 decimals (12 decimal difference)
 
         // Register the token pair with 12 decimal difference (18 -> 6)
-        _registerTokenPair(localToken, remoteToken, 12);
+        _registerTokenPair(localToken, remoteToken, 12, 0);
 
         // Initial deposits should be 0
         assertEq(bridge.deposits(localToken, remoteToken), 0, "Initial deposits should be 0");
@@ -869,7 +869,7 @@ contract BridgeTest is CommonTest {
         Pubkey secondRemoteToken = Pubkey.wrap(bytes32(uint256(0x777)));
 
         // Register another token pair
-        _registerTokenPair(secondToken, secondRemoteToken, 6);
+        _registerTokenPair(secondToken, secondRemoteToken, 6, 1);
 
         // Initial deposits should be 0 for the new pair
         assertEq(bridge.deposits(secondToken, secondRemoteToken), 0, "Initial deposits should be 0 for new pair");
@@ -888,7 +888,7 @@ contract BridgeTest is CommonTest {
         address registeredButUnused = makeAddr("registeredButUnused");
         Pubkey remoteButUnused = Pubkey.wrap(bytes32(uint256(0x888)));
 
-        _registerTokenPair(registeredButUnused, remoteButUnused, 6);
+        _registerTokenPair(registeredButUnused, remoteButUnused, 6, 2);
         assertEq(
             bridge.deposits(registeredButUnused, remoteButUnused),
             0,
@@ -997,7 +997,7 @@ contract BridgeTest is CommonTest {
     ///                  Helper Functions                      ///
     //////////////////////////////////////////////////////////////
 
-    function _registerTokenPair(address localToken, Pubkey remoteToken, uint8 scalerExponent) internal {
+    function _registerTokenPair(address localToken, Pubkey remoteToken, uint8 scalerExponent, uint64 nonce) internal {
         // Use the Bridge's registerRemoteToken function - simulate it being called by the remote bridge
         // The Bridge expects the data to be encoded as a Call struct
         Call memory call = Call({
@@ -1009,7 +1009,7 @@ contract BridgeTest is CommonTest {
         bytes memory data = abi.encode(call);
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] = IncomingMessage({nonce: 100, sender: cfg.remoteBridge, ty: MessageType.Call, data: data});
+        messages[0] = IncomingMessage({nonce: nonce, sender: cfg.remoteBridge, ty: MessageType.Call, data: data});
 
         _registerMessage(messages[0]);
         bridge.relayMessages(messages);

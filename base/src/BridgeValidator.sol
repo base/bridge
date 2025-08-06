@@ -27,6 +27,9 @@ contract BridgeValidator {
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
 
+    /// @notice The next expected nonce to be received in `registerMessages`
+    uint256 public nextNonce;
+
     /// @notice A mapping of pre-validated valid messages. Each pre-validated message corresponds to a message sent
     ///         from Solana.
     mapping(bytes32 messageHash => bool isValid) public validMessages;
@@ -57,9 +60,6 @@ contract BridgeValidator {
     /// validators.
     error Unauthenticated();
 
-    /// @notice Thrown when `validateMessage` is called with a message hash that has not been pre-validated.
-    error InvalidMessage();
-
     /// @notice Thrown when the provided `validatorSigs` byte string length is not a multiple of 65
     error InvalidSignatureLength();
 
@@ -81,33 +81,33 @@ contract BridgeValidator {
 
     /// @notice Pre-validates a batch of Solana --> Base messages.
     ///
-    /// @param messageHashes An array of message hashes to pre-validata
-    /// @param validatorSigs A concatenated bytes array of bridge partner validator signatures attesting to the validity
-    ///                      of `messageHashes`
-    function registerMessages(bytes32[] calldata messageHashes, bytes calldata validatorSigs) external {
+    /// @param innerMessageHashes An array of incoming message hashes to pre-validate (this is a hash of all message
+    ///                           data except for the nonce)
+    /// @param validatorSigs A concatenated bytes array of bridge partner validator signatures attesting to the
+    ///                      validity of `messageHashes`
+    function registerMessages(bytes32[] calldata innerMessageHashes, bytes calldata validatorSigs) external {
+        bytes32[] memory messageHashes = new bytes32[](innerMessageHashes.length);
+        uint256 currentNonce = nextNonce;
+
+        for (uint256 i; i < messageHashes.length; i++) {
+            messageHashes[i] = keccak256(abi.encode(currentNonce++, innerMessageHashes[i]));
+        }
+
         require(_validatorSigsAreValid({messageHashes: messageHashes, sigData: validatorSigs}), Unauthenticated());
 
         for (uint256 i; i < messageHashes.length; i++) {
             validMessages[messageHashes[i]] = true;
             emit MessageRegistered(messageHashes[i]);
         }
-    }
 
-    /// @notice Validates a cross chain message on the destination chain and emits an ExecutingMessage event. This
-    ///         function is useful for applications that understand the schema of the message payload and want to
-    ///         process it in a custom way.
-    ///
-    /// @param messageHash Hash of the message payload to call target with.
-    function validateMessage(bytes32 messageHash) external {
-        require(validMessages[messageHash], InvalidMessage());
-        emit ExecutingMessage(messageHash);
+        nextNonce = currentNonce;
     }
 
     //////////////////////////////////////////////////////////////
     ///                    Private Functions                   ///
     //////////////////////////////////////////////////////////////
 
-    function _validatorSigsAreValid(bytes32[] calldata messageHashes, bytes calldata sigData)
+    function _validatorSigsAreValid(bytes32[] memory messageHashes, bytes calldata sigData)
         private
         view
         returns (bool)

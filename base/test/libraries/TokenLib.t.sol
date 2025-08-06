@@ -77,7 +77,7 @@ contract TokenLibTest is CommonTest {
 
     function test_registerRemoteToken_setsCorrectScalar() public {
         uint8 exponent = 12;
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, exponent);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, exponent, 0);
 
         uint256 expectedScalar = 10 ** exponent;
         uint256 actualScalar = bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN);
@@ -91,7 +91,7 @@ contract TokenLibTest is CommonTest {
             address testToken = makeAddr(string(abi.encodePacked("token", i)));
             Pubkey testRemote = Pubkey.wrap(bytes32(i + 1));
 
-            _registerTokenPair(testToken, testRemote, uint8(i));
+            _registerTokenPair(testToken, testRemote, uint8(i), i);
 
             uint256 expectedScalar = 10 ** i;
             uint256 actualScalar = bridge.scalars(testToken, testRemote);
@@ -106,7 +106,7 @@ contract TokenLibTest is CommonTest {
 
     function test_initializeTransfer_nativeETH_success() public {
         // Register ETH-SOL pair
-        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9);
+        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9, 0);
 
         Transfer memory transfer = Transfer({
             localToken: TokenLib.ETH_ADDRESS,
@@ -128,7 +128,7 @@ contract TokenLibTest is CommonTest {
     }
 
     function test_initializeTransfer_nativeETH_revertsOnInvalidMsgValue() public {
-        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9);
+        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9, 0);
 
         Transfer memory transfer = Transfer({
             localToken: TokenLib.ETH_ADDRESS,
@@ -158,7 +158,7 @@ contract TokenLibTest is CommonTest {
 
     function test_initializeTransfer_nativeERC20_success() public {
         // Register token pair
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
 
         Transfer memory transfer = Transfer({
             localToken: address(mockToken),
@@ -198,7 +198,7 @@ contract TokenLibTest is CommonTest {
 
     function test_initializeTransfer_nativeERC20_withTransferFees() public {
         // Register fee token pair
-        _registerTokenPair(address(feeToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(feeToken), TEST_REMOTE_TOKEN, 12, 0);
 
         Transfer memory transfer = Transfer({
             localToken: address(feeToken),
@@ -295,7 +295,7 @@ contract TokenLibTest is CommonTest {
     }
 
     function test_initializeTransfer_revertsOnETHSentWithERC20() public {
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
 
         Transfer memory transfer = Transfer({
             localToken: address(mockToken),
@@ -315,7 +315,7 @@ contract TokenLibTest is CommonTest {
 
     function test_finalizeTransfer_nativeETH_success() public {
         // Register ETH-SOL pair and set up deposits
-        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9);
+        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9, 0);
 
         Transfer memory transfer = Transfer({
             localToken: TokenLib.ETH_ADDRESS,
@@ -331,7 +331,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
-            nonce: 100,
+            nonce: 1,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
@@ -349,7 +349,7 @@ contract TokenLibTest is CommonTest {
 
     function test_finalizeTransfer_nativeERC20_success() public {
         // Register token pair and set up deposits
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
         _setDeposits(address(mockToken), TEST_REMOTE_TOKEN, 100e18);
 
         Transfer memory transfer = Transfer({
@@ -366,7 +366,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
-            nonce: 100,
+            nonce: 1,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
@@ -404,7 +404,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
-            nonce: 100,
+            nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
@@ -434,7 +434,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
-            nonce: 100,
+            nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
@@ -461,7 +461,7 @@ contract TokenLibTest is CommonTest {
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
-            nonce: 0, // Use 0 since this is the first message
+            nonce: 0,
             sender: TEST_TRANSFER_SENDER,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
@@ -484,7 +484,7 @@ contract TokenLibTest is CommonTest {
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
-            nonce: 0, // Use 0 since this is the first message
+            nonce: 0,
             sender: TEST_TRANSFER_SENDER,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
@@ -507,7 +507,7 @@ contract TokenLibTest is CommonTest {
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
-            nonce: 0, // Use 0 since this is the first message
+            nonce: 0,
             sender: TEST_TRANSFER_SENDER,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
@@ -524,7 +524,7 @@ contract TokenLibTest is CommonTest {
     //////////////////////////////////////////////////////////////
 
     function test_getTokenLibStorage_deposits() public {
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
 
         // Set up deposits through bridge
         _setDeposits(address(mockToken), TEST_REMOTE_TOKEN, 500e18);
@@ -534,7 +534,7 @@ contract TokenLibTest is CommonTest {
     }
 
     function test_getTokenLibStorage_scalars() public {
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
 
         uint256 scalar = bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN);
         assertEq(scalar, 1e12, "Scalar should be accessible");
@@ -559,7 +559,7 @@ contract TokenLibTest is CommonTest {
 
     function test_fullBridgeCycle_nativeERC20() public {
         // Register token pair
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
 
         // Initialize transfer (Base -> Solana)
         Transfer memory outgoingTransfer = Transfer({
@@ -599,7 +599,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
-            nonce: 100,
+            nonce: 1,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
             data: abi.encode(incomingTransfer)
@@ -630,7 +630,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
-            nonce: 100,
+            nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
             data: abi.encode(incomingTransfer)
@@ -666,7 +666,7 @@ contract TokenLibTest is CommonTest {
     ///                Helper Functions                        ///
     //////////////////////////////////////////////////////////////
 
-    function _registerTokenPair(address localToken, Pubkey remoteToken, uint8 scalarExponent) internal {
+    function _registerTokenPair(address localToken, Pubkey remoteToken, uint8 scalarExponent, uint256 nonce) internal {
         Call memory call = Call({
             ty: CallType.Call,
             to: address(0), // Not relevant for token registration
@@ -676,7 +676,8 @@ contract TokenLibTest is CommonTest {
         bytes memory data = abi.encode(call);
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] = IncomingMessage({nonce: 100, sender: cfg.remoteBridge, ty: MessageType.Call, data: data});
+        messages[0] =
+            IncomingMessage({nonce: uint64(nonce), sender: cfg.remoteBridge, ty: MessageType.Call, data: data});
 
         _registerMessage(messages[0]);
         bridge.relayMessages(messages);

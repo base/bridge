@@ -9,6 +9,7 @@ import {Bridge} from "../src/Bridge.sol";
 import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {Twin} from "../src/Twin.sol";
+import {MessageLib} from "../src/libraries/MessageLib.sol";
 import {IncomingMessage} from "../src/libraries/MessageLib.sol";
 
 contract CommonTest is Test {
@@ -20,24 +21,40 @@ contract CommonTest is Test {
     HelperConfig.NetworkConfig public cfg;
 
     function _registerMessage(IncomingMessage memory message) internal {
-        bytes32[] memory messageHashes = _messageToMessageHashes(message);
+        (, bytes32[] memory innerMessageHashes) = _messageToMessageHashes(message);
         vm.startPrank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
+        bridgeValidator.registerMessages(innerMessageHashes, _getValidatorSigs(innerMessageHashes));
         vm.stopPrank();
     }
 
-    function _messageToMessageHashes(IncomingMessage memory message) internal view returns (bytes32[] memory) {
+    function _messageToMessageHashes(IncomingMessage memory message)
+        internal
+        view
+        returns (bytes32[] memory, bytes32[] memory)
+    {
         bytes32[] memory messageHashes = new bytes32[](1);
+        bytes32[] memory innerMessageHashes = new bytes32[](1);
         messageHashes[0] = bridge.getMessageHash(message);
-        return messageHashes;
+        innerMessageHashes[0] = MessageLib.getInnerMessageHash(message);
+        return (messageHashes, innerMessageHashes);
     }
 
-    function _getValidatorSigs(bytes32[] memory messageHashes) internal pure returns (bytes memory) {
+    function _getValidatorSigs(bytes32[] memory innerMessageHashes) internal view returns (bytes memory) {
+        bytes32[] memory messageHashes = _calculateFinalHashes(innerMessageHashes);
         return _createSignature(keccak256(abi.encode(messageHashes)), 1);
     }
 
     function _createSignature(bytes32 messageHash, uint256 privateKey) internal pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, messageHash);
         return abi.encodePacked(r, s, v);
+    }
+
+    function _calculateFinalHashes(bytes32[] memory innerHashes) internal view returns (bytes32[] memory) {
+        bytes32[] memory finalHashes = new bytes32[](innerHashes.length);
+        uint256 currentNonce = bridgeValidator.nextNonce();
+        for (uint256 i; i < innerHashes.length; i++) {
+            finalHashes[i] = keccak256(abi.encode(currentNonce++, innerHashes[i]));
+        }
+        return finalHashes;
     }
 }
