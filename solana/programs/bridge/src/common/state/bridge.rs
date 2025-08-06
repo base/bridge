@@ -13,6 +13,8 @@ pub struct Bridge {
     pub nonce: u64,
     /// Guardian pubkey authorized to update configuration
     pub guardian: Pubkey,
+    /// Whether the bridge is paused (emergency stop mechanism)
+    pub paused: bool,
     /// EIP-1559 state and configuration for dynamic pricing.
     pub eip1559: Eip1559,
     /// Gas cost configuration

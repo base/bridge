@@ -17,6 +17,9 @@ pub use protocol::*;
 pub mod buffer;
 pub use buffer::*;
 
+pub mod pause;
+pub use pause::*;
+
 /// Accounts struct for bridge configuration setter instructions
 /// Only the guardian can update these parameters
 #[derive(Accounts)]
@@ -39,4 +42,6 @@ pub struct SetBridgeConfig<'info> {
 pub enum ConfigError {
     #[msg("Unauthorized to update configuration")]
     UnauthorizedConfigUpdate = 6000,
+    #[msg("Bridge is currently paused")]
+    BridgePaused = 6001,
 }

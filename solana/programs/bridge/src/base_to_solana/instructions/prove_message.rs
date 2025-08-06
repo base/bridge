@@ -6,6 +6,7 @@ use crate::base_to_solana::{
     state::{IncomingMessage, OutputRoot},
     Message,
 };
+use crate::common::{bridge::Bridge, BRIDGE_SEED};
 
 /// Accounts struct for the prove_message instruction that verifies a message exists on Base.
 /// This instruction creates a proven message account after validating the message against an MMR proof
@@ -37,6 +38,11 @@ pub struct ProveMessage<'info> {
     )]
     pub message: Account<'info, IncomingMessage>,
 
+    /// The main bridge state account used to check pause status
+    /// - Uses PDA with BRIDGE_SEED for deterministic address
+    #[account(seeds = [BRIDGE_SEED], bump)]
+    pub bridge: Account<'info, Bridge>,
+
     /// System program required for creating new accounts.
     /// Used internally by Anchor for account initialization.
     pub system_program: Program<'info, System>,
@@ -50,6 +56,9 @@ pub fn prove_message_handler(
     proof: Proof,
     message_hash: [u8; 32],
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, ProveMessageError::BridgePaused);
+    
     // Verify that the provided message hash matches the computed hash
     let computed_hash = hash_message(&nonce.to_be_bytes(), &sender, &data);
     require!(
@@ -82,4 +91,6 @@ fn hash_message(nonce: &[u8], sender: &[u8; 20], data: &[u8]) -> [u8; 32] {
 pub enum ProveMessageError {
     #[msg("Invalid message hash")]
     InvalidMessageHash,
+    #[msg("Bridge is currently paused")]
+    BridgePaused,
 }

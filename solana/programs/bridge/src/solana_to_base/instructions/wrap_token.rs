@@ -90,6 +90,9 @@ pub fn wrap_token_handler(
     decimals: u8,
     partial_token_metadata: PartialTokenMetadata,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, WrapTokenError::BridgePaused);
+
     initialize_metadata(&ctx, decimals, &partial_token_metadata)?;
 
     register_remote_token(
@@ -236,4 +239,6 @@ const fn add_type_and_length_to_len(value_len: usize) -> usize {
 pub enum WrapTokenError {
     #[msg("Incorrect gas fee receiver")]
     IncorrectGasFeeReceiver,
+    #[msg("Bridge is paused")]
+    BridgePaused,
 }
