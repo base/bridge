@@ -18,7 +18,7 @@ contract BridgeValidatorTest is CommonTest {
     bytes32 public constant TEST_MESSAGE_HASH_3 = keccak256("test_message_3");
 
     // Events to test
-    event MessagesRegistered(bytes32[] messageHashes);
+    event MessageRegistered(bytes32 indexed messageHashes);
     event ExecutingMessage(bytes32 indexed msgHash);
 
     function setUp() public {
@@ -45,7 +45,7 @@ contract BridgeValidatorTest is CommonTest {
         messageHashes[1] = TEST_MESSAGE_HASH_2;
 
         vm.expectEmit(false, false, false, true);
-        emit MessagesRegistered(messageHashes);
+        emit MessageRegistered(messageHashes[0]);
 
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
@@ -60,22 +60,12 @@ contract BridgeValidatorTest is CommonTest {
         messageHashes[0] = TEST_MESSAGE_HASH_1;
 
         vm.expectEmit(false, false, false, true);
-        emit MessagesRegistered(messageHashes);
+        emit MessageRegistered(messageHashes[0]);
 
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
 
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
-    }
-
-    function test_registerMessages_emptyArray() public {
-        bytes32[] memory messageHashes = new bytes32[](0);
-
-        vm.expectEmit(false, false, false, true);
-        emit MessagesRegistered(messageHashes);
-
-        vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
     }
 
     function test_registerMessages_largeArray() public {
@@ -85,7 +75,7 @@ contract BridgeValidatorTest is CommonTest {
         }
 
         vm.expectEmit(false, false, false, true);
-        emit MessagesRegistered(messageHashes);
+        emit MessageRegistered(messageHashes[0]);
 
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
@@ -105,7 +95,7 @@ contract BridgeValidatorTest is CommonTest {
         bytes memory validatorSigs = _getValidatorSigs(messageHashes);
 
         vm.expectEmit(false, false, false, true);
-        emit MessagesRegistered(messageHashes);
+        emit MessageRegistered(messageHashes[0]);
 
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes, validatorSigs);
@@ -130,7 +120,7 @@ contract BridgeValidatorTest is CommonTest {
         messageHashes2[0] = TEST_MESSAGE_HASH_1;
 
         vm.expectEmit(false, false, false, true);
-        emit MessagesRegistered(messageHashes2);
+        emit MessageRegistered(messageHashes2[0]);
 
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes2, _getValidatorSigs(messageHashes2));
@@ -224,9 +214,6 @@ contract BridgeValidatorTest is CommonTest {
 
     function testFuzz_registerMessages_withRandomHashes(bytes32[] calldata messageHashes) public {
         vm.assume(messageHashes.length <= 1000); // Reasonable limit for gas
-
-        vm.expectEmit(false, false, false, true);
-        emit MessagesRegistered(messageHashes);
 
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));

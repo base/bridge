@@ -39,7 +39,7 @@ contract BridgeValidator {
     ///
     /// @param messageHashes An array of pre-validated message hashes. Each hash is a hash of an `IncomingMessage` from
     ///                      the `Bridge` contract.
-    event MessagesRegistered(bytes32[] messageHashes);
+    event MessageRegistered(bytes32 indexed messageHashes);
 
     /// @notice Emitted when a cross chain message is being executed.
     ///
@@ -89,9 +89,8 @@ contract BridgeValidator {
 
         for (uint256 i; i < messageHashes.length; i++) {
             validMessages[messageHashes[i]] = true;
+            emit MessageRegistered(messageHashes[i]);
         }
-
-        emit MessagesRegistered(messageHashes);
     }
 
     /// @notice Validates a cross chain message on the destination chain and emits an ExecutingMessage event. This
