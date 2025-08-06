@@ -35,6 +35,15 @@ contract BridgeValidatorTest is CommonTest {
         assertEq(bridgeValidator.BASE_ORACLE(), cfg.trustedRelayer);
     }
 
+    function test_constructor_setsPartnerValidatorThreshold() public view {
+        assertEq(bridgeValidator.PARTNER_VALIDATOR_THRESHOLD(), cfg.partnerValidatorThreshold);
+    }
+
+    function test_constructor_withZeroThreshold() public {
+        BridgeValidator testValidator = new BridgeValidator(address(0x123), 0);
+        assertEq(testValidator.PARTNER_VALIDATOR_THRESHOLD(), 0);
+    }
+
     //////////////////////////////////////////////////////////////
     ///                 registerMessages Tests                 ///
     //////////////////////////////////////////////////////////////
@@ -129,6 +138,114 @@ contract BridgeValidatorTest is CommonTest {
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
     }
 
+    function test_registerMessages_revertsOnInvalidSignatureLength() public {
+        bytes32[] memory messageHashes = new bytes32[](1);
+        messageHashes[0] = TEST_MESSAGE_HASH_1;
+        
+        // Create signature with invalid length (64 bytes instead of 65)
+        bytes memory invalidSig = new bytes(64);
+        
+        vm.expectRevert(BridgeValidator.InvalidSignatureLength.selector);
+        vm.prank(cfg.trustedRelayer);
+        bridgeValidator.registerMessages(messageHashes, invalidSig);
+    }
+
+    function test_registerMessages_revertsOnEmptySignature() public {
+        bytes32[] memory messageHashes = new bytes32[](1);
+        messageHashes[0] = TEST_MESSAGE_HASH_1;
+        
+        vm.expectRevert(BridgeValidator.ThresholdNotMet.selector);
+        vm.prank(cfg.trustedRelayer);
+        bridgeValidator.registerMessages(messageHashes, "");
+    }
+
+    function test_registerMessages_anyoneCanCallWithValidSigs() public {
+        bytes32[] memory messageHashes = new bytes32[](1);
+        messageHashes[0] = TEST_MESSAGE_HASH_1;
+        
+        // Anyone can call registerMessages as long as signatures are valid
+        vm.prank(address(0x999)); // Not the trusted relayer, but should still work
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
+        
+        assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
+    }
+
+    function test_registerMessages_revertsOnDuplicateSigners() public {
+        bytes32[] memory messageHashes = new bytes32[](1);
+        messageHashes[0] = TEST_MESSAGE_HASH_1;
+        
+        bytes32 signedHash = keccak256(abi.encode(messageHashes));
+        
+        // Create duplicate signatures from same signer
+        bytes memory sig1 = _createSignature(signedHash, 1);
+        bytes memory sig2 = _createSignature(signedHash, 1);
+        bytes memory duplicateSigs = abi.encodePacked(sig1, sig2);
+        
+        vm.expectRevert(BridgeValidator.Unauthenticated.selector);
+        vm.prank(cfg.trustedRelayer);
+        bridgeValidator.registerMessages(messageHashes, duplicateSigs);
+    }
+
+    function test_registerMessages_revertsOnUnsortedSigners() public {
+        bytes32[] memory messageHashes = new bytes32[](1);
+        messageHashes[0] = TEST_MESSAGE_HASH_1;
+        
+        bytes32 signedHash = keccak256(abi.encode(messageHashes));
+        
+        // Create signatures in wrong order (addresses should be sorted)
+        uint256 key1 = 1;
+        uint256 key2 = 2;
+        address addr1 = vm.addr(key1);
+        address addr2 = vm.addr(key2);
+        
+        // Ensure we have the ordering we expect
+        if (addr1 > addr2) {
+            (key1, key2) = (key2, key1);
+            (addr1, addr2) = (addr2, addr1);
+        }
+        
+        // Now create signatures in reverse order
+        bytes memory sig1 = _createSignature(signedHash, key2); // Higher address first
+        bytes memory sig2 = _createSignature(signedHash, key1); // Lower address second
+        bytes memory unsortedSigs = abi.encodePacked(sig1, sig2);
+        
+        vm.expectRevert(BridgeValidator.Unauthenticated.selector);
+        vm.prank(cfg.trustedRelayer);
+        bridgeValidator.registerMessages(messageHashes, unsortedSigs);
+    }
+
+    function test_registerMessages_requiresBaseOracleSignature() public {
+        bytes32[] memory messageHashes = new bytes32[](1);
+        messageHashes[0] = TEST_MESSAGE_HASH_1;
+        
+        bytes32 signedHash = keccak256(abi.encode(messageHashes));
+        
+        // Create signature from non-BASE_ORACLE key
+        bytes memory nonOracleSig = _createSignature(signedHash, 999);
+        
+        vm.expectRevert(BridgeValidator.InvalidSigner.selector);
+        vm.prank(cfg.trustedRelayer);
+        bridgeValidator.registerMessages(messageHashes, nonOracleSig);
+    }
+
+    function test_registerMessages_withPartnerValidatorThreshold() public {
+        // Create a BridgeValidator with partner validator threshold > 0
+        address testOracle = vm.addr(100);
+        BridgeValidator testValidator = new BridgeValidator(testOracle, 1);
+        
+        bytes32[] memory messageHashes = new bytes32[](1);
+        messageHashes[0] = TEST_MESSAGE_HASH_1;
+        
+        bytes32 signedHash = keccak256(abi.encode(messageHashes));
+        
+        // Only BASE_ORACLE signature should fail threshold check
+        bytes memory oracleSig = _createSignature(signedHash, 100);
+        
+        vm.expectRevert(BridgeValidator.ThresholdNotMet.selector);
+        vm.prank(testOracle);
+        testValidator.registerMessages(messageHashes, oracleSig);
+    }
+
     //////////////////////////////////////////////////////////////
     ///                 validateMessage Tests                  ///
     //////////////////////////////////////////////////////////////
@@ -185,6 +302,20 @@ contract BridgeValidatorTest is CommonTest {
         bridgeValidator.validateMessage(TEST_MESSAGE_HASH_2);
     }
 
+    function test_validateMessage_withZeroHash() public {
+        // Register zero hash
+        bytes32[] memory messageHashes = new bytes32[](1);
+        messageHashes[0] = bytes32(0);
+
+        vm.prank(cfg.trustedRelayer);
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
+
+        // Should be able to validate zero hash
+        vm.expectEmit(true, false, false, false);
+        emit ExecutingMessage(bytes32(0));
+        bridgeValidator.validateMessage(bytes32(0));
+    }
+
     //////////////////////////////////////////////////////////////
     ///                     View Function Tests                ///
     //////////////////////////////////////////////////////////////
@@ -206,6 +337,10 @@ contract BridgeValidatorTest is CommonTest {
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_2));
         assertFalse(bridgeValidator.validMessages(TEST_MESSAGE_HASH_3));
+    }
+
+    function test_constants() public view {
+        assertEq(bridgeValidator.SIGNATURE_LENGTH_THRESHOLD(), 65);
     }
 
     //////////////////////////////////////////////////////////////
@@ -246,5 +381,21 @@ contract BridgeValidatorTest is CommonTest {
     function testFuzz_constructor_withRandomAddress(address randomRelayer) public {
         BridgeValidator testValidator = new BridgeValidator(randomRelayer, 0);
         assertEq(testValidator.BASE_ORACLE(), randomRelayer);
+    }
+
+    function testFuzz_constructor_withRandomThreshold(uint256 threshold) public {
+        vm.assume(threshold <= type(uint256).max);
+        BridgeValidator testValidator = new BridgeValidator(address(0x123), threshold);
+        assertEq(testValidator.PARTNER_VALIDATOR_THRESHOLD(), threshold);
+    }
+
+    function testFuzz_registerMessages_withEmptyArray() public {
+        bytes32[] memory emptyArray = new bytes32[](0);
+        
+        vm.prank(cfg.trustedRelayer);
+        bridgeValidator.registerMessages(emptyArray, _getValidatorSigs(emptyArray));
+        
+        // No messages should be registered
+        assertFalse(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
     }
 }
