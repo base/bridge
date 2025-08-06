@@ -10,24 +10,12 @@ use base_to_solana::*;
 use common::*;
 use common::{
     config::{
-        set_adjustment_denominator_handler,
-        set_base_transaction_cost_handler,
-        // Protocol Configuration
-        set_block_interval_requirement_handler,
-        set_execution_epilogue_gas_buffer_handler,
-        set_execution_gas_buffer_handler,
-        set_execution_prologue_gas_buffer_handler,
-        set_extra_buffer_handler,
-        set_gas_cost_scaler_dp_handler,
-        set_gas_cost_scaler_handler,
-        set_gas_fee_receiver_handler,
-        set_gas_target_handler,
-        // Buffer and Size Limits Configuration
-        set_max_call_buffer_size_handler,
-        // Gas and Fee Management
-        set_max_gas_limit_per_message_handler,
-        // EIP-1559 Configuration
-        set_minimum_base_fee_handler,
+        set_adjustment_denominator_handler, set_block_interval_requirement_handler,
+        set_execution_epilogue_gas_buffer_handler, set_execution_gas_buffer_handler,
+        set_execution_prologue_gas_buffer_handler, set_extra_gas_buffer_handler,
+        set_gas_cost_scaler_dp_handler, set_gas_cost_scaler_handler, set_gas_fee_receiver_handler,
+        set_gas_target_handler, set_max_call_buffer_size_handler,
+        set_max_gas_limit_per_message_handler, set_minimum_base_fee_handler,
         set_window_duration_handler,
     },
     guardian::transfer_guardian as transfer_guardian_handler,
@@ -383,13 +371,7 @@ pub mod bridge {
         set_adjustment_denominator_handler(ctx, new_denominator)
     }
 
-    // Gas configuration setters
-    pub fn set_max_gas_limit_per_message(
-        ctx: Context<SetBridgeConfig>,
-        new_limit: u64,
-    ) -> Result<()> {
-        set_max_gas_limit_per_message_handler(ctx, new_limit)
-    }
+    // Gas cost configuration setters
 
     pub fn set_gas_cost_scaler(ctx: Context<SetBridgeConfig>, new_scaler: u64) -> Result<()> {
         set_gas_cost_scaler_handler(ctx, new_scaler)
@@ -403,9 +385,10 @@ pub mod bridge {
         set_gas_fee_receiver_handler(ctx, new_receiver)
     }
 
-    // Buffer configuration setters
-    pub fn set_extra_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
-        set_extra_buffer_handler(ctx, new_buffer)
+    // Gas configuration setters
+
+    pub fn set_gas_extra_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
+        set_extra_gas_buffer_handler(ctx, new_buffer)
     }
 
     pub fn set_execution_prologue_gas_buffer(
@@ -426,12 +409,16 @@ pub mod bridge {
         set_execution_epilogue_gas_buffer_handler(ctx, new_buffer)
     }
 
-    pub fn set_base_transaction_cost(ctx: Context<SetBridgeConfig>, new_cost: u64) -> Result<()> {
-        set_base_transaction_cost_handler(ctx, new_cost)
+    pub fn set_base_gas_buffer(ctx: Context<SetBridgeConfig>, new_cost: u64) -> Result<()> {
+        set_base_gas_buffer_handler(ctx, new_cost)
     }
 
-    // Metadata configuration setters
-    // Note: Token metadata keys use constants since they're needed in trait implementations
+    pub fn set_max_gas_limit_per_message(
+        ctx: Context<SetBridgeConfig>,
+        new_limit: u64,
+    ) -> Result<()> {
+        set_max_gas_limit_per_message_handler(ctx, new_limit)
+    }
 
     // Protocol configuration setters
     pub fn set_block_interval_requirement(
@@ -441,11 +428,8 @@ pub mod bridge {
         set_block_interval_requirement_handler(ctx, new_interval)
     }
 
-    // Limits configuration setters
+    // Buffer configuration setters
     pub fn set_max_call_buffer_size(ctx: Context<SetBridgeConfig>, new_size: u64) -> Result<()> {
         set_max_call_buffer_size_handler(ctx, new_size)
     }
-
-    // ABI configuration setters
-    // Note: ABI encoding overheads use constants since they're needed in state struct methods
 }
