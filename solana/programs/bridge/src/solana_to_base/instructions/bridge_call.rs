@@ -262,7 +262,6 @@ mod tests {
         let outgoing_message = Keypair::new();
 
         // Test parameters
-        let gas_limit = 1_000_000u64;
         let call = Call {
             ty: CallType::Call,
             to: [1u8; 20],
@@ -285,7 +284,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeCallIx { gas_limit, call }.data(),
+            data: BridgeCallIx { call }.data(),
         };
 
         // Build the transaction

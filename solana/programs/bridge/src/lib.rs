@@ -13,12 +13,9 @@ use common::{
     bridge::{BufferConfig, Eip1559Config, GasConfig, GasCostConfig, ProtocolConfig},
     config::{
         set_adjustment_denominator_handler, set_block_interval_requirement_handler,
-        set_execution_epilogue_gas_buffer_handler, set_execution_gas_buffer_handler,
-        set_execution_prologue_gas_buffer_handler, set_extra_gas_buffer_handler,
         set_gas_cost_scaler_dp_handler, set_gas_cost_scaler_handler, set_gas_fee_receiver_handler,
-        set_gas_target_handler, set_max_call_buffer_size_handler,
-        set_max_gas_limit_per_message_handler, set_minimum_base_fee_handler,
-        set_window_duration_handler, set_pause_status_handler,
+        set_gas_target_handler, set_max_call_buffer_size_handler, set_minimum_base_fee_handler,
+        set_pause_status_handler, set_window_duration_handler,
     },
     guardian::transfer_guardian_handler,
     initialize::initialize_handler,
@@ -406,67 +403,14 @@ pub mod bridge {
         set_gas_fee_receiver_handler(ctx, new_receiver)
     }
 
-    /// Set the gas extra buffer for Gas Config
+    /// Set the gas amount per call for Gas Config
     /// Only the guardian can call this function
     ///
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_buffer` - The new gas extra buffer value
-    pub fn set_gas_extra_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
-        set_extra_gas_buffer_handler(ctx, new_buffer)
-    }
-
-    /// Set the execution prologue gas buffer for Gas Config
-    /// Only the guardian can call this function
-    ///
-    /// # Arguments
-    /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_buffer` - The new execution prologue gas buffer value
-    pub fn set_execution_prologue_gas_buffer(
-        ctx: Context<SetBridgeConfig>,
-        new_buffer: u64,
-    ) -> Result<()> {
-        set_execution_prologue_gas_buffer_handler(ctx, new_buffer)
-    }
-
-    pub fn set_execution_gas_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
-        set_execution_gas_buffer_handler(ctx, new_buffer)
-    }
-
-    /// Set the execution epilogue gas buffer for Gas Config
-    /// Only the guardian can call this function
-    ///
-    /// # Arguments
-    /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_buffer` - The new execution epilogue gas buffer value
-    pub fn set_execution_epilogue_gas_buffer(
-        ctx: Context<SetBridgeConfig>,
-        new_buffer: u64,
-    ) -> Result<()> {
-        set_execution_epilogue_gas_buffer_handler(ctx, new_buffer)
-    }
-
-    /// Set the base gas buffer for Gas Config
-    /// Only the guardian can call this function
-    ///
-    /// # Arguments
-    /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_cost` - The new base gas buffer value
-    pub fn set_base_gas_buffer(ctx: Context<SetBridgeConfig>, new_cost: u64) -> Result<()> {
-        set_base_gas_buffer_handler(ctx, new_cost)
-    }
-
-    /// Set the max gas limit per message for Gas Config
-    /// Only the guardian can call this function
-    ///
-    /// # Arguments
-    /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_limit` - The new max gas limit per message value
-    pub fn set_max_gas_limit_per_message(
-        ctx: Context<SetBridgeConfig>,
-        new_limit: u64,
-    ) -> Result<()> {
-        set_max_gas_limit_per_message_handler(ctx, new_limit)
+    /// * `new_val` - The new gas amount per call value
+    pub fn set_gas_per_call(ctx: Context<SetBridgeConfig>, new_val: u64) -> Result<()> {
+        set_gas_per_call_handler(ctx, new_val)
     }
 
     /// Set the block interval requirement for Protocol Config

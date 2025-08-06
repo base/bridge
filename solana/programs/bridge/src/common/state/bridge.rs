@@ -155,18 +155,8 @@ pub struct GasCostConfig {
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct GasConfig {
-    /// Additional relay buffer
-    pub extra: u64,
-    /// Pre-execution gas buffer
-    pub execution_prologue: u64,
-    /// Main execution gas buffer
-    pub execution: u64,
-    /// Post-execution gas buffer
-    pub execution_epilogue: u64,
-    /// Base transaction cost (Ethereum standard)
-    pub base_transaction_cost: u64,
-    /// Maximum gas limit per cross-chain message
-    pub max_gas_limit_per_message: u64,
+    /// Amount of gas per cross-chain message
+    pub gas_per_call: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]

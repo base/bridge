@@ -72,7 +72,7 @@ pub fn bridge_sol_handler(
 ) -> Result<()> {
     // Check if bridge is paused
     require!(!ctx.accounts.bridge.paused, BridgeSolError::BridgePaused);
-    
+
     bridge_sol_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
@@ -399,7 +399,6 @@ mod tests {
         let outgoing_message = Keypair::new();
 
         // Test parameters
-        let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
         let remote_token = [2u8; 20];
         let amount = LAMPORTS_PER_SOL;
@@ -425,7 +424,6 @@ mod tests {
             program_id: ID,
             accounts,
             data: BridgeSolIx {
-                gas_limit,
                 to,
                 remote_token,
                 amount,

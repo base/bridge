@@ -90,7 +90,7 @@ pub fn bridge_spl_handler(
 ) -> Result<()> {
     // Check if bridge is paused
     require!(!ctx.accounts.bridge.paused, BridgeSplError::BridgePaused);
-    
+
     bridge_spl_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
@@ -523,7 +523,6 @@ mod tests {
         let outgoing_message = Keypair::new();
 
         // Test parameters
-        let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
         let remote_token = [2u8; 20];
         let amount = 500_000u64;
@@ -555,7 +554,6 @@ mod tests {
             program_id: ID,
             accounts,
             data: BridgeSplIx {
-                gas_limit,
                 to,
                 remote_token,
                 amount,

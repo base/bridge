@@ -483,7 +483,6 @@ mod tests {
         let outgoing_message = Keypair::new();
 
         // Test parameters
-        let gas_limit = 1_000_000u64;
         let to = [1u8; 20];
         let amount = 500_000u64;
 
@@ -506,7 +505,6 @@ mod tests {
             program_id: ID,
             accounts,
             data: BridgeWrappedTokenIx {
-                gas_limit,
                 to,
                 amount,
                 call: None,
