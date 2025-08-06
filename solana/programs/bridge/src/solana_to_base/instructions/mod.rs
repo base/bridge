@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     common::bridge::Bridge,
-    solana_to_base::{Call, CallType},
+    solana_to_base::{Call, CallType, GAS_PER_CALL},
 };
 
 pub mod wrap_token;
@@ -36,7 +36,7 @@ pub fn check_call(call: &Call) -> Result<()> {
     Ok(())
 }
 
-fn pay_for_gas<'info>(
+pub fn pay_for_gas<'info>(
     system_program: &Program<'info, System>,
     payer: &Signer<'info>,
     gas_fee_receiver: &AccountInfo<'info>,
@@ -47,7 +47,7 @@ fn pay_for_gas<'info>(
     let base_fee = bridge.eip1559.refresh_base_fee(current_timestamp);
 
     // Record gas usage for this transaction
-    eip1559.add_gas_usage(GAS_PER_CALL);
+    bridge.eip1559.add_gas_usage(GAS_PER_CALL);
 
     let gas_cost = GAS_PER_CALL * base_fee * bridge.gas_cost_config.gas_cost_scaler
         / bridge.gas_cost_config.gas_cost_scaler_dp;
