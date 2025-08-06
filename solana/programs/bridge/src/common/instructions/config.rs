@@ -110,31 +110,7 @@ pub fn set_adjustment_denominator_handler(
     Ok(())
 }
 
-// ===== GAS CONFIGURATION SETTERS =====
-
-/// Set the maximum gas limit per cross-chain message
-pub fn set_max_gas_limit_per_message_handler(
-    ctx: Context<SetBridgeConfig>,
-    new_limit: u64,
-) -> Result<()> {
-    require!(
-        new_limit > 0 && new_limit <= 1_000_000_000,
-        ConfigError::InvalidGasLimit
-    );
-
-    let old_value = ctx.accounts.bridge.gas_config.max_gas_limit_per_message;
-    ctx.accounts.bridge.gas_config.max_gas_limit_per_message = new_limit;
-
-    emit!(BridgeConfigUpdated {
-        category: "gas".to_string(),
-        parameter: "max_gas_limit_per_message".to_string(),
-        old_value: old_value.to_string(),
-        new_value: new_limit.to_string(),
-        guardian: ctx.accounts.guardian.key(),
-    });
-
-    Ok(())
-}
+// ===== GAS COST CONFIGURATION SETTERS =====
 
 /// Set the gas cost scaler
 pub fn set_gas_cost_scaler_handler(ctx: Context<SetBridgeConfig>, new_scaler: u64) -> Result<()> {
@@ -143,8 +119,8 @@ pub fn set_gas_cost_scaler_handler(ctx: Context<SetBridgeConfig>, new_scaler: u6
         ConfigError::InvalidGasScaler
     );
 
-    let old_value = ctx.accounts.bridge.gas_config.gas_cost_scaler;
-    ctx.accounts.bridge.gas_config.gas_cost_scaler = new_scaler;
+    let old_value = ctx.accounts.bridge.gas_cost_config.gas_cost_scaler;
+    ctx.accounts.bridge.gas_cost_config.gas_cost_scaler = new_scaler;
 
     emit!(BridgeConfigUpdated {
         category: "gas".to_string(),
@@ -164,8 +140,8 @@ pub fn set_gas_cost_scaler_dp_handler(ctx: Context<SetBridgeConfig>, new_dp: u64
         ConfigError::InvalidGasScalerDP
     );
 
-    let old_value = ctx.accounts.bridge.gas_config.gas_cost_scaler_dp;
-    ctx.accounts.bridge.gas_config.gas_cost_scaler_dp = new_dp;
+    let old_value = ctx.accounts.bridge.gas_cost_config.gas_cost_scaler_dp;
+    ctx.accounts.bridge.gas_cost_config.gas_cost_scaler_dp = new_dp;
 
     emit!(BridgeConfigUpdated {
         category: "gas".to_string(),
@@ -183,8 +159,8 @@ pub fn set_gas_fee_receiver_handler(
     ctx: Context<SetBridgeConfig>,
     new_receiver: Pubkey,
 ) -> Result<()> {
-    let old_value = ctx.accounts.bridge.gas_config.gas_fee_receiver;
-    ctx.accounts.bridge.gas_config.gas_fee_receiver = new_receiver;
+    let old_value = ctx.accounts.bridge.gas_cost_config.gas_fee_receiver;
+    ctx.accounts.bridge.gas_cost_config.gas_fee_receiver = new_receiver;
 
     emit!(BridgeConfigUpdated {
         category: "gas".to_string(),
@@ -203,8 +179,8 @@ pub fn set_gas_fee_receiver_handler(
 pub fn set_extra_buffer_handler(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
     require!(new_buffer <= 1_000_000, ConfigError::InvalidBuffer);
 
-    let old_value = ctx.accounts.bridge.gas_buffer_config.extra;
-    ctx.accounts.bridge.gas_buffer_config.extra = new_buffer;
+    let old_value = ctx.accounts.bridge.gas_config.extra;
+    ctx.accounts.bridge.gas_config.extra = new_buffer;
 
     emit!(BridgeConfigUpdated {
         category: "buffer".to_string(),
@@ -224,8 +200,8 @@ pub fn set_execution_prologue_gas_buffer_handler(
 ) -> Result<()> {
     require!(new_buffer <= 1_000_000, ConfigError::InvalidBuffer);
 
-    let old_value = ctx.accounts.bridge.gas_buffer_config.execution_prologue;
-    ctx.accounts.bridge.gas_buffer_config.execution_prologue = new_buffer;
+    let old_value = ctx.accounts.bridge.gas_config.execution_prologue;
+    ctx.accounts.bridge.gas_config.execution_prologue = new_buffer;
 
     emit!(BridgeConfigUpdated {
         category: "buffer".to_string(),
@@ -245,8 +221,8 @@ pub fn set_execution_gas_buffer_handler(
 ) -> Result<()> {
     require!(new_buffer <= 1_000_000, ConfigError::InvalidBuffer);
 
-    let old_value = ctx.accounts.bridge.gas_buffer_config.execution;
-    ctx.accounts.bridge.gas_buffer_config.execution = new_buffer;
+    let old_value = ctx.accounts.bridge.gas_config.execution;
+    ctx.accounts.bridge.gas_config.execution = new_buffer;
 
     emit!(BridgeConfigUpdated {
         category: "buffer".to_string(),
@@ -266,8 +242,8 @@ pub fn set_execution_epilogue_gas_buffer_handler(
 ) -> Result<()> {
     require!(new_buffer <= 1_000_000, ConfigError::InvalidBuffer);
 
-    let old_value = ctx.accounts.bridge.gas_buffer_config.execution_epilogue;
-    ctx.accounts.bridge.gas_buffer_config.execution_epilogue = new_buffer;
+    let old_value = ctx.accounts.bridge.gas_config.execution_epilogue;
+    ctx.accounts.bridge.gas_config.execution_epilogue = new_buffer;
 
     emit!(BridgeConfigUpdated {
         category: "buffer".to_string(),
@@ -290,14 +266,38 @@ pub fn set_base_transaction_cost_handler(
         ConfigError::InvalidTransactionCost
     );
 
-    let old_value = ctx.accounts.bridge.gas_buffer_config.base_transaction_cost;
-    ctx.accounts.bridge.gas_buffer_config.base_transaction_cost = new_cost;
+    let old_value = ctx.accounts.bridge.gas_config.base_transaction_cost;
+    ctx.accounts.bridge.gas_config.base_transaction_cost = new_cost;
 
     emit!(BridgeConfigUpdated {
         category: "buffer".to_string(),
         parameter: "base_transaction_cost".to_string(),
         old_value: old_value.to_string(),
         new_value: new_cost.to_string(),
+        guardian: ctx.accounts.guardian.key(),
+    });
+
+    Ok(())
+}
+
+/// Set the maximum gas limit per cross-chain message
+pub fn set_max_gas_limit_per_message_handler(
+    ctx: Context<SetBridgeConfig>,
+    new_limit: u64,
+) -> Result<()> {
+    require!(
+        new_limit > 0 && new_limit <= 1_000_000_000,
+        ConfigError::InvalidGasLimit
+    );
+
+    let old_value = ctx.accounts.bridge.gas_config.max_gas_limit_per_message;
+    ctx.accounts.bridge.gas_config.max_gas_limit_per_message = new_limit;
+
+    emit!(BridgeConfigUpdated {
+        category: "gas".to_string(),
+        parameter: "max_gas_limit_per_message".to_string(),
+        old_value: old_value.to_string(),
+        new_value: new_limit.to_string(),
         guardian: ctx.accounts.guardian.key(),
     });
 

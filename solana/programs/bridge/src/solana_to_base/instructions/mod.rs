@@ -53,6 +53,7 @@ fn check_gas_limit(gas_limit: u64, tx_size: usize, bridge: &Bridge) -> Result<()
         gas_limit >= min_gas_limit(tx_size, bridge),
         SolanaToBaseError::GasLimitTooLow
     );
+
     require!(
         gas_limit <= bridge.gas_config.max_gas_limit_per_message,
         SolanaToBaseError::GasLimitExceeded
@@ -75,8 +76,8 @@ fn pay_for_gas<'info>(
     // Record gas usage for this transaction
     bridge.eip1559.add_gas_usage(gas_limit);
 
-    let gas_cost = gas_limit * base_fee * bridge.gas_config.gas_cost_scaler
-        / bridge.gas_config.gas_cost_scaler_dp;
+    let gas_cost = gas_limit * base_fee * bridge.gas_cost_config.gas_cost_scaler
+        / bridge.gas_cost_config.gas_cost_scaler_dp;
 
     let cpi_ctx = CpiContext::new(
         system_program.to_account_info(),
@@ -93,11 +94,11 @@ fn pay_for_gas<'info>(
 
 fn min_gas_limit(tx_size: usize, bridge: &Bridge) -> u64 {
     tx_size as u64 * 40
-        + bridge.gas_buffer_config.base_transaction_cost
-        + bridge.gas_buffer_config.extra
-        + bridge.gas_buffer_config.execution_prologue
-        + bridge.gas_buffer_config.execution
-        + bridge.gas_buffer_config.execution_epilogue
+        + bridge.gas_config.base_transaction_cost
+        + bridge.gas_config.extra
+        + bridge.gas_config.execution_prologue
+        + bridge.gas_config.execution
+        + bridge.gas_config.execution_epilogue
 }
 
 #[error_code]

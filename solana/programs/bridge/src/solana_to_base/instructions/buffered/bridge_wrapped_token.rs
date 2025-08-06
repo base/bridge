@@ -27,12 +27,9 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     /// Must sign the transaction to authorize burning their tokens.
     pub from: Signer<'info>,
 
-    /// The hardcoded account that receives gas fees for Base operations.
-    /// - Must match the predefined GAS_FEE_RECEIVER address
-    /// - Receives lamports to cover gas costs on Base
-    ///
-    /// CHECK: This account is validated at runtime to match bridge.gas_config.gas_fee_receiver
-    #[account(mut)]
+    /// The account that receives payment for the gas costs of bridging the wrapped token to Base.
+    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeWrappedTokenWithBufferedCallError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The wrapped token mint account representing the original Base token.
@@ -88,12 +85,6 @@ pub fn bridge_wrapped_token_with_buffered_call_handler<'a, 'b, 'c, 'info>(
     to: [u8; 20],
     amount: u64,
 ) -> Result<()> {
-    // Validate gas fee receiver matches bridge configuration
-    require!(
-        ctx.accounts.gas_fee_receiver.key() == ctx.accounts.bridge.gas_config.gas_fee_receiver,
-        BridgeWrappedTokenWithBufferedCallError::IncorrectGasFeeReceiver
-    );
-
     let call_buffer = &ctx.accounts.call_buffer;
     let call = Some(Call {
         ty: call_buffer.ty,

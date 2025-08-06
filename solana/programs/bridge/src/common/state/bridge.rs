@@ -29,10 +29,10 @@ pub struct Bridge {
     pub eip1559: Eip1559,
     /// Guardian pubkey authorized to update configuration
     pub guardian: Pubkey,
-    /// Gas and fee management configuration
+    /// Gas cost configuration
+    pub gas_cost_config: GasCostConfig,
+    /// Gas configuration
     pub gas_config: GasConfig,
-    /// Gas buffer configuration for transaction execution
-    pub gas_buffer_config: GasBufferConfig,
     /// Protocol validation configuration
     pub protocol_config: ProtocolConfig,
     /// Buffer and size limits configuration
@@ -169,9 +169,7 @@ impl Eip1559 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct GasConfig {
-    /// Maximum gas limit per cross-chain message
-    pub max_gas_limit_per_message: u64,
+pub struct GasCostConfig {
     /// Scaling factor for gas cost calculations
     pub gas_cost_scaler: u64,
     /// Decimal precision for gas cost calculations
@@ -180,10 +178,9 @@ pub struct GasConfig {
     pub gas_fee_receiver: Pubkey,
 }
 
-impl Default for GasConfig {
+impl Default for GasCostConfig {
     fn default() -> Self {
         Self {
-            max_gas_limit_per_message: MAX_GAS_LIMIT_PER_MESSAGE,
             gas_cost_scaler: GAS_COST_SCALER,
             gas_cost_scaler_dp: GAS_COST_SCALER_DP,
             gas_fee_receiver: GAS_FEE_RECEIVER,
@@ -192,7 +189,7 @@ impl Default for GasConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct GasBufferConfig {
+pub struct GasConfig {
     /// Additional relay buffer
     pub extra: u64,
     /// Pre-execution gas buffer
@@ -203,9 +200,11 @@ pub struct GasBufferConfig {
     pub execution_epilogue: u64,
     /// Base transaction cost (Ethereum standard)
     pub base_transaction_cost: u64,
+    /// Maximum gas limit per cross-chain message
+    pub max_gas_limit_per_message: u64,
 }
 
-impl Default for GasBufferConfig {
+impl Default for GasConfig {
     fn default() -> Self {
         Self {
             extra: 10_000,
@@ -213,6 +212,7 @@ impl Default for GasBufferConfig {
             execution: 40_000,
             execution_epilogue: 25_000,
             base_transaction_cost: 21_000,
+            max_gas_limit_per_message: MAX_GAS_LIMIT_PER_MESSAGE,
         }
     }
 }

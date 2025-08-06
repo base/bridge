@@ -35,11 +35,9 @@ pub struct WrapToken<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// The hardcoded gas fee receiver account that collects cross-chain transaction fees.
-    /// This account receives payment for the gas costs of registering the token on Base.
-    /// Must match the GAS_FEE_RECEIVER constant to prevent fee payment to wrong accounts.
-    /// CHECK: This account is validated at runtime to match bridge.gas_config.gas_fee_receiver
-    #[account(mut)]
+    /// The account that receives payment for the gas costs of registering the token on Base.
+    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ WrapTokenError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The new SPL Token-2022 mint being created for the wrapped token.
@@ -58,8 +56,6 @@ pub struct WrapToken<'info> {
         bump,
         mint::decimals = decimals,
         mint::authority = mint,
-        // mint::freeze_authority = mint,
-        // extensions::metadata_pointer::authority = mint,
         extensions::metadata_pointer::metadata_address = mint,
     )]
     pub mint: InterfaceAccount<'info, Mint>,
@@ -95,12 +91,6 @@ pub fn wrap_token_handler(
     partial_token_metadata: PartialTokenMetadata,
     gas_limit: u64,
 ) -> Result<()> {
-    // Validate gas fee receiver matches bridge configuration
-    require!(
-        ctx.accounts.gas_fee_receiver.key() == ctx.accounts.bridge.gas_config.gas_fee_receiver,
-        WrapTokenError::IncorrectGasFeeReceiver
-    );
-
     initialize_metadata(&ctx, decimals, &partial_token_metadata)?;
 
     register_remote_token(

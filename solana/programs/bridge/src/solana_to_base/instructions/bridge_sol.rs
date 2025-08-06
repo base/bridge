@@ -2,9 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, SOL_VAULT_SEED},
-    solana_to_base::{
-        internal::bridge_sol::bridge_sol_internal, Call, OutgoingMessage,
-    },
+    solana_to_base::{internal::bridge_sol::bridge_sol_internal, Call, OutgoingMessage},
 };
 
 /// Accounts struct for the bridge_sol instruction that transfers native SOL from Solana to Base
@@ -25,12 +23,9 @@ pub struct BridgeSol<'info> {
     #[account(mut)]
     pub from: Signer<'info>,
 
-    /// The hardcoded account that receives gas fees for cross-chain operations.
-    /// - Must match the predefined GAS_FEE_RECEIVER address
-    /// - Mutable to receive gas fee payments
-    ///
-    /// CHECK: This account is validated at runtime to match bridge.gas_config.gas_fee_receiver
-    #[account(mut)]
+    /// The account that receives payment for the gas costs of bridging SOL to Base.
+    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeSolError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SOL vault account that holds locked tokens for the specific remote token.
@@ -76,12 +71,6 @@ pub fn bridge_sol_handler(
     amount: u64,
     call: Option<Call>,
 ) -> Result<()> {
-    // Validate gas fee receiver matches bridge configuration
-    require!(
-        ctx.accounts.gas_fee_receiver.key() == ctx.accounts.bridge.gas_config.gas_fee_receiver,
-        BridgeSolError::IncorrectGasFeeReceiver
-    );
-
     bridge_sol_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,

@@ -1,9 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::common::{
-    bridge::{
-        AbiConfig, Bridge, Eip1559, GasBufferConfig, GasConfig, LimitsConfig, ProtocolConfig,
-    },
+    bridge::{AbiConfig, Bridge, Eip1559, GasConfig, GasCostConfig, LimitsConfig, ProtocolConfig},
     BRIDGE_SEED,
 };
 
@@ -48,8 +46,8 @@ pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
         nonce: 1, // Starts the first nonce at 1 so that 0 can safely be used to initialize `base_last_relayed_nonce`
         eip1559: Eip1559::new(current_timestamp),
         guardian: ctx.accounts.guardian.key(),
+        gas_cost_config: GasCostConfig::default(),
         gas_config: GasConfig::default(),
-        gas_buffer_config: GasBufferConfig::default(),
         protocol_config: ProtocolConfig::default(),
         limits_config: LimitsConfig::default(),
         abi_config: AbiConfig::default(),
@@ -140,8 +138,8 @@ mod tests {
                 nonce: 1,
                 eip1559: Eip1559::new(timestamp),
                 guardian: guardian_pk,
+                gas_cost_config: GasCostConfig::default(),
                 gas_config: GasConfig::default(),
-                gas_buffer_config: GasBufferConfig::default(),
                 protocol_config: ProtocolConfig::default(),
                 limits_config: LimitsConfig::default(),
                 abi_config: AbiConfig::default(),

@@ -21,13 +21,9 @@ pub struct BridgeCallBuffered<'info> {
     /// This account's public key will be used as the sender in the cross-chain message.
     pub from: Signer<'info>,
 
-    /// The designated receiver of gas fees for cross-chain message relay.
-    /// - Must match the hardcoded GAS_FEE_RECEIVER address
-    /// - Receives lamports calculated based on gas_limit and current gas pricing
-    /// - Mutable to receive the gas fee payment
-    ///
-    /// CHECK: This account is validated at runtime to match bridge.gas_config.gas_fee_receiver
-    #[account(mut)]
+    /// The account that receives payment for the gas costs of bridging the call to Base.
+    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeCallBufferedError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The main bridge state account containing global bridge configuration.
@@ -71,12 +67,6 @@ pub fn bridge_call_buffered_handler<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, BridgeCallBuffered<'info>>,
     gas_limit: u64,
 ) -> Result<()> {
-    // Validate gas fee receiver matches bridge configuration
-    require!(
-        ctx.accounts.gas_fee_receiver.key() == ctx.accounts.bridge.gas_config.gas_fee_receiver,
-        BridgeCallBufferedError::IncorrectGasFeeReceiver
-    );
-
     let call_buffer = &ctx.accounts.call_buffer;
     let call = Call {
         ty: call_buffer.ty,
