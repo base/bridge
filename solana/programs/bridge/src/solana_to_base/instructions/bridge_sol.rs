@@ -71,6 +71,9 @@ pub fn bridge_sol_handler(
     amount: u64,
     call: Option<Call>,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, BridgeSolError::BridgePaused);
+    
     bridge_sol_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
@@ -93,6 +96,8 @@ pub enum BridgeSolError {
     IncorrectGasFeeReceiver,
     #[msg("Only the owner can close this call buffer")]
     Unauthorized,
+    #[msg("Bridge is currently paused")]
+    BridgePaused,
 }
 
 #[cfg(test)]
@@ -378,6 +383,85 @@ mod tests {
         assert!(
             error_string.contains("IncorrectGasFeeReceiver"),
             "Expected IncorrectGasFeeReceiver error, got: {}",
+            error_string
+        );
+    }
+
+    #[test]
+    fn test_bridge_sol_fails_when_paused() {
+        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+
+        // Pause the bridge first
+        let mut bridge_account = svm.get_account(&bridge_pda).unwrap();
+        let mut bridge = Bridge::try_deserialize(&mut &bridge_account.data[..]).unwrap();
+        bridge.paused = true;
+        let mut new_data = Vec::new();
+        bridge.try_serialize(&mut new_data).unwrap();
+        bridge_account.data = new_data;
+        svm.set_account(bridge_pda, bridge_account).unwrap();
+
+        // Create from account
+        let from = Keypair::new();
+        svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
+
+        // Create outgoing message account
+        let outgoing_message = Keypair::new();
+
+        // Test parameters
+        let gas_limit = 1_000_000u64;
+        let to = [1u8; 20];
+        let remote_token = [2u8; 20];
+        let amount = LAMPORTS_PER_SOL;
+
+        // Find SOL vault PDA
+        let sol_vault =
+            Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
+
+        // Build the BridgeSol instruction accounts
+        let accounts = accounts::BridgeSol {
+            payer: payer.pubkey(),
+            from: from.pubkey(),
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
+            sol_vault,
+            bridge: bridge_pda,
+            outgoing_message: outgoing_message.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        // Build the BridgeSol instruction
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: BridgeSolIx {
+                gas_limit,
+                to,
+                remote_token,
+                amount,
+                call: None,
+            }
+            .data(),
+        };
+
+        // Build the transaction
+        let tx = Transaction::new(
+            &[&payer, &from, &outgoing_message],
+            Message::new(&[ix], Some(&payer.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        // Send the transaction - should fail
+        let result = svm.send_transaction(tx);
+        assert!(
+            result.is_err(),
+            "Expected transaction to fail when bridge is paused"
+        );
+
+        // Check that the error contains the expected error message
+        let error_string = format!("{:?}", result.unwrap_err());
+        assert!(
+            error_string.contains("BridgePaused"),
+            "Expected BridgePaused error, got: {}",
             error_string
         );
     }

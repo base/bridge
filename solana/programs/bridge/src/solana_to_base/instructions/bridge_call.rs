@@ -50,6 +50,9 @@ pub struct BridgeCall<'info> {
 }
 
 pub fn bridge_call_handler(ctx: Context<BridgeCall>, gas_limit: u64, call: Call) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, BridgeCallError::BridgePaused);
+    
     bridge_call_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
@@ -68,6 +71,8 @@ pub enum BridgeCallError {
     IncorrectGasFeeReceiver,
     #[msg("Only the owner can close this call buffer")]
     Unauthorized,
+    #[msg("Bridge is paused")]
+    BridgePaused,
 }
 
 #[cfg(test)]
@@ -243,6 +248,76 @@ mod tests {
         assert!(
             error_string.contains("IncorrectGasFeeReceiver"),
             "Expected IncorrectGasFeeReceiver error, got: {}",
+            error_string
+        );
+    }
+
+    #[test]
+    fn test_bridge_call_fails_when_paused() {
+        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+
+        // Pause the bridge first
+        let mut bridge_account = svm.get_account(&bridge_pda).unwrap();
+        let mut bridge = Bridge::try_deserialize(&mut &bridge_account.data[..]).unwrap();
+        bridge.paused = true;
+        let mut new_data = Vec::new();
+        bridge.try_serialize(&mut new_data).unwrap();
+        bridge_account.data = new_data;
+        svm.set_account(bridge_pda, bridge_account).unwrap();
+
+        // Create from account
+        let from = Keypair::new();
+        svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
+
+        // Create outgoing message account
+        let outgoing_message = Keypair::new();
+
+        // Test parameters
+        let gas_limit = 1_000_000u64;
+        let call = Call {
+            ty: CallType::Call,
+            to: [1u8; 20],
+            value: 0u128,
+            data: vec![1, 2, 3, 4],
+        };
+
+        // Build the BridgeCall instruction accounts
+        let accounts = accounts::BridgeCall {
+            payer: payer.pubkey(),
+            from: from.pubkey(),
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
+            bridge: bridge_pda,
+            outgoing_message: outgoing_message.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        // Build the BridgeCall instruction
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: BridgeCallIx { gas_limit, call }.data(),
+        };
+
+        // Build the transaction
+        let tx = Transaction::new(
+            &[&payer, &from, &outgoing_message],
+            Message::new(&[ix], Some(&payer.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        // Send the transaction - should fail
+        let result = svm.send_transaction(tx);
+        assert!(
+            result.is_err(),
+            "Expected transaction to fail when bridge is paused"
+        );
+
+        // Check that the error contains the expected error message
+        let error_string = format!("{:?}", result.unwrap_err());
+        assert!(
+            error_string.contains("BridgePaused"),
+            "Expected BridgePaused error, got: {}",
             error_string
         );
     }

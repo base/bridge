@@ -67,6 +67,9 @@ pub fn bridge_call_buffered_handler<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, BridgeCallBuffered<'info>>,
     gas_limit: u64,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, BridgeCallBufferedError::BridgePaused);
+    
     let call_buffer = &ctx.accounts.call_buffer;
     let call = Call {
         ty: call_buffer.ty,
@@ -93,6 +96,8 @@ pub enum BridgeCallBufferedError {
     IncorrectGasFeeReceiver,
     #[msg("Only the owner can close this call buffer")]
     Unauthorized,
+    #[msg("Bridge is currently paused")]
+    BridgePaused,
 }
 
 #[cfg(test)]

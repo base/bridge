@@ -89,6 +89,9 @@ pub fn bridge_spl_handler(
     amount: u64,
     call: Option<Call>,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, BridgeSplError::BridgePaused);
+    
     bridge_spl_internal(
         &ctx.accounts.payer,
         &ctx.accounts.from,
@@ -116,6 +119,8 @@ pub enum BridgeSplError {
     MintIsWrappedToken,
     #[msg("Only the owner can close this call buffer")]
     Unauthorized,
+    #[msg("Bridge is paused")]
+    BridgePaused,
 }
 
 #[cfg(test)]
@@ -482,6 +487,111 @@ mod tests {
         assert!(
             error_string.contains("IncorrectGasFeeReceiver"),
             "Expected IncorrectGasFeeReceiver error, got: {}",
+            error_string
+        );
+    }
+
+    #[test]
+    fn test_bridge_spl_fails_when_paused() {
+        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+
+        // Pause the bridge first
+        let mut bridge_account = svm.get_account(&bridge_pda).unwrap();
+        let mut bridge = Bridge::try_deserialize(&mut &bridge_account.data[..]).unwrap();
+        bridge.paused = true;
+        let mut new_data = Vec::new();
+        bridge.try_serialize(&mut new_data).unwrap();
+        bridge_account.data = new_data;
+        svm.set_account(bridge_pda, bridge_account).unwrap();
+
+        // Create from account
+        let from = Keypair::new();
+        svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
+
+        // Create a test SPL token mint
+        let mint = Keypair::new().pubkey();
+        create_mock_mint(
+            &mut svm,
+            mint,
+            6,
+            anchor_spl::token_interface::spl_token_2022::ID,
+        );
+
+        // Create token account for the from user
+        let from_token_account = Keypair::new().pubkey();
+        let initial_amount = 1_000_000u64;
+        create_mock_token_account(
+            &mut svm,
+            from_token_account,
+            mint,
+            from.pubkey(),
+            initial_amount,
+        );
+
+        // Create outgoing message account
+        let outgoing_message = Keypair::new();
+
+        // Test parameters
+        let gas_limit = 1_000_000u64;
+        let to = [1u8; 20];
+        let remote_token = [2u8; 20];
+        let amount = 500_000u64;
+
+        // Find token vault PDA
+        let token_vault = Pubkey::find_program_address(
+            &[TOKEN_VAULT_SEED, mint.as_ref(), remote_token.as_ref()],
+            &ID,
+        )
+        .0;
+
+        // Build the BridgeSpl instruction accounts
+        let accounts = accounts::BridgeSpl {
+            payer: payer.pubkey(),
+            from: from.pubkey(),
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
+            from_token_account,
+            token_vault,
+            mint,
+            bridge: bridge_pda,
+            outgoing_message: outgoing_message.pubkey(),
+            token_program: anchor_spl::token_interface::spl_token_2022::ID,
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        // Build the BridgeSpl instruction
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: BridgeSplIx {
+                gas_limit,
+                to,
+                remote_token,
+                amount,
+                call: None,
+            }
+            .data(),
+        };
+
+        // Build the transaction
+        let tx = Transaction::new(
+            &[&payer, &from, &outgoing_message],
+            Message::new(&[ix], Some(&payer.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        // Send the transaction - should fail
+        let result = svm.send_transaction(tx);
+        assert!(
+            result.is_err(),
+            "Expected transaction to fail when bridge is paused"
+        );
+
+        // Check that the error contains the expected error message
+        let error_string = format!("{:?}", result.unwrap_err());
+        assert!(
+            error_string.contains("BridgePaused"),
+            "Expected BridgePaused error, got: {}",
             error_string
         );
     }

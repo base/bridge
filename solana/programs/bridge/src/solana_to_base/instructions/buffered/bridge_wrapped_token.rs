@@ -85,6 +85,9 @@ pub fn bridge_wrapped_token_with_buffered_call_handler<'a, 'b, 'c, 'info>(
     to: [u8; 20],
     amount: u64,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, BridgeWrappedTokenWithBufferedCallError::BridgePaused);
+    
     let call_buffer = &ctx.accounts.call_buffer;
     let call = Some(Call {
         ty: call_buffer.ty,
@@ -116,6 +119,8 @@ pub enum BridgeWrappedTokenWithBufferedCallError {
     IncorrectGasFeeReceiver,
     #[msg("Only the owner can close this call buffer")]
     Unauthorized,
+    #[msg("Bridge is currently paused")]
+    BridgePaused,
 }
 
 #[cfg(test)]

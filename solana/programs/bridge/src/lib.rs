@@ -18,7 +18,7 @@ use common::{
         set_gas_cost_scaler_dp_handler, set_gas_cost_scaler_handler, set_gas_fee_receiver_handler,
         set_gas_target_handler, set_max_call_buffer_size_handler,
         set_max_gas_limit_per_message_handler, set_minimum_base_fee_handler,
-        set_window_duration_handler,
+        set_window_duration_handler, set_pause_status_handler,
     },
     guardian::transfer_guardian_handler,
     initialize::initialize_handler,
@@ -507,5 +507,15 @@ pub mod bridge {
     /// * `new_size` - The new max call buffer size value
     pub fn set_max_call_buffer_size(ctx: Context<SetBridgeConfig>, new_size: u64) -> Result<()> {
         set_max_call_buffer_size_handler(ctx, new_size)
+    }
+
+    /// Set the pause status for the bridge
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_paused` - The new pause status (true for paused, false for unpaused)
+    pub fn set_pause_status(ctx: Context<SetBridgeConfig>, new_paused: bool) -> Result<()> {
+        set_pause_status_handler(ctx, new_paused)
     }
 }

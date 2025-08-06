@@ -6,6 +6,7 @@ use anchor_lang::{
 use crate::base_to_solana::{
     constants::BRIDGE_CPI_AUTHORITY_SEED, state::IncomingMessage, Message, Transfer,
 };
+use crate::common::{bridge::Bridge, BRIDGE_SEED};
 
 /// Accounts struct for the relay message instruction that executes cross-chain messages from Base to Solana.
 /// This instruction processes incoming messages that contain either pure instruction calls or token transfers
@@ -23,11 +24,19 @@ pub struct RelayMessage<'info> {
     /// - Prevents replay attacks by tracking execution status
     #[account(mut)]
     pub message: Account<'info, IncomingMessage>,
+
+    /// The main bridge state account used to check pause status
+    /// - Uses PDA with BRIDGE_SEED for deterministic address
+    #[account(seeds = [BRIDGE_SEED], bump)]
+    pub bridge: Account<'info, Bridge>,
 }
 
 pub fn relay_message_handler<'a, 'info>(
     ctx: Context<'a, '_, 'info, 'info, RelayMessage<'info>>,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, RelayMessageError::BridgePaused);
+
     require!(
         !ctx.accounts.message.executed,
         RelayMessageError::AlreadyExecuted
@@ -83,4 +92,6 @@ pub enum RelayMessageError {
     AlreadyExecuted,
     #[msg("Bridge CPI authority not found")]
     BridgeCpiAuthorityNotFound,
+    #[msg("Bridge is currently paused")]
+    BridgePaused,
 }

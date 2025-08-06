@@ -61,6 +61,9 @@ pub fn register_output_root_handler(
     base_block_number: u64,
     base_last_relayed_nonce: u64,
 ) -> Result<()> {
+    // Check if bridge is paused
+    require!(!ctx.accounts.bridge.paused, RegisterOutputRootError::BridgePaused);
+    
     require!(
         base_block_number > ctx.accounts.bridge.base_block_number
             && base_block_number
@@ -93,6 +96,8 @@ pub enum RegisterOutputRootError {
     IncorrectBlockNumber,
     #[msg("IncorrectLastRelayedNonce")]
     IncorrectLastRelayedNonce,
+    #[msg("BridgePaused")]
+    BridgePaused,
 }
 
 // TODO: Uncomment this when we have a trusted validator
