@@ -12,8 +12,8 @@ use crate::common::{
 use crate::solana_to_base::{
     GAS_COST_SCALER, GAS_COST_SCALER_DP, GAS_FEE_RECEIVER, MAX_CALL_BUFFER_SIZE,
     MAX_GAS_LIMIT_PER_MESSAGE, RELAY_MESSAGES_CALL_ABI_ENCODING_OVERHEAD,
-    RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD, RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD,
-    REMOTE_TOKEN_METADATA_KEY, SCALER_EXPONENT_METADATA_KEY,
+    RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD,
+    RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD,
 };
 
 #[account]
@@ -32,9 +32,7 @@ pub struct Bridge {
     /// Gas and fee management configuration
     pub gas_config: GasConfig,
     /// Gas buffer configuration for transaction execution
-    pub buffer_config: BufferConfig,
-    /// Token metadata configuration
-    pub metadata_config: MetadataConfig,
+    pub gas_buffer_config: GasBufferConfig,
     /// Protocol validation configuration
     pub protocol_config: ProtocolConfig,
     /// Buffer and size limits configuration
@@ -194,46 +192,27 @@ impl Default for GasConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct BufferConfig {
+pub struct GasBufferConfig {
     /// Additional relay buffer
-    pub extra_buffer: u64,
+    pub extra: u64,
     /// Pre-execution gas buffer
-    pub execution_prologue_gas_buffer: u64,
+    pub execution_prologue: u64,
     /// Main execution gas buffer
-    pub execution_gas_buffer: u64,
+    pub execution: u64,
     /// Post-execution gas buffer
-    pub execution_epilogue_gas_buffer: u64,
+    pub execution_epilogue: u64,
     /// Base transaction cost (Ethereum standard)
     pub base_transaction_cost: u64,
 }
 
-impl Default for BufferConfig {
+impl Default for GasBufferConfig {
     fn default() -> Self {
         Self {
-            extra_buffer: 10_000,
-            execution_prologue_gas_buffer: 65_000,
-            execution_gas_buffer: 40_000,
-            execution_epilogue_gas_buffer: 25_000,
+            extra: 10_000,
+            execution_prologue: 65_000,
+            execution: 40_000,
+            execution_epilogue: 25_000,
             base_transaction_cost: 21_000,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct MetadataConfig {
-    /// Metadata key for remote token reference (max 32 chars)
-    #[max_len(32)]
-    pub remote_token_metadata_key: String,
-    /// Metadata key for scaling exponent (max 32 chars)
-    #[max_len(32)]
-    pub scaler_exponent_metadata_key: String,
-}
-
-impl Default for MetadataConfig {
-    fn default() -> Self {
-        Self {
-            remote_token_metadata_key: REMOTE_TOKEN_METADATA_KEY.to_string(),
-            scaler_exponent_metadata_key: SCALER_EXPONENT_METADATA_KEY.to_string(),
         }
     }
 }
@@ -284,7 +263,8 @@ impl Default for AbiConfig {
         Self {
             relay_messages_call_overhead: RELAY_MESSAGES_CALL_ABI_ENCODING_OVERHEAD,
             relay_messages_transfer_overhead: RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD,
-            relay_messages_transfer_and_call_overhead: RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD,
+            relay_messages_transfer_and_call_overhead:
+                RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD,
         }
     }
 }

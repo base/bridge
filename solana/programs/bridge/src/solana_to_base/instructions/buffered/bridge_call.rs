@@ -149,7 +149,6 @@ mod tests {
         let max_data_len = 1024;
 
         // First, initialize the call buffer
-        let bridge_pda = Pubkey::find_program_address(&[BRIDGE_SEED], &ID).0;
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
             bridge: bridge_pda,
@@ -285,7 +284,6 @@ mod tests {
         let call_buffer = Keypair::new();
 
         // First, initialize the call buffer with owner
-        let bridge_pda = Pubkey::find_program_address(&[BRIDGE_SEED], &ID).0;
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
             bridge: bridge_pda,
@@ -383,7 +381,6 @@ mod tests {
         let call_buffer = Keypair::new();
 
         // Initialize the call buffer
-        let bridge_pda = Pubkey::find_program_address(&[BRIDGE_SEED], &ID).0;
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
             bridge: bridge_pda,

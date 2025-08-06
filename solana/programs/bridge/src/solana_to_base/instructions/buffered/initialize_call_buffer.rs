@@ -40,7 +40,7 @@ pub fn initialize_call_buffer_handler(
     to: [u8; 20],
     value: u128,
     initial_data: Vec<u8>,
-    max_data_len: usize,
+    _max_data_len: u64,
 ) -> Result<()> {
     *ctx.accounts.call_buffer = CallBuffer {
         owner: ctx.accounts.payer.key(),

@@ -10,26 +10,26 @@ use base_to_solana::*;
 use common::*;
 use common::{
     config::{
-        // EIP-1559 Configuration
-        set_minimum_base_fee_handler,
-        set_window_duration_handler,
-        set_gas_target_handler,
         set_adjustment_denominator_handler,
-        // Gas and Fee Management
-        set_max_gas_limit_per_message_handler,
-        set_gas_cost_scaler_handler,
-        set_gas_cost_scaler_dp_handler,
-        set_gas_fee_receiver_handler,
-        set_extra_buffer_handler,
-        set_execution_prologue_gas_buffer_handler,
-        set_execution_gas_buffer_handler,
-        set_execution_epilogue_gas_buffer_handler,
         set_base_transaction_cost_handler,
         // Protocol Configuration
         set_block_interval_requirement_handler,
+        set_execution_epilogue_gas_buffer_handler,
+        set_execution_gas_buffer_handler,
+        set_execution_prologue_gas_buffer_handler,
+        set_extra_buffer_handler,
+        set_gas_cost_scaler_dp_handler,
+        set_gas_cost_scaler_handler,
+        set_gas_fee_receiver_handler,
+        set_gas_target_handler,
         // Buffer and Size Limits Configuration
         set_max_call_buffer_size_handler,
         set_max_data_len_handler,
+        // Gas and Fee Management
+        set_max_gas_limit_per_message_handler,
+        // EIP-1559 Configuration
+        set_minimum_base_fee_handler,
+        set_window_duration_handler,
     },
     guardian::transfer_guardian as transfer_guardian_handler,
     initialize::initialize_handler,
@@ -306,7 +306,7 @@ pub mod bridge {
         initial_data: Vec<u8>,
         max_data_len: u64,
     ) -> Result<()> {
-        initialize_call_buffer_handler(ctx, ty, to, value, initial_data, max_data_len as usize)
+        initialize_call_buffer_handler(ctx, ty, to, value, initial_data, max_data_len)
     }
 
     /// Appends data to an existing call buffer account.
@@ -377,12 +377,18 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_denominator` - The new adjustment denominator (must be >= 1 and <= 100)
-    pub fn set_adjustment_denominator(ctx: Context<SetBridgeConfig>, new_denominator: u64) -> Result<()> {
+    pub fn set_adjustment_denominator(
+        ctx: Context<SetBridgeConfig>,
+        new_denominator: u64,
+    ) -> Result<()> {
         set_adjustment_denominator_handler(ctx, new_denominator)
     }
 
     // Gas configuration setters
-    pub fn set_max_gas_limit_per_message(ctx: Context<SetBridgeConfig>, new_limit: u64) -> Result<()> {
+    pub fn set_max_gas_limit_per_message(
+        ctx: Context<SetBridgeConfig>,
+        new_limit: u64,
+    ) -> Result<()> {
         set_max_gas_limit_per_message_handler(ctx, new_limit)
     }
 
@@ -403,7 +409,10 @@ pub mod bridge {
         set_extra_buffer_handler(ctx, new_buffer)
     }
 
-    pub fn set_execution_prologue_gas_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
+    pub fn set_execution_prologue_gas_buffer(
+        ctx: Context<SetBridgeConfig>,
+        new_buffer: u64,
+    ) -> Result<()> {
         set_execution_prologue_gas_buffer_handler(ctx, new_buffer)
     }
 
@@ -411,7 +420,10 @@ pub mod bridge {
         set_execution_gas_buffer_handler(ctx, new_buffer)
     }
 
-    pub fn set_execution_epilogue_gas_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
+    pub fn set_execution_epilogue_gas_buffer(
+        ctx: Context<SetBridgeConfig>,
+        new_buffer: u64,
+    ) -> Result<()> {
         set_execution_epilogue_gas_buffer_handler(ctx, new_buffer)
     }
 
@@ -423,7 +435,10 @@ pub mod bridge {
     // Note: Token metadata keys use constants since they're needed in trait implementations
 
     // Protocol configuration setters
-    pub fn set_block_interval_requirement(ctx: Context<SetBridgeConfig>, new_interval: u64) -> Result<()> {
+    pub fn set_block_interval_requirement(
+        ctx: Context<SetBridgeConfig>,
+        new_interval: u64,
+    ) -> Result<()> {
         set_block_interval_requirement_handler(ctx, new_interval)
     }
 

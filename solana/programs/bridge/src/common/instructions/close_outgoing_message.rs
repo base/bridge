@@ -42,8 +42,8 @@ pub fn close_outgoing_message_handler(_ctx: Context<CloseOutgoingMessage>) -> Re
 
 #[error_code]
 pub enum CloseOutgoingMessageError {
-    #[msg("Incorrect original payer")]
-    IncorrectOriginalPayer,
     #[msg("Message has not been relayed yet")]
     MessageNotRelayed,
+    #[msg("Incorrect original payer")]
+    IncorrectOriginalPayer,
 }

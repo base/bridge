@@ -1,9 +1,11 @@
 use anchor_lang::prelude::*;
 
 use crate::common::{
-        bridge::{Bridge, Eip1559, GasConfig, BufferConfig, MetadataConfig, ProtocolConfig, LimitsConfig, AbiConfig},
-        BRIDGE_SEED,
-    };
+    bridge::{
+        AbiConfig, Bridge, Eip1559, GasBufferConfig, GasConfig, LimitsConfig, ProtocolConfig,
+    },
+    BRIDGE_SEED,
+};
 
 /// Accounts struct for the initialize instruction that sets up the bridge program's initial state.
 /// This instruction creates the main bridge account with default values for cross-chain operations
@@ -47,8 +49,7 @@ pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
         eip1559: Eip1559::new(current_timestamp),
         guardian: ctx.accounts.guardian.key(),
         gas_config: GasConfig::default(),
-        buffer_config: BufferConfig::default(),
-        metadata_config: MetadataConfig::default(),
+        gas_buffer_config: GasBufferConfig::default(),
         protocol_config: ProtocolConfig::default(),
         limits_config: LimitsConfig::default(),
         abi_config: AbiConfig::default(),
@@ -140,8 +141,7 @@ mod tests {
                 eip1559: Eip1559::new(timestamp),
                 guardian: guardian_pk,
                 gas_config: GasConfig::default(),
-                buffer_config: BufferConfig::default(),
-                metadata_config: MetadataConfig::default(),
+                gas_buffer_config: GasBufferConfig::default(),
                 protocol_config: ProtocolConfig::default(),
                 limits_config: LimitsConfig::default(),
                 abi_config: AbiConfig::default(),

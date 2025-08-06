@@ -1,10 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    common::bridge::{Bridge},
-    solana_to_base::{
-        Call, CallType,
-    },
+    common::bridge::Bridge,
+    solana_to_base::{Call, CallType},
 };
 
 pub mod wrap_token;
@@ -77,7 +75,8 @@ fn pay_for_gas<'info>(
     // Record gas usage for this transaction
     bridge.eip1559.add_gas_usage(gas_limit);
 
-    let gas_cost = gas_limit * base_fee * bridge.gas_config.gas_cost_scaler / bridge.gas_config.gas_cost_scaler_dp;
+    let gas_cost = gas_limit * base_fee * bridge.gas_config.gas_cost_scaler
+        / bridge.gas_config.gas_cost_scaler_dp;
 
     let cpi_ctx = CpiContext::new(
         system_program.to_account_info(),
@@ -94,11 +93,11 @@ fn pay_for_gas<'info>(
 
 fn min_gas_limit(tx_size: usize, bridge: &Bridge) -> u64 {
     tx_size as u64 * 40
-        + bridge.buffer_config.base_transaction_cost
-        + bridge.buffer_config.extra_buffer
-        + bridge.buffer_config.execution_prologue_gas_buffer
-        + bridge.buffer_config.execution_gas_buffer
-        + bridge.buffer_config.execution_epilogue_gas_buffer
+        + bridge.gas_buffer_config.base_transaction_cost
+        + bridge.gas_buffer_config.extra
+        + bridge.gas_buffer_config.execution_prologue
+        + bridge.gas_buffer_config.execution
+        + bridge.gas_buffer_config.execution_epilogue
 }
 
 #[error_code]

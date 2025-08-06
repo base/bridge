@@ -28,7 +28,6 @@ pub const GAS_FEE_RECEIVER: Pubkey = TRUSTED_ORACLE;
 
 pub const MAX_CALL_BUFFER_SIZE: usize = 8 * 1024; // 8kb max size for call buffer data
 
-
 #[cfg(test)]
 mod tests {
     use alloy_sol_types::{SolInterface, SolValue};
