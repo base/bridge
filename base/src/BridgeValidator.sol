@@ -20,12 +20,12 @@ contract BridgeValidator {
     /// @notice Address of the trusted relayer that pre-verifies new messages from Solana.
     address public immutable BASE_ORACLE;
 
+    /// @notice Required number of signatures from bridge partner
+    uint256 public immutable PARTNER_VALIDATOR_THRESHOLD;
+
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
-
-    /// @notice Required number of signatures from bridge partner
-    uint256 partnerValidatorThreshold;
 
     /// @notice A mapping of pre-validated valid messages. Each pre-validated message corresponds to a message sent
     ///         from Solana.
@@ -73,8 +73,10 @@ contract BridgeValidator {
     /// @notice Deploys the BridgeValidator contract with a specified trusted relayer
     ///
     /// @param trustedRelayer The address with permission to call `registerMessages`
-    constructor(address trustedRelayer) {
+    /// @param partnerValidatorThreshold The number of partner validator signatures required for message pre-validation
+    constructor(address trustedRelayer, uint256 partnerValidatorThreshold) {
         BASE_ORACLE = trustedRelayer;
+        PARTNER_VALIDATOR_THRESHOLD = partnerValidatorThreshold;
     }
 
     /// @notice Pre-validates a batch of Solana --> Base messages.
@@ -153,7 +155,7 @@ contract BridgeValidator {
             lastValidator = currentValidator;
         }
 
-        require(signedByBaseOracle && externalSigners >= partnerValidatorThreshold, ThresholdNotMet());
+        require(signedByBaseOracle && externalSigners >= PARTNER_VALIDATOR_THRESHOLD, ThresholdNotMet());
 
         return true;
     }

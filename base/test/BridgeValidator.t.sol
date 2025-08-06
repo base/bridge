@@ -257,7 +257,7 @@ contract BridgeValidatorTest is CommonTest {
     }
 
     function testFuzz_constructor_withRandomAddress(address randomRelayer) public {
-        BridgeValidator testValidator = new BridgeValidator(randomRelayer);
+        BridgeValidator testValidator = new BridgeValidator(randomRelayer, 0);
         assertEq(testValidator.BASE_ORACLE(), randomRelayer);
     }
 }

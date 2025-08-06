@@ -15,6 +15,7 @@ contract HelperConfig is Script {
         address trustedRelayer;
         address erc1967Factory;
         address[] guardians;
+        uint256 partnerValidatorThreshold;
     }
 
     NetworkConfig private _activeNetworkConfig;
@@ -57,7 +58,8 @@ contract HelperConfig is Script {
             remoteBridge: Pubkey.wrap(0x9379502b8fd1d9f6feee747094a08cd0f9b79fbbc7e51a36e2da237ee1506460), // AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH
             trustedRelayer: BASE_ORACLE,
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
-            guardians: guardians
+            guardians: guardians,
+            partnerValidatorThreshold: 0
         });
     }
 
@@ -76,7 +78,8 @@ contract HelperConfig is Script {
             remoteBridge: Pubkey.wrap(0xc4c16980efe2a570c1a7599fd2ebb40ca7f85daf897482b9c85d4b8933a61608),
             trustedRelayer: vm.addr(1),
             erc1967Factory: address(f),
-            guardians: guardians
+            guardians: guardians,
+            partnerValidatorThreshold: 0
         });
     }
 }
