@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::solana_to_base::{
     RELAY_MESSAGES_CALL_ABI_ENCODING_OVERHEAD, RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD,
+    RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD,
 };
 
 /// Represents a token transfer from Solana to Base with optional contract execution.
@@ -163,8 +164,13 @@ impl OutgoingMessage {
                     + call.data.len().div_ceil(32) * 32
             }
             Message::Transfer(transfer) => {
-                // TODO: Fix this, seems like it should use RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD if a call exists.
-                RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD as usize
+                let overhead = if transfer.call.is_some() {
+                    RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD as usize
+                } else {
+                    RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD as usize
+                };
+
+                overhead
                     + transfer
                         .call
                         .as_ref()

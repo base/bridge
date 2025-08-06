@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::common::{
-    bridge::{AbiConfig, Bridge, BufferConfig, Eip1559, GasConfig, GasCostConfig, ProtocolConfig},
+    bridge::{Bridge, BufferConfig, Eip1559, GasConfig, GasCostConfig, ProtocolConfig},
     BRIDGE_SEED,
 };
 
@@ -50,7 +50,6 @@ pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
         gas_config: GasConfig::default(),
         protocol_config: ProtocolConfig::default(),
         buffer_config: BufferConfig::default(),
-        abi_config: AbiConfig::default(),
     };
 
     Ok(())
@@ -142,7 +141,6 @@ mod tests {
                 gas_config: GasConfig::default(),
                 protocol_config: ProtocolConfig::default(),
                 buffer_config: BufferConfig::default(),
-                abi_config: AbiConfig::default(),
             }
         );
     }

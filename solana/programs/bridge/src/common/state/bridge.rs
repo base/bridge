@@ -11,9 +11,7 @@ use crate::common::{
 // Import constants for default values
 use crate::solana_to_base::{
     GAS_COST_SCALER, GAS_COST_SCALER_DP, GAS_FEE_RECEIVER, MAX_CALL_BUFFER_SIZE,
-    MAX_GAS_LIMIT_PER_MESSAGE, RELAY_MESSAGES_CALL_ABI_ENCODING_OVERHEAD,
-    RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD,
-    RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD,
+    MAX_GAS_LIMIT_PER_MESSAGE,
 };
 
 #[account]
@@ -37,8 +35,6 @@ pub struct Bridge {
     pub protocol_config: ProtocolConfig,
     /// Buffer configuration
     pub buffer_config: BufferConfig,
-    /// ABI encoding overhead configuration
-    pub abi_config: AbiConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
@@ -241,27 +237,6 @@ impl Default for BufferConfig {
     fn default() -> Self {
         Self {
             max_call_buffer_size: MAX_CALL_BUFFER_SIZE as u64,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct AbiConfig {
-    /// Overhead for call messages
-    pub relay_messages_call_overhead: u64,
-    /// Overhead for transfer messages
-    pub relay_messages_transfer_overhead: u64,
-    /// Overhead for combined transfer and call messages
-    pub relay_messages_transfer_and_call_overhead: u64,
-}
-
-impl Default for AbiConfig {
-    fn default() -> Self {
-        Self {
-            relay_messages_call_overhead: RELAY_MESSAGES_CALL_ABI_ENCODING_OVERHEAD,
-            relay_messages_transfer_overhead: RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD,
-            relay_messages_transfer_and_call_overhead:
-                RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD,
         }
     }
 }
