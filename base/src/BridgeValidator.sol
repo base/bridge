@@ -1,21 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {ECDSA} from "solady/utils/ECDSA.sol";
+
 /// @title BridgeValidator
 ///
 /// @notice A validator contract to be used during the Stage 0 phase of Base Bridge. This will likely later be replaced
 ///         by `CrossL2Inbox` from the OP Stack.
 contract BridgeValidator {
+    using ECDSA for bytes32;
+
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
 
+    /// @notice The length of a signature in bytes.
+    uint256 public constant SIGNATURE_LENGTH_THRESHOLD = 65;
+
     /// @notice Address of the trusted relayer that pre-verifies new messages from Solana.
-    address public immutable TRUSTED_RELAYER;
+    address public immutable BASE_ORACLE;
 
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
+
+    /// @notice Required number of signatures from bridge partner
+    uint256 partnerValidatorThreshold;
 
     /// @notice A mapping of pre-validated valid messages. Each pre-validated message corresponds to a message sent
     ///         from Solana.
@@ -40,8 +50,8 @@ contract BridgeValidator {
     ///                       Errors                           ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Thrown when an entity other than `TRUSTED_RELAYER` attempts to call `registerMessages`
-    error InvalidCaller();
+    /// @notice Thrown when an entity other than `BASE_ORACLE` attempts to call `registerMessages`
+    error InvalidSigner();
 
     /// @notice Thrown when `validatorSigs` verification fails. These are signatures from our bridge partner's
     /// validators.
@@ -49,6 +59,12 @@ contract BridgeValidator {
 
     /// @notice Thrown when `validateMessage` is called with a message hash that has not been pre-validated.
     error InvalidMessage();
+
+    /// @notice Thrown when the provided `validatorSigs` byte string length is not a multiple of 65
+    error InvalidSignatureLength();
+
+    /// @notice Thrown when the required amount of signatures is not included with a `registerMessages` call
+    error ThresholdNotMet();
 
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
@@ -58,7 +74,7 @@ contract BridgeValidator {
     ///
     /// @param trustedRelayer The address with permission to call `registerMessages`
     constructor(address trustedRelayer) {
-        TRUSTED_RELAYER = trustedRelayer;
+        BASE_ORACLE = trustedRelayer;
     }
 
     /// @notice Pre-validates a batch of Solana --> Base messages.
@@ -67,13 +83,7 @@ contract BridgeValidator {
     /// @param validatorSigs A concatenated bytes array of bridge partner validator signatures attesting to the validity
     ///                      of `messageHashes`
     function registerMessages(bytes32[] calldata messageHashes, bytes calldata validatorSigs) external {
-        if (msg.sender != TRUSTED_RELAYER) {
-            revert InvalidCaller();
-        }
-
-        if (!_validatorSigsAreValid(validatorSigs)) {
-            revert Unauthenticated();
-        }
+        require(_validatorSigsAreValid({messageHashes: messageHashes, sigData: validatorSigs}), Unauthenticated());
 
         for (uint256 i; i < messageHashes.length; i++) {
             validMessages[messageHashes[i]] = true;
@@ -88,10 +98,7 @@ contract BridgeValidator {
     ///
     /// @param messageHash Hash of the message payload to call target with.
     function validateMessage(bytes32 messageHash) external {
-        if (!validMessages[messageHash]) {
-            revert InvalidMessage();
-        }
-
+        require(validMessages[messageHash], InvalidMessage());
         emit ExecutingMessage(messageHash);
     }
 
@@ -99,7 +106,77 @@ contract BridgeValidator {
     ///                    Private Functions                   ///
     //////////////////////////////////////////////////////////////
 
-    function _validatorSigsAreValid(bytes calldata) private pure returns (bool) {
+    function _validatorSigsAreValid(bytes32[] calldata messageHashes, bytes calldata sigData)
+        private
+        view
+        returns (bool)
+    {
+        // Check that the provided signature data is not too short
+        require(sigData.length % SIGNATURE_LENGTH_THRESHOLD == 0, InvalidSignatureLength());
+
+        uint256 sigCount = sigData.length / SIGNATURE_LENGTH_THRESHOLD;
+        address[] memory partnerValidators = new address[](0);
+        bytes32 signedHash = keccak256(abi.encode(messageHashes));
+        address lastValidator = address(0);
+
+        uint256 offset;
+        assembly {
+            offset := sigData.offset
+        }
+
+        bool signedByBaseOracle;
+        uint256 externalSigners;
+
+        for (uint256 i; i < sigCount; i++) {
+            (uint8 v, bytes32 r, bytes32 s) = _signatureSplit(offset, i);
+            address currentValidator = signedHash.recover(v, r, s);
+
+            if (currentValidator == lastValidator) {
+                return false;
+            }
+
+            if (currentValidator < lastValidator) {
+                return false;
+            }
+
+            // Verify signer is valid
+            if (currentValidator == BASE_ORACLE) {
+                signedByBaseOracle = true;
+            } else {
+                // Check if registered partner validator
+                require(_addressInList(partnerValidators, currentValidator), InvalidSigner());
+                unchecked {
+                    externalSigners++;
+                }
+            }
+
+            lastValidator = currentValidator;
+        }
+
+        require(signedByBaseOracle && externalSigners >= partnerValidatorThreshold, ThresholdNotMet());
+
         return true;
+    }
+
+    function _signatureSplit(uint256 signaturesCalldataOffset, uint256 pos)
+        private
+        pure
+        returns (uint8 v, bytes32 r, bytes32 s)
+    {
+        assembly {
+            let signaturePos := mul(0x41, pos) // 65 bytes per signature
+            r := calldataload(add(signaturesCalldataOffset, signaturePos)) // r at offset 0
+            s := calldataload(add(signaturesCalldataOffset, add(signaturePos, 0x20))) // s at offset 32
+            v := and(calldataload(add(signaturesCalldataOffset, add(signaturePos, 0x21))), 0xff) // v at offset 64
+        }
+    }
+
+    function _addressInList(address[] memory addrs, address addr) private pure returns (bool) {
+        for (uint256 i; i < addrs.length; i++) {
+            if (addr == addrs[i]) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test} from "forge-std/Test.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 
 import {DeployScript} from "../script/Deploy.s.sol";
@@ -9,13 +8,12 @@ import {DeployScript} from "../script/Deploy.s.sol";
 import {Bridge} from "../src/Bridge.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
+import {CommonTest} from "./CommonTest.t.sol";
 
-contract CrossChainERC20FactoryTest is Test {
+contract CrossChainERC20FactoryTest is CommonTest {
     //////////////////////////////////////////////////////////////
     ///                       Test Setup                       ///
     //////////////////////////////////////////////////////////////
-    Bridge public bridge;
-    CrossChainERC20Factory public factory;
     address public beacon;
 
     // Test users

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test, console} from "forge-std/Test.sol";
 import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
@@ -10,13 +9,12 @@ import {Bridge} from "../src/Bridge.sol";
 import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
+import {CommonTest} from "./CommonTest.t.sol";
 
-contract CrossChainERC20Test is Test {
+contract CrossChainERC20Test is CommonTest {
     //////////////////////////////////////////////////////////////
     ///                       Test Setup                       ///
     //////////////////////////////////////////////////////////////
-    Bridge public bridge;
-    CrossChainERC20Factory public factory;
     CrossChainERC20 public token;
 
     address public user1 = makeAddr("user1");
@@ -415,24 +413,5 @@ contract CrossChainERC20Test is Test {
         assertEq(token.balanceOf(user1), 0);
 
         vm.stopPrank();
-    }
-
-    function test_gasUsage() public {
-        uint256 gasBefore;
-        uint256 gasAfter;
-
-        vm.prank(address(bridge));
-        gasBefore = gasleft();
-        token.mint(user1, MINT_AMOUNT);
-        gasAfter = gasleft();
-
-        console.log("Gas used for mint:", gasBefore - gasAfter);
-
-        vm.prank(address(bridge));
-        gasBefore = gasleft();
-        token.burn(user1, BURN_AMOUNT);
-        gasAfter = gasleft();
-
-        console.log("Gas used for burn:", gasBefore - gasAfter);
     }
 }

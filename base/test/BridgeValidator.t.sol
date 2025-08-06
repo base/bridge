@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test} from "forge-std/Test.sol";
-
 import {DeployScript} from "../script/Deploy.s.sol";
 import {HelperConfig} from "../script/HelperConfig.s.sol";
 
 import {BridgeValidator} from "../src/BridgeValidator.sol";
+import {CommonTest} from "./CommonTest.t.sol";
 
-contract BridgeValidatorTest is Test {
+contract BridgeValidatorTest is CommonTest {
     //////////////////////////////////////////////////////////////
     ///                       Test Setup                       ///
     //////////////////////////////////////////////////////////////
-
-    BridgeValidator public bridgeValidator;
-    HelperConfig.NetworkConfig public cfg;
 
     // Test data
     bytes32 public constant TEST_MESSAGE_HASH_1 = keccak256("test_message_1");
@@ -27,7 +23,6 @@ contract BridgeValidatorTest is Test {
 
     function setUp() public {
         DeployScript deployer = new DeployScript();
-        HelperConfig helperConfig;
         (, bridgeValidator,,, helperConfig) = deployer.run();
         cfg = helperConfig.getConfig();
     }
@@ -37,7 +32,7 @@ contract BridgeValidatorTest is Test {
     //////////////////////////////////////////////////////////////
 
     function test_constructor_setsTrustedRelayerCorrectly() public view {
-        assertEq(bridgeValidator.TRUSTED_RELAYER(), cfg.trustedRelayer);
+        assertEq(bridgeValidator.BASE_ORACLE(), cfg.trustedRelayer);
     }
 
     //////////////////////////////////////////////////////////////
@@ -53,7 +48,7 @@ contract BridgeValidatorTest is Test {
         emit MessagesRegistered(messageHashes);
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
 
         // Verify messages are now valid
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
@@ -68,7 +63,7 @@ contract BridgeValidatorTest is Test {
         emit MessagesRegistered(messageHashes);
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
 
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
     }
@@ -80,7 +75,7 @@ contract BridgeValidatorTest is Test {
         emit MessagesRegistered(messageHashes);
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
     }
 
     function test_registerMessages_largeArray() public {
@@ -93,23 +88,12 @@ contract BridgeValidatorTest is Test {
         emit MessagesRegistered(messageHashes);
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
 
         // Verify all messages are registered
         for (uint256 i; i < 100; i++) {
             assertTrue(bridgeValidator.validMessages(messageHashes[i]));
         }
-    }
-
-    function test_registerMessages_revertsOnInvalidCaller() public {
-        bytes32[] memory messageHashes = new bytes32[](1);
-        messageHashes[0] = TEST_MESSAGE_HASH_1;
-
-        vm.expectRevert(BridgeValidator.InvalidCaller.selector);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
-
-        // Verify message is not registered
-        assertFalse(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
     }
 
     function test_registerMessages_duplicateMessageHashes() public {
@@ -118,7 +102,7 @@ contract BridgeValidatorTest is Test {
         messageHashes[1] = TEST_MESSAGE_HASH_1; // Duplicate
         messageHashes[2] = TEST_MESSAGE_HASH_2;
 
-        bytes memory validatorSigs = _getValidatorSigs();
+        bytes memory validatorSigs = _getValidatorSigs(messageHashes);
 
         vm.expectEmit(false, false, false, true);
         emit MessagesRegistered(messageHashes);
@@ -137,7 +121,7 @@ contract BridgeValidatorTest is Test {
         messageHashes1[0] = TEST_MESSAGE_HASH_1;
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes1, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes1, _getValidatorSigs(messageHashes1));
 
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
 
@@ -149,7 +133,7 @@ contract BridgeValidatorTest is Test {
         emit MessagesRegistered(messageHashes2);
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes2, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes2, _getValidatorSigs(messageHashes2));
 
         // Should still be valid
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
@@ -165,7 +149,7 @@ contract BridgeValidatorTest is Test {
         messageHashes[0] = TEST_MESSAGE_HASH_1;
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
 
         // Now validate it
         vm.expectEmit(true, false, false, false);
@@ -180,7 +164,7 @@ contract BridgeValidatorTest is Test {
         messageHashes[0] = TEST_MESSAGE_HASH_1;
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
 
         // Validate multiple times - should all succeed
         vm.expectEmit(true, false, false, false);
@@ -204,7 +188,7 @@ contract BridgeValidatorTest is Test {
         messageHashes[0] = TEST_MESSAGE_HASH_1;
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
 
         // Try to validate a different message
         vm.expectRevert(BridgeValidator.InvalidMessage.selector);
@@ -227,7 +211,7 @@ contract BridgeValidatorTest is Test {
         messageHashes[1] = TEST_MESSAGE_HASH_2;
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
 
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_2));
@@ -245,7 +229,7 @@ contract BridgeValidatorTest is Test {
         emit MessagesRegistered(messageHashes);
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
 
         // Verify all messages are registered
         for (uint256 i; i < messageHashes.length; i++) {
@@ -258,7 +242,7 @@ contract BridgeValidatorTest is Test {
         messageHashes[0] = messageHash;
 
         vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs());
+        bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
 
         vm.expectEmit(true, false, false, false);
         emit ExecutingMessage(messageHash);
@@ -274,10 +258,6 @@ contract BridgeValidatorTest is Test {
 
     function testFuzz_constructor_withRandomAddress(address randomRelayer) public {
         BridgeValidator testValidator = new BridgeValidator(randomRelayer);
-        assertEq(testValidator.TRUSTED_RELAYER(), randomRelayer);
-    }
-
-    function _getValidatorSigs() private pure returns (bytes memory) {
-        return "";
+        assertEq(testValidator.BASE_ORACLE(), randomRelayer);
     }
 }

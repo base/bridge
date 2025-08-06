@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test} from "forge-std/Test.sol";
-
 import {DeployScript} from "../../script/Deploy.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
@@ -14,20 +12,15 @@ import {Call, CallType} from "../../src/libraries/CallLib.sol";
 import {IncomingMessage, MessageType} from "../../src/libraries/MessageLib.sol";
 import {Ix, Pubkey} from "../../src/libraries/SVMLib.sol";
 import {TokenLib, Transfer} from "../../src/libraries/TokenLib.sol";
+
+import {CommonTest} from "../CommonTest.t.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MockFeeERC20} from "../mocks/MockFeeERC20.sol";
 
-contract TokenLibTest is Test {
+contract TokenLibTest is CommonTest {
     // Test addresses and constants
     address public alice = makeAddr("alice");
     address public bob = makeAddr("bob");
-
-    // Deployed contracts
-    BridgeValidator public bridgeValidator;
-    Bridge public bridge;
-    CrossChainERC20Factory public factory;
-    HelperConfig public helperConfig;
-    HelperConfig.NetworkConfig public cfg;
 
     // Test tokens
     MockERC20 public mockToken;
@@ -713,17 +706,5 @@ contract TokenLibTest is Test {
             Ix[] memory emptyIxs;
             bridge.bridgeToken{value: amount}(setupTransfer, emptyIxs);
         }
-    }
-
-    function _registerMessage(IncomingMessage memory message) private {
-        vm.startPrank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(_messageToMessageHashes(message), "");
-        vm.stopPrank();
-    }
-
-    function _messageToMessageHashes(IncomingMessage memory message) private view returns (bytes32[] memory) {
-        bytes32[] memory messageHashes = new bytes32[](1);
-        messageHashes[0] = bridge.getMessageHash(message);
-        return messageHashes;
     }
 }

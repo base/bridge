@@ -74,7 +74,7 @@ contract HelperConfig is Script {
         return NetworkConfig({
             initialOwner: makeAddr("initialOwner"),
             remoteBridge: Pubkey.wrap(0xc4c16980efe2a570c1a7599fd2ebb40ca7f85daf897482b9c85d4b8933a61608),
-            trustedRelayer: makeAddr("trustedRelayer"),
+            trustedRelayer: vm.addr(1),
             erc1967Factory: address(f),
             guardians: guardians
         });
