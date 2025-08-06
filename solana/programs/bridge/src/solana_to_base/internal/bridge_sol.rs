@@ -41,7 +41,7 @@ pub fn bridge_sol_internal<'info>(
         },
     );
 
-    pay_for_gas(system_program, payer, gas_fee_receiver, &mut bridge.eip1559)?;
+    pay_for_gas(system_program, payer, gas_fee_receiver, bridge)?;
 
     // Lock the sol from the user into the SOL vault.
     let cpi_ctx = CpiContext::new(

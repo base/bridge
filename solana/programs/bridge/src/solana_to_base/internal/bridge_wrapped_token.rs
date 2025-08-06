@@ -45,7 +45,7 @@ pub fn bridge_wrapped_token_internal<'info>(
         },
     );
 
-    pay_for_gas(system_program, payer, gas_fee_receiver, &mut bridge.eip1559)?;
+    pay_for_gas(system_program, payer, gas_fee_receiver, bridge)?;
 
     // Burn the token from the user.
     let cpi_ctx = CpiContext::new(

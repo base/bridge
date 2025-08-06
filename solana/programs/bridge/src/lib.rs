@@ -2,21 +2,37 @@
 
 use anchor_lang::prelude::*;
 
-pub mod base_to_solana;
-pub mod common;
-pub mod solana_to_base;
-
-#[cfg(test)]
-mod test_utils;
+mod base_to_solana;
+mod common;
+mod solana_to_base;
 
 use base_to_solana::*;
 use common::*;
+
+use common::{
+    bridge::{BufferConfig, Eip1559Config, GasConfig, GasCostConfig, ProtocolConfig},
+    config::{
+        set_adjustment_denominator_handler, set_block_interval_requirement_handler,
+        set_execution_epilogue_gas_buffer_handler, set_execution_gas_buffer_handler,
+        set_execution_prologue_gas_buffer_handler, set_extra_gas_buffer_handler,
+        set_gas_cost_scaler_dp_handler, set_gas_cost_scaler_handler, set_gas_fee_receiver_handler,
+        set_gas_target_handler, set_max_call_buffer_size_handler,
+        set_max_gas_limit_per_message_handler, set_minimum_base_fee_handler,
+        set_window_duration_handler,
+    },
+    guardian::transfer_guardian_handler,
+    initialize::initialize_handler,
+};
 use solana_to_base::*;
+
+#[cfg(test)]
+mod test_utils;
 
 declare_id!("4L8cUU2DXTzEaa5C8MWLTyEV8dpmpDbCjg8DNgUuGedc");
 
 #[program]
 pub mod bridge {
+
     use super::*;
 
     // Common
@@ -25,9 +41,28 @@ pub mod bridge {
     /// This function sets up the initial bridge configuration and must be called once during deployment.
     ///
     /// # Arguments
-    /// * `ctx` - The context containing all accounts needed for initialization
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize_handler(ctx)
+    /// * `ctx` - The context containing all accounts needed for initialization, including the guardian signer
+    /// * `eip1559_config` - The EIP-1559 configuration, contains the gas target, adjustment denominator, window duration, and minimum base fee
+    /// * `gas_cost_config` - The gas cost configuration, contains the gas cost scaler, gas cost scaler decimal precision, and gas fee receiver
+    /// * `gas_config` - The gas configuration, contains the extra relay buffer, execution prologue buffer, execution buffer, execution epilogue buffer, base transaction cost, and max gas limit per message
+    /// * `protocol_config` - The protocol configuration, contains the block interval requirement for output root registration
+    /// * `buffer_config` - The buffer configuration, contains the maximum call buffer size
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        eip1559_config: Eip1559Config,
+        gas_cost_config: GasCostConfig,
+        gas_config: GasConfig,
+        protocol_config: ProtocolConfig,
+        buffer_config: BufferConfig,
+    ) -> Result<()> {
+        initialize_handler(
+            ctx,
+            eip1559_config,
+            gas_cost_config,
+            gas_config,
+            protocol_config,
+            buffer_config,
+        )
     }
 
     /// Closes an outgoing message account after it has been relayed to Base.
@@ -249,7 +284,7 @@ pub mod bridge {
     /// before using it in a bridge operation.
     ///
     /// # Arguments
-    /// * `ctx`          - The context containing accounts for initialization
+    /// * `ctx`          - The context containing accounts for initialization (including bridge config)
     /// * `ty`           - The type of call (Call, DelegateCall, Create, Create2)
     /// * `to`           - The target contract address on Base
     /// * `value`        - The amount of ETH to send with the call (in wei)
@@ -261,7 +296,7 @@ pub mod bridge {
         to: [u8; 20],
         value: u128,
         initial_data: Vec<u8>,
-        max_data_len: usize,
+        max_data_len: u64,
     ) -> Result<()> {
         initialize_call_buffer_handler(ctx, ty, to, value, initial_data, max_data_len)
     }
@@ -284,5 +319,176 @@ pub mod bridge {
     /// * `ctx` - The context containing the call buffer to close and rent receiver
     pub fn close_call_buffer(ctx: Context<CloseCallBuffer>) -> Result<()> {
         close_call_buffer_handler(ctx)
+    }
+
+    /// Transfer guardian authority to a new pubkey
+    /// Only the current guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and current guardian
+    /// * `new_guardian` - The pubkey of the new guardian
+    pub fn transfer_guardian(ctx: Context<TransferGuardian>, new_guardian: Pubkey) -> Result<()> {
+        transfer_guardian_handler(ctx, new_guardian)
+    }
+
+    // EIP-1559 Configuration Management
+
+    /// Set the minimum base fee for EIP-1559 pricing
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_fee` - The new minimum base fee value (must be > 0 and <= 1,000,000,000)
+    pub fn set_minimum_base_fee(ctx: Context<SetBridgeConfig>, new_fee: u64) -> Result<()> {
+        set_minimum_base_fee_handler(ctx, new_fee)
+    }
+
+    /// Set the window duration for EIP-1559 pricing
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_duration` - The new window duration in seconds (must be > 0 and <= 3600)
+    pub fn set_window_duration(ctx: Context<SetBridgeConfig>, new_duration: u64) -> Result<()> {
+        set_window_duration_handler(ctx, new_duration)
+    }
+
+    /// Set the gas target for EIP-1559 pricing
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_target` - The new gas target value (must be > 0 and <= 1,000,000,000)
+    pub fn set_gas_target(ctx: Context<SetBridgeConfig>, new_target: u64) -> Result<()> {
+        set_gas_target_handler(ctx, new_target)
+    }
+
+    /// Set the adjustment denominator for EIP-1559 pricing
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_denominator` - The new adjustment denominator (must be >= 1 and <= 100)
+    pub fn set_adjustment_denominator(
+        ctx: Context<SetBridgeConfig>,
+        new_denominator: u64,
+    ) -> Result<()> {
+        set_adjustment_denominator_handler(ctx, new_denominator)
+    }
+
+    /// Set the gas cost scaler for Gas Cost Config
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_scaler` - The new gas cost scaler value (must be > 0 and <= 1,000,000,000)
+    pub fn set_gas_cost_scaler(ctx: Context<SetBridgeConfig>, new_scaler: u64) -> Result<()> {
+        set_gas_cost_scaler_handler(ctx, new_scaler)
+    }
+
+    /// Set the gas cost scaler DP for Gas Cost Config
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_dp` - The new gas cost scaler DP value (must be > 0 and <= 1,000,000,000)
+    pub fn set_gas_cost_scaler_dp(ctx: Context<SetBridgeConfig>, new_dp: u64) -> Result<()> {
+        set_gas_cost_scaler_dp_handler(ctx, new_dp)
+    }
+
+    /// Set the gas fee receiver for Gas Cost Config
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_receiver` - The new gas fee receiver
+    pub fn set_gas_fee_receiver(ctx: Context<SetBridgeConfig>, new_receiver: Pubkey) -> Result<()> {
+        set_gas_fee_receiver_handler(ctx, new_receiver)
+    }
+
+    /// Set the gas extra buffer for Gas Config
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_buffer` - The new gas extra buffer value
+    pub fn set_gas_extra_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
+        set_extra_gas_buffer_handler(ctx, new_buffer)
+    }
+
+    /// Set the execution prologue gas buffer for Gas Config
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_buffer` - The new execution prologue gas buffer value
+    pub fn set_execution_prologue_gas_buffer(
+        ctx: Context<SetBridgeConfig>,
+        new_buffer: u64,
+    ) -> Result<()> {
+        set_execution_prologue_gas_buffer_handler(ctx, new_buffer)
+    }
+
+    pub fn set_execution_gas_buffer(ctx: Context<SetBridgeConfig>, new_buffer: u64) -> Result<()> {
+        set_execution_gas_buffer_handler(ctx, new_buffer)
+    }
+
+    /// Set the execution epilogue gas buffer for Gas Config
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_buffer` - The new execution epilogue gas buffer value
+    pub fn set_execution_epilogue_gas_buffer(
+        ctx: Context<SetBridgeConfig>,
+        new_buffer: u64,
+    ) -> Result<()> {
+        set_execution_epilogue_gas_buffer_handler(ctx, new_buffer)
+    }
+
+    /// Set the base gas buffer for Gas Config
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_cost` - The new base gas buffer value
+    pub fn set_base_gas_buffer(ctx: Context<SetBridgeConfig>, new_cost: u64) -> Result<()> {
+        set_base_gas_buffer_handler(ctx, new_cost)
+    }
+
+    /// Set the max gas limit per message for Gas Config
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_limit` - The new max gas limit per message value
+    pub fn set_max_gas_limit_per_message(
+        ctx: Context<SetBridgeConfig>,
+        new_limit: u64,
+    ) -> Result<()> {
+        set_max_gas_limit_per_message_handler(ctx, new_limit)
+    }
+
+    /// Set the block interval requirement for Protocol Config
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_interval` - The new block interval requirement value
+    pub fn set_block_interval_requirement(
+        ctx: Context<SetBridgeConfig>,
+        new_interval: u64,
+    ) -> Result<()> {
+        set_block_interval_requirement_handler(ctx, new_interval)
+    }
+
+    /// Set the max call buffer size for Buffer Config
+    /// Only the guardian can call this function
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_size` - The new max call buffer size value
+    pub fn set_max_call_buffer_size(ctx: Context<SetBridgeConfig>, new_size: u64) -> Result<()> {
+        set_max_call_buffer_size_handler(ctx, new_size)
     }
 }

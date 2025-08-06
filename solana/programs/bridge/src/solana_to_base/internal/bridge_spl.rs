@@ -71,7 +71,7 @@ pub fn bridge_spl_internal<'info>(
         },
     );
 
-    pay_for_gas(system_program, payer, gas_fee_receiver, &mut bridge.eip1559)?;
+    pay_for_gas(system_program, payer, gas_fee_receiver, bridge)?;
 
     **outgoing_message = message;
     bridge.nonce += 1;

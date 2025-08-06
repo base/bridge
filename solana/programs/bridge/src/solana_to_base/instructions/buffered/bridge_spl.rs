@@ -5,7 +5,6 @@ use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, TOKEN_VAULT_SEED},
     solana_to_base::{
         internal::bridge_spl::bridge_spl_internal, Call, CallBuffer, OutgoingMessage,
-        GAS_FEE_RECEIVER,
     },
 };
 
@@ -28,12 +27,9 @@ pub struct BridgeSplWithBufferedCall<'info> {
     #[account(mut)]
     pub from: Signer<'info>,
 
-    /// The hardcoded gas fee receiver account that collects bridge operation fees.
-    /// - Must match the predefined GAS_FEE_RECEIVER address
-    /// - Receives SOL payment for gas costs on the destination chain
-    ///
-    /// CHECK: This is the hardcoded gas fee receiver account.
-    #[account(mut, address = GAS_FEE_RECEIVER @ BridgeSplWithBufferedCallError::IncorrectGasFeeReceiver)]
+    /// The account that receives payment for the gas costs of bridging the SPL token to Base.
+    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeSplWithBufferedCallError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SPL token mint account for the token being bridged.
@@ -158,8 +154,11 @@ mod tests {
         instruction::{
             BridgeSplWithBufferedCall as BridgeSplWithBufferedCallIx, InitializeCallBuffer,
         },
-        solana_to_base::{CallType, GAS_FEE_RECEIVER},
-        test_utils::{create_mock_mint, create_mock_token_account, setup_bridge_and_svm},
+        solana_to_base::CallType,
+        test_utils::{
+            create_mock_mint, create_mock_token_account, setup_bridge_and_svm,
+            TEST_GAS_FEE_RECEIVER,
+        },
         ID,
     };
 
@@ -174,9 +173,6 @@ mod tests {
         // Create owner account (who owns the call buffer)
         let owner = Keypair::new();
         svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
-
-        // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
         // Create a test SPL token mint
         let mint = Keypair::new().pubkey();
@@ -216,6 +212,7 @@ mod tests {
         // First, initialize the call buffer
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }
@@ -257,7 +254,7 @@ mod tests {
         let accounts = accounts::BridgeSplWithBufferedCall {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             mint,
             from_token_account,
             bridge: bridge_pda,
@@ -375,9 +372,6 @@ mod tests {
         svm.airdrop(&unauthorized.pubkey(), LAMPORTS_PER_SOL)
             .unwrap();
 
-        // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
-
         // Create a test SPL token mint
         let mint = Keypair::new().pubkey();
         create_mock_mint(
@@ -404,6 +398,7 @@ mod tests {
         // First, initialize the call buffer with owner
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }
@@ -448,7 +443,7 @@ mod tests {
         let accounts = accounts::BridgeSplWithBufferedCall {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             mint,
             from_token_account,
             bridge: bridge_pda,
@@ -510,8 +505,6 @@ mod tests {
 
         // Create wrong gas fee receiver
         let wrong_gas_fee_receiver = Keypair::new();
-        svm.airdrop(&wrong_gas_fee_receiver.pubkey(), LAMPORTS_PER_SOL)
-            .unwrap();
 
         // Create a test SPL token mint
         let mint = Keypair::new().pubkey();
@@ -539,6 +532,7 @@ mod tests {
         // Initialize the call buffer
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }

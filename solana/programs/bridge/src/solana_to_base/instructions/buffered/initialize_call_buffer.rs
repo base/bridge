@@ -1,26 +1,36 @@
 use anchor_lang::prelude::*;
 
-use crate::solana_to_base::{CallBuffer, CallType, MAX_CALL_BUFFER_SIZE};
+use crate::{
+    common::{bridge::Bridge, BRIDGE_SEED},
+    solana_to_base::{CallBuffer, CallType},
+};
 
 /// Accounts struct for initializing a call buffer account that can store large call data.
 /// This account can be used to build up call data over multiple transactions before bridging.
 #[derive(Accounts)]
-#[instruction(_ty: CallType, _to: [u8; 20], _value: u128, _initial_data: Vec<u8>, max_data_len: usize)]
+#[instruction(_ty: CallType, _to: [u8; 20], _value: u128, _initial_data: Vec<u8>, max_data_len: u64)]
 pub struct InitializeCallBuffer<'info> {
-    /// The account paying for the transaction fees and the call buffer account creation.
-    /// It is set as the owner of the call buffer account.
+    /// The account that pays for the transaction and call buffer account creation
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// The call buffer account being created.
+    /// The bridge account containing configuration including max buffer size
+    #[account(
+        seeds = [BRIDGE_SEED],
+        bump
+    )]
+    pub bridge: Account<'info, Bridge>,
+
+    /// The call buffer account being initialized
     #[account(
         init,
         payer = payer,
-        space = CallBuffer::space(max_data_len),
+        space = CallBuffer::space(max_data_len as usize),
+        constraint = bridge.buffer_config.max_call_buffer_size >= max_data_len @ InitializeCallBufferError::MaxSizeExceeded,
     )]
     pub call_buffer: Account<'info, CallBuffer>,
 
-    /// System program for account creation.
+    /// System program required for creating new accounts
     pub system_program: Program<'info, System>,
 }
 
@@ -30,14 +40,8 @@ pub fn initialize_call_buffer_handler(
     to: [u8; 20],
     value: u128,
     initial_data: Vec<u8>,
-    max_data_len: usize,
+    _max_data_len: u64,
 ) -> Result<()> {
-    // Verify that the max data length doesn't exceed the max allowed size.
-    require!(
-        max_data_len <= MAX_CALL_BUFFER_SIZE,
-        InitializeCallBufferError::MaxSizeExceeded
-    );
-
     *ctx.accounts.call_buffer = CallBuffer {
         owner: ctx.accounts.payer.key(),
         ty,
@@ -53,6 +57,8 @@ pub fn initialize_call_buffer_handler(
 pub enum InitializeCallBufferError {
     #[msg("Call buffer size exceeds maximum allowed size")]
     MaxSizeExceeded,
+    #[msg("Invalid buffer size provided")]
+    InvalidBufferSize,
 }
 
 #[cfg(test)]
@@ -75,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_initialize_call_buffer_success() {
-        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+        let (mut svm, _payer, bridge_pda) = setup_bridge_and_svm();
 
         // Create payer account
         let payer = Keypair::new();
@@ -94,6 +100,7 @@ mod tests {
         // Build the InitializeCallBuffer instruction accounts
         let accounts = accounts::InitializeCallBuffer {
             payer: payer.pubkey(),
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }
@@ -141,7 +148,7 @@ mod tests {
 
     #[test]
     fn test_initialize_call_buffer_max_size_exceeded() {
-        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+        let (mut svm, _payer, bridge_pda) = setup_bridge_and_svm();
 
         // Create payer account
         let payer = Keypair::new();
@@ -150,16 +157,17 @@ mod tests {
         // Create call buffer account
         let call_buffer = Keypair::new();
 
-        // Test parameters with max_data_len exceeding MAX_CALL_BUFFER_SIZE
+        // Test parameters with max_data_len exceeding the configured limit
         let ty = CallType::Call;
         let to = [1u8; 20];
         let value = 0u128;
         let initial_data = vec![0x12, 0x34];
-        let max_data_len = MAX_CALL_BUFFER_SIZE + 1; // Exceed the limit
+        let max_data_len = 9000u64; // Exceeds bridge limit (8KB) but under Solana limit (10KB)
 
         // Build the InitializeCallBuffer instruction accounts
         let accounts = accounts::InitializeCallBuffer {
             payer: payer.pubkey(),
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }

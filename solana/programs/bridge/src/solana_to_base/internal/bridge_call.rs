@@ -19,7 +19,7 @@ pub fn bridge_call_internal<'info>(
 
     let message = OutgoingMessage::new_call(bridge.nonce, payer.key(), from.key(), call);
 
-    pay_for_gas(system_program, payer, gas_fee_receiver, &mut bridge.eip1559)?;
+    pay_for_gas(system_program, payer, gas_fee_receiver, bridge)?;
 
     **outgoing_message = message;
     bridge.nonce += 1;

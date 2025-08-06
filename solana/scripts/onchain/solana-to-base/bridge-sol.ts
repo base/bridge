@@ -6,16 +6,24 @@ import {
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import { toBytes } from "viem";
 
-import { getBridgeSolInstruction } from "../../../clients/ts/generated";
+import {
+  fetchBridge,
+  getBridgeSolInstruction,
+} from "../../../clients/ts/generated";
 import { CONSTANTS } from "../../constants";
 import { getTarget } from "../../utils/argv";
 import { getIdlConstant } from "../../utils/idl-constants";
-import { buildAndSendTransaction, getPayer } from "../utils/transaction";
+import {
+  buildAndSendTransaction,
+  getPayer,
+  getRpc,
+} from "../utils/transaction";
 
 async function main() {
   const target = getTarget();
   const constants = CONSTANTS[target];
   const payer = await getPayer();
+  const rpc = getRpc(target);
 
   console.log("=".repeat(40));
   console.log(`Target: ${target}`);
@@ -31,6 +39,8 @@ async function main() {
     programAddress: constants.solanaBridge,
     seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
   });
+
+  const bridge = await fetchBridge(rpc, bridgeAddress);
 
   const [solVaultAddress] = await getProgramDerivedAddress({
     programAddress: constants.solanaBridge,
@@ -55,7 +65,7 @@ async function main() {
       // Accounts
       payer,
       from: payer,
-      gasFeeReceiver: getIdlConstant("GAS_FEE_RECEIVER"),
+      gasFeeReceiver: bridge.data.gasCostConfig.gasFeeReceiver,
       solVault: solVaultAddress,
       bridge: bridgeAddress,
       outgoingMessage: outgoingMessageSigner,

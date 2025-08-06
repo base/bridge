@@ -13,7 +13,7 @@ use crate::{
 /// register output roots from Base at specific block intervals, enabling subsequent message
 /// proofs and cross-chain operations.
 #[derive(Accounts)]
-#[instruction(_output_root: [u8; 32], block_number: u64)]
+#[instruction(_output_root: [u8; 32], base_block_number: u64, base_last_relayed_nonce: u64)]
 pub struct RegisterOutputRoot<'info> {
     /// The trusted oracle account that submits MMR roots from Base.
     #[account(mut, address = TRUSTED_ORACLE @ RegisterOutputRootError::Unauthorized)]
@@ -26,7 +26,7 @@ pub struct RegisterOutputRoot<'info> {
     // #[account(address = TRUSTED_VALIDATOR @ RegisterOutputRootError::Unauthorized)]
     // pub validator: Signer<'info>,
     /// The output root account being created to store the Base MMR root.
-    /// - Uses PDA with OUTPUT_ROOT_SEED and block_number for deterministic address
+    /// - Uses PDA with OUTPUT_ROOT_SEED and base_block_number for deterministic address
     /// - Payer (trusted oracle) funds the account creation
     /// - Space allocated for output root state (8-byte discriminator + OutputRoot::INIT_SPACE)
     /// - Each output root corresponds to a specific Base block number
@@ -34,7 +34,7 @@ pub struct RegisterOutputRoot<'info> {
         init,
         payer = payer,
         space = 8 + OutputRoot::INIT_SPACE,
-        seeds = [OUTPUT_ROOT_SEED, &block_number.to_le_bytes()],
+        seeds = [OUTPUT_ROOT_SEED, &base_block_number.to_le_bytes()],
         bump
     )]
     pub root: Account<'info, OutputRoot>,
@@ -62,9 +62,17 @@ pub fn register_output_root_handler(
     base_last_relayed_nonce: u64,
 ) -> Result<()> {
     require!(
-        base_block_number > ctx.accounts.bridge.base_block_number && base_block_number % 300 == 0,
+        base_block_number > ctx.accounts.bridge.base_block_number
+            && base_block_number
+                % ctx
+                    .accounts
+                    .bridge
+                    .protocol_config
+                    .block_interval_requirement
+                == 0,
         RegisterOutputRootError::IncorrectBlockNumber
     );
+
     require!(
         base_last_relayed_nonce > ctx.accounts.bridge.base_last_relayed_nonce,
         RegisterOutputRootError::IncorrectLastRelayedNonce

@@ -15,7 +15,7 @@ use anchor_spl::token_interface::{
 use spl_type_length_value::variable_len_pack::VariableLenPack;
 
 use crate::common::{bridge::Bridge, PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED};
-use crate::solana_to_base::{pay_for_gas, Call, CallType, OutgoingMessage, GAS_FEE_RECEIVER};
+use crate::solana_to_base::{pay_for_gas, Call, CallType, OutgoingMessage};
 use crate::solana_to_base::{REMOTE_TOKEN_METADATA_KEY, SCALER_EXPONENT_METADATA_KEY};
 use crate::ID;
 
@@ -35,11 +35,9 @@ pub struct WrapToken<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// The hardcoded gas fee receiver account that collects cross-chain transaction fees.
-    /// This account receives payment for the gas costs of registering the token on Base.
-    /// Must match the GAS_FEE_RECEIVER constant to prevent fee payment to wrong accounts.
-    /// CHECK: This is the hardcoded gas fee receiver account.
-    #[account(mut, address = GAS_FEE_RECEIVER @ WrapTokenError::IncorrectGasFeeReceiver)]
+    /// The account that receives payment for the gas costs of registering the token on Base.
+    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ WrapTokenError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The new SPL Token-2022 mint being created for the wrapped token.
@@ -58,8 +56,6 @@ pub struct WrapToken<'info> {
         bump,
         mint::decimals = decimals,
         mint::authority = mint,
-        // mint::freeze_authority = mint,
-        // extensions::metadata_pointer::authority = mint,
         extensions::metadata_pointer::metadata_address = mint,
     )]
     pub mint: InterfaceAccount<'info, Mint>,
@@ -218,7 +214,7 @@ fn register_remote_token(
         &ctx.accounts.system_program,
         &ctx.accounts.payer,
         &ctx.accounts.gas_fee_receiver,
-        &mut ctx.accounts.bridge.eip1559,
+        &mut ctx.accounts.bridge,
     )?;
 
     *ctx.accounts.outgoing_message = message;

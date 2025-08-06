@@ -14,6 +14,7 @@ pub struct CloseOutgoingMessage<'info> {
     pub payer: Signer<'info>,
 
     /// The account that is the original payer of the outgoing message.
+    /// CHECK: Validated by `has_one = original_payer` constraint below
     #[account(mut)]
     pub original_payer: AccountInfo<'info>,
 
@@ -41,8 +42,8 @@ pub fn close_outgoing_message_handler(_ctx: Context<CloseOutgoingMessage>) -> Re
 
 #[error_code]
 pub enum CloseOutgoingMessageError {
-    #[msg("Incorrect original payer")]
-    IncorrectOriginalPayer,
     #[msg("Message has not been relayed yet")]
     MessageNotRelayed,
+    #[msg("Incorrect original payer")]
+    IncorrectOriginalPayer,
 }

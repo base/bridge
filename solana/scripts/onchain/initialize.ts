@@ -1,4 +1,8 @@
-import { getProgramDerivedAddress } from "@solana/kit";
+import {
+  createSignerFromKeyPair,
+  generateKeyPair,
+  getProgramDerivedAddress,
+} from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 
 import { getInitializeInstruction } from "../../clients/ts/generated";
@@ -27,6 +31,9 @@ async function main() {
     seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
   });
 
+  // TODO: Use the real guardian.
+  const guardian = await createSignerFromKeyPair(await generateKeyPair());
+
   // Build the instruction.
   console.log("🛠️  Building instruction...");
   const ix = getInitializeInstruction(
@@ -34,6 +41,32 @@ async function main() {
       payer: payer,
       bridge: bridgeAddress,
       systemProgram: SYSTEM_PROGRAM_ADDRESS,
+      guardian,
+      eip1559Config: {
+        target: 5_000_000,
+        denominator: 2,
+        windowDurationSeconds: 1,
+        minimumBaseFee: 1,
+      },
+      gasCostConfig: {
+        gasCostScaler: 1_000_000,
+        gasCostScalerDp: 1_000_000,
+        gasFeeReceiver: payer.address,
+      },
+      gasConfig: {
+        extra: 10_000,
+        executionPrologue: 20_000,
+        execution: 5_000,
+        executionEpilogue: 25_000,
+        baseTransactionCost: 21_000,
+        maxGasLimitPerMessage: 100_000_000,
+      },
+      protocolConfig: {
+        blockIntervalRequirement: 300,
+      },
+      bufferConfig: {
+        maxCallBufferSize: 8 * 1024,
+      },
     },
     { programAddress: constants.solanaBridge }
   );

@@ -2,9 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
-    solana_to_base::{
-        internal::bridge_call::bridge_call_internal, Call, OutgoingMessage, GAS_FEE_RECEIVER,
-    },
+    solana_to_base::{internal::bridge_call::bridge_call_internal, Call, OutgoingMessage},
 };
 
 /// Accounts struct for the bridge_call instruction that enables arbitrary function calls
@@ -22,13 +20,9 @@ pub struct BridgeCall<'info> {
     /// This account's public key will be used as the sender in the cross-chain message.
     pub from: Signer<'info>,
 
-    /// The designated receiver of gas fees for cross-chain message relay.
-    /// - Must match the hardcoded GAS_FEE_RECEIVER address
-    /// - Receives lamports calculated based on gas_limit and current gas pricing
-    /// - Mutable to receive the gas fee payment
-    ///
-    /// CHECK: This is the hardcoded gas fee receiver account.
-    #[account(mut, address = GAS_FEE_RECEIVER @ BridgeCallError::IncorrectGasFeeReceiver)]
+    /// The account that receives payment for the gas costs of bridging the call to Base.
+    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeCallError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The main bridge state account containing global bridge configuration.
@@ -92,8 +86,8 @@ mod tests {
         accounts,
         common::bridge::Bridge,
         instruction::BridgeCall as BridgeCallIx,
-        solana_to_base::{CallType, GAS_FEE_RECEIVER},
-        test_utils::setup_bridge_and_svm,
+        solana_to_base::CallType,
+        test_utils::{setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
         ID,
     };
 
@@ -106,7 +100,8 @@ mod tests {
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
+        svm.airdrop(&TEST_GAS_FEE_RECEIVER, LAMPORTS_PER_SOL)
+            .unwrap();
 
         // Create outgoing message account
         let outgoing_message = Keypair::new();
@@ -123,7 +118,7 @@ mod tests {
         let accounts = accounts::BridgeCall {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             bridge: bridge_pda,
             outgoing_message: outgoing_message.pubkey(),
             system_program: system_program::ID,

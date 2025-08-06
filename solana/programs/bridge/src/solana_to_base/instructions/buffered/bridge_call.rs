@@ -4,7 +4,6 @@ use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
     solana_to_base::{
         internal::bridge_call::bridge_call_internal, Call, CallBuffer, OutgoingMessage,
-        GAS_FEE_RECEIVER,
     },
 };
 
@@ -22,13 +21,9 @@ pub struct BridgeCallBuffered<'info> {
     /// This account's public key will be used as the sender in the cross-chain message.
     pub from: Signer<'info>,
 
-    /// The designated receiver of gas fees for cross-chain message relay.
-    /// - Must match the hardcoded GAS_FEE_RECEIVER address
-    /// - Receives lamports calculated based on gas_limit and current gas pricing
-    /// - Mutable to receive the gas fee payment
-    ///
-    /// CHECK: This is the hardcoded gas fee receiver account.
-    #[account(mut, address = GAS_FEE_RECEIVER @ BridgeCallBufferedError::IncorrectGasFeeReceiver)]
+    /// The account that receives payment for the gas costs of bridging the call to Base.
+    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeCallBufferedError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The main bridge state account containing global bridge configuration.
@@ -115,8 +110,8 @@ mod tests {
         accounts,
         common::bridge::Bridge,
         instruction::{BridgeCallBuffered as BridgeCallBufferedIx, InitializeCallBuffer},
-        solana_to_base::{CallType, GAS_FEE_RECEIVER},
-        test_utils::setup_bridge_and_svm,
+        solana_to_base::CallType,
+        test_utils::{setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
         ID,
     };
 
@@ -127,9 +122,6 @@ mod tests {
         // Create owner account (who owns the call buffer)
         let owner = Keypair::new();
         svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
-
-        // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
         // Create call buffer account
         let call_buffer = Keypair::new();
@@ -144,6 +136,7 @@ mod tests {
         // First, initialize the call buffer
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }
@@ -181,7 +174,7 @@ mod tests {
         let accounts = accounts::BridgeCallBuffered {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             bridge: bridge_pda,
             owner: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
@@ -267,15 +260,13 @@ mod tests {
         svm.airdrop(&unauthorized.pubkey(), LAMPORTS_PER_SOL)
             .unwrap();
 
-        // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
-
         // Create call buffer account
         let call_buffer = Keypair::new();
 
         // First, initialize the call buffer with owner
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }
@@ -313,7 +304,7 @@ mod tests {
         let accounts = accounts::BridgeCallBuffered {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             bridge: bridge_pda,
             owner: unauthorized.pubkey(), // Wrong owner
             call_buffer: call_buffer.pubkey(),
@@ -362,8 +353,6 @@ mod tests {
 
         // Create wrong gas fee receiver
         let wrong_gas_fee_receiver = Keypair::new();
-        svm.airdrop(&wrong_gas_fee_receiver.pubkey(), LAMPORTS_PER_SOL)
-            .unwrap();
 
         // Create call buffer account
         let call_buffer = Keypair::new();
@@ -371,6 +360,7 @@ mod tests {
         // Initialize the call buffer
         let init_accounts = accounts::InitializeCallBuffer {
             payer: owner.pubkey(),
+            bridge: bridge_pda,
             call_buffer: call_buffer.pubkey(),
             system_program: system_program::ID,
         }

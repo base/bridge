@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    common::bridge::Eip1559,
-    solana_to_base::{Call, CallType, GAS_COST_SCALER, GAS_COST_SCALER_DP, GAS_PER_CALL},
+    common::bridge::Bridge,
+    solana_to_base::{Call, CallType},
 };
 
 pub mod wrap_token;
@@ -36,28 +36,30 @@ pub fn check_call(call: &Call) -> Result<()> {
     Ok(())
 }
 
-pub fn pay_for_gas<'info>(
+fn pay_for_gas<'info>(
     system_program: &Program<'info, System>,
     payer: &Signer<'info>,
     gas_fee_receiver: &AccountInfo<'info>,
-    eip1559: &mut Eip1559,
+    bridge: &mut Bridge,
 ) -> Result<()> {
     // Get the base fee for the current window
     let current_timestamp = Clock::get()?.unix_timestamp;
-    let base_fee = eip1559.refresh_base_fee(current_timestamp);
+    let base_fee = bridge.eip1559.refresh_base_fee(current_timestamp);
 
     // Record gas usage for this transaction
     eip1559.add_gas_usage(GAS_PER_CALL);
 
-    let gas_cost = GAS_PER_CALL * base_fee * GAS_COST_SCALER / GAS_COST_SCALER_DP;
+    let gas_cost = GAS_PER_CALL * base_fee * bridge.gas_cost_config.gas_cost_scaler
+        / bridge.gas_cost_config.gas_cost_scaler_dp;
 
     let cpi_ctx = CpiContext::new(
         system_program.to_account_info(),
         anchor_lang::system_program::Transfer {
             from: payer.to_account_info(),
-            to: gas_fee_receiver.clone(),
+            to: gas_fee_receiver.to_account_info(),
         },
     );
+
     anchor_lang::system_program::transfer(cpi_ctx, gas_cost)?;
 
     Ok(())

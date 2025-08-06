@@ -17,9 +17,9 @@ mod private {
         #[constant]
         pub const TRUSTED_ORACLE: Pubkey = pubkey!("eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt");
 
-        // TODO: Update the address later when we have a trusted validator
-        #[constant]
-        pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("11111111111111111111111111111111");
+        // // TODO: Update the address later when we have a trusted validator
+        // #[constant]
+        // pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("11111111111111111111111111111111");
     }
 
     #[cfg(all(feature = "devnet", feature = "prod"))]
@@ -29,9 +29,9 @@ mod private {
         #[constant]
         pub const TRUSTED_ORACLE: Pubkey = pubkey!("4vTj5kmBrmds3zWogiyUxtZPggcVUmG44EXRy2CxTcEZ");
 
-        // TODO: Update the address later when we have a trusted validator
-        #[constant]
-        pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("11111111111111111111111111111111");
+        // // TODO: Update the address later when we have a trusted validator
+        // #[constant]
+        // pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("11111111111111111111111111111111");
     }
 
     #[cfg(not(any(feature = "devnet")))]
@@ -41,9 +41,9 @@ mod private {
         #[constant]
         pub const TRUSTED_ORACLE: Pubkey = pubkey!("eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt");
 
-        #[constant]
-        pub const TRUSTED_VALIDATOR: Pubkey =
-            pubkey!("9n3vTKJ49M4Xk3MhiCZY4LxXAdeEaDMVMuGxDwt54Hgx");
+        // #[constant]
+        // pub const TRUSTED_VALIDATOR: Pubkey =
+        //     pubkey!("9n3vTKJ49M4Xk3MhiCZY4LxXAdeEaDMVMuGxDwt54Hgx");
     }
 }
 
