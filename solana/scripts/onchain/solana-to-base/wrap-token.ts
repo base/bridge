@@ -9,18 +9,24 @@ import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import { keccak256, toBytes } from "viem";
 
 import {
+  fetchBridge,
   getWrapTokenInstruction,
   type WrapTokenInstructionDataArgs,
 } from "../../../clients/ts/generated";
 import { CONSTANTS } from "../../constants";
 import { getTarget } from "../../utils/argv";
 import { getIdlConstant } from "../../utils/idl-constants";
-import { buildAndSendTransaction, getPayer } from "../utils/transaction";
+import {
+  buildAndSendTransaction,
+  getPayer,
+  getRpc,
+} from "../utils/transaction";
 
 async function main() {
   const target = getTarget();
   const constants = CONSTANTS[target];
   const payer = await getPayer(constants.deployerKeyPairFile);
+  const rpc = getRpc(target);
 
   console.log("=".repeat(40));
   console.log(`Target: ${target}`);
@@ -65,6 +71,8 @@ async function main() {
     seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
   });
 
+  const bridge = await fetchBridge(rpc, bridgeAddress);
+
   const outgoingMessageKeypair = await generateKeyPair();
   const outgoingMessageSigner = await createSignerFromKeyPair(
     outgoingMessageKeypair
@@ -79,7 +87,7 @@ async function main() {
     {
       // Accounts
       payer,
-      gasFeeReceiver: getIdlConstant("GAS_FEE_RECEIVER"),
+      gasFeeReceiver: bridge.data.gasCostConfig.gasFeeReceiver,
       mint: mintAddress,
       bridge: bridgeAddress,
       outgoingMessage: outgoingMessageSigner,
