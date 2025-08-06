@@ -352,35 +352,14 @@ pub fn set_max_call_buffer_size_handler(
         ConfigError::InvalidBufferSize
     ); // Max 1MB
 
-    let old_value = ctx.accounts.bridge.limits_config.max_call_buffer_size;
-    ctx.accounts.bridge.limits_config.max_call_buffer_size = new_size;
+    let old_value = ctx.accounts.bridge.buffer_config.max_call_buffer_size;
+    ctx.accounts.bridge.buffer_config.max_call_buffer_size = new_size;
 
     emit!(BridgeConfigUpdated {
         category: "limits".to_string(),
         parameter: "max_call_buffer_size".to_string(),
         old_value: old_value.to_string(),
         new_value: new_size.to_string(),
-        guardian: ctx.accounts.guardian.key(),
-    });
-
-    Ok(())
-}
-
-/// Set the maximum data length
-pub fn set_max_data_len_handler(ctx: Context<SetBridgeConfig>, new_len: u64) -> Result<()> {
-    require!(
-        new_len > 0 && new_len <= 10240,
-        ConfigError::InvalidDataLength
-    ); // Max 10KB
-
-    let old_value = ctx.accounts.bridge.limits_config.max_data_len;
-    ctx.accounts.bridge.limits_config.max_data_len = new_len;
-
-    emit!(BridgeConfigUpdated {
-        category: "limits".to_string(),
-        parameter: "max_data_len".to_string(),
-        old_value: old_value.to_string(),
-        new_value: new_len.to_string(),
         guardian: ctx.accounts.guardian.key(),
     });
 

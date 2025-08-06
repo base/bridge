@@ -24,7 +24,6 @@ use common::{
         set_gas_target_handler,
         // Buffer and Size Limits Configuration
         set_max_call_buffer_size_handler,
-        set_max_data_len_handler,
         // Gas and Fee Management
         set_max_gas_limit_per_message_handler,
         // EIP-1559 Configuration
@@ -445,10 +444,6 @@ pub mod bridge {
     // Limits configuration setters
     pub fn set_max_call_buffer_size(ctx: Context<SetBridgeConfig>, new_size: u64) -> Result<()> {
         set_max_call_buffer_size_handler(ctx, new_size)
-    }
-
-    pub fn set_max_data_len(ctx: Context<SetBridgeConfig>, new_len: u64) -> Result<()> {
-        set_max_data_len_handler(ctx, new_len)
     }
 
     // ABI configuration setters

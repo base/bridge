@@ -35,8 +35,8 @@ pub struct Bridge {
     pub gas_config: GasConfig,
     /// Protocol validation configuration
     pub protocol_config: ProtocolConfig,
-    /// Buffer and size limits configuration
-    pub limits_config: LimitsConfig,
+    /// Buffer configuration
+    pub buffer_config: BufferConfig,
     /// ABI encoding overhead configuration
     pub abi_config: AbiConfig,
 }
@@ -232,18 +232,15 @@ impl Default for ProtocolConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct LimitsConfig {
-    /// Maximum call buffer size (64KB)
+pub struct BufferConfig {
+    /// Maximum call buffer size
     pub max_call_buffer_size: u64,
-    /// Account data length limit for various operations
-    pub max_data_len: u64,
 }
 
-impl Default for LimitsConfig {
+impl Default for BufferConfig {
     fn default() -> Self {
         Self {
             max_call_buffer_size: MAX_CALL_BUFFER_SIZE as u64,
-            max_data_len: 1024,
         }
     }
 }
