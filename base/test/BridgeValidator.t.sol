@@ -141,10 +141,10 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_revertsOnInvalidSignatureLength() public {
         bytes32[] memory messageHashes = new bytes32[](1);
         messageHashes[0] = TEST_MESSAGE_HASH_1;
-        
+
         // Create signature with invalid length (64 bytes instead of 65)
         bytes memory invalidSig = new bytes(64);
-        
+
         vm.expectRevert(BridgeValidator.InvalidSignatureLength.selector);
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes, invalidSig);
@@ -153,7 +153,7 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_revertsOnEmptySignature() public {
         bytes32[] memory messageHashes = new bytes32[](1);
         messageHashes[0] = TEST_MESSAGE_HASH_1;
-        
+
         vm.expectRevert(BridgeValidator.ThresholdNotMet.selector);
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes, "");
@@ -162,25 +162,25 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_anyoneCanCallWithValidSigs() public {
         bytes32[] memory messageHashes = new bytes32[](1);
         messageHashes[0] = TEST_MESSAGE_HASH_1;
-        
+
         // Anyone can call registerMessages as long as signatures are valid
         vm.prank(address(0x999)); // Not the trusted relayer, but should still work
         bridgeValidator.registerMessages(messageHashes, _getValidatorSigs(messageHashes));
-        
+
         assertTrue(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
     }
 
     function test_registerMessages_revertsOnDuplicateSigners() public {
         bytes32[] memory messageHashes = new bytes32[](1);
         messageHashes[0] = TEST_MESSAGE_HASH_1;
-        
+
         bytes32 signedHash = keccak256(abi.encode(messageHashes));
-        
+
         // Create duplicate signatures from same signer
         bytes memory sig1 = _createSignature(signedHash, 1);
         bytes memory sig2 = _createSignature(signedHash, 1);
         bytes memory duplicateSigs = abi.encodePacked(sig1, sig2);
-        
+
         vm.expectRevert(BridgeValidator.Unauthenticated.selector);
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes, duplicateSigs);
@@ -189,26 +189,26 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_revertsOnUnsortedSigners() public {
         bytes32[] memory messageHashes = new bytes32[](1);
         messageHashes[0] = TEST_MESSAGE_HASH_1;
-        
+
         bytes32 signedHash = keccak256(abi.encode(messageHashes));
-        
+
         // Create signatures in wrong order (addresses should be sorted)
         uint256 key1 = 1;
         uint256 key2 = 2;
         address addr1 = vm.addr(key1);
         address addr2 = vm.addr(key2);
-        
+
         // Ensure we have the ordering we expect
         if (addr1 > addr2) {
             (key1, key2) = (key2, key1);
             (addr1, addr2) = (addr2, addr1);
         }
-        
+
         // Now create signatures in reverse order
         bytes memory sig1 = _createSignature(signedHash, key2); // Higher address first
         bytes memory sig2 = _createSignature(signedHash, key1); // Lower address second
         bytes memory unsortedSigs = abi.encodePacked(sig1, sig2);
-        
+
         vm.expectRevert(BridgeValidator.Unauthenticated.selector);
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes, unsortedSigs);
@@ -217,12 +217,12 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_requiresBaseOracleSignature() public {
         bytes32[] memory messageHashes = new bytes32[](1);
         messageHashes[0] = TEST_MESSAGE_HASH_1;
-        
+
         bytes32 signedHash = keccak256(abi.encode(messageHashes));
-        
+
         // Create signature from non-BASE_ORACLE key
         bytes memory nonOracleSig = _createSignature(signedHash, 999);
-        
+
         vm.expectRevert(BridgeValidator.InvalidSigner.selector);
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(messageHashes, nonOracleSig);
@@ -232,15 +232,15 @@ contract BridgeValidatorTest is CommonTest {
         // Create a BridgeValidator with partner validator threshold > 0
         address testOracle = vm.addr(100);
         BridgeValidator testValidator = new BridgeValidator(testOracle, 1);
-        
+
         bytes32[] memory messageHashes = new bytes32[](1);
         messageHashes[0] = TEST_MESSAGE_HASH_1;
-        
+
         bytes32 signedHash = keccak256(abi.encode(messageHashes));
-        
+
         // Only BASE_ORACLE signature should fail threshold check
         bytes memory oracleSig = _createSignature(signedHash, 100);
-        
+
         vm.expectRevert(BridgeValidator.ThresholdNotMet.selector);
         vm.prank(testOracle);
         testValidator.registerMessages(messageHashes, oracleSig);
@@ -391,10 +391,10 @@ contract BridgeValidatorTest is CommonTest {
 
     function testFuzz_registerMessages_withEmptyArray() public {
         bytes32[] memory emptyArray = new bytes32[](0);
-        
+
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(emptyArray, _getValidatorSigs(emptyArray));
-        
+
         // No messages should be registered
         assertFalse(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
     }

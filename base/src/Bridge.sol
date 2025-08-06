@@ -142,7 +142,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///
     /// @param transfer The token transfer to execute.
     /// @param ixs      The optional Solana instructions.
-    function bridgeToken(Transfer calldata transfer, Ix[] calldata ixs) external payable nonReentrant whenNotPaused {
+    function bridgeToken(Transfer memory transfer, Ix[] calldata ixs) external payable nonReentrant whenNotPaused {
         // IMPORTANT: The `TokenLib.initializeTransfer` function might modify the `transfer.remoteAmount` field to
         //            account for potential transfer fees.
         SolanaTokenType transferType =
