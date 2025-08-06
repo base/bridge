@@ -8,7 +8,9 @@ mod solana_to_base;
 
 use base_to_solana::*;
 use common::*;
+
 use common::{
+    bridge::{BufferConfig, Eip1559Config, GasConfig, GasCostConfig, ProtocolConfig},
     config::{
         set_adjustment_denominator_handler, set_block_interval_requirement_handler,
         set_execution_epilogue_gas_buffer_handler, set_execution_gas_buffer_handler,
@@ -18,7 +20,7 @@ use common::{
         set_max_gas_limit_per_message_handler, set_minimum_base_fee_handler,
         set_window_duration_handler,
     },
-    guardian::transfer_guardian as transfer_guardian_handler,
+    guardian::transfer_guardian_handler,
     initialize::initialize_handler,
 };
 use solana_to_base::*;
@@ -30,6 +32,7 @@ declare_id!("4L8cUU2DXTzEaa5C8MWLTyEV8dpmpDbCjg8DNgUuGedc");
 
 #[program]
 pub mod bridge {
+
     use super::*;
 
     // Common
@@ -39,8 +42,22 @@ pub mod bridge {
     ///
     /// # Arguments
     /// * `ctx` - The context containing all accounts needed for initialization, including the guardian signer
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize_handler(ctx)
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        eip1559_config: Eip1559Config,
+        gas_cost_config: GasCostConfig,
+        gas_config: GasConfig,
+        protocol_config: ProtocolConfig,
+        buffer_config: BufferConfig,
+    ) -> Result<()> {
+        initialize_handler(
+            ctx,
+            eip1559_config,
+            gas_cost_config,
+            gas_config,
+            protocol_config,
+            buffer_config,
+        )
     }
 
     /// Closes an outgoing message account after it has been relayed to Base.

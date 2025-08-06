@@ -112,8 +112,8 @@ mod tests {
         accounts,
         common::{bridge::Bridge, SOL_VAULT_SEED},
         instruction::BridgeSol as BridgeSolIx,
-        solana_to_base::{Call, CallType, GAS_FEE_RECEIVER, NATIVE_SOL_PUBKEY},
-        test_utils::setup_bridge_and_svm,
+        solana_to_base::{Call, CallType, NATIVE_SOL_PUBKEY},
+        test_utils::{setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
         ID,
     };
 
@@ -124,9 +124,6 @@ mod tests {
         // Create from account
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
-
-        // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
         // Create outgoing message account
         let outgoing_message = Keypair::new();
@@ -145,7 +142,7 @@ mod tests {
         let accounts = accounts::BridgeSol {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             sol_vault,
             bridge: bridge_pda,
             outgoing_message: outgoing_message.pubkey(),
@@ -231,9 +228,6 @@ mod tests {
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
 
-        // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
-
         // Create outgoing message account
         let outgoing_message = Keypair::new();
 
@@ -259,7 +253,7 @@ mod tests {
         let accounts = accounts::BridgeSol {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             sol_vault,
             bridge: bridge_pda,
             outgoing_message: outgoing_message.pubkey(),
@@ -325,8 +319,6 @@ mod tests {
 
         // Create wrong gas fee receiver
         let wrong_gas_fee_receiver = Keypair::new();
-        svm.airdrop(&wrong_gas_fee_receiver.pubkey(), LAMPORTS_PER_SOL)
-            .unwrap();
 
         // Create outgoing message account
         let outgoing_message = Keypair::new();

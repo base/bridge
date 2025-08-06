@@ -1,21 +1,9 @@
 use anchor_lang::prelude::*;
 
-use crate::common::{
-    constants::{
-        EIP1559_DEFAULT_ADJUSTMENT_DENOMINATOR, EIP1559_DEFAULT_GAS_TARGET_PER_WINDOW,
-        EIP1559_DEFAULT_WINDOW_DURATION_SECONDS, EIP1559_MINIMUM_BASE_FEE,
-    },
-    internal::math::{fixed_pow, SCALE},
-};
-
-// Import constants for default values
-use crate::solana_to_base::{
-    GAS_COST_SCALER, GAS_COST_SCALER_DP, GAS_FEE_RECEIVER, MAX_CALL_BUFFER_SIZE,
-    MAX_GAS_LIMIT_PER_MESSAGE,
-};
+use crate::common::internal::math::{fixed_pow, SCALE};
 
 #[account]
-#[derive(Debug, Default, PartialEq, Eq, InitSpace)]
+#[derive(Debug, PartialEq, Eq, InitSpace)]
 pub struct Bridge {
     /// The Base block number associated with the latest registered output root.
     pub base_block_number: u64,
@@ -23,15 +11,15 @@ pub struct Bridge {
     pub base_last_relayed_nonce: u64,
     /// Incremental nonce assigned to each message.
     pub nonce: u64,
-    /// EIP-1559 state and configuration for dynamic pricing.
-    pub eip1559: Eip1559,
     /// Guardian pubkey authorized to update configuration
     pub guardian: Pubkey,
+    /// EIP-1559 state and configuration for dynamic pricing.
+    pub eip1559: Eip1559,
     /// Gas cost configuration
     pub gas_cost_config: GasCostConfig,
     /// Gas configuration
     pub gas_config: GasConfig,
-    /// Protocol validation configuration
+    /// Protocol configuration
     pub protocol_config: ProtocolConfig,
     /// Buffer configuration
     pub buffer_config: BufferConfig,
@@ -39,14 +27,7 @@ pub struct Bridge {
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct Eip1559 {
-    /// Gas target per window (configurable)
-    pub target: u64,
-    /// Adjustment denominator (controls rate of change) (configurable)
-    pub denominator: u64,
-    /// Window duration in seconds (configurable)
-    pub window_duration_seconds: u64,
-    /// Minimum base fee floor (configurable)
-    pub minimum_base_fee: u64,
+    pub config: Eip1559Config,
     /// Current base fee in gwei (runtime state)
     pub current_base_fee: u64,
     /// Gas used in the current time window (runtime state)
@@ -55,26 +36,19 @@ pub struct Eip1559 {
     pub window_start_time: i64,
 }
 
-impl Default for Eip1559 {
-    fn default() -> Self {
-        Self::new(0)
-    }
+#[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
+pub struct Eip1559Config {
+    /// Gas target per window (configurable)
+    pub target: u64,
+    /// Adjustment denominator (controls rate of change) (configurable)
+    pub denominator: u64,
+    /// Window duration in seconds (configurable)
+    pub window_duration_seconds: u64,
+    /// Minimum base fee floor (configurable)
+    pub minimum_base_fee: u64,
 }
 
 impl Eip1559 {
-    /// Create a new Eip1559 with default configuration and current timestamp
-    pub fn new(current_timestamp: i64) -> Self {
-        Self {
-            target: EIP1559_DEFAULT_GAS_TARGET_PER_WINDOW,
-            denominator: EIP1559_DEFAULT_ADJUSTMENT_DENOMINATOR,
-            window_duration_seconds: EIP1559_DEFAULT_WINDOW_DURATION_SECONDS,
-            minimum_base_fee: EIP1559_MINIMUM_BASE_FEE,
-            current_base_fee: EIP1559_MINIMUM_BASE_FEE,
-            current_window_gas_used: 0,
-            window_start_time: current_timestamp,
-        }
-    }
-
     /// Refresh the base fee if window has expired, reset window tracking
     /// Handles multiple expired windows by processing each empty window
     pub fn refresh_base_fee(&mut self, current_timestamp: i64) -> u64 {
@@ -97,13 +71,13 @@ impl Eip1559 {
         //      base_fee_n = base_fee_0 * [(denom - 1) / denom]^n
         if remaining_windows_count > 0 {
             // Scale up as we're going to do some arithmetic
-            let scaled_denominator = self.denominator as u128 * SCALE;
+            let scaled_denominator = self.config.denominator as u128 * SCALE;
 
             // [(denom - 1) / denom]
             // Guaranteed to be < SCALE.
             // NOTE: scaled_denominator is in SCALE units while self.denominator is not
             //       so the returned ratio is also in SCALE units
-            let ratio = (scaled_denominator - SCALE) / (self.denominator as u128);
+            let ratio = (scaled_denominator - SCALE) / (self.config.denominator as u128);
 
             // [(denom - 1) / denom]^(n-1)
             // Guaranteed to be < SCALE because ratio < SCALE.
@@ -130,16 +104,17 @@ impl Eip1559 {
 
     /// Calculate the base fee for the next window based on current window gas usage
     fn calc_base_fee(&self, gas_used: u64) -> u64 {
-        if gas_used == self.target {
+        if gas_used == self.config.target {
             return self.current_base_fee;
         }
 
-        if gas_used > self.target {
+        if gas_used > self.config.target {
             // If the current window used more gas than target, the base fee should increase.
             // max(1, baseFee * gasUsedDelta / target / denominator)
-            let gas_used_delta = gas_used - self.target;
-            let base_fee_delta =
-                (gas_used_delta * self.current_base_fee) / self.target / self.denominator;
+            let gas_used_delta = gas_used - self.config.target;
+            let base_fee_delta = (gas_used_delta * self.current_base_fee)
+                / self.config.target
+                / self.config.denominator;
 
             // Ensure minimum increase of 1
             let base_fee_delta = base_fee_delta.max(1);
@@ -147,20 +122,22 @@ impl Eip1559 {
         } else {
             // If the current window used less gas than target, the base fee should decrease.
             // max(0, baseFee - (baseFee * gasUsedDelta / target / denominator))
-            let gas_used_delta = self.target - gas_used;
-            let base_fee_delta =
-                (gas_used_delta * self.current_base_fee) / self.target / self.denominator;
+            let gas_used_delta = self.config.target - gas_used;
+            let base_fee_delta = (gas_used_delta * self.current_base_fee)
+                / self.config.target
+                / self.config.denominator;
 
             // Ensure base fee doesn't go below the configurable minimum
             self.current_base_fee
                 .checked_sub(base_fee_delta)
-                .unwrap_or(self.minimum_base_fee)
+                .unwrap_or(self.config.minimum_base_fee)
         }
     }
 
     /// Check if the current window has expired based on current timestamp
     fn expired_windows_count(&self, current_timestamp: i64) -> u64 {
-        (current_timestamp as u64 - self.window_start_time as u64) / self.window_duration_seconds
+        (current_timestamp as u64 - self.window_start_time as u64)
+            / self.config.window_duration_seconds
     }
 }
 
@@ -172,16 +149,6 @@ pub struct GasCostConfig {
     pub gas_cost_scaler_dp: u64,
     /// Account that receives gas fees
     pub gas_fee_receiver: Pubkey,
-}
-
-impl Default for GasCostConfig {
-    fn default() -> Self {
-        Self {
-            gas_cost_scaler: GAS_COST_SCALER,
-            gas_cost_scaler_dp: GAS_COST_SCALER_DP,
-            gas_fee_receiver: GAS_FEE_RECEIVER,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
@@ -200,45 +167,16 @@ pub struct GasConfig {
     pub max_gas_limit_per_message: u64,
 }
 
-impl Default for GasConfig {
-    fn default() -> Self {
-        Self {
-            extra: 10_000,
-            execution_prologue: 65_000,
-            execution: 40_000,
-            execution_epilogue: 25_000,
-            base_transaction_cost: 21_000,
-            max_gas_limit_per_message: MAX_GAS_LIMIT_PER_MESSAGE,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct ProtocolConfig {
     /// Block interval requirement for output root registration
     pub block_interval_requirement: u64,
 }
 
-impl Default for ProtocolConfig {
-    fn default() -> Self {
-        Self {
-            block_interval_requirement: 300,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct BufferConfig {
     /// Maximum call buffer size
     pub max_call_buffer_size: u64,
-}
-
-impl Default for BufferConfig {
-    fn default() -> Self {
-        Self {
-            max_call_buffer_size: MAX_CALL_BUFFER_SIZE as u64,
-        }
-    }
 }
 
 #[cfg(test)]
@@ -248,19 +186,28 @@ mod tests {
     #[test]
     fn test_new_state_creation() {
         let timestamp = 1234567890;
-        let state = Eip1559::new(timestamp);
+        let state = Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 1000,
+            current_window_gas_used: 0,
+            window_start_time: timestamp,
+        };
 
-        assert_eq!(state.target, EIP1559_DEFAULT_GAS_TARGET_PER_WINDOW);
-        assert_eq!(state.denominator, EIP1559_DEFAULT_ADJUSTMENT_DENOMINATOR);
-        assert_eq!(state.current_base_fee, EIP1559_MINIMUM_BASE_FEE);
+        assert_eq!(state.config, Eip1559Config::test_new());
+        assert_eq!(state.current_base_fee, 1000);
         assert_eq!(state.current_window_gas_used, 0);
         assert_eq!(state.window_start_time, timestamp);
     }
 
     #[test]
     fn test_calc_base_fee_gas_equals_target() {
-        let state = Eip1559::new(0);
-        let gas_used = state.target; // Exactly at target
+        let state = Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 1000,
+            current_window_gas_used: 5_000_000,
+            window_start_time: 0,
+        };
+        let gas_used = state.config.target; // Exactly at target
 
         let new_fee = state.calc_base_fee(gas_used);
         assert_eq!(new_fee, state.current_base_fee); // Should remain unchanged
@@ -268,9 +215,13 @@ mod tests {
 
     #[test]
     fn test_calc_base_fee_gas_above_target() {
-        let mut state = Eip1559::new(0);
-        state.current_base_fee = 1000;
-        let gas_used = 8_000_000; // 3M above target (5M)
+        let state = Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 1000,
+            current_window_gas_used: 0,
+            window_start_time: 0,
+        };
+        let gas_used = state.config.target + 3_000_000; // 3M above target (5M)
 
         let new_fee = state.calc_base_fee(gas_used);
 
@@ -281,9 +232,13 @@ mod tests {
 
     #[test]
     fn test_calc_base_fee_gas_below_target() {
-        let mut state = Eip1559::new(0);
-        state.current_base_fee = 1000;
-        let gas_used = 2_000_000; // 3M below target (5M)
+        let state = Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 1000,
+            current_window_gas_used: 0,
+            window_start_time: 0,
+        };
+        let gas_used = state.config.target - 3_000_000; // 3M below target (5M)
 
         let new_fee = state.calc_base_fee(gas_used);
 
@@ -294,9 +249,13 @@ mod tests {
 
     #[test]
     fn test_calc_base_fee_small_changes_have_effect() {
-        let mut state = Eip1559::new(0);
-        state.current_base_fee = 10_000_000; // Large base fee to amplify small changes
-        let gas_used = state.target + 1; // Just 1 gas above target
+        let state = Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 10_000_000, // Large base fee to amplify small changes
+            current_window_gas_used: 0,
+            window_start_time: 0,
+        };
+        let gas_used = state.config.target + 1; // Just 1 gas above target
 
         let new_fee = state.calc_base_fee(gas_used);
 
@@ -307,27 +266,42 @@ mod tests {
     #[test]
     fn test_expired_windows_count() {
         let start_time = 1000;
-        let state = Eip1559::new(start_time);
+        let state = Eip1559 {
+            config: Eip1559Config {
+                target: 5_000_000,
+                denominator: 2,
+                window_duration_seconds: 1,
+                minimum_base_fee: 1,
+            },
+            current_base_fee: 1000,
+            current_window_gas_used: 0,
+            window_start_time: start_time,
+        };
 
         // Window should not be expired at start time
         assert_eq!(state.expired_windows_count(start_time), 0);
 
         // Window should not be expired before duration
-        let before_expiry = start_time + (state.window_duration_seconds as i64) - 1;
+        let before_expiry = start_time + (state.config.window_duration_seconds as i64) - 1;
         assert_eq!(state.expired_windows_count(before_expiry), 0);
 
         // Window should be expired after duration
-        let after_expiry = start_time + (state.window_duration_seconds as i64);
+        let after_expiry = start_time + (state.config.window_duration_seconds as i64);
         assert_eq!(state.expired_windows_count(after_expiry), 1);
 
         // Window should be expired after 2 durations
-        let after_two_expiry = start_time + (2 * state.window_duration_seconds as i64);
+        let after_two_expiry = start_time + (2 * state.config.window_duration_seconds as i64);
         assert_eq!(state.expired_windows_count(after_two_expiry), 2);
     }
 
     #[test]
     fn test_add_gas_usage() {
-        let mut state = Eip1559::new(0);
+        let mut state = Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 1000,
+            current_window_gas_used: 0,
+            window_start_time: 0,
+        };
         assert_eq!(state.current_window_gas_used, 0);
 
         state.add_gas_usage(1000);
@@ -339,7 +313,12 @@ mod tests {
 
     #[test]
     fn test_refresh_base_fee_no_expiry() {
-        let mut state = Eip1559::new(1000);
+        let mut state = Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 1000,
+            current_window_gas_used: 0,
+            window_start_time: 1000,
+        };
         let original_base_fee = state.current_base_fee;
         state.add_gas_usage(2_000_000);
 
@@ -354,12 +333,16 @@ mod tests {
 
     #[test]
     fn test_refresh_base_fee_with_expiry() {
-        let mut state = Eip1559::new(1000);
-        state.current_base_fee = 1000;
+        let mut state = Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 1000,
+            current_window_gas_used: 0,
+            window_start_time: 1000,
+        };
         state.add_gas_usage(8_000_000); // Above target, should increase fee
 
         // Update with expired window
-        let new_time = 1000 + state.window_duration_seconds as i64;
+        let new_time = 1000 + state.config.window_duration_seconds as i64;
         state.refresh_base_fee(new_time);
 
         // Base fee should increase, gas usage should reset, window should restart
@@ -370,17 +353,21 @@ mod tests {
 
     #[test]
     fn test_refresh_base_fee_multiple_empty_windows() {
-        let mut state = Eip1559::new(1000);
-        state.current_base_fee = 8000; // High base fee
+        let mut state = Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 8000, // High base fee
+            current_window_gas_used: 0,
+            window_start_time: 1000,
+        };
         state.add_gas_usage(10_000_000); // High usage in first window
 
         // Jump 1 window into the future
-        let new_time = 1000 + state.window_duration_seconds as i64;
+        let new_time = 1000 + state.config.window_duration_seconds as i64;
         let base_fee_immediately_after_first_window = state.refresh_base_fee(new_time);
 
         // Jump 100 windows into the future
         let windows_passed = 100;
-        let new_time = 1000 + (windows_passed * state.window_duration_seconds as i64);
+        let new_time = 1000 + (windows_passed * state.config.window_duration_seconds as i64);
         let base_fee_after_all_empty_windows = state.refresh_base_fee(new_time);
 
         // Base fee should decrease, gas usage should reset, window should restart

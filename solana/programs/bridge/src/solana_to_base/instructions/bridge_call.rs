@@ -87,8 +87,8 @@ mod tests {
         accounts,
         common::bridge::Bridge,
         instruction::BridgeCall as BridgeCallIx,
-        solana_to_base::{CallType, GAS_FEE_RECEIVER},
-        test_utils::setup_bridge_and_svm,
+        solana_to_base::CallType,
+        test_utils::{setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
         ID,
     };
 
@@ -101,7 +101,8 @@ mod tests {
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
+        svm.airdrop(&TEST_GAS_FEE_RECEIVER, LAMPORTS_PER_SOL)
+            .unwrap();
 
         // Create outgoing message account
         let outgoing_message = Keypair::new();
@@ -120,7 +121,7 @@ mod tests {
         let accounts = accounts::BridgeCall {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             bridge: bridge_pda,
             outgoing_message: outgoing_message.pubkey(),
             system_program: system_program::ID,

@@ -28,10 +28,64 @@ use solana_transaction::Transaction;
 
 use crate::{
     accounts,
-    common::{PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED},
+    common::{
+        bridge::{BufferConfig, Eip1559Config, GasConfig, GasCostConfig, ProtocolConfig},
+        PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED,
+    },
     instruction::Initialize,
     ID,
 };
+pub const TEST_GAS_FEE_RECEIVER: Pubkey = pubkey!("eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt");
+
+impl Eip1559Config {
+    pub fn test_new() -> Self {
+        Self {
+            target: 5_000_000,
+            denominator: 2,
+            window_duration_seconds: 1,
+            minimum_base_fee: 1,
+        }
+    }
+}
+
+impl GasCostConfig {
+    pub fn test_new(gas_fee_receiver: Pubkey) -> Self {
+        Self {
+            gas_cost_scaler: 1_000_000,
+            gas_cost_scaler_dp: 10u64.pow(6),
+            gas_fee_receiver,
+        }
+    }
+}
+
+impl GasConfig {
+    pub fn test_new() -> Self {
+        Self {
+            extra: 10_000,
+            execution_prologue: 20_000,
+            execution: 5_000,
+            execution_epilogue: 25_000,
+            base_transaction_cost: 21_000,
+            max_gas_limit_per_message: 100_000_000,
+        }
+    }
+}
+
+impl ProtocolConfig {
+    pub fn test_new() -> Self {
+        Self {
+            block_interval_requirement: 300,
+        }
+    }
+}
+
+impl BufferConfig {
+    pub fn test_new() -> Self {
+        Self {
+            max_call_buffer_size: 8 * 1024, // 8KB
+        }
+    }
+}
 
 pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
     let mut svm = LiteSVM::new();
@@ -63,7 +117,14 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
     let ix = Instruction {
         program_id: ID,
         accounts,
-        data: Initialize.data(),
+        data: Initialize {
+            eip1559_config: Eip1559Config::test_new(),
+            gas_cost_config: GasCostConfig::test_new(TEST_GAS_FEE_RECEIVER),
+            gas_config: GasConfig::test_new(),
+            protocol_config: ProtocolConfig::test_new(),
+            buffer_config: BufferConfig::test_new(),
+        }
+        .data(),
     };
 
     let tx = Transaction::new(

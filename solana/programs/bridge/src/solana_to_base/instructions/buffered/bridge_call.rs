@@ -112,8 +112,8 @@ mod tests {
         accounts,
         common::bridge::Bridge,
         instruction::{BridgeCallBuffered as BridgeCallBufferedIx, InitializeCallBuffer},
-        solana_to_base::{CallType, GAS_FEE_RECEIVER},
-        test_utils::setup_bridge_and_svm,
+        solana_to_base::CallType,
+        test_utils::{setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
         ID,
     };
 
@@ -124,9 +124,6 @@ mod tests {
         // Create owner account (who owns the call buffer)
         let owner = Keypair::new();
         svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
-
-        // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
         // Create call buffer account
         let call_buffer = Keypair::new();
@@ -180,7 +177,7 @@ mod tests {
         let accounts = accounts::BridgeCallBuffered {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             bridge: bridge_pda,
             owner: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
@@ -267,9 +264,6 @@ mod tests {
         svm.airdrop(&unauthorized.pubkey(), LAMPORTS_PER_SOL)
             .unwrap();
 
-        // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
-
         // Create call buffer account
         let call_buffer = Keypair::new();
 
@@ -315,7 +309,7 @@ mod tests {
         let accounts = accounts::BridgeCallBuffered {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             bridge: bridge_pda,
             owner: unauthorized.pubkey(), // Wrong owner
             call_buffer: call_buffer.pubkey(),
@@ -364,8 +358,6 @@ mod tests {
 
         // Create wrong gas fee receiver
         let wrong_gas_fee_receiver = Keypair::new();
-        svm.airdrop(&wrong_gas_fee_receiver.pubkey(), LAMPORTS_PER_SOL)
-            .unwrap();
 
         // Create call buffer account
         let call_buffer = Keypair::new();

@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
 
 use crate::common::{
-    bridge::{Bridge, BufferConfig, Eip1559, GasConfig, GasCostConfig, ProtocolConfig},
+    bridge::{
+        Bridge, BufferConfig, Eip1559, Eip1559Config, GasConfig, GasCostConfig, ProtocolConfig,
+    },
     BRIDGE_SEED,
 };
 
@@ -37,19 +39,32 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn initialize_handler(ctx: Context<Initialize>) -> Result<()> {
+pub fn initialize_handler(
+    ctx: Context<Initialize>,
+    eip1559_config: Eip1559Config,
+    gas_cost_config: GasCostConfig,
+    gas_config: GasConfig,
+    protocol_config: ProtocolConfig,
+    buffer_config: BufferConfig,
+) -> Result<()> {
     let current_timestamp = Clock::get()?.unix_timestamp;
+    let minimum_base_fee = eip1559_config.minimum_base_fee;
 
     *ctx.accounts.bridge = Bridge {
         base_block_number: 0,
         base_last_relayed_nonce: 0,
         nonce: 1, // Starts the first nonce at 1 so that 0 can safely be used to initialize `base_last_relayed_nonce`
-        eip1559: Eip1559::new(current_timestamp),
         guardian: ctx.accounts.guardian.key(),
-        gas_cost_config: GasCostConfig::default(),
-        gas_config: GasConfig::default(),
-        protocol_config: ProtocolConfig::default(),
-        buffer_config: BufferConfig::default(),
+        eip1559: Eip1559 {
+            config: eip1559_config,
+            current_base_fee: minimum_base_fee,
+            current_window_gas_used: 0,
+            window_start_time: current_timestamp,
+        },
+        gas_cost_config,
+        gas_config,
+        protocol_config,
+        buffer_config,
     };
 
     Ok(())
@@ -106,10 +121,18 @@ mod tests {
         .to_account_metas(None);
 
         // Build the Initialize instruction (no guardian parameter needed)
+        let gas_fee_receiver = Pubkey::new_unique();
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: Initialize {}.data(),
+            data: Initialize {
+                eip1559_config: Eip1559Config::test_new(),
+                gas_cost_config: GasCostConfig::test_new(gas_fee_receiver),
+                gas_config: GasConfig::test_new(),
+                protocol_config: ProtocolConfig::test_new(),
+                buffer_config: BufferConfig::test_new(),
+            }
+            .data(),
         };
 
         // Build the transaction with both payer and guardian as signers
@@ -135,12 +158,17 @@ mod tests {
                 base_block_number: 0,
                 base_last_relayed_nonce: 0,
                 nonce: 1,
-                eip1559: Eip1559::new(timestamp),
+                eip1559: Eip1559 {
+                    config: Eip1559Config::test_new(),
+                    current_base_fee: 1,
+                    current_window_gas_used: 0,
+                    window_start_time: timestamp,
+                },
                 guardian: guardian_pk,
-                gas_cost_config: GasCostConfig::default(),
-                gas_config: GasConfig::default(),
-                protocol_config: ProtocolConfig::default(),
-                buffer_config: BufferConfig::default(),
+                gas_cost_config: GasCostConfig::test_new(gas_fee_receiver),
+                gas_config: GasConfig::test_new(),
+                protocol_config: ProtocolConfig::test_new(),
+                buffer_config: BufferConfig::test_new(),
             }
         );
     }

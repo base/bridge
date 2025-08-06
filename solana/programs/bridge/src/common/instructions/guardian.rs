@@ -17,18 +17,18 @@ pub struct TransferGuardian<'info> {
 
 /// Transfer guardian authority to a new pubkey
 /// Only the current guardian can call this function
-pub fn transfer_guardian(
+pub fn transfer_guardian_handler(
     ctx: Context<TransferGuardian>,
     new_guardian: Pubkey,
 ) -> Result<()> {
     let old_guardian = ctx.accounts.bridge.guardian;
     ctx.accounts.bridge.guardian = new_guardian;
-    
+
     emit!(GuardianTransferred {
         old_guardian,
         new_guardian,
     });
-    
+
     Ok(())
 }
 
@@ -44,4 +44,4 @@ pub struct GuardianTransferred {
 pub enum GuardianError {
     #[msg("Unauthorized to transfer guardian authority")]
     UnauthorizedGuardianTransfer = 7000,
-} 
+}

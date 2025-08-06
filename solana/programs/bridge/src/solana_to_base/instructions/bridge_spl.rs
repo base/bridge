@@ -136,8 +136,11 @@ mod tests {
         accounts,
         common::{bridge::Bridge, TOKEN_VAULT_SEED},
         instruction::BridgeSpl as BridgeSplIx,
-        solana_to_base::{Call, CallType, GAS_FEE_RECEIVER},
-        test_utils::{create_mock_mint, create_mock_token_account, setup_bridge_and_svm},
+        solana_to_base::{Call, CallType},
+        test_utils::{
+            create_mock_mint, create_mock_token_account, setup_bridge_and_svm,
+            TEST_GAS_FEE_RECEIVER,
+        },
         ID,
     };
 
@@ -148,9 +151,6 @@ mod tests {
         // Create from account
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
-
-        // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
 
         // Create a test SPL token mint
         let mint = Keypair::new().pubkey();
@@ -192,7 +192,7 @@ mod tests {
         let accounts = accounts::BridgeSpl {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             mint,
             from_token_account,
             bridge: bridge_pda,
@@ -280,9 +280,6 @@ mod tests {
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
 
-        // Airdrop to gas fee receiver
-        svm.airdrop(&GAS_FEE_RECEIVER, LAMPORTS_PER_SOL).unwrap();
-
         // Create a test SPL token mint
         let mint = Keypair::new().pubkey();
         create_mock_mint(
@@ -331,7 +328,7 @@ mod tests {
         let accounts = accounts::BridgeSpl {
             payer: payer.pubkey(),
             from: from.pubkey(),
-            gas_fee_receiver: GAS_FEE_RECEIVER,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             mint,
             from_token_account,
             bridge: bridge_pda,
@@ -400,8 +397,6 @@ mod tests {
 
         // Create wrong gas fee receiver
         let wrong_gas_fee_receiver = Keypair::new();
-        svm.airdrop(&wrong_gas_fee_receiver.pubkey(), LAMPORTS_PER_SOL)
-            .unwrap();
 
         // Create a test SPL token mint
         let mint = Keypair::new().pubkey();
