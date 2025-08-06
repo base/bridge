@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    common::{bridge::Eip1559, GAS_PER_CALL},
-    solana_to_base::{Call, CallType, GAS_COST_SCALER, GAS_COST_SCALER_DP},
+    common::bridge::Eip1559,
+    solana_to_base::{Call, CallType, GAS_COST_SCALER, GAS_COST_SCALER_DP, GAS_PER_CALL},
 };
 
 pub mod wrap_token;

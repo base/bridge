@@ -19,3 +19,7 @@ pub const GAS_FEE_RECEIVER: Pubkey = TRUSTED_ORACLE;
 
 #[constant]
 pub const MAX_CALL_BUFFER_SIZE: usize = 8 * 1024; // 8kb max size for call buffer data
+
+#[constant]
+// TODO: Confirm this amount
+pub const GAS_PER_CALL: u64 = 100_000;
