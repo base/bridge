@@ -87,21 +87,31 @@ pub mod bridge {
     /// and stores the proven message state for later relay execution.
     ///
     /// # Arguments
-    /// * `ctx`          - The transaction context
-    /// * `nonce`        - Unique identifier for the cross-chain message
-    /// * `sender`       - The 20-byte Ethereum address that sent the message on Base
-    /// * `data`         - The message payload/calldata to be executed on Solana
-    /// * `proof`        - MMR proof demonstrating message inclusion in the output root
-    /// * `message_hash` - The 32-byte hash of the message for verification
+    /// * `ctx`             - The transaction context
+    /// * `source_chain_id` - Unique identifier for the source chain this message comes from
+    /// * `nonce`           - Unique identifier for the cross-chain message
+    /// * `sender`          - The 20-byte Ethereum address that sent the message on Base
+    /// * `data`            - The message payload/calldata to be executed on Solana
+    /// * `proof`           - MMR proof demonstrating message inclusion in the output root
+    /// * `message_hash`    - The 32-byte hash of the message for verification
     pub fn prove_message(
         ctx: Context<ProveMessage>,
+        source_chain_id: u64,
         nonce: u64,
         sender: [u8; 20],
         data: Vec<u8>,
         proof: Proof,
         message_hash: [u8; 32],
     ) -> Result<()> {
-        prove_message_handler(ctx, nonce, sender, data, proof, message_hash)
+        prove_message_handler(
+            ctx,
+            source_chain_id,
+            nonce,
+            sender,
+            data,
+            proof,
+            message_hash,
+        )
     }
 
     /// Executes a previously proven cross-chain message on Solana.

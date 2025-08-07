@@ -50,6 +50,7 @@ pub struct ProveMessage<'info> {
 
 pub fn prove_message_handler(
     ctx: Context<ProveMessage>,
+    source_chain_id: u64,
     nonce: u64,
     sender: [u8; 20],
     data: Vec<u8>,
@@ -60,7 +61,12 @@ pub fn prove_message_handler(
     require!(!ctx.accounts.bridge.paused, ProveMessageError::BridgePaused);
 
     // Verify that the provided message hash matches the computed hash
-    let computed_hash = hash_message(&nonce.to_be_bytes(), &sender, &data);
+    let computed_hash = hash_message(
+        &source_chain_id.to_be_bytes(),
+        &nonce.to_be_bytes(),
+        &sender,
+        &data,
+    );
     require!(
         message_hash == computed_hash,
         ProveMessageError::InvalidMessageHash
@@ -83,8 +89,9 @@ pub fn prove_message_handler(
     Ok(())
 }
 
-fn hash_message(nonce: &[u8], sender: &[u8; 20], data: &[u8]) -> [u8; 32] {
+fn hash_message(source_chain_id: &[u8], nonce: &[u8], sender: &[u8; 20], data: &[u8]) -> [u8; 32] {
     let mut data_to_hash = Vec::new();
+    data_to_hash.extend_from_slice(source_chain_id);
     data_to_hash.extend_from_slice(nonce);
     data_to_hash.extend_from_slice(sender);
     data_to_hash.extend_from_slice(data);
