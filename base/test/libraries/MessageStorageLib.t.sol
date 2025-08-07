@@ -816,9 +816,9 @@ contract MessageStorageLibTest is Test {
 
     function _calculateExpectedMessageHash(uint64 nonce, address sender, bytes memory data)
         internal
-        pure
+        view
         returns (bytes32)
     {
-        return keccak256(abi.encodePacked(nonce, sender, data));
+        return keccak256(abi.encodePacked(block.chainid, nonce, sender, data));
     }
 }

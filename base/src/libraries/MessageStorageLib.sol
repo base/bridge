@@ -173,8 +173,8 @@ library MessageStorageLib {
     /// @param message The message to hash.
     ///
     /// @return The keccak256 hash of the encoded message.
-    function _hashMessage(Message memory message) private pure returns (bytes32) {
-        return keccak256(abi.encodePacked(message.nonce, message.sender, message.data));
+    function _hashMessage(Message memory message) private view returns (bytes32) {
+        return keccak256(abi.encodePacked(block.chainid, message.nonce, message.sender, message.data));
     }
 
     /// @notice Appends a new leaf to the MMR.
