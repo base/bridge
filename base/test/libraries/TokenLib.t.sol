@@ -331,6 +331,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 1,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
@@ -366,6 +367,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 1,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
@@ -404,6 +406,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
@@ -434,6 +437,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
@@ -461,6 +465,7 @@ contract TokenLibTest is CommonTest {
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER,
             ty: MessageType.Transfer,
@@ -486,6 +491,7 @@ contract TokenLibTest is CommonTest {
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER,
             ty: MessageType.Transfer,
@@ -511,6 +517,7 @@ contract TokenLibTest is CommonTest {
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER,
             ty: MessageType.Transfer,
@@ -605,6 +612,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 1,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
@@ -636,6 +644,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             ty: MessageType.Transfer,
@@ -682,8 +691,13 @@ contract TokenLibTest is CommonTest {
         bytes memory data = abi.encode(call);
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] =
-            IncomingMessage({nonce: uint64(nonce), sender: cfg.remoteBridge, ty: MessageType.Call, data: data});
+        messages[0] = IncomingMessage({
+            sourceChainId: 0,
+            nonce: uint64(nonce),
+            sender: cfg.remoteBridge,
+            ty: MessageType.Call,
+            data: data
+        });
 
         _registerMessage(messages[0]);
         bridge.relayMessages(messages);

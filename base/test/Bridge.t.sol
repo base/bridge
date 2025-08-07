@@ -181,6 +181,7 @@ contract BridgeTest is CommonTest {
     function test_relayMessages_success() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_SENDER,
             ty: MessageType.Call,
@@ -204,6 +205,7 @@ contract BridgeTest is CommonTest {
         // First, create a message that will succeed with trusted relayer
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_SENDER,
             ty: MessageType.Call,
@@ -227,6 +229,7 @@ contract BridgeTest is CommonTest {
     function test_relayMessages_emitsSuccessEvent() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_SENDER,
             ty: MessageType.Call,
@@ -257,6 +260,7 @@ contract BridgeTest is CommonTest {
     function test_relayMessage_callType() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_SENDER,
             ty: MessageType.Call,
@@ -290,8 +294,13 @@ contract BridgeTest is CommonTest {
         });
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] =
-            IncomingMessage({nonce: 0, sender: TEST_SENDER, ty: MessageType.Transfer, data: abi.encode(transfer)});
+        messages[0] = IncomingMessage({
+            sourceChainId: 0,
+            nonce: 0,
+            sender: TEST_SENDER,
+            ty: MessageType.Transfer,
+            data: abi.encode(transfer)
+        });
 
         _registerMessage(messages[0]);
         bridge.relayMessages(messages);
@@ -317,6 +326,7 @@ contract BridgeTest is CommonTest {
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_SENDER,
             ty: MessageType.TransferAndCall,
@@ -333,6 +343,7 @@ contract BridgeTest is CommonTest {
     function test_relayMessage_shouldCompleteWithoutCreatingTwinWhenRemoteBridgeIsSender() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: cfg.remoteBridge,
             ty: MessageType.Call,
@@ -576,6 +587,7 @@ contract BridgeTest is CommonTest {
         IncomingMessage[] memory messages = new IncomingMessage[](3);
         for (uint256 i; i < 3; i++) {
             messages[i] = IncomingMessage({
+                sourceChainId: 0,
                 nonce: uint64(i),
                 sender: TEST_SENDER,
                 ty: MessageType.Call,
@@ -600,6 +612,7 @@ contract BridgeTest is CommonTest {
         // First message creates Twin
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: 0,
             sender: TEST_SENDER,
             ty: MessageType.Call,
@@ -662,6 +675,7 @@ contract BridgeTest is CommonTest {
         for (uint64 i; i < nonce; i++) {
             IncomingMessage[] memory tempMessages = new IncomingMessage[](1);
             tempMessages[0] = IncomingMessage({
+                sourceChainId: 0,
                 nonce: i,
                 sender: TEST_SENDER,
                 ty: MessageType.Call,
@@ -682,6 +696,7 @@ contract BridgeTest is CommonTest {
         // Now send the actual test message
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            sourceChainId: 0,
             nonce: nonce,
             sender: TEST_SENDER,
             ty: MessageType.Call,
@@ -1009,7 +1024,13 @@ contract BridgeTest is CommonTest {
         bytes memory data = abi.encode(call);
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] = IncomingMessage({nonce: nonce, sender: cfg.remoteBridge, ty: MessageType.Call, data: data});
+        messages[0] = IncomingMessage({
+            sourceChainId: 0,
+            nonce: nonce,
+            sender: cfg.remoteBridge,
+            ty: MessageType.Call,
+            data: data
+        });
 
         _registerMessage(messages[0]);
         bridge.relayMessages(messages);
