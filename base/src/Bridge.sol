@@ -59,6 +59,11 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///         present in this mapping if it has successfully been executed, and therefore cannot be executed again.
     mapping(bytes32 messageHash => bool success) public successes;
 
+    /// @notice Mapping of message hashes to boolean values indicating failed execution attempts. A message will be
+    ///         present in this mapping if and only if it has failed to execute at least once. Successfully executed
+    ///         messages on first attempt won't appear here.
+    mapping(bytes32 messageHash => bool failure) public failures;
+
     /// @notice Mapping of Solana owner pubkeys to their Twin contract addresses.
     mapping(Pubkey owner => address twinAddress) public twins;
 
@@ -73,6 +78,11 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///
     /// @param messageHash Keccak256 hash of the message that was successfully relayed.
     event MessageSuccessfullyRelayed(bytes32 indexed messageHash);
+
+    /// @notice Emitted whenever a message fails to be relayed.
+    ///
+    /// @param messageHash Keccak256 hash of the message that failed to be relayed.
+    event FailedToRelayMessage(bytes32 indexed messageHash);
 
     /// @notice Emitted whenever the bridge is paused or unpaused.
     ///
@@ -91,6 +101,9 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
 
     /// @notice Thrown when `validateMessage` is called with a message hash that has not been pre-validated.
     error InvalidMessage();
+
+    /// @notice Thrown when the sender is not the entrypoint.
+    error SenderIsNotEntrypoint();
 
     //////////////////////////////////////////////////////////////
     ///                       Modifiers                        ///
@@ -163,6 +176,54 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     function relayMessages(IncomingMessage[] calldata messages) external nonReentrant whenNotPaused {
         for (uint256 i; i < messages.length; i++) {
             _validateAndRelay(messages[i]);
+        }
+    }
+
+    /// @notice Relays a message sent from Solana to Base.
+    ///
+    /// @dev This function can only be called from `_validateAndRelay`.
+    ///
+    /// @param message The message to relay.
+    function __relayMessage(IncomingMessage calldata message) external {
+        _assertSenderIsEntrypoint();
+
+        // Special case where the message sender is directly the Solana bridge.
+        // For now this is only the case when a Wrapped Token is deployed on Solana and is being registered on Base.
+        // When this happens the message is guaranteed to be a single operation that encode the parameters of the
+        // `registerRemoteToken` function.
+        if (message.sender == REMOTE_BRIDGE) {
+            Call memory call = abi.decode(message.data, (Call));
+            (address localToken, Pubkey remoteToken, uint8 scalarExponent) =
+                abi.decode(call.data, (address, Pubkey, uint8));
+
+            TokenLib.registerRemoteToken({
+                localToken: localToken,
+                remoteToken: remoteToken,
+                scalarExponent: scalarExponent
+            });
+            return;
+        }
+
+        // Get (and deploy if needed) the Twin contract.
+        address twinAddress = twins[message.sender];
+        if (twinAddress == address(0)) {
+            twinAddress = LibClone.deployDeterministicERC1967BeaconProxy({
+                beacon: TWIN_BEACON,
+                salt: Pubkey.unwrap(message.sender)
+            });
+            twins[message.sender] = twinAddress;
+        }
+
+        if (message.ty == MessageType.Call) {
+            Call memory call = abi.decode(message.data, (Call));
+            Twin(payable(twins[message.sender])).execute(call);
+        } else if (message.ty == MessageType.Transfer) {
+            Transfer memory transfer = abi.decode(message.data, (Transfer));
+            TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
+        } else if (message.ty == MessageType.TransferAndCall) {
+            (Transfer memory transfer, Call memory call) = abi.decode(message.data, (Transfer, Call));
+            TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
+            Twin(payable(twins[message.sender])).execute(call);
         }
     }
 
@@ -263,51 +324,20 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
 
         require(BridgeValidator(BRIDGE_VALIDATOR).validMessages(messageHash), InvalidMessage());
 
-        _relayMessage(message);
-
-        // Register the message as successfully relayed.
-        successes[messageHash] = true;
-        emit MessageSuccessfullyRelayed(messageHash);
+        try this.__relayMessage(message) {
+            // Register the message as successfully relayed.
+            delete failures[messageHash];
+            successes[messageHash] = true;
+            emit MessageSuccessfullyRelayed(messageHash);
+        } catch {
+            // Register the message as failed to relay.
+            failures[messageHash] = true;
+            emit FailedToRelayMessage(messageHash);
+        }
     }
 
-    function _relayMessage(IncomingMessage calldata message) private {
-        // Special case where the message sender is directly the Solana bridge.
-        // For now this is only the case when a Wrapped Token is deployed on Solana and is being registered on Base.
-        // When this happens the message is guaranteed to be a single operation that encode the parameters of the
-        // `registerRemoteToken` function.
-        if (message.sender == REMOTE_BRIDGE) {
-            Call memory call = abi.decode(message.data, (Call));
-            (address localToken, Pubkey remoteToken, uint8 scalarExponent) =
-                abi.decode(call.data, (address, Pubkey, uint8));
-
-            TokenLib.registerRemoteToken({
-                localToken: localToken,
-                remoteToken: remoteToken,
-                scalarExponent: scalarExponent
-            });
-            return;
-        }
-
-        // Get (and deploy if needed) the Twin contract.
-        address twinAddress = twins[message.sender];
-        if (twinAddress == address(0)) {
-            twinAddress = LibClone.deployDeterministicERC1967BeaconProxy({
-                beacon: TWIN_BEACON,
-                salt: Pubkey.unwrap(message.sender)
-            });
-            twins[message.sender] = twinAddress;
-        }
-
-        if (message.ty == MessageType.Call) {
-            Call memory call = abi.decode(message.data, (Call));
-            Twin(payable(twins[message.sender])).execute(call);
-        } else if (message.ty == MessageType.Transfer) {
-            Transfer memory transfer = abi.decode(message.data, (Transfer));
-            TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
-        } else if (message.ty == MessageType.TransferAndCall) {
-            (Transfer memory transfer, Call memory call) = abi.decode(message.data, (Transfer, Call));
-            TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
-            Twin(payable(twins[message.sender])).execute(call);
-        }
+    /// @notice Asserts that the caller is the entrypoint.
+    function _assertSenderIsEntrypoint() private view {
+        require(msg.sender == address(this), SenderIsNotEntrypoint());
     }
 }

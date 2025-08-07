@@ -468,14 +468,14 @@ contract BridgeTest is CommonTest {
             remoteAmount: 100e6
         });
 
-        Ix[] memory ixs = new Ix[](0);
-        // Register token pair (this processes an incoming message, doesn't affect outgoing MMR)
-        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
-
         // Track roots across mixed operations
         bytes32[] memory roots = new bytes32[](5);
         roots[0] = bridge.getRoot(); // Initial (should be 0)
         assertEq(roots[0], bytes32(0), "Root should be 0 initially");
+
+        Ix[] memory ixs = new Ix[](0);
+        // Register token pair (this processes an incoming message, doesn't affect outgoing MMR)
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
 
         // 1. Bridge call (1st outgoing message - root still 0)
         vm.prank(user);

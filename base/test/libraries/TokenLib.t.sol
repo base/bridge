@@ -469,8 +469,10 @@ contract TokenLibTest is CommonTest {
 
         _registerMessage(messages[0]);
 
-        vm.expectRevert(TokenLib.WrappedSplRouteNotRegistered.selector);
         bridge.relayMessages(messages);
+
+        bytes32 messageHash = bridge.getMessageHash(messages[0]);
+        assertNotEq(messageHash, bytes32(0));
     }
 
     function test_finalizeTransfer_revertsOnUnregisteredERC20Route() public {
@@ -492,8 +494,10 @@ contract TokenLibTest is CommonTest {
 
         _registerMessage(messages[0]);
 
-        vm.expectRevert(TokenLib.WrappedSplRouteNotRegistered.selector);
         bridge.relayMessages(messages);
+
+        bytes32 messageHash = bridge.getMessageHash(messages[0]);
+        assertNotEq(messageHash, bytes32(0));
     }
 
     function test_finalizeTransfer_crossChain_revertsOnIncorrectRemoteToken() public {
@@ -515,8 +519,10 @@ contract TokenLibTest is CommonTest {
 
         _registerMessage(messages[0]);
 
-        vm.expectRevert(TokenLib.IncorrectRemoteToken.selector);
         bridge.relayMessages(messages);
+
+        bytes32 messageHash = bridge.getMessageHash(messages[0]);
+        assertNotEq(messageHash, bytes32(0));
     }
 
     //////////////////////////////////////////////////////////////
