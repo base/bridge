@@ -17,4 +17,9 @@ pub struct OutputRoot {
     /// The 32-byte MMR root that commits to the complete state of the Bridge contract on Base
     /// at a specific block height.
     pub root: [u8; 32],
+
+    /// The total number of leaves that were present in the MMR when this root
+    /// was generated. This is crucial for determining the MMR structure and
+    /// mountain configuration at the time of proof validation.
+    pub total_leaf_count: u64,
 }

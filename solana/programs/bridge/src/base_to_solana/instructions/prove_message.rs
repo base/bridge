@@ -58,7 +58,7 @@ pub fn prove_message_handler(
 ) -> Result<()> {
     // Check if bridge is paused
     require!(!ctx.accounts.bridge.paused, ProveMessageError::BridgePaused);
-    
+
     // Verify that the provided message hash matches the computed hash
     let computed_hash = hash_message(&nonce.to_be_bytes(), &sender, &data);
     require!(
@@ -67,7 +67,12 @@ pub fn prove_message_handler(
     );
 
     // Verify the merkle proof to ensure the transaction exists on the source chain
-    mmr::verify_proof(&ctx.accounts.output_root.root, &message_hash, &proof)?;
+    mmr::verify_proof(
+        &ctx.accounts.output_root.root,
+        &message_hash,
+        &proof,
+        ctx.accounts.output_root.total_leaf_count,
+    )?;
 
     *ctx.accounts.message = IncomingMessage {
         executed: false,

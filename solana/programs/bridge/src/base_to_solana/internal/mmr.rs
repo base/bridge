@@ -19,11 +19,6 @@ pub struct Proof {
     /// This index determines which mountain the leaf belongs to and its position
     /// within that mountain.
     pub leaf_index: u64,
-
-    /// The total number of leaves that were present in the MMR when this proof
-    /// was generated. This is crucial for determining the MMR structure and
-    /// mountain configuration at the time of proof creation.
-    pub total_leaf_count: u64,
 }
 
 /// Verifies an MMR proof.
@@ -40,24 +35,25 @@ pub struct Proof {
 ///
 /// # Returns
 /// `true` if the proof is valid, `false` otherwise.
-pub fn verify_proof(expected_root: &[u8; 32], leaf_hash: &[u8; 32], proof: &Proof) -> Result<()> {
-    let Proof {
-        proof,
-        leaf_index,
-        total_leaf_count,
-    } = proof;
+pub fn verify_proof(
+    expected_root: &[u8; 32],
+    leaf_hash: &[u8; 32],
+    proof: &Proof,
+    total_leaf_count: u64,
+) -> Result<()> {
+    let Proof { proof, leaf_index } = proof;
 
-    if *total_leaf_count == 0 {
+    if total_leaf_count == 0 {
         require!(proof.is_empty(), MmrError::MmrShouldBeEmpty);
         require!(*expected_root == [0u8; 32], MmrError::InvalidProof);
         require!(*leaf_hash == [0u8; 32], MmrError::InvalidProof);
         return Ok(());
     }
 
-    require!(leaf_index < total_leaf_count, MmrError::InvalidProof);
+    require!(*leaf_index < total_leaf_count, MmrError::InvalidProof);
 
     let calculated_root =
-        calculate_root_from_proof(proof, leaf_hash, *leaf_index, *total_leaf_count)?;
+        calculate_root_from_proof(proof, leaf_hash, *leaf_index, total_leaf_count)?;
 
     require!(calculated_root == *expected_root, MmrError::InvalidProof);
 

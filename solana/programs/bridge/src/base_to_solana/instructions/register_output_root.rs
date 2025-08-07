@@ -59,6 +59,7 @@ pub fn register_output_root_handler(
     ctx: Context<RegisterOutputRoot>,
     output_root: [u8; 32],
     base_block_number: u64,
+    total_leaf_count: u64,
 ) -> Result<()> {
     // Check if bridge is paused
     require!(
@@ -79,6 +80,7 @@ pub fn register_output_root_handler(
     );
 
     ctx.accounts.root.root = output_root;
+    ctx.accounts.root.total_leaf_count = total_leaf_count;
     ctx.accounts.bridge.base_block_number = base_block_number;
 
     Ok(())
