@@ -7,8 +7,6 @@ use crate::common::internal::math::{fixed_pow, SCALE};
 pub struct Bridge {
     /// The Base block number associated with the latest registered output root.
     pub base_block_number: u64,
-    /// The nonce of the last Solana-to-Base message that was relayed on Base.
-    pub base_last_relayed_nonce: u64,
     /// Incremental nonce assigned to each message.
     pub nonce: u64,
     /// Guardian pubkey authorized to update configuration

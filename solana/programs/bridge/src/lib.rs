@@ -62,14 +62,6 @@ pub mod bridge {
         )
     }
 
-    /// Closes an outgoing message account after it has been relayed to Base.
-    ///
-    /// # Arguments
-    /// * `ctx` - The context containing accounts for closing the outgoing message
-    pub fn close_outgoing_message(ctx: Context<CloseOutgoingMessage>) -> Result<()> {
-        close_outgoing_message_handler(ctx)
-    }
-
     // Base -> Solana
 
     /// Registers an output root from Base to enable message verification.
@@ -80,14 +72,12 @@ pub mod bridge {
     /// * `ctx`                     - The context containing accounts for storing the output root
     /// * `output_root`             - The 32-byte MMR root of Base messages for the given block
     /// * `base_block_number`       - The Base block number this output root corresponds to
-    /// * `base_last_relayed_nonce` - The most recent nonce received on Base
     pub fn register_output_root(
         ctx: Context<RegisterOutputRoot>,
         output_root: [u8; 32],
         base_block_number: u64,
-        base_last_relayed_nonce: u64,
     ) -> Result<()> {
-        register_output_root_handler(ctx, output_root, base_block_number, base_last_relayed_nonce)
+        register_output_root_handler(ctx, output_root, base_block_number)
     }
 
     /// Proves that a cross-chain message exists in the Base Bridge contract using an MMR proof.

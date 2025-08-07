@@ -237,7 +237,7 @@ mod tests {
             OutgoingMessage::try_deserialize(&mut &outgoing_message_account.data[..]).unwrap();
 
         // Verify the message fields
-        assert_eq!(outgoing_message_data.nonce, 1);
+        assert_eq!(outgoing_message_data.nonce, 0);
         assert_eq!(outgoing_message_data.original_payer, payer.pubkey());
         assert_eq!(outgoing_message_data.sender, from.pubkey());
 
@@ -269,7 +269,7 @@ mod tests {
         // Verify bridge nonce was incremented
         let bridge_account = svm.get_account(&bridge_pda).unwrap();
         let bridge_data = Bridge::try_deserialize(&mut &bridge_account.data[..]).unwrap();
-        assert_eq!(bridge_data.nonce, 2);
+        assert_eq!(bridge_data.nonce, 1);
     }
 
     #[test]

@@ -52,8 +52,7 @@ pub fn initialize_handler(
 
     *ctx.accounts.bridge = Bridge {
         base_block_number: 0,
-        base_last_relayed_nonce: 0,
-        nonce: 1, // Starts the first nonce at 1 so that 0 can safely be used to initialize `base_last_relayed_nonce`
+        nonce: 0,
         guardian: ctx.accounts.guardian.key(),
         paused: false, // Initialize bridge as unpaused
         eip1559: Eip1559 {
@@ -157,8 +156,7 @@ mod tests {
             bridge,
             Bridge {
                 base_block_number: 0,
-                base_last_relayed_nonce: 0,
-                nonce: 1,
+                nonce: 0,
                 guardian: guardian_pk,
                 paused: false,
                 eip1559: Eip1559 {

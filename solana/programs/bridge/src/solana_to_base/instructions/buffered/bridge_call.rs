@@ -67,8 +67,11 @@ pub fn bridge_call_buffered_handler<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, BridgeCallBuffered<'info>>,
 ) -> Result<()> {
     // Check if bridge is paused
-    require!(!ctx.accounts.bridge.paused, BridgeCallBufferedError::BridgePaused);
-    
+    require!(
+        !ctx.accounts.bridge.paused,
+        BridgeCallBufferedError::BridgePaused
+    );
+
     let call_buffer = &ctx.accounts.call_buffer;
     let call = Call {
         ty: call_buffer.ty,
@@ -214,7 +217,7 @@ mod tests {
             OutgoingMessage::try_deserialize(&mut &outgoing_message_account.data[..]).unwrap();
 
         // Verify the message fields
-        assert_eq!(outgoing_message_data.nonce, 1);
+        assert_eq!(outgoing_message_data.nonce, 0);
         assert_eq!(outgoing_message_data.original_payer, payer.pubkey());
         assert_eq!(outgoing_message_data.sender, from.pubkey());
 
@@ -249,7 +252,7 @@ mod tests {
         // Verify bridge nonce was incremented
         let bridge_account = svm.get_account(&bridge_pda).unwrap();
         let bridge_data = Bridge::try_deserialize(&mut &bridge_account.data[..]).unwrap();
-        assert_eq!(bridge_data.nonce, 2);
+        assert_eq!(bridge_data.nonce, 1);
     }
 
     #[test]
