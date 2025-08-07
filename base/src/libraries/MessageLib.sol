@@ -23,19 +23,19 @@ struct IncomingMessage {
 }
 
 library MessageLib {
-    function getMessageHashCd(IncomingMessage calldata message) internal pure returns (bytes32) {
+    function getMessageHashCd(IncomingMessage calldata message) internal view returns (bytes32) {
         return keccak256(abi.encode(message.nonce, getInnerMessageHashCd(message)));
     }
 
-    function getMessageHash(IncomingMessage memory message) internal pure returns (bytes32) {
+    function getMessageHash(IncomingMessage memory message) internal view returns (bytes32) {
         return keccak256(abi.encode(message.nonce, getInnerMessageHash(message)));
     }
 
-    function getInnerMessageHashCd(IncomingMessage calldata message) internal pure returns (bytes32) {
-        return keccak256(abi.encode(message.sender, message.ty, message.data));
+    function getInnerMessageHashCd(IncomingMessage calldata message) internal view returns (bytes32) {
+        return keccak256(abi.encode(block.chainid, message.sender, message.ty, message.data));
     }
 
-    function getInnerMessageHash(IncomingMessage memory message) internal pure returns (bytes32) {
-        return keccak256(abi.encode(message.sender, message.ty, message.data));
+    function getInnerMessageHash(IncomingMessage memory message) internal view returns (bytes32) {
+        return keccak256(abi.encode(block.chainid, message.sender, message.ty, message.data));
     }
 }

@@ -41,7 +41,7 @@ contract CommonTest is Test {
 
     function _getValidatorSigs(bytes32[] memory innerMessageHashes) internal view returns (bytes memory) {
         bytes32[] memory messageHashes = _calculateFinalHashes(innerMessageHashes);
-        return _createSignature(keccak256(abi.encode(block.chainid, messageHashes)), 1);
+        return _createSignature(keccak256(abi.encode(messageHashes)), 1);
     }
 
     function _createSignature(bytes32 messageHash, uint256 privateKey) internal pure returns (bytes memory) {

@@ -299,7 +299,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @param message The `IncomingMessage` to retrieve the message hash for
     ///
     /// @return messageHash The hash of `message`
-    function getMessageHash(IncomingMessage calldata message) public pure returns (bytes32) {
+    function getMessageHash(IncomingMessage calldata message) public view returns (bytes32) {
         return MessageLib.getMessageHashCd(message);
     }
 
