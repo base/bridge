@@ -819,6 +819,6 @@ contract MessageStorageLibTest is Test {
         view
         returns (bytes32)
     {
-        return keccak256(abi.encodePacked(block.chainid, nonce, sender, data));
+        return keccak256(abi.encodePacked(uint64(block.chainid), nonce, sender, data));
     }
 }

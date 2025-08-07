@@ -938,7 +938,7 @@ contract BridgeTest is CommonTest {
         // Let's calculate what the leaf hash should be
         // The leaf is the hash of (nonce=0, sender=user, data=SVMBridgeLib.serializeCall(ixs))
         bytes memory serializedCall = SVMBridgeLib.serializeCall(ixs);
-        bytes32 expectedLeafHash = keccak256(abi.encodePacked(block.chainid, uint64(0), user, serializedCall));
+        bytes32 expectedLeafHash = keccak256(abi.encodePacked(uint64(block.chainid), uint64(0), user, serializedCall));
 
         // This should now pass with the fixed implementation
         assertEq(finalRoot, expectedLeafHash, "Single leaf MMR should return the leaf hash itself");
@@ -960,7 +960,7 @@ contract BridgeTest is CommonTest {
 
         // Calculate expected first leaf hash
         bytes memory serializedCall1 = SVMBridgeLib.serializeCall(ixs1);
-        bytes32 expectedLeaf1 = keccak256(abi.encodePacked(block.chainid, uint64(0), user, serializedCall1));
+        bytes32 expectedLeaf1 = keccak256(abi.encodePacked(uint64(block.chainid), uint64(0), user, serializedCall1));
 
         // Send second bridge call
         Ix[] memory ixs2 = new Ix[](1);
@@ -973,7 +973,7 @@ contract BridgeTest is CommonTest {
 
         // Calculate expected second leaf hash
         bytes memory serializedCall2 = SVMBridgeLib.serializeCall(ixs2);
-        bytes32 expectedLeaf2 = keccak256(abi.encodePacked(block.chainid, uint64(1), user, serializedCall2));
+        bytes32 expectedLeaf2 = keccak256(abi.encodePacked(uint64(block.chainid), uint64(1), user, serializedCall2));
 
         // Calculate what the combined root should be
         // For 2 leaves, the root should be the hash of both leaves combined
