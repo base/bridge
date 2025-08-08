@@ -39,11 +39,10 @@ async function main() {
   // Instruction arguments
   const args: WrapTokenInstructionDataArgs = {
     decimals: 6,
-    name: "Wrapped ERC20",
-    symbol: "wERC20",
-    remoteToken: toBytes(constants.erc20),
+    name: "Wrapped ETH",
+    symbol: "wETH",
+    remoteToken: toBytes(constants.eth),
     scalerExponent: 9,
-    gasLimit: 1_000_000n,
   };
 
   // Calculate metadata hash

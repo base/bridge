@@ -59,9 +59,8 @@ export const IDL = {
         "the bridge's cross-chain messaging system.",
         "",
         "# Arguments",
-        "* `ctx`       - The context containing accounts for the bridge operation",
-        "* `gas_limit` - Maximum gas to use for the function call on Base",
-        "* `call`      - The contract call details including target address and calldata"
+        "* `ctx`  - The context containing accounts for the bridge operation",
+        "* `call` - The contract call details including target address and calldata"
       ],
       "discriminator": [
         90,
@@ -130,10 +129,6 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "gas_limit",
-          "type": "u64"
-        },
-        {
           "name": "call",
           "type": {
             "defined": {
@@ -151,8 +146,7 @@ export const IDL = {
         "for execution on Base.",
         "",
         "# Arguments",
-        "* `ctx`       - The context containing accounts for the bridge operation",
-        "* `gas_limit` - Maximum gas to use for the function call on Base"
+        "* `ctx` - The context containing accounts for the bridge operation"
       ],
       "discriminator": [
         138,
@@ -235,12 +229,7 @@ export const IDL = {
           ]
         }
       ],
-      "args": [
-        {
-          "name": "gas_limit",
-          "type": "u64"
-        }
-      ]
+      "args": []
     },
     {
       "name": "bridge_sol",
@@ -251,7 +240,6 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx`          - The context containing accounts for the SOL bridge operation",
-        "* `gas_limit`    - Maximum gas to use for the minting transaction on Base",
         "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
         "* `remote_token` - The 20-byte address of the token contract on Base",
         "* `amount`       - Amount of SOL to bridge (in lamports)",
@@ -334,10 +322,6 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "gas_limit",
-          "type": "u64"
-        },
-        {
           "name": "to",
           "type": {
             "array": [
@@ -380,7 +364,6 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx`          - The context containing accounts for the SOL bridge operation",
-        "* `gas_limit`    - Maximum gas to use for the transaction on Base",
         "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
         "* `remote_token` - The 20-byte address of the token contract on Base",
         "* `amount`       - Amount of SOL to bridge (in lamports)"
@@ -474,10 +457,6 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "gas_limit",
-          "type": "u64"
-        },
-        {
           "name": "to",
           "type": {
             "array": [
@@ -510,7 +489,6 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx`          - The context containing accounts for the SPL token bridge operation",
-        "* `gas_limit`    - Maximum gas to use for the minting transaction on Base",
         "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
         "* `remote_token` - The 20-byte address of the ERC20 token contract on Base",
         "* `amount`       - Amount of SPL tokens to bridge (in lamports)",
@@ -617,10 +595,6 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "gas_limit",
-          "type": "u64"
-        },
-        {
           "name": "to",
           "type": {
             "array": [
@@ -663,7 +637,6 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx`          - The context containing accounts for the SPL token bridge operation",
-        "* `gas_limit`    - Maximum gas to use for the transaction on Base",
         "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
         "* `remote_token` - The 20-byte address of the ERC20 token contract on Base",
         "* `amount`       - Amount of SPL tokens to bridge (in lamports)"
@@ -782,10 +755,6 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "gas_limit",
-          "type": "u64"
-        },
-        {
           "name": "to",
           "type": {
             "array": [
@@ -817,11 +786,10 @@ export const IDL = {
         "or mint the original tokens on Base for the specified recipient.",
         "",
         "# Arguments",
-        "* `ctx`       - The context containing accounts for the wrapped token bridge operation",
-        "* `gas_limit` - Maximum gas to use for the token release transaction on Base",
-        "* `to`        - The 20-byte Ethereum address that will receive the original tokens on Base",
-        "* `amount`    - Amount of wrapped tokens to bridge back (in lamports)",
-        "* `call`      - Optional additional contract call to execute with the token transfer"
+        "* `ctx`    - The context containing accounts for the wrapped token bridge operation",
+        "* `to`     - The 20-byte Ethereum address that will receive the original tokens on Base",
+        "* `amount` - Amount of wrapped tokens to bridge back (in lamports)",
+        "* `call`   - Optional additional contract call to execute with the token transfer"
       ],
       "discriminator": [
         55,
@@ -912,10 +880,6 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "gas_limit",
-          "type": "u64"
-        },
-        {
           "name": "to",
           "type": {
             "array": [
@@ -948,10 +912,9 @@ export const IDL = {
         "the original tokens on Base, then executes a call using data from a call buffer.",
         "",
         "# Arguments",
-        "* `ctx`       - The context containing accounts for the wrapped token bridge operation",
-        "* `gas_limit` - Maximum gas to use for the transaction on Base",
-        "* `to`        - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `amount`    - Amount of wrapped tokens to bridge back (in lamports)"
+        "* `ctx`    - The context containing accounts for the wrapped token bridge operation",
+        "* `to`     - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `amount` - Amount of wrapped tokens to bridge back (in lamports)"
       ],
       "discriminator": [
         117,
@@ -1055,10 +1018,6 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "gas_limit",
-          "type": "u64"
-        },
-        {
           "name": "to",
           "type": {
             "array": [
@@ -1113,64 +1072,18 @@ export const IDL = {
       "args": []
     },
     {
-      "name": "close_outgoing_message",
-      "docs": [
-        "Closes an outgoing message account after it has been relayed to Base.",
-        "",
-        "# Arguments",
-        "* `ctx` - The context containing accounts for closing the outgoing message"
-      ],
-      "discriminator": [
-        232,
-        70,
-        171,
-        219,
-        29,
-        220,
-        198,
-        76
-      ],
-      "accounts": [
-        {
-          "name": "payer",
-          "docs": [
-            "The account that pays for the transaction fees."
-          ],
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "original_payer",
-          "docs": [
-            "The account that is the original payer of the outgoing message."
-          ],
-          "writable": true
-        },
-        {
-          "name": "bridge",
-          "docs": [
-            "The bridge state account.",
-            "It is used to check if the message has been relayed to Base based on the `base_last_relayed_nonce` field."
-          ]
-        },
-        {
-          "name": "outgoing_message",
-          "docs": [
-            "The outgoing message account to be closed and whose rent will be refunded to the original payer."
-          ],
-          "writable": true
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "initialize",
       "docs": [
         "Initializes the bridge program with required state accounts.",
         "This function sets up the initial bridge configuration and must be called once during deployment.",
         "",
         "# Arguments",
-        "* `ctx` - The context containing all accounts needed for initialization, including the guardian signer"
+        "* `ctx` - The context containing all accounts needed for initialization, including the guardian signer",
+        "* `eip1559_config` - The EIP-1559 configuration, contains the gas target, adjustment denominator, window duration, and minimum base fee",
+        "* `gas_cost_config` - The gas cost configuration, contains the gas cost scaler, gas cost scaler decimal precision, and gas fee receiver",
+        "* `gas_config` - The gas configuration, contains the extra relay buffer, execution prologue buffer, execution buffer, execution epilogue buffer, base transaction cost, and max gas limit per message",
+        "* `protocol_config` - The protocol configuration, contains the block interval requirement for output root registration",
+        "* `buffer_config` - The buffer configuration, contains the maximum call buffer size"
       ],
       "discriminator": [
         175,
@@ -1403,6 +1316,13 @@ export const IDL = {
           "writable": true
         },
         {
+          "name": "bridge",
+          "docs": [
+            "The main bridge state account used to check pause status",
+            "- Uses PDA with BRIDGE_SEED for deterministic address"
+          ]
+        },
+        {
           "name": "system_program",
           "docs": [
             "System program required for creating new accounts.",
@@ -1455,10 +1375,10 @@ export const IDL = {
         "which is required before any messages from that block can be proven and relayed.",
         "",
         "# Arguments",
-        "* `ctx`                     - The context containing accounts for storing the output root",
-        "* `output_root`             - The 32-byte MMR root of Base messages for the given block",
-        "* `base_block_number`       - The Base block number this output root corresponds to",
-        "* `base_last_relayed_nonce` - The most recent nonce received on Base"
+        "* `ctx`               - The context containing accounts for storing the output root",
+        "* `output_root`       - The 32-byte MMR root of Base messages for the given block",
+        "* `base_block_number` - The Base block number this output root corresponds to",
+        "* `total_leaf_count`  - The total amount of leaves in the MMR with this root"
       ],
       "discriminator": [
         215,
@@ -1523,7 +1443,7 @@ export const IDL = {
           "type": "u64"
         },
         {
-          "name": "base_last_relayed_nonce",
+          "name": "total_leaf_count",
           "type": "u64"
         }
       ]
@@ -1567,6 +1487,13 @@ export const IDL = {
             "- Prevents replay attacks by tracking execution status"
           ],
           "writable": true
+        },
+        {
+          "name": "bridge",
+          "docs": [
+            "The main bridge state account used to check pause status",
+            "- Uses PDA with BRIDGE_SEED for deterministic address"
+          ]
         }
       ],
       "args": []
@@ -1615,42 +1542,15 @@ export const IDL = {
       ]
     },
     {
-      "name": "set_base_gas_buffer",
-      "discriminator": [
-        107,
-        87,
-        176,
-        144,
-        23,
-        237,
-        127,
-        92
-      ],
-      "accounts": [
-        {
-          "name": "bridge",
-          "docs": [
-            "The bridge account containing configuration"
-          ],
-          "writable": true
-        },
-        {
-          "name": "guardian",
-          "docs": [
-            "The guardian account authorized to update configuration"
-          ],
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "new_cost",
-          "type": "u64"
-        }
-      ]
-    },
-    {
       "name": "set_block_interval_requirement",
+      "docs": [
+        "Set the block interval requirement for Protocol Config",
+        "Only the guardian can call this function",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the bridge account and guardian",
+        "* `new_interval` - The new block interval requirement value"
+      ],
       "discriminator": [
         76,
         70,
@@ -1685,112 +1585,15 @@ export const IDL = {
       ]
     },
     {
-      "name": "set_execution_epilogue_gas_buffer",
-      "discriminator": [
-        145,
-        167,
-        184,
-        121,
-        73,
-        47,
-        10,
-        102
-      ],
-      "accounts": [
-        {
-          "name": "bridge",
-          "docs": [
-            "The bridge account containing configuration"
-          ],
-          "writable": true
-        },
-        {
-          "name": "guardian",
-          "docs": [
-            "The guardian account authorized to update configuration"
-          ],
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "new_buffer",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "set_execution_gas_buffer",
-      "discriminator": [
-        252,
-        214,
-        153,
-        54,
-        139,
-        142,
-        70,
-        185
-      ],
-      "accounts": [
-        {
-          "name": "bridge",
-          "docs": [
-            "The bridge account containing configuration"
-          ],
-          "writable": true
-        },
-        {
-          "name": "guardian",
-          "docs": [
-            "The guardian account authorized to update configuration"
-          ],
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "new_buffer",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "set_execution_prologue_gas_buffer",
-      "discriminator": [
-        9,
-        136,
-        55,
-        25,
-        232,
-        136,
-        187,
-        214
-      ],
-      "accounts": [
-        {
-          "name": "bridge",
-          "docs": [
-            "The bridge account containing configuration"
-          ],
-          "writable": true
-        },
-        {
-          "name": "guardian",
-          "docs": [
-            "The guardian account authorized to update configuration"
-          ],
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "new_buffer",
-          "type": "u64"
-        }
-      ]
-    },
-    {
       "name": "set_gas_cost_scaler",
+      "docs": [
+        "Set the gas cost scaler for Gas Cost Config",
+        "Only the guardian can call this function",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the bridge account and guardian",
+        "* `new_scaler` - The new gas cost scaler value (must be > 0 and <= 1,000,000,000)"
+      ],
       "discriminator": [
         148,
         146,
@@ -1826,6 +1629,14 @@ export const IDL = {
     },
     {
       "name": "set_gas_cost_scaler_dp",
+      "docs": [
+        "Set the gas cost scaler DP for Gas Cost Config",
+        "Only the guardian can call this function",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the bridge account and guardian",
+        "* `new_dp` - The new gas cost scaler DP value (must be > 0 and <= 1,000,000,000)"
+      ],
       "discriminator": [
         198,
         111,
@@ -1860,42 +1671,15 @@ export const IDL = {
       ]
     },
     {
-      "name": "set_gas_extra_buffer",
-      "discriminator": [
-        135,
-        13,
-        86,
-        11,
-        195,
-        2,
-        59,
-        185
-      ],
-      "accounts": [
-        {
-          "name": "bridge",
-          "docs": [
-            "The bridge account containing configuration"
-          ],
-          "writable": true
-        },
-        {
-          "name": "guardian",
-          "docs": [
-            "The guardian account authorized to update configuration"
-          ],
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "new_buffer",
-          "type": "u64"
-        }
-      ]
-    },
-    {
       "name": "set_gas_fee_receiver",
+      "docs": [
+        "Set the gas fee receiver for Gas Cost Config",
+        "Only the guardian can call this function",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the bridge account and guardian",
+        "* `new_receiver` - The new gas fee receiver"
+      ],
       "discriminator": [
         58,
         188,
@@ -1926,6 +1710,49 @@ export const IDL = {
         {
           "name": "new_receiver",
           "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_gas_per_call",
+      "docs": [
+        "Set the gas amount per call for Gas Config",
+        "Only the guardian can call this function",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the bridge account and guardian",
+        "* `new_val` - The new gas amount per call value"
+      ],
+      "discriminator": [
+        164,
+        95,
+        213,
+        130,
+        26,
+        69,
+        82,
+        127
+      ],
+      "accounts": [
+        {
+          "name": "bridge",
+          "docs": [
+            "The bridge account containing configuration"
+          ],
+          "writable": true
+        },
+        {
+          "name": "guardian",
+          "docs": [
+            "The guardian account authorized to update configuration"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_val",
+          "type": "u64"
         }
       ]
     },
@@ -1974,6 +1801,14 @@ export const IDL = {
     },
     {
       "name": "set_max_call_buffer_size",
+      "docs": [
+        "Set the max call buffer size for Buffer Config",
+        "Only the guardian can call this function",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the bridge account and guardian",
+        "* `new_size` - The new max call buffer size value"
+      ],
       "discriminator": [
         140,
         178,
@@ -2003,41 +1838,6 @@ export const IDL = {
       "args": [
         {
           "name": "new_size",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "set_max_gas_limit_per_message",
-      "discriminator": [
-        226,
-        193,
-        216,
-        39,
-        248,
-        45,
-        244,
-        179
-      ],
-      "accounts": [
-        {
-          "name": "bridge",
-          "docs": [
-            "The bridge account containing configuration"
-          ],
-          "writable": true
-        },
-        {
-          "name": "guardian",
-          "docs": [
-            "The guardian account authorized to update configuration"
-          ],
-          "signer": true
-        }
-      ],
-      "args": [
-        {
-          "name": "new_limit",
           "type": "u64"
         }
       ]
@@ -2082,6 +1882,49 @@ export const IDL = {
         {
           "name": "new_fee",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_pause_status",
+      "docs": [
+        "Set the pause status for the bridge",
+        "Only the guardian can call this function",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the bridge account and guardian",
+        "* `new_paused` - The new pause status (true for paused, false for unpaused)"
+      ],
+      "discriminator": [
+        118,
+        25,
+        145,
+        217,
+        114,
+        209,
+        236,
+        145
+      ],
+      "accounts": [
+        {
+          "name": "bridge",
+          "docs": [
+            "The bridge account containing configuration"
+          ],
+          "writable": true
+        },
+        {
+          "name": "guardian",
+          "docs": [
+            "The guardian account authorized to update configuration"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_paused",
+          "type": "bool"
         }
       ]
     },
@@ -2176,8 +2019,7 @@ export const IDL = {
         "# Arguments",
         "* `ctx`                    - The transaction context",
         "* `decimals`               - Number of decimal places for the token",
-        "* `partial_token_metadata` - Token name, symbol, and other metadata for the ERC20 contract",
-        "* `gas_limit`              - Maximum gas to use for the ERC20 deployment transaction on Base"
+        "* `partial_token_metadata` - Token name, symbol, and other metadata for the ERC20 contract"
       ],
       "discriminator": [
         203,
@@ -2262,10 +2104,6 @@ export const IDL = {
               "name": "PartialTokenMetadata"
             }
           }
-        },
-        {
-          "name": "gas_limit",
-          "type": "u64"
         }
       ]
     }
@@ -2357,6 +2195,16 @@ export const IDL = {
       "code": 6000,
       "name": "IncorrectGasFeeReceiver",
       "msg": "Incorrect gas fee receiver"
+    },
+    {
+      "code": 6001,
+      "name": "Unauthorized",
+      "msg": "Only the owner can close this call buffer"
+    },
+    {
+      "code": 6002,
+      "name": "BridgePaused",
+      "msg": "Bridge is currently paused"
     }
   ],
   "types": [
@@ -2373,13 +2221,6 @@ export const IDL = {
             "type": "u64"
           },
           {
-            "name": "base_last_relayed_nonce",
-            "docs": [
-              "The nonce of the last Solana-to-Base message that was relayed on Base."
-            ],
-            "type": "u64"
-          },
-          {
             "name": "nonce",
             "docs": [
               "Incremental nonce assigned to each message."
@@ -2392,6 +2233,13 @@ export const IDL = {
               "Guardian pubkey authorized to update configuration"
             ],
             "type": "pubkey"
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "Whether the bridge is paused (emergency stop mechanism)"
+            ],
+            "type": "bool"
           },
           {
             "name": "eip1559",
@@ -2832,44 +2680,9 @@ export const IDL = {
         "kind": "struct",
         "fields": [
           {
-            "name": "extra",
+            "name": "gas_per_call",
             "docs": [
-              "Additional relay buffer"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "execution_prologue",
-            "docs": [
-              "Pre-execution gas buffer"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "execution",
-            "docs": [
-              "Main execution gas buffer"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "execution_epilogue",
-            "docs": [
-              "Post-execution gas buffer"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "base_transaction_cost",
-            "docs": [
-              "Base transaction cost (Ethereum standard)"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "max_gas_limit_per_message",
-            "docs": [
-              "Maximum gas limit per cross-chain message"
+              "Amount of gas per cross-chain message"
             ],
             "type": "u64"
           }
@@ -3083,14 +2896,6 @@ export const IDL = {
             "type": "pubkey"
           },
           {
-            "name": "gas_limit",
-            "docs": [
-              "Maximum amount of gas that can be consumed when executing this message on Base.",
-              "If execution exceeds this limit, the transaction will revert on the Base side."
-            ],
-            "type": "u64"
-          },
-          {
             "name": "message",
             "docs": [
               "The actual message payload that will be executed on Base.",
@@ -3135,6 +2940,15 @@ export const IDL = {
                 32
               ]
             }
+          },
+          {
+            "name": "total_leaf_count",
+            "docs": [
+              "The total number of leaves that were present in the MMR when this root",
+              "was generated. This is crucial for determining the MMR structure and",
+              "mountain configuration at the time of proof validation."
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -3231,15 +3045,6 @@ export const IDL = {
               "The 0-indexed position of the leaf being proven within the MMR.",
               "This index determines which mountain the leaf belongs to and its position",
               "within that mountain."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "total_leaf_count",
-            "docs": [
-              "The total number of leaves that were present in the MMR when this proof",
-              "was generated. This is crucial for determining the MMR structure and",
-              "mountain configuration at the time of proof creation."
             ],
             "type": "u64"
           }
@@ -3517,21 +3322,6 @@ export const IDL = {
       "name": "OUTPUT_ROOT_SEED",
       "type": "bytes",
       "value": "[111, 117, 116, 112, 117, 116, 95, 114, 111, 111, 116]"
-    },
-    {
-      "name": "RELAY_MESSAGES_CALL_ABI_ENCODING_OVERHEAD",
-      "type": "u64",
-      "value": "544"
-    },
-    {
-      "name": "RELAY_MESSAGES_TRANSFER_ABI_ENCODING_OVERHEAD",
-      "type": "u64",
-      "value": "480"
-    },
-    {
-      "name": "RELAY_MESSAGES_TRANSFER_AND_CALL_ABI_ENCODING_OVERHEAD",
-      "type": "u64",
-      "value": "704"
     },
     {
       "name": "REMOTE_TOKEN_METADATA_KEY",

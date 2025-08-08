@@ -47,7 +47,7 @@ contract HelperConfig is Script {
         // Internal testing version
         return NetworkConfig({
             initialOwner: BRIDGE_ADMIN,
-            remoteBridge: Pubkey.wrap(0x41513b90635e51cd9d937b42c6a363f3874002414623f99271f6b560a82eacd4), // 5PyLteyLMV7UzWnsELBmMBTpjd8SdxpFx6yDfoXSCrG3
+            remoteBridge: Pubkey.wrap(0x6504d691558cb2bd3ba447ae9683674667053d04b89a77157eed9d74a638c150), // 7oLTUCrqwRUgYMMRQYbe9vHFMGkensP9SBo9sY8XSP2P
             trustedRelayer: BASE_ORACLE,
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             guardians: guardians,
@@ -62,7 +62,8 @@ contract HelperConfig is Script {
 
         // return NetworkConfig({
         //     initialOwner: BRIDGE_ADMIN,
-        //     remoteBridge: Pubkey.wrap(0x9379502b8fd1d9f6feee747094a08cd0f9b79fbbc7e51a36e2da237ee1506460), // AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH
+        //     remoteBridge: Pubkey.wrap(0x9379502b8fd1d9f6feee747094a08cd0f9b79fbbc7e51a36e2da237ee1506460), //
+        // AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH
         //     trustedRelayer: BASE_ORACLE,
         //     erc1967Factory: ERC1967FactoryConstants.ADDRESS,
         //     guardians: guardians,

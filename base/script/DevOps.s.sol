@@ -30,9 +30,9 @@ contract DevOps is Script {
         Chain memory chain = getChain(block.chainid);
 
         if (bytes(environment).length == 0) {
-            return string.concat("deployments/", chain.name, ".json");
+            return string.concat("deployments/", chain.chainAlias, ".json");
         }
 
-        return string.concat("deployments/", chain.name, "_", environment, ".json");
+        return string.concat("deployments/", chain.chainAlias, "_", environment, ".json");
     }
 }

@@ -4,7 +4,7 @@ A cross-chain bridge program that enables seamless message passing between Solan
 
 ## Program IDs
 
-- **Devnet Alpha**: `4L8cUU2DXTzEaa5C8MWLTyEV8dpmpDbCjg8DNgUuGedc`
+- **Devnet Alpha**: `7oLTUCrqwRUgYMMRQYbe9vHFMGkensP9SBo9sY8XSP2P`
 - **Devnet Prod**: `AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH`
 
 ## Overview
