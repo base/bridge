@@ -34,7 +34,6 @@ pub fn bridge_wrapped_token_internal<'info>(
 
     let message = OutgoingMessage::new_transfer(
         bridge.nonce,
-        payer.key(),
         from.key(),
         TransferOp {
             to,

@@ -206,12 +206,7 @@ fn register_remote_token(
         data: (address, local_token, scaler_exponent).abi_encode(),
     };
 
-    let message = OutgoingMessage::new_call(
-        ctx.accounts.bridge.nonce,
-        ctx.accounts.payer.key(),
-        ID,
-        call,
-    );
+    let message = OutgoingMessage::new_call(ctx.accounts.bridge.nonce, ID, call);
 
     pay_for_gas(
         &ctx.accounts.system_program,

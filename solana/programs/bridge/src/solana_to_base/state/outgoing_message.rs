@@ -98,10 +98,6 @@ pub struct OutgoingMessage {
     /// Starts at 1 and is incremented for each new message.
     pub nonce: u64,
 
-    /// The Solana public key of the account that paid for the message.
-    /// This is needed to refund the payer once the message has been relayed to Base.
-    pub original_payer: Pubkey,
-
     /// The Solana public key of the account that initiated this cross-chain message.
     /// This is used for authentication and to identify the message originator on Base.
     pub sender: Pubkey,
@@ -112,19 +108,17 @@ pub struct OutgoingMessage {
 }
 
 impl OutgoingMessage {
-    pub fn new_call(nonce: u64, payer: Pubkey, sender: Pubkey, call: Call) -> Self {
+    pub fn new_call(nonce: u64, sender: Pubkey, call: Call) -> Self {
         Self {
             nonce,
-            original_payer: payer,
             sender,
             message: Message::Call(call),
         }
     }
 
-    pub fn new_transfer(nonce: u64, payer: Pubkey, sender: Pubkey, transfer: Transfer) -> Self {
+    pub fn new_transfer(nonce: u64, sender: Pubkey, transfer: Transfer) -> Self {
         Self {
             nonce,
-            original_payer: payer,
             sender,
             message: Message::Transfer(transfer),
         }
@@ -132,7 +126,6 @@ impl OutgoingMessage {
 
     pub fn space(data_len: Option<usize>) -> usize {
         8 + // nonce
-        32 + // original_payer
         32 + // sender
 
         // TODO: Accept the message type as a parameter, so we can use the correct space calculation.

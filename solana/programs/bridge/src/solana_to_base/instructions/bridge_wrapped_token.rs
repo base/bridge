@@ -141,7 +141,7 @@ mod tests {
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
 
-
+        
 
         // Create test wrapped token metadata
         let partial_token_metadata = PartialTokenMetadata {
@@ -218,7 +218,6 @@ mod tests {
 
         // Verify the message fields
         assert_eq!(outgoing_message_data.nonce, 0);
-        assert_eq!(outgoing_message_data.original_payer, payer.pubkey());
         assert_eq!(outgoing_message_data.sender, from.pubkey());
 
         // Verify the message content

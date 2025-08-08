@@ -30,7 +30,6 @@ pub fn bridge_sol_internal<'info>(
 
     let message = OutgoingMessage::new_transfer(
         bridge.nonce,
-        payer.key(),
         from.key(),
         TransferOp {
             to,

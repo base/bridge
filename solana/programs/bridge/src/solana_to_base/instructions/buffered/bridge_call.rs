@@ -218,7 +218,6 @@ mod tests {
 
         // Verify the message fields
         assert_eq!(outgoing_message_data.nonce, 0);
-        assert_eq!(outgoing_message_data.original_payer, payer.pubkey());
         assert_eq!(outgoing_message_data.sender, from.pubkey());
 
         // Verify the message content matches the call buffer data

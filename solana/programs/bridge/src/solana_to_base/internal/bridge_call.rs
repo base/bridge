@@ -17,7 +17,7 @@ pub fn bridge_call_internal<'info>(
 ) -> Result<()> {
     check_call(&call)?;
 
-    let message = OutgoingMessage::new_call(bridge.nonce, payer.key(), from.key(), call);
+    let message = OutgoingMessage::new_call(bridge.nonce, from.key(), call);
 
     pay_for_gas(system_program, payer, gas_fee_receiver, bridge)?;
 

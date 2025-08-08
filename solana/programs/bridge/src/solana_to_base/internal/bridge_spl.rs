@@ -60,7 +60,6 @@ pub fn bridge_spl_internal<'info>(
 
     let message = OutgoingMessage::new_transfer(
         bridge.nonce,
-        payer.key(),
         from.key(),
         TransferOp {
             to,

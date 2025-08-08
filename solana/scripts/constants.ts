@@ -19,9 +19,9 @@ export const CONSTANTS = {
     spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
     splAta: address("Hw1qKo9UjDxPDUwEFdUvfGs77XFim9CQzvpaMGWRTe7d"),
     wEth: address("GJdYmKpWXcPqsqqusSND9t4rKbiHLobmWVqGx73xf2gp"),
-    wEthAta: address(""),
+    wEthAta: address("11111111111111111111111111111111"),
     wErc20: address("Dpu9qKAW1c7SyA8zUGiz2BLzXbwoZbXX8rebKz4zFqFy"),
-    wErc20Ata: address(""),
+    wErc20Ata: address("11111111111111111111111111111111"),
 
     // Base addresses
     baseBridge: "0xaace3A73B7096c40F75e3306bd58877048c81AEb",
