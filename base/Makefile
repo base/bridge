@@ -50,7 +50,7 @@ dev-deploy: deploy create-wrapped-sol create-wrapped-spl
 
 .PHONY: deploy
 deploy:
-	BRIDGE_ENVIRONMENT=$(ENV_NAME) forge script DeployScript --account testnet-admin --rpc-url $(BASE_RPC) --sender $(shell cast wallet address --account testnet-admin) -vvvv
+	BRIDGE_ENVIRONMENT=$(ENV_NAME) forge script DeployScript --account testnet-admin --rpc-url $(BASE_RPC) --sender $(shell cast wallet address --account testnet-admin) --broadcast -vvvv
 
 .PHONY: create-wrapped-sol
 create-wrapped-sol:

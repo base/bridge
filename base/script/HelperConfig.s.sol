@@ -38,29 +38,36 @@ contract HelperConfig is Script {
     }
 
     function getBaseSepoliaConfig() public pure returns (NetworkConfig memory) {
-        // Internal testing version
-        // return NetworkConfig({
-        //     initialOwner: 0x0fe884546476dDd290eC46318785046ef68a0BA9, // Base Sepolia Proxy Admin
-        //     remoteBridge: Pubkey.wrap(0x3179b3df897c6f5fc5391806c1e7e38284ecbaa7cc7c7f56df7c299e800f1437), //
-        // 4L8cUU2DXTzEaa5C8MWLTyEV8dpmpDbCjg8DNgUuGedc
-        //     trustedRelayer: 0x0e9a877906EBc3b7098DA2404412BF0Ed1A5EFb4,
-        //     erc1967Factory: ERC1967FactoryConstants.ADDRESS
-        // });
-        address BASE_ORACLE = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2;
-        address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
+        address BASE_ORACLE = 0x6D0E9C04BD896608b7e10b87FB686E1Feba85510;
+        address BRIDGE_ADMIN = 0x0fe884546476dDd290eC46318785046ef68a0BA9;
 
-        // Public version
         address[] memory guardians = new address[](1);
-        guardians[0] = BRIDGE_ADMIN; // Same as initial owner
+        guardians[0] = BRIDGE_ADMIN;
 
+        // Internal testing version
         return NetworkConfig({
             initialOwner: BRIDGE_ADMIN,
-            remoteBridge: Pubkey.wrap(0x9379502b8fd1d9f6feee747094a08cd0f9b79fbbc7e51a36e2da237ee1506460), // AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH
+            remoteBridge: Pubkey.wrap(0x41513b90635e51cd9d937b42c6a363f3874002414623f99271f6b560a82eacd4), // 5PyLteyLMV7UzWnsELBmMBTpjd8SdxpFx6yDfoXSCrG3
             trustedRelayer: BASE_ORACLE,
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             guardians: guardians,
             partnerValidatorThreshold: 0
         });
+        // address BASE_ORACLE = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2;
+        // address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
+
+        // // Public version
+        // address[] memory guardians = new address[](1);
+        // guardians[0] = BRIDGE_ADMIN; // Same as initial owner
+
+        // return NetworkConfig({
+        //     initialOwner: BRIDGE_ADMIN,
+        //     remoteBridge: Pubkey.wrap(0x9379502b8fd1d9f6feee747094a08cd0f9b79fbbc7e51a36e2da237ee1506460), // AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH
+        //     trustedRelayer: BASE_ORACLE,
+        //     erc1967Factory: ERC1967FactoryConstants.ADDRESS,
+        //     guardians: guardians,
+        //     partnerValidatorThreshold: 0
+        // });
     }
 
     function getLocalConfig() public returns (NetworkConfig memory) {

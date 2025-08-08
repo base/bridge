@@ -15,12 +15,14 @@ import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployScript is DevOps {
+    bytes12 salt = "bridge16";
+
     function run() public returns (Twin, BridgeValidator, Bridge, CrossChainERC20Factory, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
 
         address precomputedBridgeAddress =
-            ERC1967Factory(cfg.erc1967Factory).predictDeterministicAddress({salt: _salt("bridge15")});
+            ERC1967Factory(cfg.erc1967Factory).predictDeterministicAddress(_salt(salt));
 
         vm.startBroadcast(msg.sender);
         address twinBeacon = _deployTwinBeacon({cfg: cfg, precomputedBridgeAddress: precomputedBridgeAddress});
@@ -41,6 +43,7 @@ contract DeployScript is DevOps {
         console.log("Deployed CrossChainERC20Factory at: %s", factory);
 
         _serializeAddress({key: "Bridge", value: bridge});
+        _serializeAddress({key: "BridgeValidator", value: bridgeValidator});
         _serializeAddress({key: "CrossChainERC20Factory", value: factory});
         _serializeAddress({key: "Twin", value: twinBeacon});
         _writeJsonFile();
@@ -101,14 +104,14 @@ contract DeployScript is DevOps {
         return ERC1967Factory(cfg.erc1967Factory).deployDeterministicAndCall({
             implementation: address(bridgeImpl),
             admin: cfg.initialOwner,
-            salt: _salt("bridge15"),
+            salt: _salt(salt),
             data: abi.encodeCall(Bridge.initialize, (cfg.initialOwner, cfg.guardians))
         });
     }
 
-    function _salt(bytes12 salt) private view returns (bytes32) {
-        // Concat the msg.sender and the salt
-        bytes memory packed = abi.encodePacked(msg.sender, salt);
+    function _salt(bytes12 salt_) private view returns (bytes32) {
+        // Concat the msg.sender and the salt_
+        bytes memory packed = abi.encodePacked(msg.sender, salt_);
         return bytes32(packed);
     }
 }
