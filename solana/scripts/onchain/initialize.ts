@@ -54,12 +54,7 @@ async function main() {
         gasFeeReceiver: payer.address,
       },
       gasConfig: {
-        extra: 10_000,
-        executionPrologue: 20_000,
-        execution: 5_000,
-        executionEpilogue: 25_000,
-        baseTransactionCost: 21_000,
-        maxGasLimitPerMessage: 100_000_000,
+        gasPerCall: 50_000,
       },
       protocolConfig: {
         blockIntervalRequirement: 300,

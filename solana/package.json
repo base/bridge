@@ -8,6 +8,7 @@
     "program:deploy": "bun ./scripts/program/deploy.ts",
     "generate:client": "bun ./scripts/generate-client.ts",
     "generate:idl": "bun ./scripts/generate-idl.ts",
+    "generate:keypair": "bun ./scripts/utils/generate-keypair.ts",
     "tx:spl:create-mint": "bun ./scripts/onchain/spl/create-mint.ts",
     "tx:spl:create-ata": "bun ./scripts/onchain/spl/create-ata.ts",
     "tx:spl:mint": "bun ./scripts/onchain/spl/mint.ts",
