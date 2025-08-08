@@ -15,14 +15,13 @@ import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployScript is DevOps {
-    bytes12 salt = "bridge16";
+    bytes12 salt = "bridge17";
 
     function run() public returns (Twin, BridgeValidator, Bridge, CrossChainERC20Factory, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
 
-        address precomputedBridgeAddress =
-            ERC1967Factory(cfg.erc1967Factory).predictDeterministicAddress(_salt(salt));
+        address precomputedBridgeAddress = ERC1967Factory(cfg.erc1967Factory).predictDeterministicAddress(_salt(salt));
 
         vm.startBroadcast(msg.sender);
         address twinBeacon = _deployTwinBeacon({cfg: cfg, precomputedBridgeAddress: precomputedBridgeAddress});

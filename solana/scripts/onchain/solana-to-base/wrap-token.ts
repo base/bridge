@@ -39,9 +39,9 @@ async function main() {
   // Instruction arguments
   const args: WrapTokenInstructionDataArgs = {
     decimals: 6,
-    name: "Wrapped ETH",
-    symbol: "wETH",
-    remoteToken: toBytes(constants.eth),
+    name: "Wrapped ERC20",
+    symbol: "wERC20",
+    remoteToken: toBytes(constants.erc20),
     scalerExponent: 9,
   };
 

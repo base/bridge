@@ -15,20 +15,20 @@ export const CONSTANTS = {
     bridgeKeyPairFile: await fileFromPath("keypairs/bridge.devnet.alpha.json"),
 
     // Solana addresses
-    solanaBridge: address("7oLTUCrqwRUgYMMRQYbe9vHFMGkensP9SBo9sY8XSP2P"),
+    solanaBridge: address("ADr2FqCx35AFdS2j46gJtkoksxAFPRtjVMPo6u62tVfz"),
     spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
     splAta: address("Hw1qKo9UjDxPDUwEFdUvfGs77XFim9CQzvpaMGWRTe7d"),
-    wEth: address("GJdYmKpWXcPqsqqusSND9t4rKbiHLobmWVqGx73xf2gp"),
+    wEth: address("3zPmfRJHXEYZP1SAAzwdhACkgARwX9YzpocdTMWqx8E6"),
     wEthAta: address("11111111111111111111111111111111"),
-    wErc20: address("Dpu9qKAW1c7SyA8zUGiz2BLzXbwoZbXX8rebKz4zFqFy"),
+    wErc20: address("Dsbc8W1LVY3tXsdpzemeHDEmLLE7ugaSuiBpkqauaJ7d"),
     wErc20Ata: address("11111111111111111111111111111111"),
 
     // Base addresses
-    baseBridge: "0xaace3A73B7096c40F75e3306bd58877048c81AEb",
+    baseBridge: "0x8DcB17B51300C5Af4b1fE22c6BDA294b37FAF336",
     eth: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
     erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
-    wSol: "0x4B2f802705462c9506271b97271AE1F91Ea4c239",
-    wSpl: "0x15eAEFE23132216f4Dc5581cfd7797c61fcfc649",
+    wSol: "0x0D6995fe5768683C7934d070c5a12569d21fBA06",
+    wSpl: "0x583b43F642F9496827b65D5AF4173f3De4A7e9D9",
     recipient: "0x8c1a617bdb47342f9c17ac8750e0b070c372c721",
     counter: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
   },

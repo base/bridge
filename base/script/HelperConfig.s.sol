@@ -47,7 +47,7 @@ contract HelperConfig is Script {
         // Internal testing version
         return NetworkConfig({
             initialOwner: BRIDGE_ADMIN,
-            remoteBridge: Pubkey.wrap(0x6504d691558cb2bd3ba447ae9683674667053d04b89a77157eed9d74a638c150), // 7oLTUCrqwRUgYMMRQYbe9vHFMGkensP9SBo9sY8XSP2P
+            remoteBridge: Pubkey.wrap(0x890394bc966bf6a9d808ff4a700236444afbc430bd691db0f8118754ae023b6d), // ADr2FqCx35AFdS2j46gJtkoksxAFPRtjVMPo6u62tVfz
             trustedRelayer: BASE_ORACLE,
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             guardians: guardians,

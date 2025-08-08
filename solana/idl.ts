@@ -2198,13 +2198,8 @@ export const IDL = {
     },
     {
       "code": 6001,
-      "name": "Unauthorized",
-      "msg": "Only the owner can close this call buffer"
-    },
-    {
-      "code": 6002,
       "name": "BridgePaused",
-      "msg": "Bridge is currently paused"
+      "msg": "Bridge is paused"
     }
   ],
   "types": [
@@ -2878,14 +2873,6 @@ export const IDL = {
               "Starts at 1 and is incremented for each new message."
             ],
             "type": "u64"
-          },
-          {
-            "name": "original_payer",
-            "docs": [
-              "The Solana public key of the account that paid for the message.",
-              "This is needed to refund the payer once the message has been relayed to Base."
-            ],
-            "type": "pubkey"
           },
           {
             "name": "sender",
