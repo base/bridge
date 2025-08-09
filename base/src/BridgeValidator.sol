@@ -117,7 +117,7 @@ contract BridgeValidator {
 
         uint256 sigCount = sigData.length / SIGNATURE_LENGTH_THRESHOLD;
         address[] memory partnerValidators = new address[](0);
-        bytes32 signedHash = keccak256(abi.encode(messageHashes));
+        bytes32 signedHash = keccak256(abi.encode(messageHashes)).toEthSignedMessageHash();
         address lastValidator = address(0);
 
         uint256 offset;

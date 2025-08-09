@@ -54,7 +54,7 @@ deploy:
 
 .PHONY: create-wrapped-sol
 create-wrapped-sol:
-	BRIDGE_ENVIRONMENT=$(ENV_NAME) TOKEN_NAME=WrappedSOL TOKEN_SYMBOL=wSOL REMOTE_TOKEN=$(REMOTE_SOL) forge script CreateTokenScript --account testnet-admin --rpc-url $(BASE_RPC) -vvvv
+	BRIDGE_ENVIRONMENT=$(ENV_NAME) TOKEN_NAME=WrappedSOL TOKEN_SYMBOL=wSOL REMOTE_TOKEN=$(REMOTE_SOL) forge script CreateTokenScript --account testnet-admin --rpc-url $(BASE_RPC) --broadcast -vvvv
 
 .PHONY: create-wrapped-spl
 create-wrapped-spl:

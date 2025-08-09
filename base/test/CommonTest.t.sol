@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol";
 
 import {HelperConfig} from "../script/HelperConfig.s.sol";
 
@@ -13,6 +14,8 @@ import {MessageLib} from "../src/libraries/MessageLib.sol";
 import {IncomingMessage} from "../src/libraries/MessageLib.sol";
 
 contract CommonTest is Test {
+    using ECDSA for bytes32;
+
     BridgeValidator public bridgeValidator;
     Bridge public bridge;
     Twin public twinBeacon;
@@ -45,7 +48,7 @@ contract CommonTest is Test {
     }
 
     function _createSignature(bytes32 messageHash, uint256 privateKey) internal pure returns (bytes memory) {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, messageHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, messageHash.toEthSignedMessageHash());
         return abi.encodePacked(r, s, v);
     }
 

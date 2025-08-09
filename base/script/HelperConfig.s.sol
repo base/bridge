@@ -39,7 +39,7 @@ contract HelperConfig is Script {
 
     function getBaseSepoliaConfig() public pure returns (NetworkConfig memory) {
         address BASE_ORACLE = 0x6D0E9C04BD896608b7e10b87FB686E1Feba85510;
-        address BRIDGE_ADMIN = 0x0fe884546476dDd290eC46318785046ef68a0BA9;
+        address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
         address[] memory guardians = new address[](1);
         guardians[0] = BRIDGE_ADMIN;

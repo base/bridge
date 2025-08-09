@@ -15,7 +15,7 @@ import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployScript is DevOps {
-    bytes12 salt = "bridge17";
+    bytes12 salt = "bridge18";
 
     function run() public returns (Twin, BridgeValidator, Bridge, CrossChainERC20Factory, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
@@ -38,6 +38,7 @@ contract DeployScript is DevOps {
         require(address(bridge) == precomputedBridgeAddress, "Bridge address mismatch");
 
         console.log("Deployed TwinBeacon at: %s", twinBeacon);
+        console.log("Deployed BridgeValidator at: %s", bridgeValidator);
         console.log("Deployed Bridge at: %s", bridge);
         console.log("Deployed CrossChainERC20Factory at: %s", factory);
 
