@@ -15,7 +15,7 @@ import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployScript is DevOps {
-    bytes12 salt = "bridge18";
+    bytes12 salt = "bridge19";
 
     function run() public returns (Twin, BridgeValidator, Bridge, CrossChainERC20Factory, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
