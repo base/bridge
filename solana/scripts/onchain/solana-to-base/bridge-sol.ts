@@ -18,6 +18,7 @@ import {
   getPayer,
   getRpc,
 } from "../utils/transaction";
+import { waitAndExecuteOnBase } from "../../utils";
 
 async function main() {
   const target = getTarget();
@@ -72,7 +73,6 @@ async function main() {
       systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
       // Arguments
-      gasLimit: 1_000_000n,
       to: toBytes(constants.recipient),
       remoteToken,
       amount: BigInt(0.001 * 1e9),
@@ -83,7 +83,10 @@ async function main() {
 
   console.log("🚀 Sending transaction...");
   await buildAndSendTransaction(target, [ix]);
-  console.log("✅ Done!");
+  console.log("✅ Transaction sent!");
+
+  await waitAndExecuteOnBase(outgoingMessageSigner.address);
+  console.log("✅ Executed on Base!");
 }
 
 main().catch((e) => {

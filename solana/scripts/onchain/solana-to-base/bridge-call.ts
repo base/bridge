@@ -19,8 +19,7 @@ import {
   getPayer,
   getRpc,
 } from "../utils/transaction";
-
-const COUNTER_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+import { waitAndExecuteOnBase } from "../../utils";
 
 async function main() {
   const target = getTarget();
@@ -63,12 +62,11 @@ async function main() {
       systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
       // Arguments
-      gasLimit: 1_000_000n,
       call: {
         ty: CallType.Call,
-        to: toBytes(COUNTER_ADDRESS),
+        to: toBytes(constants.counter),
         value: 0n,
-        data: Buffer.from("d09de08a", "hex"),
+        data: Buffer.from("d09de08a", "hex"), // signature of Counter.sol:increment()
       },
     },
     { programAddress: constants.solanaBridge }
@@ -77,7 +75,10 @@ async function main() {
   // Send the transaction.
   console.log("🚀 Sending transaction...");
   await buildAndSendTransaction(target, [ix]);
-  console.log("✅ Done!");
+  console.log("✅ Transaction sent!");
+
+  await waitAndExecuteOnBase(outgoingMessageSigner.address);
+  console.log("✅ Executed on Base!");
 }
 
 main().catch((e) => {

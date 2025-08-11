@@ -6,54 +6,31 @@ import {
 } from "@solana/kit";
 import { toHex, keccak256, encodeAbiParameters, padHex, type Hex } from "viem";
 
-import { CONSTANTS } from "./scripts/constants";
-import { getTarget } from "./scripts/utils/argv";
-import { fetchOutgoingMessage } from "./clients/ts/generated";
-import { BRIDGE_ABI } from "./scripts/onchain/utils/bridge.abi";
+import { BRIDGE_ABI, BRIDGE_VALIDATOR_ABI } from "../abi";
+
+import { CONSTANTS } from "../constants";
+import { getTarget } from "./argv";
+import { fetchOutgoingMessage, type Call } from "../../clients/ts/generated";
 import {
   getPublicClient,
   writeContractTx,
   getDefaultChainFromEnv,
-} from "./scripts/onchain/utils/evmTransaction";
+} from "../onchain/utils/evmTransaction";
 
-// Minimal ABI for BridgeValidator.validMessages(bytes32) and nextNonce()
-const BRIDGE_VALIDATOR_ABI = [
-  {
-    type: "function",
-    name: "validMessages",
-    stateMutability: "view",
-    inputs: [{ name: "messageHash", type: "bytes32" }],
-    outputs: [{ name: "isValid", type: "bool" }],
-  },
-  {
-    type: "function",
-    name: "nextNonce",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ name: "", type: "uint256" }],
-  },
-] as const;
+// See MessageType enum in MessageLib.sol
+const MessageType = {
+  Call: 0,
+  Transfer: 1,
+  TransferAndCall: 2,
+} as const;
 
-type MessageTy = 0 | 1 | 2; // Call | Transfer | TransferAndCall
-
-async function main() {
+export async function waitAndExecuteOnBase(outgoingMessagePubkey: SolAddress) {
   const target = getTarget();
   const constants = CONSTANTS[target];
 
-  const outgoingMessagePubkey = (process.argv[3] ?? "").toString();
-  if (!outgoingMessagePubkey) {
-    console.error(
-      "Usage: bun waitAndExecuteOnBase.ts <devnet-alpha|devnet-prod> <OutgoingMessage pubkey>"
-    );
-    process.exit(1);
-  }
-
   // Solana: fetch OutgoingMessage
   const solRpc = createSolanaRpc(devnet(`https://${constants.rpcUrl}`));
-  const outgoing = await fetchOutgoingMessage(
-    solRpc,
-    outgoingMessagePubkey as SolAddress
-  );
+  const outgoing = await fetchOutgoingMessage(solRpc, outgoingMessagePubkey);
 
   // Build Base IncomingMessage fields from Solana OutgoingMessage
   const nonce = BigInt(outgoing.data.nonce);
@@ -89,14 +66,6 @@ async function main() {
     abi: BRIDGE_ABI,
     functionName: "BRIDGE_VALIDATOR",
   })) as `0x${string}`;
-
-  console.log("=".repeat(40));
-  console.log(`Target: ${target}`);
-  console.log(`Solana RPC: ${constants.rpcUrl}`);
-  console.log(`OutgoingMessage: ${outgoingMessagePubkey}`);
-  console.log(`Base Bridge: ${bridgeAddress}`);
-  console.log(`BridgeValidator: ${validatorAddress}`);
-  console.log("=".repeat(40));
 
   console.log(`Computed inner hash: ${innerHash}`);
   console.log(`Expected message hash: ${expectedMessageHash}`);
@@ -158,12 +127,12 @@ function bytes32FromPubkey(pubkey: SolAddress): Hex {
 function buildIncomingPayload(
   outgoing: Awaited<ReturnType<typeof fetchOutgoingMessage>>
 ) {
-  const msg = outgoing.data.message as any;
+  const msg = outgoing.data.message;
 
   // Call
   if (msg.__kind === "Call") {
     const call = msg.fields[0];
-    const ty: MessageTy = 0;
+    const ty = MessageType.Call;
     const data = encodeCallData(call);
     return { ty, data };
   }
@@ -184,6 +153,7 @@ function buildIncomingPayload(
       }) as Hex,
       remoteAmount: BigInt(transfer.amount),
     } as const;
+
     const encodedTransfer = encodeAbiParameters(
       [
         {
@@ -199,47 +169,47 @@ function buildIncomingPayload(
       [transferTuple]
     );
 
-    if (transfer.call.__option === "Some") {
-      const ty: MessageTy = 2; // TransferAndCall
-      const call = transfer.call.value;
-      const callTuple = callTupleObject(call);
-      const data = encodeAbiParameters(
-        [
-          {
-            type: "tuple",
-            components: [
-              { name: "localToken", type: "address" },
-              { name: "remoteToken", type: "bytes32" },
-              { name: "to", type: "bytes32" },
-              { name: "remoteAmount", type: "uint64" },
-            ],
-          },
-          {
-            type: "tuple",
-            components: [
-              { name: "ty", type: "uint8" },
-              { name: "to", type: "address" },
-              { name: "value", type: "uint128" },
-              { name: "data", type: "bytes" },
-            ],
-          },
-        ],
-        [transferTuple, callTuple]
-      );
-
-      return { ty, data, transferTuple, callTuple };
-    } else {
-      const ty: MessageTy = 1; // Transfer
+    if (transfer.call.__option === "None") {
+      const ty = MessageType.Transfer;
       return { ty, data: encodedTransfer, transferTuple };
     }
+
+    const ty = MessageType.TransferAndCall;
+    const call = transfer.call.value;
+    const callTuple = callTupleObject(call);
+    const data = encodeAbiParameters(
+      [
+        {
+          type: "tuple",
+          components: [
+            { name: "localToken", type: "address" },
+            { name: "remoteToken", type: "bytes32" },
+            { name: "to", type: "bytes32" },
+            { name: "remoteAmount", type: "uint64" },
+          ],
+        },
+        {
+          type: "tuple",
+          components: [
+            { name: "ty", type: "uint8" },
+            { name: "to", type: "address" },
+            { name: "value", type: "uint128" },
+            { name: "data", type: "bytes" },
+          ],
+        },
+      ],
+      [transferTuple, callTuple]
+    );
+
+    return { ty, data, transferTuple, callTuple };
   }
 
   throw new Error("Unsupported outgoing message type");
 }
 
-function encodeCallData(call: any): Hex {
-  const evmTo = toHex(call.to);
-  // ensure ByteArray for toHex on data
+function encodeCallData(call: Call): Hex {
+  const evmTo = toHex(new Uint8Array(call.to));
+
   const encoded = encodeAbiParameters(
     [
       {
@@ -257,20 +227,21 @@ function encodeCallData(call: any): Hex {
         ty: Number(call.ty),
         to: evmTo,
         value: BigInt(call.value),
-        data: toHex(call.data),
+        data: toHex(new Uint8Array(call.data)),
       },
     ]
   );
-  return `0x${encoded.slice(66)}` as Hex;
+  return encoded;
 }
 
-function callTupleObject(call: any) {
-  const evmTo = `0x${toHex(call.to).slice(2)}` as Hex;
+function callTupleObject(call: Call) {
+  const evmTo = toHex(new Uint8Array(call.to));
+
   return {
     ty: Number(call.ty),
     to: evmTo,
     value: BigInt(call.value),
-    data: `0x${toHex(new Uint8Array(call.data)).slice(2)}` as Hex,
+    data: toHex(new Uint8Array(call.data)),
   } as const;
 }
 
@@ -312,8 +283,3 @@ async function waitForApproval({
 function sanitizeHex(h: string): string {
   return h.toLowerCase();
 }
-
-main().catch((e) => {
-  console.error("❌ waitAndExecuteOnBase failed:", e);
-  process.exit(1);
-});

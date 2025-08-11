@@ -22,7 +22,8 @@ import {
   getPayer,
   getRpc,
 } from "../utils/transaction";
-import { BRIDGE_ABI } from "../utils/bridge.abi";
+import { BRIDGE_ABI } from "../../abi/bridge.abi";
+import { waitAndExecuteOnBase } from "../../utils";
 
 async function main() {
   const target = getTarget();
@@ -85,7 +86,6 @@ async function main() {
       systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
       // Arguments
-      gasLimit: 1_000_000n,
       to: toBytes(twinAddress),
       amount: 1n,
       call: {
@@ -100,7 +100,10 @@ async function main() {
 
   console.log("🚀 Sending transaction...");
   await buildAndSendTransaction(target, [ix]);
-  console.log("✅ Done!");
+  console.log("✅ Transaction sent!");
+
+  await waitAndExecuteOnBase(outgoingMessageSigner.address);
+  console.log("✅ Executed on Base!");
 }
 
 main().catch((e) => {

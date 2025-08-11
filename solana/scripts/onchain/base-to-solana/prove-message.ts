@@ -16,7 +16,7 @@ import {
   getPayer,
   getRpc,
 } from "../utils/transaction";
-import { BRIDGE_ABI } from "../utils/bridge.abi";
+import { BRIDGE_ABI } from "../../abi/bridge.abi";
 
 const TRANSACTION_HASH =
   "0x30b961b75231b2711cfd511e9de42aa43096feecd05466356d20bd0e123519f3";

@@ -17,11 +17,8 @@ export const CONSTANTS = {
     // Solana addresses
     solanaBridge: address("ADr2FqCx35AFdS2j46gJtkoksxAFPRtjVMPo6u62tVfz"),
     spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
-    splAta: address("Hw1qKo9UjDxPDUwEFdUvfGs77XFim9CQzvpaMGWRTe7d"),
     wEth: address("3zPmfRJHXEYZP1SAAzwdhACkgARwX9YzpocdTMWqx8E6"),
-    wEthAta: address("11111111111111111111111111111111"),
     wErc20: address("Dsbc8W1LVY3tXsdpzemeHDEmLLE7ugaSuiBpkqauaJ7d"),
-    wErc20Ata: address("11111111111111111111111111111111"),
 
     // Base addresses
     baseBridge: "0xe6EC42a064d2eFdb19B5AAbD6c40BbE4dd1C2970",
@@ -47,11 +44,8 @@ export const CONSTANTS = {
     // Solana addresses
     solanaBridge: address("AvgDrHpWUeV7fpZYVhDQbWrV2sD7zp9zDB7w97CWknKH"),
     spl: address("E1UGSzb3zcdQpFsEV4Xc3grxrxMsmHtHdFHuSWC8Hsax"),
-    splAta: address("6x7ujzdNWDKQPxfW1gosdzegm6sPeNU5BooUfjkQn4Jk"),
     wEth: address("7kK3DZWUFHRYUky5aV95CouGYR3XuA3WnEPwQ5s1W8im"),
-    wEthAta: address("Hij46yANqwuuc2VThykEsHfEH8gvzxPhH9EXspkgL68G"),
     wErc20: address("7s3fSFV23MSRssnp7gYam4LEJbBvXTcc6cVXY5duy2Dn"),
-    wErc20Ata: address("7qd2bgZSkj5hR4yaH3fS9ecx5C8QTSzvsX62gFcVPyzm"),
 
     // Base addresses
     baseBridge: "0xfcde89DFe9276Ec059d68e43759a226f0961426F",

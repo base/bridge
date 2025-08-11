@@ -2,7 +2,6 @@ import { CONSTANTS } from "../constants";
 
 export function getTarget() {
   const target = process.argv[2] ?? "devnet-alpha";
-  console.log(process.argv);
   if (!(target in CONSTANTS)) {
     console.error(
       `Invalid or missing target. Available targets: ${Object.keys(
