@@ -3333,7 +3333,7 @@ export const IDL = {
     {
       "name": "TRUSTED_ORACLE",
       "type": "pubkey",
-      "value": "eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt"
+      "value": "4vTj5kmBrmds3zWogiyUxtZPggcVUmG44EXRy2CxTcEZ"
     },
     {
       "name": "WRAPPED_TOKEN_SEED",

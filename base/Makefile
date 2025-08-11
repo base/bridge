@@ -6,7 +6,7 @@ BASE_RPC=https://base-sepolia.cbhq.net
 # Update values in this section to specify token recipients / token amount
 ####################################################################################################
 # alpha or prod
-ENV_NAME=alpha
+ENV_NAME=prod
 
 SOLANA_SOL_RECEIVER = 0x9827993b7b317eb6c74279d49074a13b33a3495a30637c86a7513922014ba424
 USER_SPL_ATA = 0x6621d2d930ef7ada6260d3e0a5679a8fe81fde41262314f2efbf9c4c828550b1
