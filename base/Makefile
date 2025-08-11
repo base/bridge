@@ -8,10 +8,10 @@ BASE_RPC=https://base-sepolia.cbhq.net
 # alpha or prod
 ENV_NAME=alpha
 
-SOLANA_SOL_RECEIVER = 0x82c9f09a109bce580bb82c13c310689fd00e2225f8dd22015271620ecc035221
-USER_SPL_ATA = 0x586931089de14bbc55cc4ee29c5d4d9be9db9967ab6770c0fda2337c09091749
-USER_REMOTE_ERC20_ATA = 0x4ff5c7f38d663901170d191dd4629d560f6a30eeb826f6d93d29c0d7cc3df992
-USER_REMOTE_ETH_ATA = 0x3fc9a50604fa7b85e0ca8cd36386152ab80e0e6244b5345112864e58c947d9de
+SOLANA_SOL_RECEIVER = 0x9827993b7b317eb6c74279d49074a13b33a3495a30637c86a7513922014ba424
+USER_SPL_ATA = 0x6621d2d930ef7ada6260d3e0a5679a8fe81fde41262314f2efbf9c4c828550b1
+USER_REMOTE_ERC20_ATA = 0x2af11ef2bf07c9f34eb038aa042dc375cdeb8519d31464bda410ed72c4087f6f
+USER_REMOTE_ETH_ATA = 0x6ce0eb02e5c9ce90914c1457e6ebb812b96a9d5a4f2cb753c13c4e84eb0703d0
 
 AMOUNT = 1000000000
 ####################################################################################################
@@ -74,8 +74,8 @@ bridge-sol-to-solana:
 	AMOUNT=$(AMOUNT) \
 	forge script BridgeTokensToSolanaScript --account testnet-admin --rpc-url $(BASE_RPC) --broadcast -vvvv
 
-.PHONY: bridge-tokens-to-solana
-bridge-tokens-to-solana:
+.PHONY: bridge-spl-to-solana
+bridge-spl-to-solana:
 	BRIDGE_ENVIRONMENT=$(ENV_NAME) \
 	LOCAL_TOKEN=$(LOCAL_SPL) \
 	REMOTE_TOKEN=$(REMOTE_SPL) \

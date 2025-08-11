@@ -17,6 +17,7 @@ import {
   getRpc,
 } from "../utils/transaction";
 import { BRIDGE_ABI } from "../../abi/bridge.abi";
+import { relayMessage } from "./relay-message";
 
 const TRANSACTION_HASH =
   "0x30b961b75231b2711cfd511e9de42aa43096feecd05466356d20bd0e123519f3";
@@ -75,7 +76,7 @@ async function generateProof(
   console.log(`  Sender: ${event.message.sender}`);
   console.log(`  Data: ${event.message.data}`);
 
-  const [rawProof, totalLeafCount] = await publicClient.readContract({
+  const [rawProof] = await publicClient.readContract({
     address: baseBridgeAddress as `0x${string}`,
     abi: BRIDGE_ABI,
     functionName: "generateProof",
@@ -85,13 +86,11 @@ async function generateProof(
 
   console.log(`📊 Proof generated at block ${bridgeBaseBlockNumber}`);
   console.log(`  Leaf index: ${event.message.nonce}`);
-  console.log(`  Total leaves: ${totalLeafCount}`);
 
   return {
     event,
     rawProof,
     leafIndex: event.message.nonce,
-    totalLeafCount,
   };
 }
 
@@ -125,7 +124,7 @@ async function main() {
     ],
   });
 
-  const { event, rawProof, leafIndex, totalLeafCount } = await generateProof(
+  const { event, rawProof, leafIndex } = await generateProof(
     TRANSACTION_HASH,
     baseBlockNumber,
     constants.baseBridge
@@ -170,7 +169,11 @@ async function main() {
 
   console.log("🚀 Sending transaction...");
   await buildAndSendTransaction(target, [ix]);
-  console.log("✅ Done!");
+
+  console.log("Message proved, now relaying...");
+
+  await relayMessage(event.messageHash);
+  console.log("Done!");
 }
 
 main().catch((e) => {

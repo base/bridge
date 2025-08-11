@@ -2,6 +2,7 @@ import {
   AccountRole,
   createKeyPairFromBytes,
   createSignerFromKeyPair,
+  getBase58Codec,
   getProgramDerivedAddress,
   type Address,
   type IAccountMeta,
@@ -33,6 +34,10 @@ const NEW_ACCOUNT_SECRET_KEY =
   "0x0cd60f7db0ca726a07da10e35323042a5b05facc00b781e57b06a59eaf2e2197769b26af0c3e3d129796876e465c21b479aae47bba4e9c964bb556d8d7cf93b2";
 
 async function main() {
+  await relayMessage(MESSAGE_HASH);
+}
+
+export async function relayMessage(messageHash: string) {
   const target = getTarget();
   const constants = CONSTANTS[target];
   const payer = await getPayer();
@@ -56,7 +61,7 @@ async function main() {
     programAddress: constants.solanaBridge,
     seeds: [
       Buffer.from(getIdlConstant("INCOMING_MESSAGE_SEED")),
-      toBytes(MESSAGE_HASH),
+      toBytes(messageHash),
     ],
   });
 
@@ -161,7 +166,7 @@ async function main() {
         programAddress: constants.solanaBridge,
         seeds: [
           Buffer.from(getIdlConstant("TOKEN_VAULT_SEED")),
-          Buffer.from(localToken),
+          getBase58Codec().encode(localToken),
           Buffer.from(remoteToken),
         ],
       });
@@ -202,6 +207,10 @@ async function main() {
       remainingAccounts = [
         {
           address: localToken,
+          role: AccountRole.WRITABLE,
+        },
+        {
+          address: to,
           role: AccountRole.WRITABLE,
         },
         {

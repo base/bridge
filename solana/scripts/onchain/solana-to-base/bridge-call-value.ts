@@ -75,8 +75,6 @@ async function main() {
     return;
   }
 
-  console.log({ maybeAta });
-
   console.log(`🔗 Twin: ${twinAddress}`);
   console.log(`🔗 Bridge: ${bridgeAddress}`);
   console.log(`🔗 From Token Account: ${maybeAta.address}`);
@@ -102,8 +100,8 @@ async function main() {
       call: {
         ty: CallType.Call,
         to: toBytes(constants.counter),
-        value: 1_000_000_000_000n, // 0.000001 ETH
-        data: Buffer.from(toBytes("0xd09de08a")), // increment()
+        value: 1_000_000_000n, // 0.000000001 ETH
+        data: Buffer.from(toBytes("0x28c64dd0")), // incrementPayable()
       },
     },
     { programAddress: constants.solanaBridge }
