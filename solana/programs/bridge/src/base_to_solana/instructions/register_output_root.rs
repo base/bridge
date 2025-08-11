@@ -67,17 +67,17 @@ pub fn register_output_root_handler(
         RegisterOutputRootError::BridgePaused
     );
 
-    require!(
-        base_block_number > ctx.accounts.bridge.base_block_number
-            && base_block_number
-                % ctx
-                    .accounts
-                    .bridge
-                    .protocol_config
-                    .block_interval_requirement
-                == 0,
-        RegisterOutputRootError::IncorrectBlockNumber
-    );
+    // require!(
+    //     base_block_number > ctx.accounts.bridge.base_block_number
+    //         && base_block_number
+    //             % ctx
+    //                 .accounts
+    //                 .bridge
+    //                 .protocol_config
+    //                 .block_interval_requirement
+    //             == 0,
+    //     RegisterOutputRootError::IncorrectBlockNumber
+    // );
 
     ctx.accounts.root.root = output_root;
     ctx.accounts.root.total_leaf_count = total_leaf_count;

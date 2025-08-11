@@ -37,7 +37,7 @@ contract BridgeTokensToSolanaScript is DevOps {
             localToken: LOCAL_TOKEN,
             remoteToken: Pubkey.wrap(REMOTE_TOKEN),
             to: TO,
-            remoteAmount: AMOUNT / 1e12
+            remoteAmount: AMOUNT / 1e9
         });
         bridge.bridgeToken{value: value}(t, new Ix[](0));
         vm.stopBroadcast();

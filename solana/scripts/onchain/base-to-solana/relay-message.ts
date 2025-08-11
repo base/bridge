@@ -240,11 +240,17 @@ async function main() {
     return acct;
   });
 
+  const [bridgeAddress] = await getProgramDerivedAddress({
+    programAddress: constants.solanaBridge,
+    seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
+  });
+
   console.log("🛠️  Building instruction...");
   const ix = getRelayMessageInstruction(
     {
       payer,
       message: messagePda,
+      bridge: bridgeAddress,
     },
     { programAddress: constants.solanaBridge }
   );

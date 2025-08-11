@@ -10,10 +10,10 @@ ENV_NAME=alpha
 
 SOLANA_SOL_RECEIVER = 0x82c9f09a109bce580bb82c13c310689fd00e2225f8dd22015271620ecc035221
 USER_SPL_ATA = 0x586931089de14bbc55cc4ee29c5d4d9be9db9967ab6770c0fda2337c09091749
-USER_REMOTE_ERC20_ATA = 0x659abca3e23fa5a8212846977d3f8d2593b4b0c565afcc38aa89ea6d184cfb06
-USER_REMOTE_ETH_ATA = 0xf86b5aa217cca19080d4c9fb685bc671bc882e49a1764e0ecfbfaabc360bb661
+USER_REMOTE_ERC20_ATA = 0x4ff5c7f38d663901170d191dd4629d560f6a30eeb826f6d93d29c0d7cc3df992
+USER_REMOTE_ETH_ATA = 0x3fc9a50604fa7b85e0ca8cd36386152ab80e0e6244b5345112864e58c947d9de
 
-AMOUNT = 1000000
+AMOUNT = 1000000000
 ####################################################################################################
 
 BRIDGE = $(shell jq -r '.Bridge' deployments/base_sepolia_$(ENV_NAME).json)
@@ -22,6 +22,7 @@ REMOTE_SOL = $(shell jq -r '.RemoteSOL' deployments/base_sepolia_$(ENV_NAME).jso
 LOCAL_SPL = $(shell jq -r '.WrappedSPL' deployments/base_sepolia_$(ENV_NAME).json)
 REMOTE_SPL = $(shell jq -r '.RemoteSPL' deployments/base_sepolia_$(ENV_NAME).json)
 REMOTE_ERC20 = $(shell jq -r '.RemoteERC20' deployments/base_sepolia_$(ENV_NAME).json)
+REMOTE_ETH = $(shell jq -r '.RemoteETH' deployments/base_sepolia_$(ENV_NAME).json)
 
 LOCAL_ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
 LOCAL_ERC20 = 0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9
@@ -66,6 +67,7 @@ create-mock-token:
 
 .PHONY: bridge-sol-to-solana
 bridge-sol-to-solana:
+	BRIDGE_ENVIRONMENT=$(ENV_NAME) \
 	LOCAL_TOKEN=$(LOCAL_SOL) \
 	REMOTE_TOKEN=$(REMOTE_SOL) \
 	TO=$(SOLANA_SOL_RECEIVER) \
@@ -74,6 +76,7 @@ bridge-sol-to-solana:
 
 .PHONY: bridge-tokens-to-solana
 bridge-tokens-to-solana:
+	BRIDGE_ENVIRONMENT=$(ENV_NAME) \
 	LOCAL_TOKEN=$(LOCAL_SPL) \
 	REMOTE_TOKEN=$(REMOTE_SPL) \
 	TO=$(USER_SPL_ATA) \
@@ -82,6 +85,7 @@ bridge-tokens-to-solana:
 
 .PHONY: bridge-erc20-to-solana
 bridge-erc20-to-solana:
+	BRIDGE_ENVIRONMENT=$(ENV_NAME) \
 	LOCAL_TOKEN=$(LOCAL_ERC20) \
 	REMOTE_TOKEN=$(REMOTE_ERC20) \
 	TO=$(USER_REMOTE_ERC20_ATA) \
@@ -91,6 +95,7 @@ bridge-erc20-to-solana:
 
 .PHONY: bridge-eth-to-solana
 bridge-eth-to-solana:
+	BRIDGE_ENVIRONMENT=$(ENV_NAME) \
 	LOCAL_TOKEN=$(LOCAL_ETH) \
 	REMOTE_TOKEN=$(REMOTE_ETH) \
 	TO=$(USER_REMOTE_ETH_ATA) \

@@ -24,6 +24,7 @@ import {
 } from "../utils/transaction";
 import { BRIDGE_ABI } from "../../abi/bridge.abi";
 import { waitAndExecuteOnBase } from "../../utils";
+import { maybeGetAta } from "../utils/ata";
 
 async function main() {
   const target = getTarget();
@@ -66,9 +67,19 @@ async function main() {
     outgoingMessageKeypair
   );
 
+  const maybeAta = await maybeGetAta(rpc, payer.address, constants.wEth);
+  if (!maybeAta.exists) {
+    console.error(
+      `ATA does not exist, use bun tx:spl:create-ata first and fund it with bun tx:spl:mint`
+    );
+    return;
+  }
+
+  console.log({ maybeAta });
+
   console.log(`🔗 Twin: ${twinAddress}`);
   console.log(`🔗 Bridge: ${bridgeAddress}`);
-  console.log(`🔗 From Token Account: ${constants.wEthAta}`);
+  console.log(`🔗 From Token Account: ${maybeAta.address}`);
   console.log(`🔗 Outgoing Message: ${outgoingMessageSigner.address}`);
 
   console.log("🛠️  Building instruction...");
@@ -79,7 +90,7 @@ async function main() {
       from: payer,
       gasFeeReceiver: bridge.data.gasCostConfig.gasFeeReceiver,
       mint: constants.wEth,
-      fromTokenAccount: constants.wEthAta,
+      fromTokenAccount: maybeAta.address,
       bridge: bridgeAddress,
       outgoingMessage: outgoingMessageSigner,
       tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,

@@ -154,6 +154,7 @@ async function main() {
       payer,
       outputRoot: outputRootAddress,
       message: messageAddress,
+      bridge: bridgeAddress,
       systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
       // Arguments
@@ -162,7 +163,6 @@ async function main() {
       data: toBytes(event.message.data),
       proof: rawProof.map((e) => toBytes(e)),
       leafIndex,
-      totalLeafCount,
       messageHash: toBytes(event.messageHash),
     },
     { programAddress: constants.solanaBridge }

@@ -9,7 +9,11 @@ import type { Address, createSolanaRpc } from "@solana/kit";
 type RpcType = ReturnType<typeof createSolanaRpc>;
 
 export async function maybeGetAta(rpc: RpcType, owner: Address, mint: Address) {
-  const mintAcc = await rpc.getAccountInfo(mint).send();
+  const mintAcc = await rpc
+    .getAccountInfo(mint, {
+      encoding: "jsonParsed",
+    })
+    .send();
   if (!mintAcc.value) {
     throw new Error("Mint not found");
   }
