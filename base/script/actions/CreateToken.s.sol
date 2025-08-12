@@ -36,6 +36,5 @@ contract CreateTokenScript is DevOps {
         vm.stopBroadcast();
 
         _serializeAddress({key: tokenName, value: token});
-        _writeJsonFile();
     }
 }

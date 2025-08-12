@@ -67,7 +67,7 @@ contract UpgradeScript is DevOps {
         vm.stopBroadcast();
     }
 
-    function _readAndParseDeploymentFile() internal view returns (address, address, address) {
+    function _readAndParseDeploymentFile() internal returns (address, address, address) {
         return (_getAddress("Bridge"), _getAddress("CrossChainERC20Factory"), _getAddress("Twin"));
     }
 

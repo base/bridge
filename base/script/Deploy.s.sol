@@ -15,7 +15,7 @@ import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployScript is DevOps {
-    bytes12 salt = "bridge19";
+    bytes12 salt = bytes12(keccak256(abi.encode(block.timestamp)));
 
     function run() public returns (Twin, BridgeValidator, Bridge, CrossChainERC20Factory, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
@@ -46,7 +46,6 @@ contract DeployScript is DevOps {
         _serializeAddress({key: "BridgeValidator", value: bridgeValidator});
         _serializeAddress({key: "CrossChainERC20Factory", value: factory});
         _serializeAddress({key: "Twin", value: twinBeacon});
-        _writeJsonFile();
 
         return (
             Twin(payable(twinBeacon)),

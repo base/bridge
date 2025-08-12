@@ -4,13 +4,7 @@ import {
   getBase58Encoder,
   getProgramDerivedAddress,
 } from "@solana/kit";
-import {
-  ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
-  fetchMaybeToken,
-  fetchToken,
-  findAssociatedTokenPda,
-  TOKEN_PROGRAM_ADDRESS,
-} from "@solana-program/token";
+import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import { toBytes } from "viem";
 

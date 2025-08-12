@@ -43,16 +43,16 @@ export const CONSTANTS = {
 
     // Solana addresses
     solanaBridge: address("Z8DUqPNTT4tZAX3hNoQjYdNoB7rLxDBDX6CrHG972c7"),
-    spl: address("E1UGSzb3zcdQpFsEV4Xc3grxrxMsmHtHdFHuSWC8Hsax"),
+    spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
     wEth: address("3h67vcqHCoJ61gvkyZ1SMFtM1P6JGg2mgiYWQ7k2XzHU"),
     wErc20: address("9P7h46b3nAgBv743Y5373FKHhDL31Tzx5jxihpWmfNg4"),
 
     // Base addresses
-    baseBridge: "0x8D0fE4465F3E41b1e933AF50Fe34BA5E10084410",
+    baseBridge: "0x58cb08E00ec0d97Ee1b9FB0DCeE0Bc87978DdC58",
     eth: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
     erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
-    wSol: "0xb64Aec5Cb44247f75C490c2b1e93B2809B32307B",
-    wSpl: "0x46848FA619CA3DE5788475e1C1D713fe05aeb300",
+    wSol: "0xCfc031A0A2C378f37e3858d174222614dbDCc826",
+    wSpl: "0xdA8BEBF6f9cfEC0C0e1bE2CE3F689221692594BA",
     recipient: "0x8c1a617bdb47342f9c17ac8750e0b070c372c721",
     counter: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
   },
