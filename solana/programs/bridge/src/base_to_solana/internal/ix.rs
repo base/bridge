@@ -27,7 +27,7 @@ pub struct IxAccount {
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub enum PubkeyOrPda {
     Pubkey(Pubkey),
-    PDA {
+    Pda {
         seeds: Vec<Vec<u8>>,
         program_id: Pubkey,
     },
@@ -49,7 +49,7 @@ impl From<IxAccount> for AccountMeta {
     fn from(account: IxAccount) -> AccountMeta {
         let pubkey = match account.pubkey_or_pda {
             PubkeyOrPda::Pubkey(pubkey) => pubkey,
-            PubkeyOrPda::PDA { seeds, program_id } => {
+            PubkeyOrPda::Pda { seeds, program_id } => {
                 let seeds: Vec<&[u8]> = seeds.iter().map(|v| v.as_slice()).collect();
                 let (pubkey, _) = Pubkey::find_program_address(seeds.as_slice(), &program_id);
                 pubkey
