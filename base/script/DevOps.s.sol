@@ -5,22 +5,30 @@ import {Script} from "forge-std/Script.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
 contract DevOps is Script {
-    string environment = vm.envString("BRIDGE_ENVIRONMENT");
+    string environment = vm.envOr("BRIDGE_ENVIRONMENT", string(""));
 
     constructor() {
-        string memory fileName = _generateDeploymentFilename();
-        if (!vm.isFile(fileName)) {
-            string memory fileData = vm.readFile(string.concat(vm.projectRoot(), "/deployments/template.json"));
-            vm.writeJson({json: fileData, path: fileName});
+        if (block.chainid != 31337) {
+            string memory fileName = _generateDeploymentFilename();
+            if (!vm.isFile(fileName)) {
+                string memory fileData = vm.readFile(string.concat(vm.projectRoot(), "/deployments/template.json"));
+                vm.writeJson({json: fileData, path: fileName});
+            }
         }
     }
 
-    function _getAddress(string memory key) internal returns (address) {
+    modifier skipLocal() {
+        if (block.chainid != 31337) {
+            _;
+        }
+    }
+
+    function _getAddress(string memory key) internal skipLocal returns (address) {
         string memory fileData = vm.readFile(string.concat(vm.projectRoot(), "/", _generateDeploymentFilename()));
         return vm.parseJsonAddress({json: fileData, key: string.concat(".", key)});
     }
 
-    function _serializeAddress(string memory key, address value) internal {
+    function _serializeAddress(string memory key, address value) internal skipLocal {
         vm.writeJson({
             json: LibString.toHexStringChecksummed(value),
             path: _generateDeploymentFilename(),

@@ -27,15 +27,8 @@ import {
   getRpc,
 } from "../utils/transaction";
 
-const MESSAGE_HASH =
-  "0x5a1e91ae8594a7e58ae2aa213954d7733a5e90b276a37d62800ec00a97e7e66d";
-
 const NEW_ACCOUNT_SECRET_KEY =
   "0x0cd60f7db0ca726a07da10e35323042a5b05facc00b781e57b06a59eaf2e2197769b26af0c3e3d129796876e465c21b479aae47bba4e9c964bb556d8d7cf93b2";
-
-async function main() {
-  await relayMessage(MESSAGE_HASH);
-}
 
 export async function relayMessage(messageHash: string) {
   const target = getTarget();
@@ -274,11 +267,6 @@ export async function relayMessage(messageHash: string) {
   await buildAndSendTransaction(target, [ix_]);
   console.log("✅ Done!");
 }
-
-main().catch((e) => {
-  console.error("❌ Relay message failed:", e);
-  process.exit(1);
-});
 
 async function getIxAccounts(ixs: Ix[]) {
   const allIxsAccounts = [];

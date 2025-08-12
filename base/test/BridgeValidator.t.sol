@@ -163,7 +163,7 @@ contract BridgeValidatorTest is CommonTest {
         innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
 
         bytes32[] memory finalHashes = _calculateFinalHashes(innerMessageHashes);
-        bytes32 signedHash = keccak256(abi.encode(finalHashes));
+        bytes memory signedHash = abi.encode(finalHashes);
 
         // Create duplicate signatures from same signer
         bytes memory sig1 = _createSignature(signedHash, 1);
@@ -180,7 +180,7 @@ contract BridgeValidatorTest is CommonTest {
         innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
 
         bytes32[] memory finalHashes = _calculateFinalHashes(innerMessageHashes);
-        bytes32 signedHash = keccak256(abi.encode(finalHashes));
+        bytes memory signedHash = abi.encode(finalHashes);
 
         // Create signatures in wrong order (addresses should be sorted)
         uint256 key1 = 1;
@@ -209,7 +209,7 @@ contract BridgeValidatorTest is CommonTest {
         innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
 
         bytes32[] memory finalHashes = _calculateFinalHashes(innerMessageHashes);
-        bytes32 signedHash = keccak256(abi.encode(finalHashes));
+        bytes memory signedHash = abi.encode(finalHashes);
 
         // Create signature from non-BASE_ORACLE key
         bytes memory nonOracleSig = _createSignature(signedHash, 999);
@@ -230,7 +230,7 @@ contract BridgeValidatorTest is CommonTest {
         // Calculate final hashes with the new validator's nonce (which is 0)
         bytes32[] memory finalHashes = new bytes32[](1);
         finalHashes[0] = keccak256(abi.encode(uint256(0), innerMessageHashes[0]));
-        bytes32 signedHash = keccak256(abi.encode(finalHashes));
+        bytes memory signedHash = abi.encode(finalHashes);
 
         // Only BASE_ORACLE signature should fail threshold check
         bytes memory oracleSig = _createSignature(signedHash, 100);

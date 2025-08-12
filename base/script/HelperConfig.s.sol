@@ -5,10 +5,13 @@ import {Script} from "forge-std/Script.sol";
 
 import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 import {ERC1967FactoryConstants} from "solady/utils/ERC1967FactoryConstants.sol";
+import {LibString} from "solady/utils/LibString.sol";
 
 import {Pubkey} from "../src/libraries/SVMLib.sol";
 
 contract HelperConfig is Script {
+    string environment = vm.envOr("BRIDGE_ENVIRONMENT", string(""));
+
     struct NetworkConfig {
         address initialOwner;
         Pubkey remoteBridge;
@@ -22,7 +25,13 @@ contract HelperConfig is Script {
 
     constructor() {
         if (block.chainid == 84532) {
-            _activeNetworkConfig = getBaseSepoliaConfig();
+            if (LibString.eq(environment, "alpha")) {
+                _activeNetworkConfig = getBaseSepoliaDevConfig();
+            } else if (LibString.eq(environment, "prod")) {
+                _activeNetworkConfig = getBaseSepoliaProdConfig();
+            } else {
+                revert("Unrecognized env name");
+            }
         } else {
             _activeNetworkConfig = getLocalConfig();
         }
@@ -37,30 +46,29 @@ contract HelperConfig is Script {
         return cfg;
     }
 
-    function getBaseSepoliaConfig() public pure returns (NetworkConfig memory) {
-        // address BASE_ORACLE = 0x6D0E9C04BD896608b7e10b87FB686E1Feba85510;
-        // address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
+    function getBaseSepoliaDevConfig() public pure returns (NetworkConfig memory) {
+        address BASE_ORACLE = 0x6D0E9C04BD896608b7e10b87FB686E1Feba85510;
+        address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
-        // address[] memory guardians = new address[](1);
-        // guardians[0] = BRIDGE_ADMIN;
+        address[] memory guardians = new address[](1);
+        guardians[0] = BRIDGE_ADMIN;
 
-        // // Internal testing version
-        // return NetworkConfig({
-        //     initialOwner: BRIDGE_ADMIN,
-        //     remoteBridge: Pubkey.wrap(0x890394bc966bf6a9d808ff4a700236444afbc430bd691db0f8118754ae023b6d), //
-        // ADr2FqCx35AFdS2j46gJtkoksxAFPRtjVMPo6u62tVfz
-        //     trustedRelayer: BASE_ORACLE,
-        //     erc1967Factory: ERC1967FactoryConstants.ADDRESS,
-        //     guardians: guardians,
-        //     partnerValidatorThreshold: 0
-        // });
+        return NetworkConfig({
+            initialOwner: BRIDGE_ADMIN,
+            remoteBridge: Pubkey.wrap(0x890394bc966bf6a9d808ff4a700236444afbc430bd691db0f8118754ae023b6d), // ADr2FqCx35AFdS2j46gJtkoksxAFPRtjVMPo6u62tVfz
+            trustedRelayer: BASE_ORACLE,
+            erc1967Factory: ERC1967FactoryConstants.ADDRESS,
+            guardians: guardians,
+            partnerValidatorThreshold: 0
+        });
+    }
 
+    function getBaseSepoliaProdConfig() public pure returns (NetworkConfig memory) {
         address BASE_ORACLE = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2;
         address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
-        // Public version
         address[] memory guardians = new address[](1);
-        guardians[0] = BRIDGE_ADMIN; // Same as initial owner
+        guardians[0] = BRIDGE_ADMIN;
 
         return NetworkConfig({
             initialOwner: BRIDGE_ADMIN,
