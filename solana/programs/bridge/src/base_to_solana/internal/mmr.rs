@@ -160,10 +160,9 @@ fn calculate_root_from_proof(
 
     let mut current_root = all_peak_hashes[0]; // Start with the leftmost peak.
     for peak_hash in all_peak_hashes.iter().skip(1) {
-        // next_peak_hash is to the right of current_root.
-        // Hashing order for bagging: H(LeftPeak, H(MiddlePeak, RightPeak))
-        // So, current_root is the left operand, all_peak_hashes[i] is the right.
-        current_root = commutative_keccak256(current_root, *peak_hash);
+        // Bagging must be ORDERED (non-commutative) to bind each peak
+        // to its mountain position/size.
+        current_root = ordered_keccak256(current_root, *peak_hash);
     }
 
     Ok(current_root)
@@ -177,6 +176,11 @@ fn commutative_keccak256(a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
     } else {
         efficient_keccak256(&b, &a)
     }
+}
+
+// Ordered Keccak256 used for bagging peaks (non-commutative)
+fn ordered_keccak256(left: [u8; 32], right: [u8; 32]) -> [u8; 32] {
+    efficient_keccak256(&left, &right)
 }
 
 fn efficient_keccak256(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {

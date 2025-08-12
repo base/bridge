@@ -364,7 +364,9 @@ library MessageStorageLib {
         // Sequentially hash with the next peak to the right
         for (uint256 i = 1; i < peakIndices.length; i++) {
             bytes32 nextPeakHash = $.nodes[peakIndices[i]];
-            currentRoot = _hashInternalNode(currentRoot, nextPeakHash);
+            // Bagging peaks must be ORDERED (non-commutative) to bind each
+            // peak to its mountain position/size. Do not sort here.
+            currentRoot = _hashOrderedPair(currentRoot, nextPeakHash);
         }
 
         return currentRoot;
@@ -483,19 +485,23 @@ library MessageStorageLib {
         return (1 << (height + 1)) - 1;
     }
 
-    /// @notice Hashes two node hashes together.
+    /// @notice Hashes two node hashes together for intra-mountain merges.
     ///
     /// @dev Uses sorted inputs for commutative hashing: H(left, right) == H(right, left).
-    ///
-    /// @param left The left node hash.
-    /// @param right The right node hash.
-    ///
-    /// @return The hash of the two node hashes.
+    ///      This is only used within a single mountain where sibling ordering
+    ///      may not be deterministic.
     function _hashInternalNode(bytes32 left, bytes32 right) private pure returns (bytes32) {
         if (left < right) {
             return keccak256(abi.encodePacked(left, right));
         }
         return keccak256(abi.encodePacked(right, left));
+    }
+
+    /// @notice Ordered hash for bagging peaks left-to-right (non-commutative).
+    ///
+    /// @dev The order is significant to bind each peak to its position and size.
+    function _hashOrderedPair(bytes32 left, bytes32 right) private pure returns (bytes32) {
+        return keccak256(abi.encodePacked(left, right));
     }
 
     /// @notice Calculates the population count (number of 1 bits) in a uint64.

@@ -23,7 +23,7 @@ contract DevOps is Script {
         }
     }
 
-    function _getAddress(string memory key) internal skipLocal returns (address) {
+    function _getAddress(string memory key) internal skipLocal returns (address ret) {
         string memory fileData = vm.readFile(string.concat(vm.projectRoot(), "/", _generateDeploymentFilename()));
         return vm.parseJsonAddress({json: fileData, key: string.concat(".", key)});
     }
