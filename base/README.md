@@ -4,7 +4,7 @@ A cross-chain bridge implementation that enables seamless message passing and to
 
 ## Contract Addresses
 
-- **Base Sepolia Bridge**: `0xfcde89DFe9276Ec059d68e43759a226f0961426F`
+- **Base Sepolia Bridge**: `0x9BA58C63b341B3560693610aF2b2555301Fd3AEC`
 
 ## Overview
 

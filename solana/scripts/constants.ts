@@ -21,11 +21,11 @@ export const CONSTANTS = {
     wErc20: address("Dsbc8W1LVY3tXsdpzemeHDEmLLE7ugaSuiBpkqauaJ7d"),
 
     // Base addresses
-    baseBridge: "0xe6EC42a064d2eFdb19B5AAbD6c40BbE4dd1C2970",
+    baseBridge: "0x6A52C4Eb4B096FE3a468F96975D444B3e0d939Af",
     eth: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
     erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
-    wSol: "0x90032B7b474FDC9c6e58A96d7B1B22FF471C50ae",
-    wSpl: "0xed0D3f4AB984010b6bC8bF812C332093e5025C91",
+    wSol: "0xb4fc71604681527644cC686a024b8d13A5AF5fd9",
+    wSpl: "0x00e9aC740E198DCFBCf0e2913D1deCe16b736dc9",
     recipient: "0x8c1a617bdb47342f9c17ac8750e0b070c372c721",
     counter: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
   },
@@ -48,11 +48,11 @@ export const CONSTANTS = {
     wErc20: address("9P7h46b3nAgBv743Y5373FKHhDL31Tzx5jxihpWmfNg4"),
 
     // Base addresses
-    baseBridge: "0x58cb08E00ec0d97Ee1b9FB0DCeE0Bc87978DdC58",
+    baseBridge: "0x9BA58C63b341B3560693610aF2b2555301Fd3AEC",
     eth: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
     erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
-    wSol: "0xCfc031A0A2C378f37e3858d174222614dbDCc826",
-    wSpl: "0xdA8BEBF6f9cfEC0C0e1bE2CE3F689221692594BA",
+    wSol: "0xC924C339deeF36Bda20e94b2813CF98049B2815a",
+    wSpl: "0x99FE595072dE80D1Df43f3091F4867A75081166C",
     recipient: "0x8c1a617bdb47342f9c17ac8750e0b070c372c721",
     counter: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
   },
