@@ -10,11 +10,15 @@ use crate::base_to_solana::{
 ///
 /// This struct stores the essential information needed to validate and execute
 /// bridge operations from Base to Solana, including both simple calls and token transfers.
+///
+/// Messages are created by the `prove_message` instruction (after MMR verification)
+/// and executed by the `relay_message` instruction.
 #[account]
 #[derive(Debug)]
 pub struct IncomingMessage {
-    /// The 20-byte Ethereum address of the sender on Base who initiated this bridge operation.
-    /// This is used for verification and access control during message execution.
+    /// The 20-byte EVM address of the sender on Base who initiated this bridge operation.
+    /// Used to derive the bridge CPI authority PDA that signs downstream CPIs during relay.
+    /// This field does not restrict who can call the relay instruction.
     pub sender: [u8; 20],
 
     /// The actual message payload containing either instruction calls or token transfer data.
@@ -27,6 +31,12 @@ pub struct IncomingMessage {
 }
 
 impl IncomingMessage {
+    /// Returns the byte size for account allocation excluding the 8-byte Anchor discriminator.
+    ///
+    /// Layout:
+    /// - `sender`: 20 bytes
+    /// - `message`: 4-byte length prefix + `data_len` bytes (Anchor-serialized `Message`)
+    /// - `executed`: 1 byte
     pub fn space(data_len: usize) -> usize {
         20 + (4 + data_len) + 1
     }
@@ -53,23 +63,21 @@ pub enum Message {
     },
 }
 
-/// Specifies the type of token being transferred from Base to Solana and contains
-/// the necessary data to finalize the transfer on the Solana side.
+/// Specifies the type of token being finalized on Solana for a Base→Solana bridge
+/// and contains the necessary data to complete the transfer on the Solana side.
 ///
 /// Each variant corresponds to a different token type that can be bridged,
 /// with variant-specific data needed to complete the transfer operation.
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub enum Transfer {
-    /// Transfer of native SOL tokens from Base to Solana.
-    /// Contains the recipient address and amount to be transferred.
+    /// Finalization of bridged native SOL. Releases SOL from a PDA vault to the recipient.
     Sol(FinalizeBridgeSol),
 
-    /// Transfer of SPL tokens from Base to Solana.
-    /// Used for tokens that already exist natively on Solana and are bridged to Base.
+    /// Finalization of bridged SPL tokens corresponding to an ERC-20 on Base.
+    /// Releases tokens from a PDA vault to the recipient's token account.
     Spl(FinalizeBridgeSpl),
 
-    /// Transfer of wrapped tokens from Base to Solana.
-    /// Used for tokens that originated on Base and are wrapped on Solana.
-    /// The wrapped token will be minted on Solana to represent the Base token.
+    /// Finalization of wrapped tokens for assets that originated on Base.
+    /// Mints wrapped tokens on Solana to represent the Base asset.
     WrappedToken(FinalizeBridgeWrappedToken),
 }

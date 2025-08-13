@@ -28,7 +28,8 @@ pub struct Bridge {
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct Eip1559 {
     pub config: Eip1559Config,
-    /// Current base fee in gwei (runtime state)
+    /// Current base fee used in fee computation (runtime state).
+    /// Unitless value combined with `gas_per_call` and gas cost scaler to produce lamports.
     pub current_base_fee: u64,
     /// Gas used in the current time window (runtime state)
     pub current_window_gas_used: u64,
@@ -44,7 +45,9 @@ pub struct Eip1559Config {
     pub denominator: u64,
     /// Window duration in seconds (configurable)
     pub window_duration_seconds: u64,
-    /// Minimum base fee floor (configurable)
+    /// Minimum base fee (configurable). Used to seed `current_base_fee` at initialization
+    /// and as an underflow clamp during decreases; not enforced as a strict lower bound
+    /// on every step.
     pub minimum_base_fee: u64,
 }
 
@@ -120,14 +123,15 @@ impl Eip1559 {
             let base_fee_delta = base_fee_delta.max(1);
             self.current_base_fee + base_fee_delta
         } else {
-            // If the current window used less gas than target, the base fee should decrease.
-            // max(0, baseFee - (baseFee * gasUsedDelta / target / denominator))
+            // If the current window used less gas than target, the base fee should decrease
+            // by (baseFee * gasUsedDelta / target / denominator).
             let gas_used_delta = self.config.target - gas_used;
             let base_fee_delta = (gas_used_delta * self.current_base_fee)
                 / self.config.target
                 / self.config.denominator;
 
-            // Ensure base fee doesn't go below the configurable minimum
+            // Note: This implementation only clamps to `minimum_base_fee` on underflow.
+            // If the subtraction does not underflow, the result may be below `minimum_base_fee`.
             self.current_base_fee
                 .checked_sub(base_fee_delta)
                 .unwrap_or(self.config.minimum_base_fee)
@@ -143,11 +147,11 @@ impl Eip1559 {
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct GasCostConfig {
-    /// Scaling factor for gas cost calculations
+    /// Scaling factor applied when converting (gas_per_call * base_fee) into lamports
     pub gas_cost_scaler: u64,
-    /// Decimal precision for gas cost calculations
+    /// Decimal precision for the gas cost scaler (denominator)
     pub gas_cost_scaler_dp: u64,
-    /// Account that receives gas fees
+    /// Account that receives gas fees collected on Solana
     pub gas_fee_receiver: Pubkey,
 }
 

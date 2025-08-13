@@ -19,7 +19,7 @@ pub struct CloseCallBuffer<'info> {
 }
 
 pub fn close_call_buffer_handler(_ctx: Context<CloseCallBuffer>) -> Result<()> {
-    // The account will be closed automatically by Anchor due to the close = rent_receiver constraint
+    // The account will be closed automatically by Anchor due to the `close = owner` constraint
     Ok(())
 }
 
@@ -33,11 +33,11 @@ pub enum CloseCallBufferError {
 mod tests {
     use super::*;
 
+    use crate::common::BRIDGE_SEED;
     use anchor_lang::{
         solana_program::{instruction::Instruction, native_token::LAMPORTS_PER_SOL},
         system_program, InstructionData,
     };
-    use crate::common::BRIDGE_SEED;
     use solana_keypair::Keypair;
     use solana_message::Message;
     use solana_signer::Signer;

@@ -41,7 +41,7 @@ pub mod bridge {
     /// * `ctx` - The context containing all accounts needed for initialization, including the guardian signer
     /// * `eip1559_config` - The EIP-1559 configuration, contains the gas target, adjustment denominator, window duration, and minimum base fee
     /// * `gas_cost_config` - The gas cost configuration, contains the gas cost scaler, gas cost scaler decimal precision, and gas fee receiver
-    /// * `gas_config` - The gas configuration, contains the extra relay buffer, execution prologue buffer, execution buffer, execution epilogue buffer, base transaction cost, and max gas limit per message
+    /// * `gas_config` - The gas configuration, contains the gas amount per cross-chain message
     /// * `protocol_config` - The protocol configuration, contains the block interval requirement for output root registration
     /// * `buffer_config` - The buffer configuration, contains the maximum call buffer size
     pub fn initialize(
@@ -69,10 +69,10 @@ pub mod bridge {
     /// which is required before any messages from that block can be proven and relayed.
     ///
     /// # Arguments
-    /// * `ctx`               - The context containing accounts for storing the output root
+    /// * `ctx`               - The context containing accounts for storing the output root (trusted oracle must sign)
     /// * `output_root`       - The 32-byte MMR root of Base messages for the given block
     /// * `base_block_number` - The Base block number this output root corresponds to
-    /// * `total_leaf_count`  - The total amount of leaves in the MMR with this root
+    /// * `total_leaf_count`  - The total number of leaves in the MMR with this root
     pub fn register_output_root(
         ctx: Context<RegisterOutputRoot>,
         output_root: [u8; 32],
@@ -106,7 +106,7 @@ pub mod bridge {
 
     /// Executes a previously proven cross-chain message on Solana.
     /// This function takes a message that has been proven via `prove_message` and executes
-    /// its payload, completing the cross-chain message transfer from Base to Solana.
+    /// its payload using a bridge CPI authority derived from the message sender.
     ///
     /// # Arguments
     /// * `ctx` - The transaction context
@@ -126,7 +126,7 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx`                    - The transaction context
     /// * `decimals`               - Number of decimal places for the token
-    /// * `partial_token_metadata` - Token name, symbol, and other metadata for the ERC20 contract
+    /// * `partial_token_metadata` - Token name, symbol, remote Base token address, and scaler exponent
     pub fn wrap_token(
         ctx: Context<WrapToken>,
         decimals: u8,
@@ -141,7 +141,7 @@ pub mod bridge {
     ///
     /// # Arguments
     /// * `ctx`  - The context containing accounts for the bridge operation
-    /// * `call` - The contract call details including target address and calldata
+    /// * `call` - The contract call details including call type, target address, value, and calldata
     pub fn bridge_call(ctx: Context<BridgeCall>, call: Call) -> Result<()> {
         bridge_call_handler(ctx, call)
     }
@@ -204,7 +204,7 @@ pub mod bridge {
     /// * `ctx`          - The context containing accounts for the SPL token bridge operation
     /// * `to`           - The 20-byte Ethereum address that will receive tokens on Base
     /// * `remote_token` - The 20-byte address of the ERC20 token contract on Base
-    /// * `amount`       - Amount of SPL tokens to bridge (in lamports)
+    /// * `amount`       - Amount of SPL tokens to bridge (in the token's smallest units)
     /// * `call`         - Optional additional contract call to execute with the token transfer
     pub fn bridge_spl(
         ctx: Context<BridgeSpl>,
@@ -224,7 +224,7 @@ pub mod bridge {
     /// * `ctx`          - The context containing accounts for the SPL token bridge operation
     /// * `to`           - The 20-byte Ethereum address that will receive tokens on Base
     /// * `remote_token` - The 20-byte address of the ERC20 token contract on Base
-    /// * `amount`       - Amount of SPL tokens to bridge (in lamports)
+    /// * `amount`       - Amount of SPL tokens to bridge (in the token's smallest units)
     pub fn bridge_spl_with_buffered_call<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, BridgeSplWithBufferedCall<'info>>,
         to: [u8; 20],
@@ -241,7 +241,7 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx`    - The context containing accounts for the wrapped token bridge operation
     /// * `to`     - The 20-byte Ethereum address that will receive the original tokens on Base
-    /// * `amount` - Amount of wrapped tokens to bridge back (in lamports)
+    /// * `amount` - Amount of wrapped tokens to bridge back (in the token's smallest units)
     /// * `call`   - Optional additional contract call to execute with the token transfer
     pub fn bridge_wrapped_token(
         ctx: Context<BridgeWrappedToken>,
@@ -305,7 +305,7 @@ pub mod bridge {
     /// changed their mind or made a mistake and wants to recover the rent.
     ///
     /// # Arguments
-    /// * `ctx` - The context containing the call buffer to close and rent receiver
+    /// * `ctx` - The context containing the call buffer to close and rent receiver (owner)
     pub fn close_call_buffer(ctx: Context<CloseCallBuffer>) -> Result<()> {
         close_call_buffer_handler(ctx)
     }
@@ -327,7 +327,7 @@ pub mod bridge {
     ///
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_fee` - The new minimum base fee value (must be > 0 and <= 1,000,000,000)
+    /// * `new_fee` - The new minimum base fee value
     pub fn set_minimum_base_fee(ctx: Context<SetBridgeConfig>, new_fee: u64) -> Result<()> {
         set_minimum_base_fee_handler(ctx, new_fee)
     }
@@ -337,7 +337,7 @@ pub mod bridge {
     ///
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_duration` - The new window duration in seconds (must be > 0 and <= 3600)
+    /// * `new_duration` - The new window duration in seconds
     pub fn set_window_duration(ctx: Context<SetBridgeConfig>, new_duration: u64) -> Result<()> {
         set_window_duration_handler(ctx, new_duration)
     }
@@ -347,7 +347,7 @@ pub mod bridge {
     ///
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_target` - The new gas target value (must be > 0 and <= 1,000,000,000)
+    /// * `new_target` - The new gas target value
     pub fn set_gas_target(ctx: Context<SetBridgeConfig>, new_target: u64) -> Result<()> {
         set_gas_target_handler(ctx, new_target)
     }
@@ -357,7 +357,7 @@ pub mod bridge {
     ///
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_denominator` - The new adjustment denominator (must be >= 1 and <= 100)
+    /// * `new_denominator` - The new adjustment denominator
     pub fn set_adjustment_denominator(
         ctx: Context<SetBridgeConfig>,
         new_denominator: u64,
@@ -370,7 +370,7 @@ pub mod bridge {
     ///
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_scaler` - The new gas cost scaler value (must be > 0 and <= 1,000,000,000)
+    /// * `new_scaler` - The new gas cost scaler value
     pub fn set_gas_cost_scaler(ctx: Context<SetBridgeConfig>, new_scaler: u64) -> Result<()> {
         set_gas_cost_scaler_handler(ctx, new_scaler)
     }
@@ -380,7 +380,7 @@ pub mod bridge {
     ///
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
-    /// * `new_dp` - The new gas cost scaler DP value (must be > 0 and <= 1,000,000,000)
+    /// * `new_dp` - The new gas cost scaler DP value
     pub fn set_gas_cost_scaler_dp(ctx: Context<SetBridgeConfig>, new_dp: u64) -> Result<()> {
         set_gas_cost_scaler_dp_handler(ctx, new_dp)
     }

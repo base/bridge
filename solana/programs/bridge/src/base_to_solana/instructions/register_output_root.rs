@@ -8,12 +8,13 @@ use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
 };
 
-/// Accounts struct for the register_output_root instruction that stores Base MMR roots
+/// Accounts struct for the `register_output_root` instruction that stores Base MMR roots
 /// on Solana for cross-chain message verification. This instruction allows a trusted oracle to
 /// register output roots from Base at specific block intervals, enabling subsequent message
-/// proofs and cross-chain operations.
+/// proofs and cross-chain operations. The instruction also records the MMR's total leaf count
+/// needed for proof verification at that checkpoint.
 #[derive(Accounts)]
-#[instruction(_output_root: [u8; 32], base_block_number: u64, base_last_relayed_nonce: u64)]
+#[instruction(output_root: [u8; 32], base_block_number: u64, total_leaf_count: u64)]
 pub struct RegisterOutputRoot<'info> {
     /// The trusted oracle account that submits MMR roots from Base.
     #[account(mut, address = TRUSTED_ORACLE @ RegisterOutputRootError::Unauthorized)]
@@ -25,7 +26,7 @@ pub struct RegisterOutputRoot<'info> {
     // /// - Must match TRUSTED_VALIDATOR constant for authorization
     // #[account(address = TRUSTED_VALIDATOR @ RegisterOutputRootError::Unauthorized)]
     // pub validator: Signer<'info>,
-    /// The output root account being created to store the Base MMR root.
+    /// The output root account being created to store the Base MMR root and total leaf count.
     /// - Uses PDA with OUTPUT_ROOT_SEED and base_block_number for deterministic address
     /// - Payer (trusted oracle) funds the account creation
     /// - Space allocated for output root state (8-byte discriminator + OutputRoot::INIT_SPACE)
@@ -40,9 +41,9 @@ pub struct RegisterOutputRoot<'info> {
     pub root: Account<'info, OutputRoot>,
 
     /// The main bridge state account that tracks the latest registered Base block number.
-    /// - Uses PDA with BRIDGE_SEED for deterministic address  
+    /// - Uses PDA with BRIDGE_SEED for deterministic address
     /// - Must be mutable to update the base_block_number field
-    /// - Ensures output roots are registered in sequential order
+    /// - Enforces registrations are monotonic and aligned to the configured interval
     #[account(
         mut,
         seeds = [BRIDGE_SEED],

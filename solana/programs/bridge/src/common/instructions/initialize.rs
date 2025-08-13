@@ -7,9 +7,9 @@ use crate::common::{
     BRIDGE_SEED,
 };
 
-/// Accounts struct for the initialize instruction that sets up the bridge program's initial state.
-/// This instruction creates the main bridge account with default values for cross-chain operations
-/// between Base and Solana.
+/// Accounts for the initialize instruction that sets up the bridge program's initial state.
+/// This instruction creates the main bridge account for cross-chain operations between Base and
+/// Solana, using the provided configuration values and initializing counters/state to zero.
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     /// The account that pays for the transaction and bridge account creation.
@@ -31,7 +31,8 @@ pub struct Initialize<'info> {
     pub bridge: Account<'info, Bridge>,
 
     /// The guardian account that will have administrative authority over the bridge.
-    /// Must be a signer to ensure the initializer controls this account.
+    /// Must be a signer to prove ownership of the guardian key. The payer and guardian
+    /// may be distinct signers.
     pub guardian: Signer<'info>,
 
     /// System program required for creating new accounts.
@@ -39,6 +40,9 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// Initializes the `Bridge` state account with the provided configs, sets the guardian to the
+/// provided signer, starts unpaused, zeros counters, sets the EIP-1559 base fee to
+/// `eip1559_config.minimum_base_fee`, and records the current timestamp as the window start.
 pub fn initialize_handler(
     ctx: Context<Initialize>,
     eip1559_config: Eip1559Config,

@@ -7,17 +7,17 @@ use crate::{
     },
 };
 
-/// Accounts struct for the bridge_sol_with_buffered_call instruction that transfers native SOL
-/// from Solana to Base along with a call (read from a call buffer account) to execute on Base.
+/// Accounts for `bridge_sol_with_buffered_call`, which transfers native SOL from Solana to Base
+/// and includes an optional call (read from a `CallBuffer`) to execute on Base.
 ///
-/// The bridged SOLs are locked in a vault on Solana and an outgoing message is created to mint
-/// the corresponding tokens and execute the call on Base. The call buffer account is closed and
-/// rent returned to the owner.
+/// The bridged SOL is locked in a vault on Solana and an outgoing message is created to mint/credit
+/// the corresponding tokens and execute the call on Base. The `CallBuffer` account is consumed and
+/// closed (rent refunded to its `owner`).
 #[derive(Accounts)]
 #[instruction(_to: [u8; 20], remote_token: [u8; 20])]
 pub struct BridgeSolWithBufferedCall<'info> {
-    /// The account that pays for transaction fees and account creation.
-    /// Must be mutable to deduct lamports for account rent and gas fees.
+    /// The account that pays for account creation and the gas fee (EIP-1559 based) on Solana.
+    /// Must be mutable to deduct lamports for rent and to transfer the gas fee to `gas_fee_receiver`.
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -32,8 +32,8 @@ pub struct BridgeSolWithBufferedCall<'info> {
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SOL vault account that holds locked tokens for the specific remote token.
-    /// - Uses PDA with SOL_VAULT_SEED and remote_token for deterministic address
-    /// - Mutable to receive the locked SOL tokens
+    /// - PDA of this program using `[SOL_VAULT_SEED, remote_token]`
+    /// - Mutable to receive the locked SOL
     /// - Each remote token has its own dedicated vault
     ///
     /// CHECK: This is the SOL vault account.
@@ -45,8 +45,8 @@ pub struct BridgeSolWithBufferedCall<'info> {
     pub sol_vault: AccountInfo<'info>,
 
     /// The main bridge state account that tracks nonces and fee parameters.
-    /// - Uses PDA with BRIDGE_SEED for deterministic address
-    /// - Mutable to increment nonce and update EIP1559 fee data
+    /// - PDA with `BRIDGE_SEED`
+    /// - Mutable to charge gas (EIP-1559 accounting) and increment the message nonce
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
 
@@ -54,8 +54,9 @@ pub struct BridgeSolWithBufferedCall<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    /// The call buffer account that stores the call data.
-    /// This account will be closed and rent returned to the owner.
+    /// The call buffer account that stores the call parameters and data.
+    /// Its contents are copied into the outgoing message, then the account is closed
+    /// (rent refunded to `owner`).
     #[account(
         mut,
         close = owner,
@@ -64,10 +65,13 @@ pub struct BridgeSolWithBufferedCall<'info> {
     pub call_buffer: Account<'info, CallBuffer>,
 
     /// The outgoing message account that stores the cross-chain transfer details.
+    /// - Created fresh for each bridge; address determined by the provided keypair
+    /// - Funded by `payer`
+    /// - Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`
     #[account(init, payer = payer, space = 8 + OutgoingMessage::space(Some(call_buffer.data.len())))]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
-    /// System program required for SOL transfers and account creation.
+    /// System program required for account creation and the SOL transfer CPI.
     pub system_program: Program<'info, System>,
 }
 

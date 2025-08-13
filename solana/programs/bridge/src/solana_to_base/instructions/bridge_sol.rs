@@ -59,7 +59,7 @@ pub struct BridgeSol<'info> {
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
     /// System program required for SOL transfers and account creation.
-    /// Used for transferring SOL from user to vault and creating outgoing message account.
+    /// Used for transferring SOL from user to vault and creating outgoing message accounts.
     pub system_program: Program<'info, System>,
 }
 

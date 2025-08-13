@@ -1,21 +1,22 @@
 use anchor_lang::prelude::*;
 
-/// Represents a cryptographic commitment to the state of the Base L2 chain at a specific block.
+/// Represents a cryptographic commitment to the set of Base L2 bridge messages
+/// at a specific Base block number.
 ///
-/// OutputRoots are submitted by proposers and serve as checkpoints that allow messages
-/// and state from Base to be proven and relayed to Solana. Each OutputRoot contains
-/// an MMR root that commits to the state of all messages on Base at
-/// a particular block height.
+/// Output roots are registered on Solana by a trusted oracle and serve as
+/// checkpoints that allow messages from Base to be proven and relayed to
+/// Solana. Each output root contains an MMR root that commits to all bridge
+/// messages as of a particular Base block number.
 ///
-/// This struct is used in the Base → Solana message passing flow, where:
-/// 1. Proposers submit OutputRoots for Base blocks
-/// 2. Users can prove their messages were included in Base using these roots
-/// 3. Messages are then relayed and executed on Solana
+/// This account is used in the Base → Solana message passing flow, where:
+/// 1. A trusted oracle registers output roots for specific Base blocks
+/// 2. Users prove their messages were included on Base using these roots and an MMR proof
+/// 3. Proven messages are then relayed and executed on Solana
 #[account]
 #[derive(InitSpace)]
 pub struct OutputRoot {
-    /// The 32-byte MMR root that commits to the complete state of the Bridge contract on Base
-    /// at a specific block height.
+    /// The 32-byte MMR root that commits to all outgoing bridge messages on Base
+    /// as of the specified Base block number.
     pub root: [u8; 32],
 
     /// The total number of leaves that were present in the MMR when this root

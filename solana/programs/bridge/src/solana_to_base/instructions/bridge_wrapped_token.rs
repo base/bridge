@@ -66,7 +66,8 @@ pub struct BridgeWrappedToken<'info> {
     /// Required for all token operations including burn_checked.
     pub token_program: Program<'info, Token2022>,
 
-    /// System program required for creating the outgoing message account.
+    /// System program required for creating the outgoing message account
+    /// and transferring the gas payment to the `gas_fee_receiver`.
     pub system_program: Program<'info, System>,
 }
 
@@ -99,10 +100,6 @@ pub fn bridge_wrapped_token_handler(
 pub enum BridgeWrappedTokenError {
     #[msg("Incorrect gas fee receiver")]
     IncorrectGasFeeReceiver,
-    #[msg("Mint is a wrapped token")]
-    MintIsWrappedToken,
-    #[msg("Only the owner can close this call buffer")]
-    Unauthorized,
     #[msg("Bridge is paused")]
     BridgePaused,
 }

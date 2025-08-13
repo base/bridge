@@ -1,8 +1,12 @@
+/// Fixed-point scale factor: 1e6 (six decimals)
 pub const SCALE: u128 = 1_000_000;
 
-/// Compute base^exp with a fixed precision of SCALE
-/// Guaranteed to not overflow for all `base` < SCALE values.
-/// NOTE: base is expected to be given in SCALE units.
+/// Computes base^exp using fixed-point arithmetic with scale `SCALE`.
+/// Inputs and result are expressed in `SCALE` units (six decimals).
+/// Uses truncating division on each multiply (rounds toward zero).
+/// Guaranteed not to overflow for all 0 <= base <= SCALE.
+/// Panics on overflow for larger bases or exponents (uses checked_mul).
+/// Time complexity: O(log exp) via exponentiation by squaring.
 pub fn fixed_pow(mut base: u128, mut exp: u64) -> u128 {
     let mut result = SCALE;
     while exp > 0 {
@@ -162,7 +166,7 @@ mod tests {
             // Allow 1% tolerance for small number precision
             assert!(
                 approx_eq(result_fixed, expected_fixed, 1.0),
-                "{}^{}: fixed_pow result {} differs from float result {} by more than 5%",
+                "{}^{}: fixed_pow result {} differs from float result {} by more than 1%",
                 base_float,
                 exp,
                 fixed_to_float(result_fixed),

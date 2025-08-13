@@ -77,7 +77,7 @@ pub struct WrapToken<'info> {
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
     /// SPL Token-2022 program for creating the mint with metadata extensions.
-    /// Required for initializing tokens with advanced features like metadata pointer.
+    /// Required for initializing tokens with advanced features like metadata pointers.
     pub token_program: Program<'info, Token2022>,
 
     /// System program required for creating new accounts and transferring lamports.

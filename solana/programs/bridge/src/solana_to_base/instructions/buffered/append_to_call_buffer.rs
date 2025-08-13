@@ -4,14 +4,18 @@ use crate::solana_to_base::CallBuffer;
 
 /// Accounts struct for appending data to an existing call buffer account.
 /// This allows building up large call data over multiple transactions.
+/// Ownership is enforced via `has_one = owner` on the `call_buffer` account.
 #[derive(Accounts)]
 pub struct AppendToCallBuffer<'info> {
-    /// The account paying for the transaction fees.
-    /// It must be the owner of the call buffer account.
+    /// The signer authorized to modify this call buffer.
+    /// Must match `call_buffer.owner`.
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    /// The call buffer account to append data to
+    /// The call buffer account to append data to.
+    /// Must have been initialized with enough space to hold the resulting
+    /// data; this instruction does not reallocate and will revert if
+    /// serialization would exceed the account's allocated size.
     #[account(
         mut,
         has_one = owner @ AppendToCallBufferError::Unauthorized,
@@ -19,6 +23,11 @@ pub struct AppendToCallBuffer<'info> {
     pub call_buffer: Account<'info, CallBuffer>,
 }
 
+/// Appends raw bytes to `call_buffer.data`.
+///
+/// Note: No explicit max-length checks are performed here. The account must
+/// have sufficient space allocated during initialization; otherwise the
+/// transaction will fail during serialization.
 pub fn append_to_call_buffer_handler(
     ctx: Context<AppendToCallBuffer>,
     data: Vec<u8>,
@@ -39,11 +48,11 @@ pub enum AppendToCallBufferError {
 mod tests {
     use super::*;
 
+    use crate::common::BRIDGE_SEED;
     use anchor_lang::{
         solana_program::{instruction::Instruction, native_token::LAMPORTS_PER_SOL},
         system_program, InstructionData,
     };
-    use crate::common::BRIDGE_SEED;
     use solana_keypair::Keypair;
     use solana_message::Message;
     use solana_signer::Signer;

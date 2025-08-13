@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 
-/// Instruction to be executed by the wallet.
-/// Functionally equivalent to a Solana Instruction.
+/// Instruction to be executed by the bridge program via signed CPI during message relay.
+/// Functionally equivalent to a Solana `Instruction`, but serialized with Anchor for cross-program messaging.
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct Ix {
     /// Program that will process this instruction.
@@ -13,7 +13,7 @@ pub struct Ix {
 }
 
 /// Account used in an instruction.
-/// Identical to Solana's AccountMeta but implements AnchorSerialize and AnchorDeserialize.
+/// Similar to Solana's `AccountMeta`, but serializable with Anchor and supports PDAs via `PubkeyOrPda`.
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct IxAccount {
     /// Public key of the account.
@@ -24,6 +24,8 @@ pub struct IxAccount {
     pub is_signer: bool,
 }
 
+/// Either a concrete `Pubkey` or a PDA described by seeds and a program id.
+/// When converting to `AccountMeta`, PDAs are derived with `Pubkey::find_program_address`.
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub enum PubkeyOrPda {
     Pubkey(Pubkey),
@@ -33,7 +35,7 @@ pub enum PubkeyOrPda {
     },
 }
 
-/// Converts a Ix to a Solana Instruction.
+/// Converts an Ix to a Solana Instruction.
 impl From<Ix> for Instruction {
     fn from(ix: Ix) -> Instruction {
         Instruction {
@@ -44,7 +46,7 @@ impl From<Ix> for Instruction {
     }
 }
 
-/// Converts a IxAccount to a Solana AccountMeta.
+/// Converts an IxAccount to a Solana AccountMeta.
 impl From<IxAccount> for AccountMeta {
     fn from(account: IxAccount) -> AccountMeta {
         let pubkey = match account.pubkey_or_pda {
@@ -63,7 +65,7 @@ impl From<IxAccount> for AccountMeta {
     }
 }
 
-/// Converts a Solana Instruction to a Ix.
+/// Converts a Solana Instruction to an Ix.
 /// NOTE: Only used in tests.
 impl From<Instruction> for Ix {
     fn from(ix: Instruction) -> Ix {
@@ -75,7 +77,7 @@ impl From<Instruction> for Ix {
     }
 }
 
-/// Converts a Solana AccountMeta to a IxAccount.
+/// Converts a Solana AccountMeta to an IxAccount.
 /// NOTE: Only used in tests.
 impl From<AccountMeta> for IxAccount {
     fn from(account: AccountMeta) -> IxAccount {

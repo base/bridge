@@ -5,12 +5,15 @@ use crate::{
     solana_to_base::{CallBuffer, CallType},
 };
 
-/// Accounts struct for initializing a call buffer account that can store large call data.
-/// This account can be used to build up call data over multiple transactions before bridging.
+/// Accounts for initializing a `CallBuffer` that can store large call data.
+/// The buffer is owned by `payer` and can be appended over multiple transactions before bridging.
+/// Allocation is sized by `max_data_len` and capped by `bridge.buffer_config.max_call_buffer_size`.
+/// Initial data plus any later appends must fit within the allocated `max_data_len`.
 #[derive(Accounts)]
 #[instruction(_ty: CallType, _to: [u8; 20], _value: u128, _initial_data: Vec<u8>, max_data_len: u64)]
 pub struct InitializeCallBuffer<'info> {
-    /// The account that pays for the transaction and call buffer account creation
+    /// The account that pays for the transaction and call buffer account creation.
+    /// This signer becomes the `CallBuffer.owner`.
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -21,7 +24,9 @@ pub struct InitializeCallBuffer<'info> {
     )]
     pub bridge: Account<'info, Bridge>,
 
-    /// The call buffer account being initialized
+    /// The call buffer account being initialized.
+    /// Space is allocated for up to `max_data_len` bytes of `data` (plus the Vec length prefix).
+    /// The bridge configuration enforces an upper bound via `buffer_config.max_call_buffer_size`.
     #[account(
         init,
         payer = payer,
@@ -34,6 +39,10 @@ pub struct InitializeCallBuffer<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// Initializes a `CallBuffer` with the provided parameters.
+/// Note: `max_data_len` is used only for account allocation (via the accounts macro) and is not
+/// stored in the account state. If `initial_data.len()` exceeds the allocated capacity, the
+/// transaction will fail due to insufficient account space.
 pub fn initialize_call_buffer_handler(
     ctx: Context<InitializeCallBuffer>,
     ty: CallType,

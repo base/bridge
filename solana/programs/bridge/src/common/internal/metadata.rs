@@ -14,8 +14,9 @@ use anchor_spl::{
 /// chains, including information about its remote counterpart and any scaling factors needed
 /// to handle differences between the chains (such as decimal precision).
 ///
-/// The metadata is stored in the Solana Token-2022 program's additional metadata field and
-/// can be used to reconstruct the relationship between tokens on both sides of the bridge.
+/// The metadata is stored using the SPL Token-2022 metadata interface's
+/// `additional_metadata` key/value field and can be used to reconstruct the relationship
+/// between tokens on both sides of the bridge.
 #[derive(Debug, Clone, AnchorDeserialize, AnchorSerialize)]
 pub struct PartialTokenMetadata {
     /// The human-readable name of the token (e.g., "Wrapped Bitcoin")
@@ -24,18 +25,22 @@ pub struct PartialTokenMetadata {
     /// The symbol/ticker of the token (e.g., "WBTC")
     pub symbol: String,
 
-    /// The 20-byte address of the corresponding token contract on Base.
+    /// The 20-byte address of the corresponding token contract on Base (EVM address bytes).
     /// This allows the bridge to identify which Base token this Solana token represents.
     pub remote_token: [u8; 20],
 
     /// The scaling exponent used to convert between token amounts on different chains.
-    /// This handles cases where tokens have different decimal precision on Base vs Solana.
-    /// For example, if Base token has 18 decimals and Solana token has 9 decimals,
-    /// this would be used to scale amounts appropriately during bridging operations.
+    /// This handles cases where tokens have differing decimal precision on Base vs Solana.
+    /// For example, when Base token has 18 decimals and the Solana wrapped mint has 9,
+    /// this value conveys the decimal relationship so bridging logic can scale amounts.
+    /// The exact conversion is performed by the EVM-side contract; Solana propagates this
+    /// value but does not apply arithmetic with it.
     pub scaler_exponent: u8,
 }
 
+/// Key used in `additional_metadata` for the Base (EVM) token address bytes, hex-encoded.
 pub const REMOTE_TOKEN_METADATA_KEY: &str = "remote_token";
+/// Key used in `additional_metadata` for the decimal scaling exponent.
 pub const SCALER_EXPONENT_METADATA_KEY: &str = "scaler_exponent";
 
 impl From<&PartialTokenMetadata> for TokenMetadata {
@@ -58,6 +63,14 @@ impl From<&PartialTokenMetadata> for TokenMetadata {
     }
 }
 
+/// Attempts to reconstruct `PartialTokenMetadata` from SPL Token-2022 `TokenMetadata`.
+///
+/// Notes/assumptions:
+/// - Only the first two entries of `additional_metadata` are inspected.
+/// - Those entries are expected to be, in order: (`remote_token`, `scaler_exponent`).
+/// - If the keys are missing, in a different order, or appear after other keys, this
+///   conversion will fail with a `NotFound` error. This reflects the current write
+///   behavior, which inserts the keys in that order.
 impl TryFrom<TokenMetadata> for PartialTokenMetadata {
     type Error = Error;
 
@@ -114,6 +127,9 @@ impl TryFrom<&AccountInfo<'_>> for PartialTokenMetadata {
 }
 
 impl PartialTokenMetadata {
+    /// Computes a keccak256 hash of the metadata fields as:
+    /// `keccak(name || symbol || remote_token || scaler_exponent_le)`,
+    /// where `scaler_exponent_le` is the little-endian byte representation.
     pub fn hash(&self) -> [u8; 32] {
         let mut data = Vec::new();
         data.extend_from_slice(self.name.as_bytes());
@@ -124,6 +140,10 @@ impl PartialTokenMetadata {
     }
 }
 
+/// Reads and returns Token-2022 `TokenMetadata` from a mint account.
+///
+/// Fails if the account is not owned by the Token-2022 program or if the metadata
+/// extension is missing/malformed.
 fn mint_info_to_token_metadata(mint: &AccountInfo<'_>) -> Result<TokenMetadata> {
     require_keys_eq!(
         *mint.owner,
@@ -139,9 +159,9 @@ fn mint_info_to_token_metadata(mint: &AccountInfo<'_>) -> Result<TokenMetadata> 
 
 #[error_code]
 pub enum TokenMetadataError {
-    #[msg("Invalid remote token")]
+    #[msg("Remote token not found")]
     RemoteTokenNotFound,
-    #[msg("Invalid scaler exponent")]
+    #[msg("Scaler exponent not found")]
     ScalerExponentNotFound,
     #[msg("Invalid remote token")]
     InvalidRemoteToken,

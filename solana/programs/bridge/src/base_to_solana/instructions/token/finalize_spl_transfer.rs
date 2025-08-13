@@ -3,35 +3,29 @@ use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, Tran
 
 use crate::{common::TOKEN_VAULT_SEED, ID};
 
-/// Data structure for finalizing SPL token transfers from Base to Solana.
+/// Instruction data for finalizing a bridged SPL token transfer from Base to Solana.
 ///
-/// This struct contains all the necessary information to complete a cross-chain
-/// SPL token transfer that was initiated on Base and is being finalized on Solana.
-/// It handles the release of tokens from a program-controlled vault to the
-/// designated recipient on Solana.
+/// Releases tokens from a program-controlled vault PDA to the specified recipient
+/// token account on Solana.
 #[derive(Debug, Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct FinalizeBridgeSpl {
-    /// The token contract address on Base.
-    /// This is a 20-byte address representing the ERC-20 token
-    /// contract on Base that was originally bridged. Used to derive the
-    /// token vault PDA and ensure proper token mapping between chains.
+    /// The 20-byte ERC-20 contract address on Base that corresponds to the SPL mint.
+    /// Used, together with the SPL mint, to derive the token-vault PDA for this mapping.
     pub remote_token: [u8; 20],
 
-    /// The SPL token mint public key on Solana.
-    /// This represents the corresponding SPL token on Solana that mirrors
-    /// the remote token.
+    /// The SPL token mint on Solana that mirrors the `remote_token`.
     pub local_token: Pubkey,
 
-    /// The recipient's token account public key on Solana.
-    /// This is the SPL token account that will receive the bridged tokens.
-    /// Must be an associated token account or valid token account owned
-    /// by the intended recipient and matching the local_token mint.
+    /// The recipient SPL token account address on Solana that will receive tokens.
+    /// This must be a valid token account for `local_token`.
+    /// Note: this program does not enforce ownership or ATA semantics; the account
+    /// is authenticated by address equality (`self.to`) and `transfer_checked`
+    /// enforces the mint match.
     pub to: Pubkey,
 
-    /// The amount of tokens to transfer in the token's base units.
-    /// This amount respects the token's decimal precision as defined by
-    /// the mint. The transfer will be validated using transfer_checked
-    /// to ensure decimal accuracy.
+    /// The amount to transfer, in base units of the mint (respecting mint decimals).
+    /// `transfer_checked` enforces that the destination account's mint matches and
+    /// the decimals are correct.
     pub amount: u64,
 }
 

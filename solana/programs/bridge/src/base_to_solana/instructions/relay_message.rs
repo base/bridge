@@ -57,6 +57,7 @@ pub fn relay_message_handler<'a, 'info>(
         };
     }
 
+    // Derive the bridge CPI authority PDA tied to the message sender; used to sign all downstream CPIs.
     let (_, bump) = Pubkey::find_program_address(
         &[
             BRIDGE_CPI_AUTHORITY_SEED,
@@ -71,7 +72,7 @@ pub fn relay_message_handler<'a, 'info>(
         &[bump],
     ];
 
-    // Process all the remaining instructions
+    // Execute the provided downstream instructions via signed CPI
     for ix in ixs {
         // NOTE: We always do a signed CPI even if the actual program CPIed into might not require the bridge authority signer.
         solana_program::program::invoke_signed(
@@ -90,8 +91,6 @@ pub fn relay_message_handler<'a, 'info>(
 pub enum RelayMessageError {
     #[msg("Message already executed")]
     AlreadyExecuted,
-    #[msg("Bridge CPI authority not found")]
-    BridgeCpiAuthorityNotFound,
     #[msg("Bridge is currently paused")]
     BridgePaused,
 }

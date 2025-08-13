@@ -28,7 +28,9 @@ pub struct FinalizeBridgeWrappedToken {
 
     /// The destination token account that will receive the wrapped tokens.
     /// This must be a valid token account that is associated with the wrapped
-    /// token mint and owned by the intended recipient of the bridged tokens.
+    /// token mint. It is expected to be controlled by the intended recipient of
+    /// the bridged tokens; recipient ownership is not enforced by this
+    /// instruction.
     pub to: Pubkey,
 
     /// The amount of wrapped tokens to mint to the recipient.

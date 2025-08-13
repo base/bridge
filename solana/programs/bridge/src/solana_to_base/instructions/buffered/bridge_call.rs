@@ -7,18 +7,19 @@ use crate::{
     },
 };
 
-/// Accounts struct for the bridge_call_buffered instruction that enables arbitrary function calls
-/// from Solana to Base. This instruction falls back to the same logic as bridge_call, but it reads
-/// the call data from a call buffer account instead of the instruction data.
+/// Accounts for the buffered variant of `bridge_call` that enables arbitrary function calls
+/// from Solana to Base. This delegates to the same internal logic as `bridge_call`, but reads
+/// the call data from a `CallBuffer` account (which is consumed and closed) instead of from
+/// instruction data.
 #[derive(Accounts)]
 pub struct BridgeCallBuffered<'info> {
-    /// The account that pays for the transaction fees and outgoing message account creation.
-    /// Must be mutable to deduct lamports for account rent and gas fees.
+    /// The account that pays for outgoing message account creation and the gas fee.
+    /// Must be mutable to deduct lamports for rent and the EIP-1559-based gas fee.
     #[account(mut)]
     pub payer: Signer<'info>,
 
     /// The account initiating the bridge call on Solana.
-    /// This account's public key will be used as the sender in the cross-chain message.
+    /// This account's public key is recorded as the `sender` in the cross-chain message.
     pub from: Signer<'info>,
 
     /// The account that receives payment for the gas costs of bridging the call to Base.
@@ -26,9 +27,9 @@ pub struct BridgeCallBuffered<'info> {
     #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeCallBufferedError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
-    /// The main bridge state account containing global bridge configuration.
-    /// - Uses PDA with BRIDGE_SEED for deterministic address
-    /// - Mutable to increment the nonce and update EIP-1559 gas pricing
+    /// The main bridge state account containing global configuration and runtime state.
+    /// - PDA with `BRIDGE_SEED`
+    /// - Mutable to charge gas (EIP-1559 accounting) and increment the message nonce
     /// - Provides the current nonce for message ordering
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
@@ -37,8 +38,9 @@ pub struct BridgeCallBuffered<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    /// The call buffer account that stores the call data.
-    /// This account will be closed and rent returned to the owner.
+    /// The call buffer account that stores the call parameters and data.
+    /// Its contents are copied into the outgoing message. The account is then
+    /// closed by Anchor (via `close = owner`), refunding its rent to `owner`.
     #[account(
         mut,
         close = owner,
@@ -46,11 +48,14 @@ pub struct BridgeCallBuffered<'info> {
     )]
     pub call_buffer: Account<'info, CallBuffer>,
 
-    /// The outgoing message account that stores the cross-chain call data.
-    /// - Created fresh for each bridge call with unique address
-    /// - Payer funds the account creation
-    /// - Space calculated dynamically based on call data length (8-byte discriminator + message data)
-    /// - Contains all information needed for execution on Base
+    /// The outgoing message account that stores the cross-chain message (header + payload).
+    /// - Created fresh for each call; the provided keypair determines its address
+    /// - Funded by `payer`
+    /// - Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`
+    ///   Sizing uses `OutgoingMessage::space(Some(call_buffer.data.len()))`, which
+    ///   intentionally allocates for the Transfer variant (worst case) to safely
+    ///   cover the Call variant
+    /// - Includes `nonce` and `sender` metadata used on Base
     #[account(
         init,
         payer = payer,

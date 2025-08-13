@@ -19,7 +19,7 @@ pub struct ProveMessage<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// The output root account containing the merkle root from Base.
+    /// The output root account containing the MMR root from Base.
     /// Used to verify that the message proof is valid against the committed state.
     /// This root must have been previously registered via register_output_root instruction.
     pub output_root: Account<'info, OutputRoot>,
@@ -66,7 +66,7 @@ pub fn prove_message_handler(
         ProveMessageError::InvalidMessageHash
     );
 
-    // Verify the merkle proof to ensure the transaction exists on the source chain
+    // Verify the MMR proof to ensure the message was included on the source chain
     mmr::verify_proof(
         &ctx.accounts.output_root.root,
         &message_hash,
@@ -83,6 +83,11 @@ pub fn prove_message_handler(
     Ok(())
 }
 
+/// Computes the message hash as keccak256(nonce || sender || data).
+///
+/// - `nonce` is encoded as big-endian bytes.
+/// - `sender` is a 20-byte Base/EVM address.
+/// - `data` is the Anchor-serialized `Message` payload.
 fn hash_message(nonce: &[u8], sender: &[u8; 20], data: &[u8]) -> [u8; 32] {
     let mut data_to_hash = Vec::new();
     data_to_hash.extend_from_slice(nonce);

@@ -12,8 +12,9 @@ use crate::{
 /// from Solana to Base with a call using buffered data.
 ///
 /// The bridged SPL tokens are locked in a vault on Solana and an outgoing message is created to mint
-/// the corresponding tokens and execute the call on Base. The call buffer account is closed and
-/// rent returned to the owner.
+/// the corresponding tokens and execute the call on Base. If the token charges transfer fees, the
+/// outgoing message records the net amount actually received by the vault. The call buffer account
+/// is closed and rent returned to the owner.
 #[derive(Accounts)]
 #[instruction(_to: [u8; 20], remote_token: [u8; 20])]
 pub struct BridgeSplWithBufferedCall<'info> {
@@ -22,8 +23,8 @@ pub struct BridgeSplWithBufferedCall<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// The token owner authorizing the transfer of SPL tokens.
-    /// This account must sign the transaction and own the tokens being bridged.
+    /// The token authority authorizing the transfer of SPL tokens.
+    /// This signer must be the owner or an approved delegate for the source token account.
     #[account(mut)]
     pub from: Signer<'info>,
 
@@ -39,7 +40,7 @@ pub struct BridgeSplWithBufferedCall<'info> {
     pub mint: InterfaceAccount<'info, Mint>,
 
     /// The user's token account containing the SPL tokens to be bridged.
-    /// - Must be owned by the 'from' signer
+    /// - Must be owned by, or delegated to, the `from` signer (transfer authority)
     /// - Tokens will be transferred from this account to the token vault
     #[account(mut)]
     pub from_token_account: InterfaceAccount<'info, TokenAccount>,
@@ -54,6 +55,7 @@ pub struct BridgeSplWithBufferedCall<'info> {
     /// The token vault account that holds locked SPL tokens during the bridge process.
     /// - PDA derived from TOKEN_VAULT_SEED, mint pubkey, and remote_token address
     /// - Created if it doesn't exist for this mint/remote_token pair
+    /// - Token account authority is set to this vault PDA; the program signs using the PDA seeds
     /// - Acts as the custody account for tokens being bridged to Base
     #[account(
         init_if_needed,
@@ -90,7 +92,8 @@ pub struct BridgeSplWithBufferedCall<'info> {
     /// Used for the transfer_checked operation to move tokens to the vault.
     pub token_program: Interface<'info, TokenInterface>,
 
-    /// System program required for creating the outgoing message account.
+    /// System program required for creating the outgoing message account and
+    /// initializing the token vault when needed.
     pub system_program: Program<'info, System>,
 }
 

@@ -10,7 +10,8 @@ use crate::{
 /// with an optional call that can be executed on Base.
 ///
 /// This instruction locks SPL tokens in a vault on Solana and creates an outgoing message
-/// to mint corresponding tokens and execute the optional call on Base.
+/// to mint corresponding tokens and execute the optional call on Base. If the token charges
+/// transfer fees, the outgoing message records the net amount actually received by the vault.
 #[derive(Accounts)]
 #[instruction(_to: [u8; 20], remote_token: [u8; 20], _amount: u64, call: Option<Call>)]
 pub struct BridgeSpl<'info> {
@@ -19,8 +20,8 @@ pub struct BridgeSpl<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// The token owner authorizing the transfer of SPL tokens.
-    /// This account must sign the transaction and own the tokens being bridged.
+    /// The token authority authorizing the transfer of SPL tokens.
+    /// This signer must be the owner or an approved delegate for the source token account.
     #[account(mut)]
     pub from: Signer<'info>,
 
@@ -31,12 +32,12 @@ pub struct BridgeSpl<'info> {
 
     /// The SPL token mint account for the token being bridged.
     /// - Must not be a wrapped token (wrapped tokens use bridge_wrapped_token)
-    /// - Used to validate transfer amounts and get token metadata
+    /// - Used to read token decimals and validate it is not a wrapped token
     #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
 
     /// The user's token account containing the SPL tokens to be bridged.
-    /// - Must be owned by the 'from' signer
+    /// - Must be owned by, or delegated to, the `from` signer (transfer authority)
     /// - Tokens will be transferred from this account to the token vault
     #[account(mut)]
     pub from_token_account: InterfaceAccount<'info, TokenAccount>,
@@ -51,6 +52,7 @@ pub struct BridgeSpl<'info> {
     /// The token vault account that holds locked SPL tokens during the bridge process.
     /// - PDA derived from TOKEN_VAULT_SEED, mint pubkey, and remote_token address
     /// - Created if it doesn't exist for this mint/remote_token pair
+    /// - Token account authority is set to this vault PDA; the program signs using the PDA seeds
     /// - Acts as the custody account for tokens being bridged to Base
     #[account(
         init_if_needed,
@@ -66,6 +68,7 @@ pub struct BridgeSpl<'info> {
     /// - Contains transfer details and optional call data for the destination chain
     /// - Space is calculated based on the size of optional call data
     /// - Used by relayers to execute the bridge operation on Base
+    /// - The recorded transfer amount equals the net increase in `token_vault` balance
     #[account(
         init,
         payer = payer,
@@ -77,7 +80,8 @@ pub struct BridgeSpl<'info> {
     /// Used for the transfer_checked operation to move tokens to the vault.
     pub token_program: Interface<'info, TokenInterface>,
 
-    /// System program required for creating the outgoing message account.
+    /// System program required for creating the outgoing message account and
+    /// initializing the token vault when needed.
     pub system_program: Program<'info, System>,
 }
 
@@ -115,8 +119,6 @@ pub enum BridgeSplError {
     IncorrectGasFeeReceiver,
     #[msg("Mint is a wrapped token")]
     MintIsWrappedToken,
-    #[msg("Only the owner can close this call buffer")]
-    Unauthorized,
     #[msg("Bridge is paused")]
     BridgePaused,
 }

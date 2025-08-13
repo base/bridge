@@ -5,24 +5,23 @@ use anchor_lang::{
 
 use crate::{common::SOL_VAULT_SEED, ID};
 
-/// Parameters for finalizing a SOL transfer from Base to Solana.
+/// Instruction data for finalizing a native SOL transfer from Base to Solana.
 ///
-/// This struct contains all the necessary information to complete a cross-chain
-/// SOL transfer that was initiated on Base. The SOL is held in
-/// a program-derived account (vault) until the transfer is finalized on Solana.
+/// Contains the data needed to release escrowed SOL on Solana that corresponds
+/// to a transfer initiated on Base. SOL is held in a PDA vault and released to
+/// the recipient when finalized.
 #[derive(Debug, Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct FinalizeBridgeSol {
-    /// The 20-byte address of the token contract on Base.
-    /// This is used as a seed to derive the SOL vault PDA that holds the escrowed SOL.
-    /// Even though this is a SOL transfer, we need the remote token identifier
-    /// to locate the correct vault.
+    /// The 20-byte Ethereum address of the ERC20 token on Base that represents SOL for this bridge.
+    /// Used as a seed to derive the SOL vault PDA that escrows SOL for this mapping.
+    /// This identifier names the vault even though the asset released here is native SOL.
     pub remote_token: [u8; 20],
 
     /// The Solana public key of the recipient who will receive the SOL.
     /// This must match the intended recipient specified in the original bridge message.
     pub to: Pubkey,
 
-    /// The amount of SOL to transfer, denominated in lamports (1 SOL = 1,000,000,000 lamports).
+    /// The amount of SOL to transfer, denominated in lamports (1 SOL = 1_000_000_000 lamports).
     /// This amount will be transferred from the SOL vault to the recipient.
     pub amount: u64,
 }

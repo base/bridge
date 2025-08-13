@@ -9,15 +9,16 @@ pub struct Transfer {
     pub to: [u8; 20],
 
     /// The token mint address on Solana that is being bridged.
-    /// This identifies which token on Solana is being transferred cross-chain.
+    /// For SOL this is `NATIVE_SOL_PUBKEY`.
     pub local_token: Pubkey,
 
     /// The corresponding token contract address on Base.
     /// This is the token that will be minted or unlocked on the Base side.
     pub remote_token: [u8; 20],
 
-    /// The amount of tokens to transfer, in the token's smallest unit.
-    /// This amount will be burned/locked on Solana and minted/unlocked on Base.
+    /// The amount to transfer, in the token's smallest unit.
+    /// For SPL tokens and SOL, funds are locked on Solana; for wrapped tokens, they are burned.
+    /// On Base, the corresponding amount is minted or unlocked.
     pub amount: u64,
 
     /// Optional contract call to execute on Base after the token transfer completes.
@@ -56,7 +57,7 @@ pub struct Call {
     /// Must be set to zero for Create and Create2 operations.
     pub to: [u8; 20],
 
-    /// The amount of native currency (ETH) to send with this call, in wei.
+    /// Amount of ETH to send with this call on Base, in wei.
     pub value: u128,
 
     /// The encoded function call data or contract bytecode.
@@ -94,12 +95,13 @@ pub enum Message {
 #[account]
 #[derive(Debug, Eq, PartialEq)]
 pub struct OutgoingMessage {
-    /// Sequential number for this message to ensure ordering and prevent replay attacks.
-    /// Starts at 1 and is incremented for each new message.
+    /// Monotonic message nonce used for ordering and replay protection on Base.
+    /// Starts at 0 and is incremented by the `Bridge` for each new message.
     pub nonce: u64,
 
-    /// The Solana public key of the account that initiated this cross-chain message.
-    /// This is used for authentication and to identify the message originator on Base.
+    /// The Solana public key of the signer that initiated this cross-chain message.
+    /// Carried to Base for use by destination logic; Solana-side authentication is enforced
+    /// via signer constraints.
     pub sender: Pubkey,
 
     /// The actual message payload that will be executed on Base.
@@ -124,6 +126,9 @@ impl OutgoingMessage {
         }
     }
 
+    /// Returns the serialized size of an `OutgoingMessage` payload, excluding the 8-byte Anchor
+    /// account discriminator. Uses the `Transfer` variant for sizing because it is larger than
+    /// `Call` (it embeds an optional `Call`), ensuring sufficient capacity for either variant.
     pub fn space(data_len: Option<usize>) -> usize {
         8 + // nonce
         32 + // sender

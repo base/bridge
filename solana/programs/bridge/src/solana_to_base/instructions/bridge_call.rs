@@ -5,9 +5,11 @@ use crate::{
     solana_to_base::{internal::bridge_call::bridge_call_internal, Call, OutgoingMessage},
 };
 
-/// Accounts struct for the bridge_call instruction that enables arbitrary function calls
-/// from Solana to Base. This instruction creates an outgoing message containing
-/// the call data and handles gas fee payment for cross-chain execution.
+/// Accounts struct for the `bridge_call` instruction that enables contract calls
+/// from Solana to Base. This instruction:
+/// - Creates an `OutgoingMessage` containing the call data
+/// - Validates call semantics (e.g. creation calls require zero target)
+/// - Charges gas according to the bridge's EIP-1559 configuration and updates its state
 #[derive(Accounts)]
 #[instruction(call: Call)]
 pub struct BridgeCall<'info> {
@@ -33,9 +35,10 @@ pub struct BridgeCall<'info> {
     pub bridge: Account<'info, Bridge>,
 
     /// The outgoing message account that stores the cross-chain call data.
-    /// - Created fresh for each bridge call with unique address
+    /// - Created fresh for each bridge call at a client-provided address (not a PDA)
     /// - Payer funds the account creation
-    /// - Space calculated dynamically based on call data length (8-byte discriminator + message data)
+    /// - Space is `8 (anchor discriminator) + OutgoingMessage::space(...)` and is sized using
+    ///   the worst-case message variant to ensure sufficient capacity even for large payloads
     /// - Contains all information needed for execution on Base
     #[account(
         init,
@@ -49,6 +52,11 @@ pub struct BridgeCall<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// Handler for `bridge_call`.
+/// - Fails if the bridge is paused
+/// - Validates the call
+/// - Charges gas and updates EIP-1559 state
+/// - Persists the `OutgoingMessage` and increments the nonce
 pub fn bridge_call_handler(ctx: Context<BridgeCall>, call: Call) -> Result<()> {
     // Check if bridge is paused
     require!(!ctx.accounts.bridge.paused, BridgeCallError::BridgePaused);
@@ -67,8 +75,6 @@ pub fn bridge_call_handler(ctx: Context<BridgeCall>, call: Call) -> Result<()> {
 pub enum BridgeCallError {
     #[msg("Incorrect gas fee receiver")]
     IncorrectGasFeeReceiver,
-    #[msg("Only the owner can close this call buffer")]
-    Unauthorized,
     #[msg("Bridge is paused")]
     BridgePaused,
 }

@@ -12,17 +12,16 @@ use crate::{
     },
 };
 
-/// Accounts struct for the bridge_wrapped_token_with_buffered_call instruction that transfers wrapped tokens
-/// from Solana to Base with a call using buffered data.
+/// Accounts for bridging wrapped tokens from Solana to Base with a buffered call.
 ///
-/// The wrapped tokens are burned on Solana and an outgoing message is created to transfer
-/// the equivalent tokens and execute the call on Base. The call buffer account is closed and
-/// rent returned to the owner.
+/// The wrapped tokens are burned from the user's token account on Solana and an outgoing
+/// message is created to transfer the equivalent tokens and execute the call on Base. The
+/// call buffer account is consumed (closed) and its rent is returned to the owner.
 #[derive(Accounts)]
 #[instruction(_to: [u8; 20], _amount: u64)]
 pub struct BridgeWrappedTokenWithBufferedCall<'info> {
-    /// The account that pays for transaction fees and outgoing message account creation.
-    /// Must be mutable to deduct lamports for account rent and gas fees.
+    /// The account that pays for transaction fees, gas fees, and outgoing message account creation.
+    /// Must be mutable to deduct lamports for account rent and gas fees (sent to `gas_fee_receiver`).
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -31,25 +30,30 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     pub from: Signer<'info>,
 
     /// The account that receives payment for the gas costs of bridging the wrapped token to Base.
-    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
-    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeWrappedTokenWithBufferedCallError::IncorrectGasFeeReceiver)]
+    /// Mutable because lamports are transferred to this account.
+    /// CHECK: Enforced to match `bridge.gas_cost_config.gas_fee_receiver` by the account constraint.
+    #[account(
+        mut,
+        address = bridge.gas_cost_config.gas_fee_receiver @ BridgeWrappedTokenWithBufferedCallError::IncorrectGasFeeReceiver
+    )]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The wrapped token mint account representing the original Base token.
     /// - Contains metadata linking to the original token on Base
-    /// - Tokens will be burned from this mint
+    /// - Supply will be reduced by burning tokens from the user's token account for this mint
     #[account(mut)]
     pub mint: InterfaceAccount<'info, Mint>,
 
     /// The user's token account holding the wrapped tokens to be bridged.
     /// - Must contain sufficient token balance for the bridge amount
     /// - Tokens will be burned from this account
+    /// - The burn authority must be the `from` signer (or a valid delegate)
     #[account(mut)]
     pub from_token_account: InterfaceAccount<'info, TokenAccount>,
 
     /// The main bridge state account storing global bridge configuration.
-    /// - Uses PDA with BRIDGE_SEED for deterministic address
-    /// - Tracks nonce for message ordering and EIP-1559 gas pricing
+    /// - Uses PDA with `BRIDGE_SEED` for deterministic address
+    /// - Tracks `nonce` for message ordering and maintains EIP-1559 fee state
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
 
@@ -67,6 +71,7 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     pub call_buffer: Account<'info, CallBuffer>,
 
     /// The outgoing message account that stores the cross-chain transfer details.
+    /// Space is sized based on the current call buffer length so the call data fits.
     #[account(
         init,
         payer = payer,
@@ -74,11 +79,10 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
-    /// Token2022 program used for burning the wrapped tokens.
-    /// Required for all token operations including burn_checked.
+    /// Token2022 program used for burning the wrapped tokens (burn_checked).
     pub token_program: Program<'info, Token2022>,
 
-    /// System program required for creating the outgoing message account.
+    /// System program required for creating the outgoing message account and transferring gas fees.
     pub system_program: Program<'info, System>,
 }
 

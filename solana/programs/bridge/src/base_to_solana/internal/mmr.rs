@@ -9,8 +9,11 @@ use anchor_lang::{prelude::*, solana_program::keccak};
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct Proof {
     /// The proof elements consisting of:
-    /// 1. Sibling hashes along the path from the leaf to its mountain's peak
-    /// 2. The hashes of all other mountain peaks (in left-to-right order)
+    /// 1. Sibling hashes along the path from the leaf to its mountain's peak,
+    ///    provided in bottom-up order (from the leaf level upwards). For these
+    ///    intra-mountain steps, hash pairing is commutative, so left/right
+    ///    orientation is not required.
+    /// 2. The hashes of all other mountain peaks in left-to-right order.
     ///
     /// These elements are used to reconstruct the MMR root and verify leaf inclusion.
     pub proof: Vec<[u8; 32]>,
@@ -24,17 +27,19 @@ pub struct Proof {
 /// Verifies an MMR proof.
 ///
 /// The proof consists of sibling hashes along the path from the leaf to its
-/// mountain's peak, followed by the hashes of all other mountain peaks (left-to-right).
+/// mountain's peak (bottom-up), followed by the hashes of all other mountain
+/// peaks (left-to-right).
 ///
-/// # Arguments
-/// * `proof` - The proof elements.
-/// * `root` - The expected MMR root.
-/// * `leaf_hash` - The hash of the leaf being verified.
-/// * `leaf_index` - The 0-indexed position of the leaf in the MMR.
-/// * `total_leaf_count` - The total number of leaves in the MMR when the proof was generated.
+/// Arguments:
+/// - `expected_root`: The expected MMR root.
+/// - `leaf_hash`: The hash of the leaf being verified.
+/// - `proof`: The proof, containing the proof elements and the 0-indexed `leaf_index`.
+/// - `total_leaf_count`: The total number of leaves in the MMR when the proof was generated.
 ///
-/// # Returns
-/// `true` if the proof is valid, `false` otherwise.
+/// Behavior for an empty MMR (`total_leaf_count == 0`): the proof must be empty
+/// and both `expected_root` and `leaf_hash` must be `[0u8; 32]`.
+///
+/// Returns `Ok(())` if the proof is valid, or an error otherwise.
 pub fn verify_proof(
     expected_root: &[u8; 32],
     leaf_hash: &[u8; 32],
@@ -168,8 +173,9 @@ fn calculate_root_from_proof(
     Ok(current_root)
 }
 
-// Commutative Keccak256 hash of a sorted pair of bytes32. Frequently used when working with merkle proofs.
-// NOTE: Equivalent to the `standardNodeHash` in our https://github.com/OpenZeppelin/merkle-tree[JavaScript library].
+// Commutative Keccak256 of a pair of bytes32 by sorting the inputs first
+// and hashing their concatenation. Used for intra-mountain Merkle paths
+// where left/right orientation is not required.
 fn commutative_keccak256(a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
     if a < b {
         efficient_keccak256(&a, &b)
@@ -178,11 +184,13 @@ fn commutative_keccak256(a: [u8; 32], b: [u8; 32]) -> [u8; 32] {
     }
 }
 
-// Ordered Keccak256 used for bagging peaks (non-commutative)
+// Ordered (non-commutative) Keccak256: left || right
+// Used for bagging peaks to bind the order/position of mountains.
 fn ordered_keccak256(left: [u8; 32], right: [u8; 32]) -> [u8; 32] {
     efficient_keccak256(&left, &right)
 }
 
+// Efficient Keccak256 of the concatenation of two bytes32 values.
 fn efficient_keccak256(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
     let mut data_to_hash = Vec::new();
     data_to_hash.extend_from_slice(a);
