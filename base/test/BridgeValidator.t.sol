@@ -204,21 +204,6 @@ contract BridgeValidatorTest is CommonTest {
         bridgeValidator.registerMessages(innerMessageHashes, unsortedSigs);
     }
 
-    function test_registerMessages_requiresBaseOracleSignature() public {
-        bytes32[] memory innerMessageHashes = new bytes32[](1);
-        innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
-
-        bytes32[] memory finalHashes = _calculateFinalHashes(innerMessageHashes);
-        bytes memory signedHash = abi.encode(finalHashes);
-
-        // Create signature from non-BASE_ORACLE key
-        bytes memory nonOracleSig = _createSignature(signedHash, 999);
-
-        vm.expectRevert(BridgeValidator.InvalidSigner.selector);
-        vm.prank(cfg.trustedRelayer);
-        bridgeValidator.registerMessages(innerMessageHashes, nonOracleSig);
-    }
-
     function test_registerMessages_withPartnerValidatorThreshold() public {
         // Create a BridgeValidator with partner validator threshold > 0
         address testOracle = vm.addr(100);

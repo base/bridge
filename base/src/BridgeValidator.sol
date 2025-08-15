@@ -53,9 +53,6 @@ contract BridgeValidator {
     ///                       Errors                           ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Thrown when an entity other than `BASE_ORACLE` attempts to call `registerMessages`
-    error InvalidSigner();
-
     /// @notice Thrown when `validatorSigs` verification fails. These are signatures from our bridge partner's
     /// validators.
     error Unauthenticated();
@@ -145,9 +142,10 @@ contract BridgeValidator {
                 signedByBaseOracle = true;
             } else {
                 // Check if registered partner validator
-                require(_addressInList(partnerValidators, currentValidator), InvalidSigner());
-                unchecked {
-                    externalSigners++;
+                if (_addressInList(partnerValidators, currentValidator)) {
+                    unchecked {
+                        externalSigners++;
+                    }
                 }
             }
 
