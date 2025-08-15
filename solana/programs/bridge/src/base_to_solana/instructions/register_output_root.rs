@@ -16,7 +16,7 @@ use crate::{
 /// proofs and cross-chain operations. The instruction also records the MMR's total leaf count
 /// needed for proof verification at that checkpoint.
 #[derive(Accounts)]
-#[instruction(output_root: [u8; 32], base_block_number: u64, total_leaf_count: u64, _signatures: Vec<[u8;65]>)]
+#[instruction(output_root: [u8; 32], base_block_number: u64)]
 pub struct RegisterOutputRoot<'info> {
     /// Payer funds the account creation. Authorization is enforced via oracle EVM signature.
     #[account(mut)]

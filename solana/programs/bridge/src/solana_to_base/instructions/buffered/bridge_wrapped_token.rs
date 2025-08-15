@@ -18,7 +18,6 @@ use crate::{
 /// message is created to transfer the equivalent tokens and execute the call on Base. The
 /// call buffer account is consumed (closed) and its rent is returned to the owner.
 #[derive(Accounts)]
-#[instruction(_to: [u8; 20], _amount: u64)]
 pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     /// The account that pays for transaction fees, gas fees, and outgoing message account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees (sent to `gas_fee_receiver`).
