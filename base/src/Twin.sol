@@ -82,7 +82,7 @@ contract Twin {
     ///
     /// @param call The encoded call to execute, containing the call type, target, value, and data.
     function execute(Call calldata call) external payable {
-        if (msg.sender != BRIDGE && msg.sender != address(this)) revert Unauthorized();
+        require(msg.sender == BRIDGE || msg.sender == address(this), Unauthorized());
         CallLib.execute(call);
     }
 }

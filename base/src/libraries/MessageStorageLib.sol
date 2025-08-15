@@ -93,13 +93,8 @@ library MessageStorageLib {
     function generateProof(uint64 leafIndex) internal view returns (bytes32[] memory proof, uint64 totalLeafCount) {
         MessageStorageLibStorage storage $ = getMessageStorageLibStorage();
 
-        if ($.lastOutgoingNonce == 0) {
-            revert EmptyMMR();
-        }
-
-        if (leafIndex >= $.lastOutgoingNonce) {
-            revert LeafIndexOutOfBounds();
-        }
+        require($.lastOutgoingNonce != 0, EmptyMMR());
+        require(leafIndex < $.lastOutgoingNonce, LeafIndexOutOfBounds());
 
         // Use optimized single-pass algorithm
         (uint256 leafNodePos, uint256 mountainHeight, uint64 leafIdxInMountain, bytes32[] memory otherPeaks) =
@@ -123,9 +118,7 @@ library MessageStorageLib {
                 siblingNodePos = parentNodePos - 1;
             }
 
-            if (siblingNodePos >= $.nodes.length) {
-                revert SiblingNodeOutOfBounds();
-            }
+            require(siblingNodePos < $.nodes.length, SiblingNodeOutOfBounds());
 
             intraMountainProof[hClimb] = $.nodes[siblingNodePos];
             currentPathNodePos = parentNodePos;

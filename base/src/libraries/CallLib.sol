@@ -38,17 +38,11 @@ library CallLib {
     function execute(Call memory call) internal {
         if (call.ty == CallType.Call) {
             (bool success, bytes memory result) = call.to.call{value: call.value}(call.data);
-
-            if (!success) {
-                revert(string(result));
-            }
+            require(success, string(result));
         } else if (call.ty == CallType.DelegateCall) {
-            if (call.value != 0) revert DelegateCallCannotHaveValue();
-
+            require(call.value == 0, DelegateCallCannotHaveValue());
             (bool success, bytes memory result) = call.to.delegatecall(call.data);
-            if (!success) {
-                revert(string(result));
-            }
+            require(success, string(result));
         } else if (call.ty == CallType.Create) {
             uint128 value = call.value;
             bytes memory data = call.data;
