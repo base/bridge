@@ -230,9 +230,11 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Pauses or unpauses the bridge.
     ///
     /// @dev This function can only be called by a guardian.
-    function pauseSwitch() external onlyRoles(GUARDIAN_ROLE) {
-        paused = !paused;
-        emit PauseSwitched(paused);
+    ///
+    /// @param isPaused Boolean representing the desired paused status
+    function setPaused(bool isPaused) external onlyRoles(GUARDIAN_ROLE) {
+        paused = isPaused;
+        emit PauseSwitched(isPaused);
     }
 
     /// @notice Get the current root of the MMR.
