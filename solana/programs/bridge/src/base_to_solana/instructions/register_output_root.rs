@@ -151,12 +151,16 @@ mod tests {
     use crate::{
         accounts,
         base_to_solana::constants::{OUTPUT_ROOT_SEED, PARTNER_SIGNERS_ACCOUNT_SEED},
+        base_to_solana::internal::compute_output_root_message_hash,
         common::{bridge::Bridge, state::oracle_signers::OracleSigners, ORACLE_SIGNERS_SEED},
         instruction::RegisterOutputRoot as RegisterOutputRootIx,
         partner_config::PartnerConfig,
         test_utils::setup_bridge_and_svm,
         ID,
     };
+
+    use anchor_lang::solana_program::keccak::hash as keccak_hash;
+    use secp256k1::{Message as SecpMessage, Secp256k1, SecretKey};
 
     fn partner_config_pda() -> Pubkey {
         Pubkey::find_program_address(&[PARTNER_SIGNERS_ACCOUNT_SEED], &PARTNER_PROGRAM_ID).0
@@ -234,6 +238,39 @@ mod tests {
 
         svm.send_transaction(tx).map_err(Box::new)?;
         Ok(())
+    }
+
+    fn make_eth_sig_and_addr(
+        sk_bytes: [u8; 32],
+        output_root: [u8; 32],
+        base_block_number: u64,
+        total_leaf_count: u64,
+    ) -> ([u8; 65], [u8; 20]) {
+        // Compute the raw message hash exactly as the on-chain code does
+        let msg_hash =
+            compute_output_root_message_hash(&output_root, base_block_number, total_leaf_count);
+
+        // secp256k1 crate expects 32-byte message; use raw hash (no Ethereum prefix) to match on-chain
+        let secp = Secp256k1::new();
+        let sk = SecretKey::from_slice(&sk_bytes).unwrap();
+        let msg = SecpMessage::from_digest_slice(&msg_hash).unwrap();
+        let sig = secp.sign_ecdsa_recoverable(&msg, &sk);
+        let (rec_id, sig_bytes64) = sig.serialize_compact();
+
+        // Build 65-byte signature: r||s||v, with v in {27..30}
+        let mut sig65 = [0u8; 65];
+        sig65[..64].copy_from_slice(&sig_bytes64);
+        sig65[64] = 27 + rec_id.to_i32() as u8;
+
+        // Derive the Ethereum address from the public key
+        let pk = secp256k1::PublicKey::from_secret_key(&secp, &sk);
+        let pk_uncompressed = pk.serialize_uncompressed();
+        // Ethereum address is keccak256 of the 64-byte uncompressed pubkey (without the 0x04 prefix)
+        let hashed = keccak_hash(&pk_uncompressed[1..]);
+        let mut addr = [0u8; 20];
+        addr.copy_from_slice(&hashed.to_bytes()[12..]);
+
+        (sig65, addr)
     }
 
     #[test]
@@ -470,5 +507,148 @@ mod tests {
         );
         let err_str = format!("{:?}", result.unwrap_err());
         assert!(err_str.contains("InsufficientPartnerSignatures"));
+    }
+
+    #[test]
+    fn test_signature_verification_success_with_thresholds() {
+        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+
+        // Configure base oracle signers threshold = 2 with 2 authorized addrs
+        let oracle_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
+        let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
+        let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
+
+        // Generate two ECDSA keypairs and signatures
+        let sk1 = [1u8; 32];
+        let sk2 = [2u8; 32];
+        let output_root = [11u8; 32];
+        let base_block_number = 600;
+        let total_leaf_count = 5;
+        let (sig1, addr1) =
+            make_eth_sig_and_addr(sk1, output_root, base_block_number, total_leaf_count);
+        let (sig2, addr2) =
+            make_eth_sig_and_addr(sk2, output_root, base_block_number, total_leaf_count);
+
+        oracle.threshold = 2;
+        oracle.signers = vec![addr1, addr2];
+        let mut new_data = Vec::new();
+        oracle.try_serialize(&mut new_data).unwrap();
+        oracle_acc.data = new_data;
+        svm.set_account(oracle_pda, oracle_acc).unwrap();
+
+        // Partner requires 1 signature and authorizes signer addr1
+        let partner_cfg = write_partner_config_account(&mut svm, &[addr1]);
+        let mut bridge_acc = svm.get_account(&bridge_pda).unwrap();
+        let mut bridge = Bridge::try_deserialize(&mut &bridge_acc.data[..]).unwrap();
+        bridge.partner_oracle_config.required_threshold = 1;
+        let mut new_data = Vec::new();
+        bridge.try_serialize(&mut new_data).unwrap();
+        bridge_acc.data = new_data;
+        svm.set_account(bridge_pda, bridge_acc).unwrap();
+
+        // Submit both signatures
+        send_register(
+            &mut svm,
+            &payer,
+            bridge_pda,
+            partner_cfg,
+            output_root,
+            base_block_number,
+            total_leaf_count,
+            vec![sig1, sig2],
+        )
+        .expect("register_output_root should succeed with valid signatures");
+    }
+
+    #[test]
+    fn test_signature_verification_deduplicates_signers() {
+        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+
+        // Base oracle requires 2 unique approvals, but we will submit the same signer twice
+        let oracle_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
+        let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
+        let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
+
+        let sk = [3u8; 32];
+        let output_root = [12u8; 32];
+        let base_block_number = 900;
+        let total_leaf_count = 9;
+        let (sig, addr) =
+            make_eth_sig_and_addr(sk, output_root, base_block_number, total_leaf_count);
+
+        oracle.threshold = 2;
+        oracle.signers = vec![addr];
+        let mut new_data = Vec::new();
+        oracle.try_serialize(&mut new_data).unwrap();
+        oracle_acc.data = new_data;
+        svm.set_account(oracle_pda, oracle_acc).unwrap();
+
+        // Partner threshold 0; focus on base signer dedup
+        let partner_cfg = write_partner_config_account(&mut svm, &[]);
+
+        let result = send_register(
+            &mut svm,
+            &payer,
+            bridge_pda,
+            partner_cfg,
+            output_root,
+            base_block_number,
+            total_leaf_count,
+            vec![sig, sig], // duplicate signature from same signer
+        );
+        assert!(
+            result.is_err(),
+            "expected failure due to deduplication reducing unique count"
+        );
+        let err_str = format!("{:?}", result.unwrap_err());
+        assert!(err_str.contains("InsufficientBaseSignatures"));
+    }
+
+    #[test]
+    fn test_signature_verification_invalid_recovery_id() {
+        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let partner_cfg = write_partner_config_account(&mut svm, &[]);
+
+        // Base oracle requires 1 signer but we'll submit an invalid signature (bad v)
+        let oracle_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
+        let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
+        let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
+        oracle.threshold = 1;
+        // authorize some dummy address so that threshold logic would pass if signature were valid
+        oracle.signers = vec![[0xAA; 20]];
+        let mut new_data = Vec::new();
+        oracle.try_serialize(&mut new_data).unwrap();
+        oracle_acc.data = new_data;
+        svm.set_account(oracle_pda, oracle_acc).unwrap();
+
+        let output_root = [13u8; 32];
+        let base_block_number = 1200;
+        let total_leaf_count = 1;
+
+        // Forge a 65-byte blob with invalid recovery id (v >= 31 -> rec_id >= 4 after minus 27)
+        let mut bad_sig = [0u8; 65];
+        bad_sig[64] = 31; // 31 - 27 = 4 -> invalid
+
+        let result = send_register(
+            &mut svm,
+            &payer,
+            bridge_pda,
+            partner_cfg,
+            output_root,
+            base_block_number,
+            total_leaf_count,
+            vec![bad_sig],
+        );
+        assert!(
+            result.is_err(),
+            "expected failure due to invalid recovery id"
+        );
+        let err_str = format!("{:?}", result.unwrap_err());
+        // The error bubbles up as SignatureVerificationFailed or InvalidRecoveryId; both indicate signature check path executed
+        assert!(
+            err_str.contains("SignatureVerificationFailed")
+                || err_str.contains("InvalidRecoveryId")
+                || err_str.contains("custom program error")
+        );
     }
 }
