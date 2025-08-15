@@ -705,9 +705,9 @@ contract BridgeTest is CommonTest {
     ///                  Pause Mechanism Tests                 ///
     //////////////////////////////////////////////////////////////
 
-    function test_pause_blocksBridgeOperations() public {
+    function test_setPaused_blocksBridgeOperations() public {
         vm.prank(cfg.guardians[0]);
-        bridge.pauseSwitch();
+        bridge.setPaused(true);
 
         assertTrue(bridge.paused(), "Bridge should be paused");
 
@@ -732,31 +732,31 @@ contract BridgeTest is CommonTest {
         bridge.bridgeToken{value: 1e18}(transfer, new Ix[](0));
     }
 
-    function test_pauseSwitch_onlyGuardian() public {
+    function test_setPaused_onlyGuardian() public {
         // Test that non-guardian cannot pause
         vm.expectRevert();
         vm.prank(user);
-        bridge.pauseSwitch();
+        bridge.setPaused(true);
 
         assertFalse(bridge.paused(), "Bridge should start unpaused");
 
         // Guardian can pause
         vm.prank(cfg.guardians[0]);
-        bridge.pauseSwitch();
+        bridge.setPaused(true);
         assertTrue(bridge.paused(), "Bridge should be paused after guardian toggle");
 
         // Guardian can unpause
         vm.prank(cfg.guardians[0]);
-        bridge.pauseSwitch();
+        bridge.setPaused(false);
         assertFalse(bridge.paused(), "Bridge should be unpaused after second guardian toggle");
     }
 
-    function test_pause_worksNormallyWhenUnpaused() public {
+    function test_setPaused_worksNormallyWhenUnpaused() public {
         vm.prank(cfg.guardians[0]);
-        bridge.pauseSwitch(); // Pause
+        bridge.setPaused(true); // Pause
 
         vm.prank(cfg.guardians[0]);
-        bridge.pauseSwitch(); // Unpause
+        bridge.setPaused(false); // Unpause
 
         assertFalse(bridge.paused(), "Bridge should be unpaused");
 

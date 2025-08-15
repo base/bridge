@@ -90,7 +90,7 @@ contract CrossChainERC20 is ERC20, Initializable {
     /// @param decimals_ ERC20 decimals for the token.
     function initialize(bytes32 remoteToken_, string memory name_, string memory symbol_, uint8 decimals_)
         external
-        reinitializer(1)
+        initializer
     {
         _remoteToken = remoteToken_;
         _decimals = decimals_;
