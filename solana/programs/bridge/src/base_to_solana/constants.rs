@@ -15,7 +15,7 @@ mod private {
         use super::*;
 
         #[constant]
-        pub const TRUSTED_ORACLE: Pubkey = pubkey!("eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt");
+        pub const TRUSTED_ORACLE: Pubkey = pubkey!("BRZ8KNNwMoS1NK1tAfnESbi7eiMye5kfgYVvjW3utMZ");
 
         // // TODO: Update the address later when we have a trusted validator
         // #[constant]
