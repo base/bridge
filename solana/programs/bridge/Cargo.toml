@@ -37,3 +37,4 @@ solana-keypair = "2.2.1"
 solana-signer = "2.2.1"
 solana-transaction = "2.2.1"
 solana-message = "2.2.1"
+secp256k1 = { version = "0.28", features = ["recovery"] }

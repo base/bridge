@@ -8,3 +8,5 @@ pub const SOL_VAULT_SEED: &[u8] = b"sol_vault";
 pub const TOKEN_VAULT_SEED: &[u8] = b"token_vault";
 #[constant]
 pub const WRAPPED_TOKEN_SEED: &[u8] = b"wrapped_token";
+#[constant]
+pub const ORACLE_SIGNERS_SEED: &[u8] = b"oracle_signers";

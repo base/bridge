@@ -6,45 +6,7 @@ pub const INCOMING_MESSAGE_SEED: &[u8] = b"incoming_message";
 pub const OUTPUT_ROOT_SEED: &[u8] = b"output_root";
 #[constant]
 pub const BRIDGE_CPI_AUTHORITY_SEED: &[u8] = b"bridge_cpi_authority";
-
-mod private {
-    use super::*;
-
-    #[cfg(all(feature = "devnet", feature = "alpha"))]
-    pub mod config {
-        use super::*;
-
-        #[constant]
-        pub const TRUSTED_ORACLE: Pubkey = pubkey!("BRZ8KNNwMoS1NK1tAfnESbi7eiMye5kfgYVvjW3utMZ");
-
-        // // TODO: Update the address later when we have a trusted validator
-        // #[constant]
-        // pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("11111111111111111111111111111111");
-    }
-
-    #[cfg(all(feature = "devnet", feature = "prod"))]
-    pub mod config {
-        use super::*;
-
-        #[constant]
-        pub const TRUSTED_ORACLE: Pubkey = pubkey!("4vTj5kmBrmds3zWogiyUxtZPggcVUmG44EXRy2CxTcEZ");
-
-        // // TODO: Update the address later when we have a trusted validator
-        // #[constant]
-        // pub const TRUSTED_VALIDATOR: Pubkey = pubkey!("11111111111111111111111111111111");
-    }
-
-    #[cfg(not(any(feature = "devnet")))]
-    pub mod config {
-        use super::*;
-
-        #[constant]
-        pub const TRUSTED_ORACLE: Pubkey = pubkey!("eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt");
-
-        // #[constant]
-        // pub const TRUSTED_VALIDATOR: Pubkey =
-        //     pubkey!("9n3vTKJ49M4Xk3MhiCZY4LxXAdeEaDMVMuGxDwt54Hgx");
-    }
-}
-
-pub use private::config::*;
+#[constant]
+pub const PARTNER_SIGNERS_ACCOUNT_SEED: &[u8] = b"config";
+#[constant]
+pub const PARTNER_PROGRAM_ID: Pubkey = pubkey!("offqSMQWgQud6WJz694LRzkeN5kMYpCHTpXQr3Rkcjm"); // TODO: placeholder

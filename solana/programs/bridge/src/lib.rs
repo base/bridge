@@ -9,8 +9,11 @@ mod solana_to_base;
 use base_to_solana::*;
 use common::*;
 
+use common::instructions::oracle_signers::{set_oracle_signers_handler, SetOracleSigners};
 use common::{
-    bridge::{BufferConfig, Eip1559Config, GasConfig, GasCostConfig, ProtocolConfig},
+    bridge::{
+        BufferConfig, Eip1559Config, GasConfig, GasCostConfig, PartnerOracleConfig, ProtocolConfig,
+    },
     config::{
         set_adjustment_denominator_handler, set_block_interval_requirement_handler,
         set_gas_cost_scaler_dp_handler, set_gas_cost_scaler_handler, set_gas_fee_receiver_handler,
@@ -38,12 +41,13 @@ pub mod bridge {
     /// This function sets up the initial bridge configuration and must be called once during deployment.
     ///
     /// # Arguments
-    /// * `ctx` - The context containing all accounts needed for initialization, including the guardian signer
-    /// * `eip1559_config` - The EIP-1559 configuration, contains the gas target, adjustment denominator, window duration, and minimum base fee
-    /// * `gas_cost_config` - The gas cost configuration, contains the gas cost scaler, gas cost scaler decimal precision, and gas fee receiver
-    /// * `gas_config` - The gas configuration, contains the gas amount per cross-chain message
-    /// * `protocol_config` - The protocol configuration, contains the block interval requirement for output root registration
-    /// * `buffer_config` - The buffer configuration, contains the maximum call buffer size
+    /// * `ctx`                   - The context containing all accounts needed for initialization, including the guardian signer
+    /// * `eip1559_config`        - The EIP-1559 configuration, contains the gas target, adjustment denominator, window duration, and minimum base fee
+    /// * `gas_cost_config`       - The gas cost configuration, contains the gas cost scaler, gas cost scaler decimal precision, and gas fee receiver
+    /// * `gas_config`            - The gas configuration, contains the gas amount per cross-chain message
+    /// * `protocol_config`       - The protocol configuration, contains the block interval requirement for output root registration
+    /// * `buffer_config`         - The buffer configuration, contains the maximum call buffer size
+    /// * `partner_oracle_config` - Sets the program ID and account pubkey that should own the definition of valid partner oracles
     pub fn initialize(
         ctx: Context<Initialize>,
         eip1559_config: Eip1559Config,
@@ -51,6 +55,7 @@ pub mod bridge {
         gas_config: GasConfig,
         protocol_config: ProtocolConfig,
         buffer_config: BufferConfig,
+        partner_oracle_config: PartnerOracleConfig,
     ) -> Result<()> {
         initialize_handler(
             ctx,
@@ -59,6 +64,7 @@ pub mod bridge {
             gas_config,
             protocol_config,
             buffer_config,
+            partner_oracle_config,
         )
     }
 
@@ -73,13 +79,37 @@ pub mod bridge {
     /// * `output_root`       - The 32-byte MMR root of Base messages for the given block
     /// * `base_block_number` - The Base block number this output root corresponds to
     /// * `total_leaf_count`  - The total number of leaves in the MMR with this root
+    /// * `signatures`        - A list of ECDSA signatures from authorized oracles attesting to the output root
     pub fn register_output_root(
         ctx: Context<RegisterOutputRoot>,
         output_root: [u8; 32],
         base_block_number: u64,
         total_leaf_count: u64,
+        signatures: Vec<[u8; 65]>,
     ) -> Result<()> {
-        register_output_root_handler(ctx, output_root, base_block_number, total_leaf_count)
+        register_output_root_handler(
+            ctx,
+            output_root,
+            base_block_number,
+            total_leaf_count,
+            signatures,
+        )
+    }
+
+    /// Sets the authorized oracle EVM signer addresses and the signature threshold used
+    /// when registering output roots. This function updates the `OracleSigners` account
+    /// and can only be called by the guardian.
+    ///
+    /// # Arguments
+    /// * `ctx`       - The context containing the bridge, guardian signer, and oracle signers accounts
+    /// * `threshold` - The number of required unique valid signatures; must be <= number of signers
+    /// * `signers`   - The list of 20-byte Ethereum addresses allowed to sign (max 32, must be unique)
+    pub fn set_oracle_signers(
+        ctx: Context<SetOracleSigners>,
+        threshold: u8,
+        signers: Vec<[u8; 20]>,
+    ) -> Result<()> {
+        set_oracle_signers_handler(ctx, threshold, signers)
     }
 
     /// Proves that a cross-chain message exists in the Base Bridge contract using an MMR proof.
