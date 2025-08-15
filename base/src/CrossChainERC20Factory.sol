@@ -60,13 +60,15 @@ contract CrossChainERC20Factory {
     /// @param symbol The symbol of the token (e.g., "MTK")
     /// @param decimals The number of decimal places the token uses
     ///
-    /// @return crossChainERC20 The address of the newly deployed CrossChainERC20 contract
+    /// @return localToken The address of the newly deployed CrossChainERC20 contract
     function deploy(bytes32 remoteToken, string memory name, string memory symbol, uint8 decimals)
         external
-        returns (address crossChainERC20)
+        returns (address localToken)
     {
         bytes32 salt = keccak256(abi.encode(remoteToken, name, symbol, decimals));
-        address localToken = LibClone.deployDeterministicERC1967BeaconProxy({beacon: BEACON, salt: salt});
+        localToken = LibClone.deployDeterministicERC1967BeaconProxy({beacon: BEACON, salt: salt});
+
+        isCrossChainErc20[localToken] = true;
 
         // Initialize the deployed proxy with the token parameters
         CrossChainERC20(localToken).initialize({
@@ -76,10 +78,6 @@ contract CrossChainERC20Factory {
             decimals_: decimals
         });
 
-        isCrossChainErc20[localToken] = true;
-
         emit CrossChainERC20Created({localToken: localToken, remoteToken: remoteToken, deployer: msg.sender});
-
-        return localToken;
     }
 }
