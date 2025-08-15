@@ -23,6 +23,8 @@ pub struct Bridge {
     pub protocol_config: ProtocolConfig,
     /// Buffer configuration
     pub buffer_config: BufferConfig,
+    /// Partner oracle configuration (program-owned account holding signer set)
+    pub partner_oracle_config: PartnerOracleConfig,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
@@ -171,6 +173,16 @@ pub struct ProtocolConfig {
 pub struct BufferConfig {
     /// Maximum call buffer size
     pub max_call_buffer_size: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
+pub struct PartnerOracleConfig {
+    /// Partner program id that owns the signers account
+    pub program_id: Pubkey,
+    /// Account address within partner program that stores the signer set
+    pub signers_account: Pubkey,
+    /// Partner signatures required by our bridge to accept an output root
+    pub required_threshold: u8,
 }
 
 #[cfg(test)]

@@ -2,10 +2,12 @@ use anchor_lang::prelude::*;
 
 use crate::common::{
     bridge::{
-        Bridge, BufferConfig, Eip1559, Eip1559Config, GasConfig, GasCostConfig, ProtocolConfig,
+        Bridge, BufferConfig, Eip1559, Eip1559Config, GasConfig, GasCostConfig,
+        PartnerOracleConfig, ProtocolConfig,
     },
     BRIDGE_SEED,
 };
+use crate::common::{state::oracle_signers::OracleSigners, ORACLE_SIGNERS_SEED};
 
 /// Accounts for the initialize instruction that sets up the bridge program's initial state.
 /// This instruction creates the main bridge account for cross-chain operations between Base and
@@ -35,6 +37,16 @@ pub struct Initialize<'info> {
     /// may be distinct signers.
     pub guardian: Signer<'info>,
 
+    /// Oracle signers config PDA seeded at program init time as empty
+    #[account(
+        init,
+        payer = payer,
+        seeds = [ORACLE_SIGNERS_SEED],
+        bump,
+        space = 8 + OracleSigners::INIT_SPACE,
+    )]
+    pub oracle_signers: Account<'info, OracleSigners>,
+
     /// System program required for creating new accounts.
     /// Used internally by Anchor for account initialization.
     pub system_program: Program<'info, System>,
@@ -50,6 +62,7 @@ pub fn initialize_handler(
     gas_config: GasConfig,
     protocol_config: ProtocolConfig,
     buffer_config: BufferConfig,
+    partner_oracle_config: PartnerOracleConfig,
 ) -> Result<()> {
     let current_timestamp = Clock::get()?.unix_timestamp;
     let minimum_base_fee = eip1559_config.minimum_base_fee;
@@ -69,6 +82,7 @@ pub fn initialize_handler(
         gas_config,
         protocol_config,
         buffer_config,
+        partner_oracle_config,
     };
 
     Ok(())
@@ -120,6 +134,7 @@ mod tests {
             payer: payer_pk,
             bridge: bridge_pda,
             guardian: guardian_pk,
+            oracle_signers: Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -135,6 +150,7 @@ mod tests {
                 gas_config: GasConfig::test_new(),
                 protocol_config: ProtocolConfig::test_new(),
                 buffer_config: BufferConfig::test_new(),
+                partner_oracle_config: PartnerOracleConfig::default(),
             }
             .data(),
         };
@@ -173,6 +189,7 @@ mod tests {
                 gas_config: GasConfig::test_new(),
                 protocol_config: ProtocolConfig::test_new(),
                 buffer_config: BufferConfig::test_new(),
+                partner_oracle_config: PartnerOracleConfig::default(),
             }
         );
     }

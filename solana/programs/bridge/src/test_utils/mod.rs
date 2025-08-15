@@ -29,8 +29,11 @@ use solana_transaction::Transaction;
 use crate::{
     accounts,
     common::{
-        bridge::{BufferConfig, Eip1559Config, GasConfig, GasCostConfig, ProtocolConfig},
-        PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED,
+        bridge::{
+            BufferConfig, Eip1559Config, GasConfig, GasCostConfig, PartnerOracleConfig,
+            ProtocolConfig,
+        },
+        PartialTokenMetadata, BRIDGE_SEED, ORACLE_SIGNERS_SEED, WRAPPED_TOKEN_SEED,
     },
     instruction::Initialize,
     ID,
@@ -105,6 +108,7 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
         payer: payer_pk,
         bridge: bridge_pda,
         guardian: guardian.pubkey(),
+        oracle_signers: Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0,
         system_program: system_program::ID,
     }
     .to_account_metas(None);
@@ -118,6 +122,7 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
             gas_config: GasConfig::test_new(),
             protocol_config: ProtocolConfig::test_new(),
             buffer_config: BufferConfig::test_new(),
+            partner_oracle_config: PartnerOracleConfig::default(),
         }
         .data(),
     };
