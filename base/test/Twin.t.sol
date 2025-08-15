@@ -40,6 +40,11 @@ contract TwinTest is Test {
         assertEq(testTwin.BRIDGE(), bridge);
     }
 
+    function test_constructor_revertsOnZeroBridge() public {
+        vm.expectRevert(Twin.ZeroAddress.selector);
+        new Twin(address(0));
+    }
+
     //////////////////////////////////////////////////////////////
     ///                   Receive Tests                        ///
     //////////////////////////////////////////////////////////////

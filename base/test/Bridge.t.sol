@@ -330,6 +330,83 @@ contract BridgeTest is CommonTest {
         assertEq(mockTarget.value(), 456);
     }
 
+    //////////////////////////////////////////////////////////////
+    ///                 Constructor Validation Tests           ///
+    //////////////////////////////////////////////////////////////
+
+    function test_constructor_revertsOnZeroTwinBeacon() public {
+        vm.expectRevert(Bridge.ZeroAddress.selector);
+        new Bridge({
+            remoteBridge: TEST_SENDER,
+            twinBeacon: address(0),
+            crossChainErc20Factory: address(0xBEEF),
+            bridgeValidator: address(0xCAFE)
+        });
+    }
+
+    function test_constructor_revertsOnZeroFactory() public {
+        vm.expectRevert(Bridge.ZeroAddress.selector);
+        new Bridge({
+            remoteBridge: TEST_SENDER,
+            twinBeacon: address(0xBEEF),
+            crossChainErc20Factory: address(0),
+            bridgeValidator: address(0xCAFE)
+        });
+    }
+
+    function test_constructor_revertsOnZeroBridgeValidator() public {
+        vm.expectRevert(Bridge.ZeroAddress.selector);
+        new Bridge({
+            remoteBridge: TEST_SENDER,
+            twinBeacon: address(0xBEEF),
+            crossChainErc20Factory: address(0xCAFE),
+            bridgeValidator: address(0)
+        });
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                   Input Validation Tests               ///
+    //////////////////////////////////////////////////////////////
+
+    function test_relayMessages_revertsOnInvalidMessage() public {
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
+            nonce: 0,
+            sender: TEST_SENDER,
+            ty: MessageType.Call,
+            data: abi.encode(
+                Call({
+                    ty: CallType.Call,
+                    to: address(mockTarget),
+                    value: 0,
+                    data: abi.encodeWithSelector(TestTarget.setValue.selector, 777)
+                })
+            )
+        });
+
+        vm.expectRevert(Bridge.InvalidMessage.selector);
+        bridge.relayMessages(messages);
+    }
+
+    function test___relayMessage_revertsWhenCalledExternally() public {
+        IncomingMessage memory message = IncomingMessage({
+            nonce: 0,
+            sender: TEST_SENDER,
+            ty: MessageType.Call,
+            data: abi.encode(
+                Call({
+                    ty: CallType.Call,
+                    to: address(mockTarget),
+                    value: 0,
+                    data: abi.encodeWithSelector(TestTarget.setValue.selector, 1)
+                })
+            )
+        });
+
+        vm.expectRevert(Bridge.SenderIsNotEntrypoint.selector);
+        bridge.__relayMessage(message);
+    }
+
     function test_relayMessage_shouldCompleteWithoutCreatingTwinWhenRemoteBridgeIsSender() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({

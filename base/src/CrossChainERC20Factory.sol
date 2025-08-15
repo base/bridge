@@ -38,6 +38,13 @@ contract CrossChainERC20Factory {
     event CrossChainERC20Created(address indexed localToken, bytes32 indexed remoteToken, address deployer);
 
     //////////////////////////////////////////////////////////////
+    ///                       Errors                           ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice Thrown when a zero address is detected
+    error ZeroAddress();
+
+    //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
     //////////////////////////////////////////////////////////////
 
@@ -45,6 +52,7 @@ contract CrossChainERC20Factory {
     ///
     /// @dev Disables initializers to prevent the implementation contract from being initialized
     constructor(address beacon) {
+        require(beacon != address(0), ZeroAddress());
         BEACON = beacon;
     }
 

@@ -105,6 +105,9 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Thrown when the sender is not the entrypoint.
     error SenderIsNotEntrypoint();
 
+    /// @notice Thrown when a zero address is detected
+    error ZeroAddress();
+
     //////////////////////////////////////////////////////////////
     ///                       Modifiers                        ///
     //////////////////////////////////////////////////////////////
@@ -125,6 +128,10 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @param crossChainErc20Factory The address of the CrossChainERC20Factory.
     /// @param bridgeValidator        The address of the contract used to validate Bridge messages
     constructor(Pubkey remoteBridge, address twinBeacon, address crossChainErc20Factory, address bridgeValidator) {
+        require(twinBeacon != address(0), ZeroAddress());
+        require(crossChainErc20Factory != address(0), ZeroAddress());
+        require(bridgeValidator != address(0), ZeroAddress());
+
         REMOTE_BRIDGE = remoteBridge;
         TWIN_BEACON = twinBeacon;
         CROSS_CHAIN_ERC20_FACTORY = crossChainErc20Factory;
@@ -138,11 +145,14 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @param owner     The owner of the Bridge contract.
     /// @param guardians An array of guardian addresses approved to pause the Bridge.
     function initialize(address owner, address[] calldata guardians) external initializer {
+        require(owner != address(0), ZeroAddress());
+
         // Initialize ownership
         _initializeOwner(owner);
 
         // Initialize guardians
         for (uint256 i; i < guardians.length; i++) {
+            require(guardians[i] != address(0), ZeroAddress());
             _grantRoles(guardians[i], GUARDIAN_ROLE);
         }
     }

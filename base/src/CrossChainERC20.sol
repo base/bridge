@@ -60,6 +60,9 @@ contract CrossChainERC20 is ERC20, Initializable {
     /// @notice Thrown when the burning from the zero address is attempted.
     error BurnFromZeroAddress();
 
+    /// @notice Thrown when a zero address is detected
+    error ZeroAddress();
+
     //////////////////////////////////////////////////////////////
     ///                       Modifiers                        ///
     //////////////////////////////////////////////////////////////
@@ -78,6 +81,8 @@ contract CrossChainERC20 is ERC20, Initializable {
     ///
     /// @param bridge_ Address of the bridge contract that will have minting and burning privileges.
     constructor(address bridge_) {
+        require(bridge_ != address(0), ZeroAddress());
+
         _BRIDGE = bridge_;
         _disableInitializers();
     }
@@ -92,6 +97,8 @@ contract CrossChainERC20 is ERC20, Initializable {
         external
         reinitializer(1)
     {
+        require(remoteToken_ != bytes32(0), ZeroAddress());
+
         _remoteToken = remoteToken_;
         _decimals = decimals_;
         _name = name_;

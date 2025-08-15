@@ -39,6 +39,9 @@ contract Twin {
     /// @notice Thrown when the caller is neither the portal nor the twin itself.
     error Unauthorized();
 
+    /// @notice Thrown when a zero address is detected
+    error ZeroAddress();
+
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
     //////////////////////////////////////////////////////////////
@@ -50,6 +53,8 @@ contract Twin {
     ///
     /// @param bridge The address of the Bridge contract that will have execution privileges.
     constructor(address bridge) {
+        require(bridge != address(0), ZeroAddress());
+
         BRIDGE = bridge;
     }
 

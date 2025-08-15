@@ -47,6 +47,11 @@ contract CrossChainERC20Test is CommonTest {
         assertEq(token.totalSupply(), 0);
     }
 
+    function test_constructor_revertsOnZeroBridgeAddress() public {
+        vm.expectRevert(CrossChainERC20.ZeroAddress.selector);
+        new CrossChainERC20(address(0));
+    }
+
     //////////////////////////////////////////////////////////////
     ///                     View Function Tests                ///
     //////////////////////////////////////////////////////////////
@@ -240,6 +245,20 @@ contract CrossChainERC20Test is CommonTest {
         vm.prank(address(bridge));
         vm.expectRevert(CrossChainERC20.BurnFromZeroAddress.selector);
         token.burn(address(0), BURN_AMOUNT);
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                 Initialization Validation              ///
+    //////////////////////////////////////////////////////////////
+
+    function test_initialize_revertsOnZeroRemoteToken() public {
+        // Deploy fresh infra to access a new factory instance
+        DeployScript deployer = new DeployScript();
+        (,, /* bridgeLocal */, CrossChainERC20Factory factoryLocal,) = deployer.run();
+
+        // Expect the initialize validation to bubble up through the factory deployment
+        vm.expectRevert(CrossChainERC20.ZeroAddress.selector);
+        factoryLocal.deploy(bytes32(0), TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS);
     }
 
     function test_burn_revert_fromUser() public {

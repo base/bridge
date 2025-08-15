@@ -66,6 +66,9 @@ contract CrossChainERC20FactoryTest is CommonTest {
 
         // Verify it's a contract (has code)
         assertTrue(deployedToken.code.length > 0, "Deployed address should contain contract code");
+
+        // Factory should record mapping for deployed token
+        assertTrue(factory.isCrossChainErc20(deployedToken), "Mapping flag should be set for deployed token");
     }
 
     function test_deploy_deterministicAddresses() public {
@@ -147,13 +150,6 @@ contract CrossChainERC20FactoryTest is CommonTest {
         assertTrue(token != address(0), "Should deploy with long name and symbol");
     }
 
-    function test_deploy_withZeroRemoteToken() public {
-        vm.prank(deployer);
-
-        address token = factory.deploy(bytes32(0), TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS);
-        assertTrue(token != address(0), "Should deploy with zero remote token address");
-    }
-
     function test_deploy_withMaxRemoteToken() public {
         vm.prank(deployer);
 
@@ -195,6 +191,8 @@ contract CrossChainERC20FactoryTest is CommonTest {
         string memory symbol,
         uint8 decimals
     ) public {
+        vm.assume(remoteToken != bytes32(0));
+
         vm.prank(deployer);
 
         address deployedToken = factory.deploy(remoteToken, name, symbol, decimals);
@@ -211,6 +209,8 @@ contract CrossChainERC20FactoryTest is CommonTest {
         string memory symbol,
         uint8 decimals
     ) public {
+        vm.assume(remoteToken != bytes32(0));
+
         // Generate 2 random deployer addresses.
         address randomDeployer1 = makeAddr(string.concat("deployer1", vm.toString(remoteToken)));
         address randomDeployer2 = makeAddr(string.concat("deployer2", vm.toString(remoteToken)));
@@ -269,6 +269,18 @@ contract CrossChainERC20FactoryTest is CommonTest {
         assertEq(token.decimals(), TOKEN_DECIMALS, "Token decimals should match");
         assertEq(token.remoteToken(), REMOTE_TOKEN, "Remote token should match");
         assertEq(token.bridge(), address(bridge), "Bridge address should match");
+
+        // Verify mapping flag is set
+        assertTrue(factory.isCrossChainErc20(deployedToken), "isCrossChainErc20 should be true for deployed token");
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                Constructor Validation Tests            ///
+    //////////////////////////////////////////////////////////////
+
+    function test_constructor_revertsOnZeroBeacon() public {
+        vm.expectRevert(CrossChainERC20Factory.ZeroAddress.selector);
+        new CrossChainERC20Factory(address(0));
     }
 
     //////////////////////////////////////////////////////////////

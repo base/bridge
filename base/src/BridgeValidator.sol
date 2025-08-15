@@ -14,6 +14,9 @@ contract BridgeValidator {
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
 
+    /// @notice The max allowed partner validator threshold
+    uint256 public constant MAX_PARTNER_VALIDATOR_THRESHOLD = 5;
+
     /// @notice The length of a signature in bytes.
     uint256 public constant SIGNATURE_LENGTH_THRESHOLD = 65;
 
@@ -66,6 +69,12 @@ contract BridgeValidator {
     /// @notice Thrown when the required amount of signatures is not included with a `registerMessages` call
     error ThresholdNotMet();
 
+    /// @notice Thrown when a zero address is detected
+    error ZeroAddress();
+
+    /// @notice Thrown when the partner validator threshold is higher than number of validators
+    error ThresholdTooHigh();
+
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
     //////////////////////////////////////////////////////////////
@@ -75,6 +84,9 @@ contract BridgeValidator {
     /// @param trustedRelayer The address with permission to call `registerMessages`
     /// @param partnerValidatorThreshold The number of partner validator signatures required for message pre-validation
     constructor(address trustedRelayer, uint256 partnerValidatorThreshold) {
+        require(trustedRelayer != address(0), ZeroAddress());
+        require(partnerValidatorThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
+
         BASE_ORACLE = trustedRelayer;
         PARTNER_VALIDATOR_THRESHOLD = partnerValidatorThreshold;
     }

@@ -44,6 +44,17 @@ contract BridgeValidatorTest is CommonTest {
         assertEq(testValidator.PARTNER_VALIDATOR_THRESHOLD(), 0);
     }
 
+    function test_constructor_revertsOnZeroTrustedRelayer() public {
+        vm.expectRevert(BridgeValidator.ZeroAddress.selector);
+        new BridgeValidator(address(0), 0);
+    }
+
+    function test_constructor_revertsWhenThresholdAboveMax() public {
+        uint256 tooHigh = bridgeValidator.MAX_PARTNER_VALIDATOR_THRESHOLD() + 1;
+        vm.expectRevert(BridgeValidator.ThresholdTooHigh.selector);
+        new BridgeValidator(address(0x1234), tooHigh);
+    }
+
     //////////////////////////////////////////////////////////////
     ///                 registerMessages Tests                 ///
     //////////////////////////////////////////////////////////////
@@ -134,6 +145,26 @@ contract BridgeValidatorTest is CommonTest {
         vm.expectRevert(BridgeValidator.InvalidSignatureLength.selector);
         vm.prank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(innerMessageHashes, invalidSig);
+    }
+
+    function test_registerMessages_revertsWhenThresholdNotMet() public {
+        bytes32[] memory innerMessageHashes = new bytes32[](1);
+        innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
+
+        // Create a validator with threshold 1 and call with only BASE_ORACLE signature
+        address testOracle = vm.addr(77);
+        BridgeValidator testValidator = new BridgeValidator(testOracle, 1);
+
+        // Calculate message hash for nonce 0
+        bytes32[] memory finalHashes = new bytes32[](1);
+        finalHashes[0] = keccak256(abi.encode(uint256(0), innerMessageHashes[0]));
+        bytes memory signedHash = abi.encode(finalHashes);
+
+        // Only oracle signature -> should fail ThresholdNotMet
+        bytes memory oracleSig = _createSignature(signedHash, 77);
+        vm.expectRevert(BridgeValidator.ThresholdNotMet.selector);
+        vm.prank(testOracle);
+        testValidator.registerMessages(innerMessageHashes, oracleSig);
     }
 
     function test_registerMessages_revertsOnEmptySignature() public {
@@ -288,12 +319,14 @@ contract BridgeValidatorTest is CommonTest {
     }
 
     function testFuzz_constructor_withRandomAddress(address randomRelayer) public {
+        vm.assume(randomRelayer != address(0));
+
         BridgeValidator testValidator = new BridgeValidator(randomRelayer, 0);
         assertEq(testValidator.BASE_ORACLE(), randomRelayer);
     }
 
     function testFuzz_constructor_withRandomThreshold(uint256 threshold) public {
-        vm.assume(threshold <= type(uint256).max);
+        vm.assume(threshold <= bridgeValidator.MAX_PARTNER_VALIDATOR_THRESHOLD());
         BridgeValidator testValidator = new BridgeValidator(address(0x123), threshold);
         assertEq(testValidator.PARTNER_VALIDATOR_THRESHOLD(), threshold);
     }
