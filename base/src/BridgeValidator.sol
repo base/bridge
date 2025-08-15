@@ -78,7 +78,7 @@ contract BridgeValidator {
 
     /// @notice Deploys the BridgeValidator contract with a specified trusted relayer
     ///
-    /// @param trustedRelayer The address with permission to call `registerMessages`
+    /// @param trustedRelayer The Base address with permission to approve messages
     /// @param partnerValidatorThreshold The number of partner validator signatures required for message pre-validation
     constructor(address trustedRelayer, uint256 partnerValidatorThreshold) {
         require(trustedRelayer != address(0), ZeroAddress());
@@ -95,16 +95,17 @@ contract BridgeValidator {
     /// @param validatorSigs A concatenated bytes array of bridge partner validator signatures attesting to the
     ///                      validity of `messageHashes`
     function registerMessages(bytes32[] calldata innerMessageHashes, bytes calldata validatorSigs) external {
-        bytes32[] memory messageHashes = new bytes32[](innerMessageHashes.length);
+        uint256 len = innerMessageHashes.length;
+        bytes32[] memory messageHashes = new bytes32[](len);
         uint256 currentNonce = nextNonce;
 
-        for (uint256 i; i < messageHashes.length; i++) {
+        for (uint256 i; i < len; i++) {
             messageHashes[i] = keccak256(abi.encode(currentNonce++, innerMessageHashes[i]));
         }
 
         require(_validatorSigsAreValid({messageHashes: messageHashes, sigData: validatorSigs}), Unauthenticated());
 
-        for (uint256 i; i < messageHashes.length; i++) {
+        for (uint256 i; i < len; i++) {
             validMessages[messageHashes[i]] = true;
             emit MessageRegistered(messageHashes[i]);
         }
@@ -121,7 +122,7 @@ contract BridgeValidator {
         view
         returns (bool)
     {
-        // Check that the provided signature data is not too short
+        // Check that the provided signature data is a multiple of the valid sig length
         require(sigData.length % SIGNATURE_LENGTH_THRESHOLD == 0, InvalidSignatureLength());
 
         uint256 sigCount = sigData.length / SIGNATURE_LENGTH_THRESHOLD;
@@ -141,11 +142,7 @@ contract BridgeValidator {
             (uint8 v, bytes32 r, bytes32 s) = _signatureSplit(offset, i);
             address currentValidator = signedHash.recover(v, r, s);
 
-            if (currentValidator == lastValidator) {
-                return false;
-            }
-
-            if (currentValidator < lastValidator) {
+            if (currentValidator <= lastValidator) {
                 return false;
             }
 
