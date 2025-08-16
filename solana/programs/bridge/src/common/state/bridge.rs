@@ -15,8 +15,6 @@ pub struct Bridge {
     pub paused: bool,
     /// EIP-1559 state and configuration for dynamic pricing.
     pub eip1559: Eip1559,
-    /// Gas cost configuration
-    pub gas_cost_config: GasCostConfig,
     /// Gas configuration
     pub gas_config: GasConfig,
     /// Protocol configuration
@@ -148,17 +146,13 @@ impl Eip1559 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct GasCostConfig {
+pub struct GasConfig {
     /// Scaling factor applied when converting (gas_per_call * base_fee) into lamports
     pub gas_cost_scaler: u64,
     /// Decimal precision for the gas cost scaler (denominator)
     pub gas_cost_scaler_dp: u64,
     /// Account that receives gas fees collected on Solana
     pub gas_fee_receiver: Pubkey,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct GasConfig {
     /// Amount of gas per cross-chain message
     pub gas_per_call: u64,
 }

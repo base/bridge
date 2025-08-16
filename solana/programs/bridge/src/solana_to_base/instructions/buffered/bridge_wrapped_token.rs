@@ -30,10 +30,10 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
 
     /// The account that receives payment for the gas costs of bridging the wrapped token to Base.
     /// Mutable because lamports are transferred to this account.
-    /// CHECK: Enforced to match `bridge.gas_cost_config.gas_fee_receiver` by the account constraint.
+    /// CHECK: Enforced to match `bridge.gas_config.gas_fee_receiver` by the account constraint.
     #[account(
         mut,
-        address = bridge.gas_cost_config.gas_fee_receiver @ BridgeWrappedTokenWithBufferedCallError::IncorrectGasFeeReceiver
+        address = bridge.gas_config.gas_fee_receiver @ BridgeWrappedTokenWithBufferedCallError::IncorrectGasFeeReceiver
     )]
     pub gas_fee_receiver: AccountInfo<'info>,
 
