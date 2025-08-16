@@ -6,9 +6,8 @@ use anchor_spl::{
 
 use crate::solana_to_base::{check_call, pay_for_gas};
 use crate::{
-    common::{bridge::Bridge, PartialTokenMetadata, WRAPPED_TOKEN_SEED},
+    common::{bridge::Bridge, PartialTokenMetadata},
     solana_to_base::{Call, OutgoingMessage, Transfer as TransferOp},
-    ID,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -32,21 +31,6 @@ pub fn bridge_wrapped_token_internal<'info>(
 
     // Get the token metadata from the mint.
     let partial_token_metadata = PartialTokenMetadata::try_from(&mint.to_account_info())?;
-
-    // Ensure the provided mint is a PDA derived by this program for wrapped tokens.
-    let decimals_bytes = mint.decimals.to_le_bytes();
-    let metadata_hash = partial_token_metadata.hash();
-    let seeds: &[&[u8]] = &[
-        WRAPPED_TOKEN_SEED,
-        decimals_bytes.as_ref(),
-        metadata_hash.as_ref(),
-    ];
-    let (expected_mint, _bump) = Pubkey::find_program_address(seeds, &ID);
-    require_keys_eq!(
-        mint.key(),
-        expected_mint,
-        BridgeWrappedTokenInternalError::IncorrectWrappedMint
-    );
 
     let message = OutgoingMessage::new_transfer(
         bridge.nonce,
@@ -77,10 +61,4 @@ pub fn bridge_wrapped_token_internal<'info>(
     bridge.nonce += 1;
 
     Ok(())
-}
-
-#[error_code]
-pub enum BridgeWrappedTokenInternalError {
-    #[msg("Mint is not a valid wrapped token PDA")]
-    IncorrectWrappedMint,
 }
