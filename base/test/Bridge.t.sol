@@ -719,7 +719,9 @@ contract BridgeTest is CommonTest {
     //////////////////////////////////////////////////////////////
 
     function testFuzz_bridgeCall_withDifferentSenders(address sender) public {
+        // Avoid senders that may interact strangely with the transparent proxy routing
         vm.assume(sender != address(0));
+        vm.assume(sender != cfg.erc1967Factory);
 
         Ix[] memory ixs = new Ix[](1);
         ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: new bytes[](0), data: abi.encodePacked("test")});
