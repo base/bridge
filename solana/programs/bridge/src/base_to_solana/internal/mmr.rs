@@ -1,29 +1,5 @@
 use anchor_lang::{prelude::*, solana_program::keccak};
 
-/// Represents a Merkle Mountain Range (MMR) proof that can be used to verify
-/// the inclusion of a specific leaf in the MMR.
-///
-/// An MMR proof contains all the necessary information to reconstruct the MMR root
-/// from a given leaf, proving that the leaf was included in the MMR at the time
-/// the proof was generated.
-#[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
-pub struct Proof {
-    /// The proof elements consisting of:
-    /// 1. Sibling hashes along the path from the leaf to its mountain's peak,
-    ///    provided in bottom-up order (from the leaf level upwards). For these
-    ///    intra-mountain steps, hash pairing is commutative, so left/right
-    ///    orientation is not required.
-    /// 2. The hashes of all other mountain peaks in left-to-right order.
-    ///
-    /// These elements are used to reconstruct the MMR root and verify leaf inclusion.
-    pub proof: Vec<[u8; 32]>,
-
-    /// The 0-indexed position of the leaf being proven within the MMR.
-    /// This index determines which mountain the leaf belongs to and its position
-    /// within that mountain.
-    pub leaf_index: u64,
-}
-
 /// Verifies an MMR proof.
 ///
 /// The proof consists of sibling hashes along the path from the leaf to its
@@ -43,11 +19,10 @@ pub struct Proof {
 pub fn verify_proof(
     expected_root: &[u8; 32],
     leaf_hash: &[u8; 32],
-    proof: &Proof,
+    leaf_index: &u64,
+    proof: &[[u8; 32]],
     total_leaf_count: u64,
 ) -> Result<()> {
-    let Proof { proof, leaf_index } = proof;
-
     if total_leaf_count == 0 {
         require!(proof.is_empty(), MmrError::MmrShouldBeEmpty);
         require!(*expected_root == [0u8; 32], MmrError::InvalidProof);

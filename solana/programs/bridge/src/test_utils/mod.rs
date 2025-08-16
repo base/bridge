@@ -29,10 +29,7 @@ use solana_transaction::Transaction;
 use crate::{
     accounts,
     common::{
-        bridge::{
-            BufferConfig, Eip1559Config, GasConfig, GasCostConfig, PartnerOracleConfig,
-            ProtocolConfig,
-        },
+        bridge::{BufferConfig, Eip1559Config, GasConfig, PartnerOracleConfig, ProtocolConfig},
         PartialTokenMetadata, BRIDGE_SEED, ORACLE_SIGNERS_SEED, WRAPPED_TOKEN_SEED,
     },
     instruction::Initialize,
@@ -51,19 +48,12 @@ impl Eip1559Config {
     }
 }
 
-impl GasCostConfig {
+impl GasConfig {
     pub fn test_new(gas_fee_receiver: Pubkey) -> Self {
         Self {
             gas_cost_scaler: 1_000_000,
             gas_cost_scaler_dp: 10u64.pow(6),
             gas_fee_receiver,
-        }
-    }
-}
-
-impl GasConfig {
-    pub fn test_new() -> Self {
-        Self {
             gas_per_call: 100_000,
         }
     }
@@ -118,8 +108,7 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
         accounts,
         data: Initialize {
             eip1559_config: Eip1559Config::test_new(),
-            gas_cost_config: GasCostConfig::test_new(TEST_GAS_FEE_RECEIVER),
-            gas_config: GasConfig::test_new(),
+            gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
             protocol_config: ProtocolConfig::test_new(),
             buffer_config: BufferConfig::test_new(),
             partner_oracle_config: PartnerOracleConfig::default(),
