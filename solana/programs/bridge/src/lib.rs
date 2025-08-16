@@ -128,7 +128,7 @@ pub mod bridge {
         nonce: u64,
         sender: [u8; 20],
         data: Vec<u8>,
-        proof: Proof,
+        proof: Vec<[u8; 32]>,
         message_hash: [u8; 32],
     ) -> Result<()> {
         prove_message_handler(ctx, nonce, sender, data, proof, message_hash)
