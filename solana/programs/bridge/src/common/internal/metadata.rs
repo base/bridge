@@ -1,3 +1,4 @@
+use crate::{common::WRAPPED_TOKEN_SEED, ID};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::keccak;
 use anchor_spl::{
@@ -121,8 +122,25 @@ impl TryFrom<&AccountInfo<'_>> for PartialTokenMetadata {
     type Error = Error;
 
     fn try_from(value: &AccountInfo<'_>) -> Result<Self> {
-        let token_metadata = mint_info_to_token_metadata(value)?;
-        Self::try_from(token_metadata)
+        let (token_metadata, decimals) = mint_info_to_token_metadata(value)?;
+        let partial = Self::try_from(token_metadata)?;
+
+        // Ensure the provided mint is a PDA derived by this program for wrapped tokens.
+        let decimals_bytes = decimals.to_le_bytes();
+        let metadata_hash = partial.hash();
+        let seeds: &[&[u8]] = &[
+            WRAPPED_TOKEN_SEED,
+            decimals_bytes.as_ref(),
+            metadata_hash.as_ref(),
+        ];
+        let (expected_mint, _bump) = Pubkey::find_program_address(seeds, &ID);
+        require_keys_eq!(
+            value.key(),
+            expected_mint,
+            TokenMetadataError::MintIsNotWrappedTokenPda
+        );
+
+        Ok(partial)
     }
 }
 
@@ -144,7 +162,7 @@ impl PartialTokenMetadata {
 ///
 /// Fails if the account is not owned by the Token-2022 program or if the metadata
 /// extension is missing/malformed.
-fn mint_info_to_token_metadata(mint: &AccountInfo<'_>) -> Result<TokenMetadata> {
+fn mint_info_to_token_metadata(mint: &AccountInfo<'_>) -> Result<(TokenMetadata, u8)> {
     require_keys_eq!(
         *mint.owner,
         anchor_spl::token_2022::ID,
@@ -154,7 +172,8 @@ fn mint_info_to_token_metadata(mint: &AccountInfo<'_>) -> Result<TokenMetadata> 
     let mint_data = mint.data.borrow();
     let mint_with_extension = PodStateWithExtensions::<PodMint>::unpack(&mint_data)?;
     let token_metadata = mint_with_extension.get_variable_len_extension::<TokenMetadata>()?;
-    Ok(token_metadata)
+    let decimals = mint_with_extension.base.decimals;
+    Ok((token_metadata, decimals))
 }
 
 #[error_code]
@@ -169,4 +188,6 @@ pub enum TokenMetadataError {
     InvalidScalerExponent,
     #[msg("Mint is not a token 2022 mint")]
     MintIsNotFromToken2022,
+    #[msg("Mint is not a valid wrapped token PDA")]
+    MintIsNotWrappedTokenPda,
 }
