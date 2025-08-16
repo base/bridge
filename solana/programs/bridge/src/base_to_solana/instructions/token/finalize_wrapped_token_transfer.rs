@@ -72,7 +72,14 @@ impl FinalizeBridgeWrappedToken {
             decimals_bytes.as_ref(),
             metadata_hash.as_ref(),
         ];
-        let (_, mint_bump) = Pubkey::find_program_address(seeds, &ID);
+        let (expected_mint_pda, mint_bump) = Pubkey::find_program_address(seeds, &ID);
+
+        // Ensure the mint account is the expected wrapped token PDA
+        require_keys_eq!(
+            mint.key(),
+            expected_mint_pda,
+            FinalizeBridgeWrappedTokenError::MintIsNotWrappedTokenPda
+        );
 
         let seeds: &[&[&[u8]]] = &[&[
             WRAPPED_TOKEN_SEED,
@@ -103,4 +110,6 @@ pub enum FinalizeBridgeWrappedTokenError {
     TokenAccountDoesNotMatchTo,
     #[msg("Mint does not match local token")]
     MintDoesNotMatchLocalToken,
+    #[msg("Mint is not a valid wrapped token PDA")]
+    MintIsNotWrappedTokenPda,
 }
