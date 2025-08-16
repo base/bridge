@@ -64,7 +64,7 @@ impl FinalizeBridgeWrappedToken {
         // Get the partial token metadata
         let partial_token_metadata = PartialTokenMetadata::try_from(&mint.to_account_info())?;
 
-        // Derive signer seeds for the wrapped mint (PDA already validated during metadata extraction)
+        // Derive the seeds for the wrapped token mint
         let decimals_bytes = mint.decimals.to_le_bytes();
         let metadata_hash = partial_token_metadata.hash();
         let seeds: &[&[u8]] = &[
@@ -73,6 +73,7 @@ impl FinalizeBridgeWrappedToken {
             metadata_hash.as_ref(),
         ];
         let (_, mint_bump) = Pubkey::find_program_address(seeds, &ID);
+
         let seeds: &[&[&[u8]]] = &[&[
             WRAPPED_TOKEN_SEED,
             decimals_bytes.as_ref(),
