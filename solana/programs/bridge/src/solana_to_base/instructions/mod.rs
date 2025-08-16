@@ -49,9 +49,8 @@ pub fn pay_for_gas<'info>(
     // Record gas usage for this transaction
     bridge.eip1559.add_gas_usage(bridge.gas_config.gas_per_call);
 
-    let gas_cost =
-        bridge.gas_config.gas_per_call * base_fee * bridge.gas_cost_config.gas_cost_scaler
-            / bridge.gas_cost_config.gas_cost_scaler_dp;
+    let gas_cost = bridge.gas_config.gas_per_call * base_fee * bridge.gas_config.gas_cost_scaler
+        / bridge.gas_config.gas_cost_scaler_dp;
 
     let cpi_ctx = CpiContext::new(
         system_program.to_account_info(),

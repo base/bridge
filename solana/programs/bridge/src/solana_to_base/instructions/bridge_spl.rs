@@ -26,8 +26,8 @@ pub struct BridgeSpl<'info> {
     pub from: Signer<'info>,
 
     /// The account that receives payment for the gas costs of bridging the SPL token to Base.
-    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
-    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeSplError::IncorrectGasFeeReceiver)]
+    /// CHECK: This account is validated to be the same as bridge.gas_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeSplError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SPL token mint account for the token being bridged.
