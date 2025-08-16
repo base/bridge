@@ -346,7 +346,7 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and current guardian
     /// * `new_guardian` - The pubkey of the new guardian
-    pub fn transfer_guardian(ctx: Context<TransferGuardian>, new_guardian: Pubkey) -> Result<()> {
+    pub fn transfer_guardian(ctx: Context<SetBridgeConfig>, new_guardian: Pubkey) -> Result<()> {
         transfer_guardian_handler(ctx, new_guardian)
     }
 
