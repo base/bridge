@@ -23,7 +23,6 @@ contract CommonTest is Test {
 
     function _registerMessage(IncomingMessage memory message) internal {
         (, bytes32[] memory innerMessageHashes) = _messageToMessageHashes(message);
-        vm.startPrank(cfg.trustedRelayer);
         bridgeValidator.registerMessages(innerMessageHashes, _getValidatorSigs(innerMessageHashes));
         vm.stopPrank();
     }

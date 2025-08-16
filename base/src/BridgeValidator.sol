@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
+
+import {Bridge} from "./Bridge.sol";
+import {VerificationLib} from "./libraries/VerificationLib.sol";
 
 /// @title BridgeValidator
 ///
 /// @notice A validator contract to be used during the Stage 0 phase of Base Bridge. This will likely later be replaced
 ///         by `CrossL2Inbox` from the OP Stack.
-contract BridgeValidator {
+contract BridgeValidator is Initializable {
     using ECDSA for bytes32;
 
     //////////////////////////////////////////////////////////////
@@ -17,14 +22,14 @@ contract BridgeValidator {
     /// @notice The max allowed partner validator threshold
     uint256 public constant MAX_PARTNER_VALIDATOR_THRESHOLD = 5;
 
-    /// @notice The length of a signature in bytes.
-    uint256 public constant SIGNATURE_LENGTH_THRESHOLD = 65;
-
-    /// @notice Address of the trusted relayer that pre-verifies new messages from Solana.
-    address public immutable BASE_ORACLE;
+    /// @notice Guardian role bit used by the `Bridge` contract for privileged actions on this contract.
+    uint256 public constant GUARDIAN_ROLE = 1 << 0;
 
     /// @notice Required number of signatures from bridge partner
     uint256 public immutable PARTNER_VALIDATOR_THRESHOLD;
+
+    /// @notice Address of the Base Bridge contract. Used for authenticating guardian roles
+    address public immutable BRIDGE;
 
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
@@ -41,10 +46,10 @@ contract BridgeValidator {
     ///                       Events                           ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Emitted when messages are registered by our trusted relayer.
+    /// @notice Emitted when a single message is registered (pre-validated) by the trusted relayer.
     ///
-    /// @param messageHashes An array of pre-validated message hashes. Each hash is a hash of an `IncomingMessage` from
-    ///                      the `Bridge` contract.
+    /// @param messageHashes The pre-validated message hash (derived from the inner message hash and an incremental
+    ///                      nonce) corresponding to an `IncomingMessage` in the `Bridge` contract.
     event MessageRegistered(bytes32 indexed messageHashes);
 
     /// @notice Emitted when a cross chain message is being executed.
@@ -72,28 +77,54 @@ contract BridgeValidator {
     /// @notice Thrown when the partner validator threshold is higher than number of validators
     error ThresholdTooHigh();
 
+    /// @notice Thrown when the caller of a protected function is not a Base Bridge guardian
+    error CallerNotGuardian();
+
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Deploys the BridgeValidator contract with a specified trusted relayer
+    /// @notice Deploys the BridgeValidator contract with configuration for partner signatures and the `Bridge` address.
     ///
-    /// @param trustedRelayer The Base address with permission to approve messages
-    /// @param partnerValidatorThreshold The number of partner validator signatures required for message pre-validation
-    constructor(address trustedRelayer, uint256 partnerValidatorThreshold) {
-        require(trustedRelayer != address(0), ZeroAddress());
+    /// @param partnerValidatorThreshold The number of partner (external) validator signatures required for
+    ///                                  message pre-validation.
+    /// @param bridge The address of the `Bridge` contract used to check guardian roles.
+    ///
+    /// @dev Reverts with `ThresholdTooHigh()` if `partnerValidatorThreshold` exceeds
+    ///      `MAX_PARTNER_VALIDATOR_THRESHOLD`. Reverts with `ZeroAddress()` if `bridge` is the zero address.
+    constructor(uint256 partnerValidatorThreshold, address bridge) {
         require(partnerValidatorThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
-
-        BASE_ORACLE = trustedRelayer;
+        require(bridge != address(0), ZeroAddress());
         PARTNER_VALIDATOR_THRESHOLD = partnerValidatorThreshold;
+        BRIDGE = bridge;
+        _disableInitializers();
+    }
+
+    /// @dev Restricts function to `Bridge` guardians (as defined by `GUARDIAN_ROLE`).
+    modifier isGuardian() {
+        require(OwnableRoles(BRIDGE).hasAnyRole(msg.sender, GUARDIAN_ROLE), CallerNotGuardian());
+        _;
+    }
+
+    /// @notice Initializes Base validator set and threshold.
+    ///
+    /// @dev Callable only once due to `initializer` modifier.
+    ///
+    /// @param baseValidators The initial list of Base validators.
+    /// @param baseThreshold The minimum number of Base validator signatures required.
+    function initialize(address[] calldata baseValidators, uint128 baseThreshold) external initializer {
+        VerificationLib.initialize(baseValidators, baseThreshold);
     }
 
     /// @notice Pre-validates a batch of Solana --> Base messages.
     ///
-    /// @param innerMessageHashes An array of incoming message hashes to pre-validate (this is a hash of all message
-    ///                           data except for the nonce)
-    /// @param validatorSigs A concatenated bytes array of bridge partner validator signatures attesting to the
-    ///                      validity of `messageHashes`
+    /// @param innerMessageHashes An array of inner message hashes to pre-validate (hash over message data excluding the
+    ///                           nonce). Each is combined with a monotonically increasing nonce to form
+    /// `messageHashes`.
+    /// @param validatorSigs A concatenated bytes array of validator signatures. Signatures must be over the
+    ///                      EIP-191 `eth_sign` digest of `abi.encode(messageHashes)` and provided in strictly
+    ///                      ascending order by signer address. Must include at least `getBaseThreshold()` Base
+    ///                      validator signatures and at least `PARTNER_VALIDATOR_THRESHOLD` external signatures.
     function registerMessages(bytes32[] calldata innerMessageHashes, bytes calldata validatorSigs) external {
         uint256 len = innerMessageHashes.length;
         bytes32[] memory messageHashes = new bytes32[](len);
@@ -113,19 +144,52 @@ contract BridgeValidator {
         nextNonce = currentNonce;
     }
 
+    /// @notice Updates the Base signature threshold.
+    ///
+    /// @dev Only callable by a Bridge guardian.
+    ///
+    /// @param newThreshold The new threshold value.
+    function setThreshold(uint256 newThreshold) external isGuardian {
+        VerificationLib.setThreshold(newThreshold);
+    }
+
+    /// @notice Adds a Base validator.
+    ///
+    /// @dev Only callable by a Bridge guardian.
+    ///
+    /// @param validator The validator address to add.
+    function addValidator(address validator) external isGuardian {
+        VerificationLib.addValidator(validator);
+    }
+
+    /// @notice Removes a Base validator.
+    ///
+    /// @dev Only callable by a Bridge guardian.
+    ///
+    /// @param validator The validator address to remove.
+    function removeValidator(address validator) external isGuardian {
+        VerificationLib.removeValidator(validator);
+    }
+
     //////////////////////////////////////////////////////////////
     ///                    Private Functions                   ///
     //////////////////////////////////////////////////////////////
 
+    /// @dev Verifies that the provided signatures satisfy Base and partner thresholds for `messageHashes`.
+    ///
+    /// @param messageHashes The derived message hashes (inner hash + nonce) for the batch.
+    /// @param sigData Concatenated signatures over `toEthSignedMessageHash(abi.encode(messageHashes))`.
+    ///
+    /// @return True if thresholds are met by valid signers with strictly ascending signer order.
     function _validatorSigsAreValid(bytes32[] memory messageHashes, bytes calldata sigData)
         private
         view
         returns (bool)
     {
         // Check that the provided signature data is a multiple of the valid sig length
-        require(sigData.length % SIGNATURE_LENGTH_THRESHOLD == 0, InvalidSignatureLength());
+        require(sigData.length % VerificationLib.SIGNATURE_LENGTH_THRESHOLD == 0, InvalidSignatureLength());
 
-        uint256 sigCount = sigData.length / SIGNATURE_LENGTH_THRESHOLD;
+        uint256 sigCount = sigData.length / VerificationLib.SIGNATURE_LENGTH_THRESHOLD;
         address[] memory partnerValidators = new address[](0);
         bytes32 signedHash = ECDSA.toEthSignedMessageHash(abi.encode(messageHashes));
         address lastValidator = address(0);
@@ -135,11 +199,11 @@ contract BridgeValidator {
             offset := sigData.offset
         }
 
-        bool signedByBaseOracle;
+        uint256 baseSigners;
         uint256 externalSigners;
 
         for (uint256 i; i < sigCount; i++) {
-            (uint8 v, bytes32 r, bytes32 s) = _signatureSplit(offset, i);
+            (uint8 v, bytes32 r, bytes32 s) = VerificationLib.signatureSplit(offset, i);
             address currentValidator = signedHash.recover(v, r, s);
 
             if (currentValidator <= lastValidator) {
@@ -147,38 +211,28 @@ contract BridgeValidator {
             }
 
             // Verify signer is valid
-            if (currentValidator == BASE_ORACLE) {
-                signedByBaseOracle = true;
-            } else {
-                // Check if registered partner validator
-                if (_addressInList(partnerValidators, currentValidator)) {
-                    unchecked {
-                        externalSigners++;
-                    }
+            if (VerificationLib.isBaseValidator(currentValidator)) {
+                unchecked {
+                    baseSigners++;
+                }
+            } else if (_addressInList(partnerValidators, currentValidator)) {
+                unchecked {
+                    externalSigners++;
                 }
             }
 
             lastValidator = currentValidator;
         }
 
-        require(signedByBaseOracle && externalSigners >= PARTNER_VALIDATOR_THRESHOLD, ThresholdNotMet());
+        require(baseSigners >= VerificationLib.getBaseThreshold(), ThresholdNotMet());
+        require(externalSigners >= PARTNER_VALIDATOR_THRESHOLD, ThresholdNotMet());
 
         return true;
     }
 
-    function _signatureSplit(uint256 signaturesCalldataOffset, uint256 pos)
-        private
-        pure
-        returns (uint8 v, bytes32 r, bytes32 s)
-    {
-        assembly {
-            let signaturePos := mul(0x41, pos) // 65 bytes per signature
-            r := calldataload(add(signaturesCalldataOffset, signaturePos)) // r at offset 0
-            s := calldataload(add(signaturesCalldataOffset, add(signaturePos, 0x20))) // s at offset 32
-            v := and(calldataload(add(signaturesCalldataOffset, add(signaturePos, 0x21))), 0xff) // v at offset 64
-        }
-    }
-
+    /// @dev Linear search for `addr` in memory array `addrs`.
+    ///
+    /// @return True if found, false otherwise.
     function _addressInList(address[] memory addrs, address addr) private pure returns (bool) {
         for (uint256 i; i < addrs.length; i++) {
             if (addr == addrs[i]) {

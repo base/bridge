@@ -105,10 +105,7 @@ contract UpgradeScript is DevOps {
 
     function _upgradeBridgeValidator(HelperConfig.NetworkConfig memory cfg) internal {
         address bridgeValidatorImpl = address(
-            new BridgeValidator({
-                trustedRelayer: cfg.trustedRelayer,
-                partnerValidatorThreshold: cfg.partnerValidatorThreshold
-            })
+            new BridgeValidator({partnerValidatorThreshold: cfg.partnerValidatorThreshold, bridge: bridgeAddress})
         );
 
         console.log("Deployed new BridgeValidator implementation: %s", bridgeValidatorImpl);
