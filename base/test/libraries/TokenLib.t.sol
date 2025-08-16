@@ -317,6 +317,20 @@ contract TokenLibTest is CommonTest {
         // Register ETH-SOL pair and set up deposits
         _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9, 0);
 
+        // Fund deposits by actually bridging ETH into the contract (Base -> Solana)
+        uint256 expectedLocalAmount = 1e18; // 1 ETH
+        vm.deal(address(this), expectedLocalAmount);
+        {
+            Transfer memory setup = Transfer({
+                localToken: TokenLib.ETH_ADDRESS,
+                remoteToken: TokenLib.NATIVE_SOL_PUBKEY,
+                to: bytes32(bytes20(address(this))),
+                remoteAmount: 1e9
+            });
+            Ix[] memory emptyIxs;
+            bridge.bridgeToken{value: expectedLocalAmount}(setup, emptyIxs);
+        }
+
         Transfer memory transfer = Transfer({
             localToken: TokenLib.ETH_ADDRESS,
             remoteToken: TokenLib.NATIVE_SOL_PUBKEY,
@@ -324,7 +338,6 @@ contract TokenLibTest is CommonTest {
             remoteAmount: 1e9 // 1 SOL
         });
 
-        uint256 expectedLocalAmount = 1e18; // 1 ETH
         uint256 aliceInitialBalance = alice.balance;
 
         // Simulate message relay from Solana to finalize transfer
@@ -332,7 +345,7 @@ contract TokenLibTest is CommonTest {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
             nonce: 1,
-            sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            sender: TEST_TRANSFER_SENDER,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
         });

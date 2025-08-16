@@ -132,6 +132,7 @@ library TokenLib {
             require(msg.value == localAmount, InvalidMsgValue());
 
             tokenType = SolanaTokenType.WrappedToken;
+            $.deposits[transfer.localToken][transfer.remoteToken] += localAmount;
         } else {
             // Prevent sending ETH when bridging ERC20 tokens
             require(msg.value == 0, InvalidMsgValue());
@@ -204,6 +205,7 @@ library TokenLib {
             uint256 scalar = $.scalars[transfer.localToken][transfer.remoteToken];
             require(scalar != 0, WrappedSplRouteNotRegistered());
             localAmount = transfer.remoteAmount * scalar;
+            $.deposits[transfer.localToken][transfer.remoteToken] -= localAmount;
 
             SafeTransferLib.safeTransferETH({to: to, amount: localAmount});
         } else {
