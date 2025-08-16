@@ -26,7 +26,7 @@ contract DeployScript is DevOps {
         vm.startBroadcast(msg.sender);
         address twinBeacon = _deployTwinBeacon({cfg: cfg, precomputedBridgeAddress: precomputedBridgeAddress});
         address factory = _deployFactory({cfg: cfg, precomputedBridgeAddress: precomputedBridgeAddress});
-        address bridgeValidator = _deployBridgeValidator({cfg: cfg});
+        address bridgeValidator = _deployBridgeValidator({cfg: cfg, bridge: precomputedBridgeAddress});
         address bridge = _deployBridge({
             cfg: cfg,
             twinBeacon: twinBeacon,
@@ -77,14 +77,15 @@ contract DeployScript is DevOps {
             ERC1967Factory(cfg.erc1967Factory).deploy({implementation: xChainERC20FactoryImpl, admin: cfg.initialOwner});
     }
 
-    function _deployBridgeValidator(HelperConfig.NetworkConfig memory cfg) private returns (address) {
-        address bridgeValidatorImpl = address(
-            new BridgeValidator({
-                trustedRelayer: cfg.trustedRelayer,
-                partnerValidatorThreshold: cfg.partnerValidatorThreshold
-            })
-        );
-        return ERC1967Factory(cfg.erc1967Factory).deploy({implementation: bridgeValidatorImpl, admin: cfg.initialOwner});
+    function _deployBridgeValidator(HelperConfig.NetworkConfig memory cfg, address bridge) private returns (address) {
+        address bridgeValidatorImpl =
+            address(new BridgeValidator({partnerValidatorThreshold: cfg.partnerValidatorThreshold, bridge: bridge}));
+
+        return ERC1967Factory(cfg.erc1967Factory).deployAndCall({
+            implementation: bridgeValidatorImpl,
+            admin: cfg.initialOwner,
+            data: abi.encodeCall(BridgeValidator.initialize, (cfg.baseValidators, cfg.baseSignatureThreshold))
+        });
     }
 
     function _deployBridge(

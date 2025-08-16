@@ -15,8 +15,9 @@ contract HelperConfig is Script {
     struct NetworkConfig {
         address initialOwner;
         Pubkey remoteBridge;
-        address trustedRelayer;
         address erc1967Factory;
+        address[] baseValidators;
+        uint128 baseSignatureThreshold;
         address[] guardians;
         uint256 partnerValidatorThreshold;
     }
@@ -51,13 +52,16 @@ contract HelperConfig is Script {
         address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
         address[] memory guardians = new address[](1);
+        address[] memory baseValidators = new address[](1);
         guardians[0] = BRIDGE_ADMIN;
+        baseValidators[0] = BASE_ORACLE;
 
         return NetworkConfig({
             initialOwner: BRIDGE_ADMIN,
             remoteBridge: Pubkey.wrap(0x890394bc966bf6a9d808ff4a700236444afbc430bd691db0f8118754ae023b6d), // ADr2FqCx35AFdS2j46gJtkoksxAFPRtjVMPo6u62tVfz
-            trustedRelayer: BASE_ORACLE,
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
+            baseValidators: baseValidators,
+            baseSignatureThreshold: 1,
             guardians: guardians,
             partnerValidatorThreshold: 0
         });
@@ -68,13 +72,16 @@ contract HelperConfig is Script {
         address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
         address[] memory guardians = new address[](1);
+        address[] memory baseValidators = new address[](1);
         guardians[0] = BRIDGE_ADMIN;
+        baseValidators[0] = BASE_ORACLE;
 
         return NetworkConfig({
             initialOwner: BRIDGE_ADMIN,
             remoteBridge: Pubkey.wrap(0x083abe7dfcdf7b07b857e3b141d49bf0e5a959a0c3ad07445160417b31274a68), // Z8DUqPNTT4tZAX3hNoQjYdNoB7rLxDBDX6CrHG972c7
-            trustedRelayer: BASE_ORACLE,
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
+            baseValidators: baseValidators,
+            baseSignatureThreshold: 1,
             guardians: guardians,
             partnerValidatorThreshold: 0
         });
@@ -88,13 +95,16 @@ contract HelperConfig is Script {
         ERC1967Factory f = new ERC1967Factory();
 
         address[] memory guardians = new address[](1);
+        address[] memory baseValidators = new address[](1);
         guardians[0] = makeAddr("guardian");
+        baseValidators[0] = vm.addr(1);
 
         return NetworkConfig({
             initialOwner: makeAddr("initialOwner"),
             remoteBridge: Pubkey.wrap(0xc4c16980efe2a570c1a7599fd2ebb40ca7f85daf897482b9c85d4b8933a61608),
-            trustedRelayer: vm.addr(1),
             erc1967Factory: address(f),
+            baseValidators: baseValidators,
+            baseSignatureThreshold: 1,
             guardians: guardians,
             partnerValidatorThreshold: 0
         });
