@@ -2,7 +2,7 @@ use anchor_lang::{prelude::*, solana_program::keccak};
 
 use crate::base_to_solana::{
     constants::INCOMING_MESSAGE_SEED,
-    internal::mmr::{self, Proof},
+    internal::mmr::{self},
     state::{IncomingMessage, OutputRoot},
     Message,
 };
@@ -12,7 +12,7 @@ use crate::common::{bridge::Bridge, BRIDGE_SEED};
 /// This instruction creates a proven message account after validating the message against an MMR proof
 /// and an output root. The proven message can later be relayed/executed on Solana.
 #[derive(Accounts)]
-#[instruction(nonce: u64, sender: [u8; 20], data: Vec<u8>, _proof: Proof, message_hash: [u8; 32])]
+#[instruction(nonce: u64, sender: [u8; 20], data: Vec<u8>, _proof: Vec<[u8; 32]>, message_hash: [u8; 32])]
 pub struct ProveMessage<'info> {
     /// The account that pays for the transaction and incoming message account creation.
     /// Must be mutable to deduct lamports for account rent.
@@ -53,7 +53,7 @@ pub fn prove_message_handler(
     nonce: u64,
     sender: [u8; 20],
     data: Vec<u8>,
-    proof: Proof,
+    proof: Vec<[u8; 32]>,
     message_hash: [u8; 32],
 ) -> Result<()> {
     // Check if bridge is paused
@@ -70,6 +70,7 @@ pub fn prove_message_handler(
     mmr::verify_proof(
         &ctx.accounts.output_root.root,
         &message_hash,
+        &nonce,
         &proof,
         ctx.accounts.output_root.total_leaf_count,
     )?;
