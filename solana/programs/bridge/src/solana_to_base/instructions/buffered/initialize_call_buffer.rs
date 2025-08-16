@@ -30,7 +30,7 @@ pub struct InitializeCallBuffer<'info> {
     #[account(
         init,
         payer = payer,
-        space = CallBuffer::space(max_data_len as usize),
+        space = 8 + CallBuffer::space(max_data_len as usize),
         constraint = bridge.buffer_config.max_call_buffer_size >= max_data_len @ InitializeCallBufferError::MaxSizeExceeded,
     )]
     pub call_buffer: Account<'info, CallBuffer>,

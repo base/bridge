@@ -2,8 +2,8 @@ use anchor_lang::prelude::*;
 
 use crate::common::{
     bridge::{
-        Bridge, BufferConfig, Eip1559, Eip1559Config, GasConfig, GasCostConfig,
-        PartnerOracleConfig, ProtocolConfig,
+        Bridge, BufferConfig, Eip1559, Eip1559Config, GasConfig, PartnerOracleConfig,
+        ProtocolConfig,
     },
     BRIDGE_SEED,
 };
@@ -58,7 +58,6 @@ pub struct Initialize<'info> {
 pub fn initialize_handler(
     ctx: Context<Initialize>,
     eip1559_config: Eip1559Config,
-    gas_cost_config: GasCostConfig,
     gas_config: GasConfig,
     protocol_config: ProtocolConfig,
     buffer_config: BufferConfig,
@@ -78,7 +77,6 @@ pub fn initialize_handler(
             current_window_gas_used: 0,
             window_start_time: current_timestamp,
         },
-        gas_cost_config,
         gas_config,
         protocol_config,
         buffer_config,
@@ -146,8 +144,7 @@ mod tests {
             accounts,
             data: Initialize {
                 eip1559_config: Eip1559Config::test_new(),
-                gas_cost_config: GasCostConfig::test_new(gas_fee_receiver),
-                gas_config: GasConfig::test_new(),
+                gas_config: GasConfig::test_new(gas_fee_receiver),
                 protocol_config: ProtocolConfig::test_new(),
                 buffer_config: BufferConfig::test_new(),
                 partner_oracle_config: PartnerOracleConfig::default(),
@@ -185,8 +182,7 @@ mod tests {
                     current_window_gas_used: 0,
                     window_start_time: timestamp,
                 },
-                gas_cost_config: GasCostConfig::test_new(gas_fee_receiver),
-                gas_config: GasConfig::test_new(),
+                gas_config: GasConfig::test_new(gas_fee_receiver),
                 protocol_config: ProtocolConfig::test_new(),
                 buffer_config: BufferConfig::test_new(),
                 partner_oracle_config: PartnerOracleConfig::default(),
