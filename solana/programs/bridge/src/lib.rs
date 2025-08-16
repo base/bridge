@@ -11,9 +11,7 @@ use common::*;
 
 use common::instructions::oracle_signers::{set_oracle_signers_handler, SetOracleSigners};
 use common::{
-    bridge::{
-        BufferConfig, Eip1559Config, GasConfig, GasCostConfig, PartnerOracleConfig, ProtocolConfig,
-    },
+    bridge::{BufferConfig, Eip1559Config, GasConfig, PartnerOracleConfig, ProtocolConfig},
     config::{
         set_adjustment_denominator_handler, set_block_interval_requirement_handler,
         set_gas_cost_scaler_dp_handler, set_gas_cost_scaler_handler, set_gas_fee_receiver_handler,
@@ -43,15 +41,13 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx`                   - The context containing all accounts needed for initialization, including the guardian signer
     /// * `eip1559_config`        - The EIP-1559 configuration, contains the gas target, adjustment denominator, window duration, and minimum base fee
-    /// * `gas_cost_config`       - The gas cost configuration, contains the gas cost scaler, gas cost scaler decimal precision, and gas fee receiver
-    /// * `gas_config`            - The gas configuration, contains the gas amount per cross-chain message
+    /// * `gas_config`            - The gas configuration, contains the gas amount per cross-chain message, gas cost scaler, gas cost scaler decimal precision, and gas fee receiver
     /// * `protocol_config`       - The protocol configuration, contains the block interval requirement for output root registration
     /// * `buffer_config`         - The buffer configuration, contains the maximum call buffer size
     /// * `partner_oracle_config` - Sets the program ID and account pubkey that should own the definition of valid partner oracles
     pub fn initialize(
         ctx: Context<Initialize>,
         eip1559_config: Eip1559Config,
-        gas_cost_config: GasCostConfig,
         gas_config: GasConfig,
         protocol_config: ProtocolConfig,
         buffer_config: BufferConfig,
@@ -60,7 +56,6 @@ pub mod bridge {
         initialize_handler(
             ctx,
             eip1559_config,
-            gas_cost_config,
             gas_config,
             protocol_config,
             buffer_config,

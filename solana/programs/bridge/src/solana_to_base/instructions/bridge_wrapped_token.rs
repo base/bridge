@@ -29,8 +29,8 @@ pub struct BridgeWrappedToken<'info> {
     pub from: Signer<'info>,
 
     /// The account that receives payment for the gas costs of bridging the token on Base.
-    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
-    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeWrappedTokenError::IncorrectGasFeeReceiver)]
+    /// CHECK: This account is validated to be the same as bridge.gas_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeWrappedTokenError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The wrapped token mint account representing the original Base token.

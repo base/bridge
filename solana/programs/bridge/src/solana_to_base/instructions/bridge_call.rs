@@ -23,8 +23,8 @@ pub struct BridgeCall<'info> {
     pub from: Signer<'info>,
 
     /// The account that receives payment for the gas costs of bridging the call to Base.
-    /// CHECK: This account is validated to be the same as bridge.gas_cost_config.gas_fee_receiver
-    #[account(mut, address = bridge.gas_cost_config.gas_fee_receiver @ BridgeCallError::IncorrectGasFeeReceiver)]
+    /// CHECK: This account is validated to be the same as bridge.gas_config.gas_fee_receiver
+    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeCallError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The main bridge state account containing global bridge configuration.
