@@ -9,7 +9,8 @@ use anchor_lang::{prelude::*, solana_program::keccak};
 /// Arguments:
 /// - `expected_root`: The expected MMR root.
 /// - `leaf_hash`: The hash of the leaf being verified.
-/// - `proof`: The proof, containing the proof elements and the 0-indexed `leaf_index`.
+/// - `leaf_index`: The 0-indexed leaf position in the MMR.
+/// - `proof`: The proof elements.
 /// - `total_leaf_count`: The total number of leaves in the MMR when the proof was generated.
 ///
 /// Behavior for an empty MMR (`total_leaf_count == 0`): the proof must be empty
@@ -131,10 +132,10 @@ fn calculate_root_from_proof(
     // 4. Bag the peaks (left-to-right).
     // `all_peak_hashes` is already in left-to-right mountain order.
     if all_peak_hashes.is_empty() {
-        // Should be caught by total_leaf_count == 0 earlier, but as a safeguard.
+        // Unreachable due to precondition `total_leaf_count > 0`; retained as a safeguard.
         require!(total_leaf_count == 0, MmrError::NoPeaksFoundForNonEmptyMmr);
 
-        // If total_leaf_count is 0, what should an empty root be? Let's assume [0u8;32]
+        // For an empty MMR, the empty root is defined as `[0u8; 32]`.
         return Ok([0u8; 32]);
     }
 

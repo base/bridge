@@ -12,7 +12,7 @@ use crate::{common::SOL_VAULT_SEED, ID};
 /// the recipient when finalized.
 #[derive(Debug, Copy, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct FinalizeBridgeSol {
-    /// The 20-byte Ethereum address of the ERC20 token on Base that represents SOL for this bridge.
+    /// The 20-byte EVM address on Base of the ERC-20 token that represents SOL for this bridge.
     /// Used as a seed to derive the SOL vault PDA that escrows SOL for this mapping.
     /// This identifier names the vault even though the asset released here is native SOL.
     pub remote_token: [u8; 20],
@@ -28,16 +28,16 @@ pub struct FinalizeBridgeSol {
 
 impl FinalizeBridgeSol {
     pub fn finalize<'info>(&self, account_infos: &'info [AccountInfo<'info>]) -> Result<()> {
-        // Deserialize the accounts
+        // Read the accounts in the expected order
         let mut iter = account_infos.iter();
         let sol_vault_info = next_account_info(&mut iter)?;
         let to_info = next_account_info(&mut iter)?;
         let system_program_info = Program::<System>::try_from(next_account_info(&mut iter)?)?;
 
-        // Check that the to is correct
+        // Verify the recipient matches the instruction data
         require_keys_eq!(to_info.key(), self.to, FinalizeBridgeSolError::IncorrectTo);
 
-        // Check that the sol vault is the expected PDA
+        // Verify the SOL vault PDA is correct
         let sol_vault_seeds = &[SOL_VAULT_SEED, self.remote_token.as_ref()];
         let (sol_vault_pda, sol_vault_bump) = Pubkey::find_program_address(sol_vault_seeds, &ID);
 
@@ -47,7 +47,7 @@ impl FinalizeBridgeSol {
             FinalizeBridgeSolError::IncorrectSolVault
         );
 
-        // Transfer the SOL from the sol vault to the recipient
+        // Transfer SOL from the SOL vault to the recipient
         let seeds: &[&[&[u8]]] = &[&[
             SOL_VAULT_SEED,
             self.remote_token.as_ref(),

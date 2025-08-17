@@ -70,7 +70,8 @@ impl From<&PartialTokenMetadata> for TokenMetadata {
 /// - Only the first two entries of `additional_metadata` are inspected.
 /// - Those entries are expected to be, in order: (`remote_token`, `scaler_exponent`).
 /// - If the keys are missing, in a different order, or appear after other keys, this
-///   conversion will fail with a `NotFound` error. This reflects the current write
+///   returns `TokenMetadataError::RemoteTokenNotFound` or
+///   `TokenMetadataError::ScalerExponentNotFound`. This reflects the current write
 ///   behavior, which inserts the keys in that order.
 impl TryFrom<TokenMetadata> for PartialTokenMetadata {
     type Error = Error;
@@ -158,10 +159,10 @@ impl PartialTokenMetadata {
     }
 }
 
-/// Reads and returns Token-2022 `TokenMetadata` from a mint account.
+/// Reads and returns Token-2022 `TokenMetadata` and `decimals` from a mint account.
 ///
 /// Fails if the account is not owned by the Token-2022 program or if the metadata
-/// extension is missing/malformed.
+/// extension is missing or malformed.
 fn mint_info_to_token_metadata(mint: &AccountInfo<'_>) -> Result<(TokenMetadata, u8)> {
     require_keys_eq!(
         *mint.owner,

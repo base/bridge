@@ -37,7 +37,7 @@ pub struct Initialize<'info> {
     /// may be distinct signers.
     pub guardian: Signer<'info>,
 
-    /// Oracle signers config PDA seeded at program init time as empty
+    /// Oracle signers config account storing Base signers and our required threshold for output root submissions
     #[account(
         init,
         payer = payer,

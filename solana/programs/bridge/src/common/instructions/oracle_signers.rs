@@ -5,11 +5,14 @@ use crate::common::{
 };
 
 /// Accounts for initializing or updating the oracle signers list and threshold.
-/// Guardian-gated.
 #[derive(Accounts)]
 #[instruction(threshold: u8, signers: Vec<[u8;20]>)]
 pub struct SetOracleSigners<'info> {
-    /// Canonical bridge state; guardian checked here
+    /// Canonical bridge state used to authorize the change.
+    ///
+    /// Constraints:
+    /// - `has_one = guardian` ensures only the current guardian can update.
+    /// - PDA derived from `BRIDGE_SEED`.
     #[account(
         mut,
         has_one = guardian,
@@ -18,10 +21,14 @@ pub struct SetOracleSigners<'info> {
     )]
     pub bridge: Account<'info, Bridge>,
 
-    /// Guardian must authorize updates
+    /// Guardian who must authorize the update.
     pub guardian: Signer<'info>,
 
-    /// PDA storing signers and threshold
+    /// PDA storing the oracle signer set and required threshold.
+    ///
+    /// Constraints:
+    /// - PDA derived from `ORACLE_SIGNERS_SEED`.
+    /// - Marked `mut` because the instruction updates its fields.
     #[account(
         mut,
         seeds = [ORACLE_SIGNERS_SEED],
@@ -29,9 +36,15 @@ pub struct SetOracleSigners<'info> {
     )]
     pub oracle_signers: Account<'info, OracleSigners>,
 
+    /// System program (required by Anchor account machinery; no direct writes).
     pub system_program: Program<'info, System>,
 }
 
+/// Set or update the oracle signer configuration.
+///
+/// Updates the `oracle_signers` account with a new approval `threshold` and a
+/// new list of unique EVM signer addresses. This instruction is used to rotate
+/// oracle keys or adjust the required threshold for output root attestations.
 pub fn set_oracle_signers_handler(
     ctx: Context<SetOracleSigners>,
     threshold: u8,

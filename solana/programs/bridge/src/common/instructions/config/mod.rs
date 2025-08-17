@@ -5,9 +5,6 @@ use crate::common::{bridge::Bridge, BRIDGE_SEED};
 pub mod eip1559;
 pub use eip1559::*;
 
-pub mod gas_cost;
-pub use gas_cost::*;
-
 pub mod gas;
 pub use gas::*;
 

@@ -44,7 +44,7 @@ pub mod bridge {
     /// * `gas_config`            - The gas configuration, contains the gas amount per cross-chain message, gas cost scaler, gas cost scaler decimal precision, and gas fee receiver
     /// * `protocol_config`       - The protocol configuration, contains the block interval requirement for output root registration
     /// * `buffer_config`         - The buffer configuration, contains the maximum call buffer size
-    /// * `partner_oracle_config` - Sets the program ID and account pubkey that should own the definition of valid partner oracles
+    /// * `partner_oracle_config` - Sets the program ID and account pubkey that own the partner oracle signer set, and the required signature threshold
     pub fn initialize(
         ctx: Context<Initialize>,
         eip1559_config: Eip1559Config,
@@ -68,9 +68,11 @@ pub mod bridge {
     /// Registers an output root from Base to enable message verification.
     /// This function stores the MMR root of Base message state at a specific block number,
     /// which is required before any messages from that block can be proven and relayed.
+    /// Authorization is enforced via EVM signatures from authorized Base oracles and partner
+    /// signers per configured thresholds; the Solana payer only funds account creation.
     ///
     /// # Arguments
-    /// * `ctx`               - The context containing accounts for storing the output root (trusted oracle must sign)
+    /// * `ctx`               - The context containing accounts for storing the output root (payer signs for fees; authorization is provided via EVM signatures)
     /// * `output_root`       - The 32-byte MMR root of Base messages for the given block
     /// * `base_block_number` - The Base block number this output root corresponds to
     /// * `total_leaf_count`  - The total number of leaves in the MMR with this root
@@ -284,7 +286,7 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx`    - The context containing accounts for the wrapped token bridge operation
     /// * `to`     - The 20-byte Ethereum address that will receive tokens on Base
-    /// * `amount` - Amount of wrapped tokens to bridge back (in lamports)
+    /// * `amount` - Amount of wrapped tokens to bridge back (in the token's smallest units)
     pub fn bridge_wrapped_token_with_buffered_call<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, BridgeWrappedTokenWithBufferedCall<'info>>,
         to: [u8; 20],

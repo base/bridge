@@ -88,7 +88,7 @@ pub fn prove_message_handler(
 ///
 /// - `nonce` is encoded as big-endian bytes.
 /// - `sender` is a 20-byte Base/EVM address.
-/// - `data` is the Anchor-serialized `Message` payload.
+/// - `data` is the Borsh-serialized `Message` payload.
 fn hash_message(nonce: &[u8], sender: &[u8; 20], data: &[u8]) -> [u8; 32] {
     let mut data_to_hash = Vec::new();
     data_to_hash.extend_from_slice(nonce);

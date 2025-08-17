@@ -24,7 +24,7 @@ pub struct RegisterOutputRoot<'info> {
 
     /// The output root account being created to store the Base MMR root and total leaf count.
     /// - Uses PDA with OUTPUT_ROOT_SEED and base_block_number for deterministic address
-    /// - Payer (trusted oracle) funds the account creation
+    /// - Payer funds the account creation (authorization is enforced via EVM signatures)
     /// - Space allocated for output root state (8-byte discriminator + OutputRoot::INIT_SPACE)
     /// - Each output root corresponds to a specific Base block number
     #[account(
@@ -48,7 +48,7 @@ pub struct RegisterOutputRoot<'info> {
     pub oracle_signers: Account<'info, OracleSigners>,
 
     /// Partner `Config` account (PDA with seed "config") owned by partner program.
-    /// Unchecked to avoid Anchor pre-handler owner checks; validated in handler.
+    /// Unchecked to avoid Anchor pre-handler owner checks; PDA address is validated in the handler.
     pub partner_config: AccountInfo<'info>,
 
     /// System program required for creating new accounts.
@@ -63,7 +63,7 @@ pub fn register_output_root_handler(
     total_leaf_count: u64,
     signatures: Vec<[u8; 65]>,
 ) -> Result<()> {
-    // Validate partner_config: owner and seeds with external program id
+    // Validate partner_config PDA using seed with the partner program id
     let expected_partner_cfg =
         Pubkey::find_program_address(&[PARTNER_SIGNERS_ACCOUNT_SEED], &PARTNER_PROGRAM_ID).0;
     require_keys_eq!(
