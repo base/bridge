@@ -25,7 +25,7 @@ contract CrossChainERC20 is ERC20, Initializable {
     /// @notice The symbol of the token.
     string private _symbol;
 
-    /// @notice The address of the corresponding token on the remote chain.
+    /// @notice The identifier of the corresponding token on the remote chain.
     bytes32 private _remoteToken;
 
     /// @notice The number of decimal places for this token.
@@ -60,7 +60,7 @@ contract CrossChainERC20 is ERC20, Initializable {
     /// @notice Thrown when the burning from the zero address is attempted.
     error BurnFromZeroAddress();
 
-    /// @notice Thrown when a zero address is detected
+    /// @notice Thrown when a zero address or zero identifier is provided
     error ZeroAddress();
 
     //////////////////////////////////////////////////////////////
@@ -89,7 +89,7 @@ contract CrossChainERC20 is ERC20, Initializable {
 
     /// @notice Initializes the CrossChainERC20 contract.
     ///
-    /// @param remoteToken_ Address of the corresponding token on the remote chain.
+    /// @param remoteToken_ Identifier (bytes32) of the corresponding token on the remote chain.
     /// @param name_ ERC20 name of the token.
     /// @param symbol_ ERC20 symbol of the token.
     /// @param decimals_ ERC20 decimals for the token.
@@ -112,7 +112,7 @@ contract CrossChainERC20 is ERC20, Initializable {
         return _BRIDGE;
     }
 
-    /// @notice Returns the remote token address.
+    /// @notice Returns the remote token identifier.
     ///
     /// @dev This represents the corresponding token on the remote chain.
     function remoteToken() public view returns (bytes32) {
@@ -133,7 +133,7 @@ contract CrossChainERC20 is ERC20, Initializable {
         return _symbol;
     }
 
-    /// @notice Returns the decimals places of the token.
+    /// @notice Returns the decimal places of the token.
     ///
     /// @dev Overrides the ERC20 decimals function.
     function decimals() public view override returns (uint8) {

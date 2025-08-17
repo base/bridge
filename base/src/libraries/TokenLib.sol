@@ -79,10 +79,11 @@ library TokenLib {
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice The ERC-7528 standard address representing native ETH in token operations.
+    /// @notice The ERC-7528 pseudo-address representing native ETH in token operations.
     address public constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-    /// @notice The Solana pubkey for the native SOL token ("SoL1111111111111111111111111111111111111111")
+    /// @notice Sentinel pubkey used to denote native SOL within bridging logic.
+    /// ("SoL1111111111111111111111111111111111111111")
     Pubkey public constant NATIVE_SOL_PUBKEY =
         Pubkey.wrap(0x069be72ab836d4eacc02525b7350a78a395da2f1253a40ebafd6630000000000);
 
@@ -236,11 +237,12 @@ library TokenLib {
         });
     }
 
-    /// @notice Registers a remote token that was deployed from the Solana factory.
+    /// @notice Registers a remote token and its conversion scalar.
     ///
     /// @param localToken Address of the ERC20 token on this chain.
     /// @param remoteToken Pubkey of the remote token on Solana.
-    /// @param scalarExponent Exponent to be used to convert local to remote amounts.
+    /// @param scalarExponent Exponent used to compute the remote->local conversion scalar
+    ///        (localAmount = remoteAmount * 10^scalarExponent).
     function registerRemoteToken(address localToken, Pubkey remoteToken, uint8 scalarExponent) internal {
         TokenLibStorage storage $ = getTokenLibStorage();
         $.scalars[localToken][remoteToken] = 10 ** scalarExponent;

@@ -5,11 +5,11 @@ pragma solidity ^0.8.28;
 ///
 /// @custom:storage-location erc7201:coinbase.storage.MessageStorageLib
 ///
-/// @custom:field messages Mapping of registered message hashes.
-/// @custom:field lastOutgoingNonce The last outgoing message's nonce.
+/// @custom:field nextNonce Number of messages sent.
+/// @custom:field root Current MMR root hash.
 /// @custom:field nodes All nodes (leaves and internal) in the MMR.
 struct MessageStorageLibStorage {
-    uint64 lastOutgoingNonce;
+    uint64 nextNonce;
     bytes32 root;
     bytes32[] nodes;
 }
@@ -82,7 +82,7 @@ library MessageStorageLib {
         }
     }
 
-    /// @notice Generates a Merkle proof for a specific leaf in the MMR.
+    /// @notice Generates an MMR inclusion proof for a specific leaf.
     ///
     /// @dev This function may consume significant gas for large MMRs (O(log N) storage reads).
     ///
@@ -93,10 +93,9 @@ library MessageStorageLib {
     function generateProof(uint64 leafIndex) internal view returns (bytes32[] memory proof, uint64 totalLeafCount) {
         MessageStorageLibStorage storage $ = getMessageStorageLibStorage();
 
-        require($.lastOutgoingNonce != 0, EmptyMMR());
-        require(leafIndex < $.lastOutgoingNonce, LeafIndexOutOfBounds());
+        require($.nextNonce != 0, EmptyMMR());
+        require(leafIndex < $.nextNonce, LeafIndexOutOfBounds());
 
-        // Use optimized single-pass algorithm
         (uint256 leafNodePos, uint256 mountainHeight, uint64 leafIdxInMountain, bytes32[] memory otherPeaks) =
             _generateProofData(leafIndex);
 
@@ -136,7 +135,7 @@ library MessageStorageLib {
             proof[proofIndex++] = otherPeaks[i];
         }
 
-        totalLeafCount = $.lastOutgoingNonce;
+        totalLeafCount = $.nextNonce;
     }
 
     /// @notice Sends a message to the Solana bridge.
@@ -146,12 +145,12 @@ library MessageStorageLib {
     function sendMessage(address sender, bytes memory data) internal {
         MessageStorageLibStorage storage $ = getMessageStorageLibStorage();
 
-        Message memory message = Message({nonce: $.lastOutgoingNonce, sender: sender, data: data});
+        Message memory message = Message({nonce: $.nextNonce, sender: sender, data: data});
         bytes32 messageHash = _hashMessage(message);
-        bytes32 mmrRoot = _appendLeafToMMR({leafHash: messageHash, originalLeafCount: $.lastOutgoingNonce});
+        bytes32 mmrRoot = _appendLeafToMMR({leafHash: messageHash, originalLeafCount: $.nextNonce});
 
         unchecked {
-            ++$.lastOutgoingNonce;
+            ++$.nextNonce;
         }
 
         emit MessageRegistered({messageHash: messageHash, mmrRoot: mmrRoot, message: message});
@@ -254,12 +253,12 @@ library MessageStorageLib {
 
         uint256 nodeOffset = 0;
         uint64 leafOffset = 0;
-        uint256 maxHeight = _calculateMaxPossibleHeight($.lastOutgoingNonce);
+        uint256 maxHeight = _calculateMaxPossibleHeight($.nextNonce);
 
         for (uint256 h = maxHeight + 1; h > 0; h--) {
             uint256 height = h - 1;
 
-            if (($.lastOutgoingNonce >> height) & 1 == 1) {
+            if (($.nextNonce >> height) & 1 == 1) {
                 uint64 mountainLeaves = uint64(1 << height);
 
                 if (leafIndex >= leafOffset && leafIndex < leafOffset + mountainLeaves) {
@@ -289,13 +288,13 @@ library MessageStorageLib {
         uint256 peakCount = 0;
         uint256 nodeOffset = 0;
         uint64 leafOffset = 0;
-        uint256 maxHeight = _calculateMaxPossibleHeight($.lastOutgoingNonce);
+        uint256 maxHeight = _calculateMaxPossibleHeight($.nextNonce);
 
         // Collect peaks in left-to-right order (largest to smallest mountain)
         for (uint256 h = maxHeight + 1; h > 0; h--) {
             uint256 height = h - 1;
 
-            if (($.lastOutgoingNonce >> height) & 1 == 1) {
+            if (($.nextNonce >> height) & 1 == 1) {
                 uint64 mountainLeaves = uint64(1 << height);
                 bool isLeafMountain = (leafIndex >= leafOffset && leafIndex < leafOffset + mountainLeaves);
 
@@ -318,6 +317,8 @@ library MessageStorageLib {
     }
 
     /// @notice Calculates the current root by "bagging the peaks".
+    ///
+    /// @param currentLeafCount Number of leaves to compute the root for.
     ///
     /// @return The MMR root.
     function _calculateRoot(uint64 currentLeafCount) private view returns (bytes32) {
@@ -370,7 +371,7 @@ library MessageStorageLib {
     /// @return The indices of the peak nodes ordered from leftmost to rightmost.
     function _getPeakNodeIndices() private view returns (uint256[] memory) {
         MessageStorageLibStorage storage $ = getMessageStorageLibStorage();
-        return _getPeakNodeIndicesForLeafCount($.lastOutgoingNonce);
+        return _getPeakNodeIndicesForLeafCount($.nextNonce);
     }
 
     /// @notice Gets the indices of all peak nodes in the MMR for a specific leaf count.

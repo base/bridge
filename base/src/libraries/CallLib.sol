@@ -12,10 +12,10 @@ enum CallType {
 /// @notice Struct representing a call to execute.
 ///
 /// @custom:field ty The type of call.
-/// @custom:field to The target address to call.
-/// @custom:field gasLimit The gas limit for the call.
+/// @custom:field to The target address to call (ignored for Create/Create2).
 /// @custom:field value The value to send with the call.
-/// @custom:field data The data to pass to the call.
+/// @custom:field data For Call/DelegateCall: calldata; for Create: creation bytecode; for Create2: abi.encode(bytes32
+/// salt, bytes creationCode).
 struct Call {
     CallType ty;
     address to;
@@ -35,6 +35,10 @@ library CallLib {
     ///                       Internal Functions               ///
     //////////////////////////////////////////////////////////////
 
+    /// @notice Execute the provided call.
+    /// @dev For Call and DelegateCall, reverts with the returned revert reason (as string) on failure.
+    ///      For Create and Create2, reverts without a reason on failure. For Create2, `call.data` must be
+    ///      abi.encode(bytes32 salt, bytes creationCode).
     function execute(Call memory call) internal {
         if (call.ty == CallType.Call) {
             (bool success, bytes memory result) = call.to.call{value: call.value}(call.data);

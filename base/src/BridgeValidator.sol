@@ -25,7 +25,7 @@ contract BridgeValidator is Initializable {
     /// @notice Guardian role bit used by the `Bridge` contract for privileged actions on this contract.
     uint256 public constant GUARDIAN_ROLE = 1 << 0;
 
-    /// @notice Required number of signatures from bridge partner
+    /// @notice Required number of external (non-Base) signatures
     uint256 public immutable PARTNER_VALIDATOR_THRESHOLD;
 
     /// @notice Address of the Base Bridge contract. Used for authenticating guardian roles
@@ -46,23 +46,18 @@ contract BridgeValidator is Initializable {
     ///                       Events                           ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Emitted when a single message is registered (pre-validated) by the trusted relayer.
+    /// @notice Emitted when a single message is registered (pre-validated).
     ///
     /// @param messageHashes The pre-validated message hash (derived from the inner message hash and an incremental
     ///                      nonce) corresponding to an `IncomingMessage` in the `Bridge` contract.
     event MessageRegistered(bytes32 indexed messageHashes);
 
-    /// @notice Emitted when a cross chain message is being executed.
-    ///
-    /// @param msgHash Hash of message payload being executed.
-    event ExecutingMessage(bytes32 indexed msgHash);
-
     //////////////////////////////////////////////////////////////
     ///                       Errors                           ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Thrown when `validatorSigs` verification fails. These are signatures from our bridge partner's
-    /// validators.
+    /// @notice Thrown when `validatorSigs` verification fails (Base and/or external signatures invalid or
+    /// insufficient).
     error Unauthenticated();
 
     /// @notice Thrown when the provided `validatorSigs` byte string length is not a multiple of 65
@@ -121,10 +116,10 @@ contract BridgeValidator is Initializable {
     /// @param innerMessageHashes An array of inner message hashes to pre-validate (hash over message data excluding the
     ///                           nonce). Each is combined with a monotonically increasing nonce to form
     /// `messageHashes`.
-    /// @param validatorSigs A concatenated bytes array of validator signatures. Signatures must be over the
-    ///                      EIP-191 `eth_sign` digest of `abi.encode(messageHashes)` and provided in strictly
-    ///                      ascending order by signer address. Must include at least `getBaseThreshold()` Base
-    ///                      validator signatures and at least `PARTNER_VALIDATOR_THRESHOLD` external signatures.
+    /// @param validatorSigs A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
+    ///                      `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
+    ///                      Must include at least `getBaseThreshold()` Base validator signatures. The external
+    ///                      signature threshold is controlled by `PARTNER_VALIDATOR_THRESHOLD`.
     function registerMessages(bytes32[] calldata innerMessageHashes, bytes calldata validatorSigs) external {
         uint256 len = innerMessageHashes.length;
         bytes32[] memory messageHashes = new bytes32[](len);
@@ -190,6 +185,7 @@ contract BridgeValidator is Initializable {
         require(sigData.length % VerificationLib.SIGNATURE_LENGTH_THRESHOLD == 0, InvalidSignatureLength());
 
         uint256 sigCount = sigData.length / VerificationLib.SIGNATURE_LENGTH_THRESHOLD;
+        // Placeholder for an external contract lookup to be introduced soon
         address[] memory partnerValidators = new address[](0);
         bytes32 signedHash = ECDSA.toEthSignedMessageHash(abi.encode(messageHashes));
         address lastValidator = address(0);

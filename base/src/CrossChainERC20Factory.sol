@@ -13,7 +13,7 @@ contract CrossChainERC20Factory {
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Address of the CrossChainERC20 beacon proxy.
+    /// @notice Address of the ERC-1967 beacon contract used by deployed proxies for CrossChainERC20.
     address public immutable BEACON;
 
     //////////////////////////////////////////////////////////////
@@ -50,7 +50,7 @@ contract CrossChainERC20Factory {
 
     /// @notice Constructs the CrossChainERC20Factory contract
     ///
-    /// @dev Disables initializers to prevent the implementation contract from being initialized
+    /// @dev Stores the beacon address for proxies and reverts if the beacon is the zero address.
     constructor(address beacon) {
         require(beacon != address(0), ZeroAddress());
         BEACON = beacon;

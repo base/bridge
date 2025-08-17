@@ -61,23 +61,23 @@ contract BridgeTest is CommonTest {
         Ix[] memory ixs = new Ix[](1);
         ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: new bytes[](0), data: hex"deadbeef"});
 
-        uint64 initialNonce = bridge.getLastOutgoingNonce();
+        uint64 initialNonce = bridge.getNextNonce();
 
         vm.prank(user);
         bridge.bridgeCall(ixs);
 
-        assertEq(bridge.getLastOutgoingNonce(), initialNonce + 1);
+        assertEq(bridge.getNextNonce(), initialNonce + 1);
     }
 
     function test_bridgeCall_withEmptyInstructions() public {
         Ix[] memory ixs = new Ix[](0);
 
-        uint64 initialNonce = bridge.getLastOutgoingNonce();
+        uint64 initialNonce = bridge.getNextNonce();
 
         vm.prank(user);
         bridge.bridgeCall(ixs);
 
-        assertEq(bridge.getLastOutgoingNonce(), initialNonce + 1);
+        assertEq(bridge.getNextNonce(), initialNonce + 1);
     }
 
     function test_bridgeCall_withMultipleInstructions() public {
@@ -86,12 +86,12 @@ contract BridgeTest is CommonTest {
             ixs[i] = Ix({programId: TEST_SENDER, serializedAccounts: new bytes[](0), data: abi.encodePacked(i)});
         }
 
-        uint64 initialNonce = bridge.getLastOutgoingNonce();
+        uint64 initialNonce = bridge.getNextNonce();
 
         vm.prank(user);
         bridge.bridgeCall(ixs);
 
-        assertEq(bridge.getLastOutgoingNonce(), initialNonce + 1);
+        assertEq(bridge.getNextNonce(), initialNonce + 1);
     }
 
     //////////////////////////////////////////////////////////////
@@ -596,7 +596,7 @@ contract BridgeTest is CommonTest {
 
     function test_getRoot_consistentWithNonceProgression() public {
         // Verify root updates align with nonce increments
-        uint64 initialNonce = bridge.getLastOutgoingNonce();
+        uint64 initialNonce = bridge.getNextNonce();
         bytes32 initialRoot = bridge.getRoot();
 
         assertEq(initialNonce, 0);
@@ -612,7 +612,7 @@ contract BridgeTest is CommonTest {
             vm.prank(user);
             bridge.bridgeCall(ixs);
 
-            uint64 currentNonce = bridge.getLastOutgoingNonce();
+            uint64 currentNonce = bridge.getNextNonce();
             bytes32 currentRoot = bridge.getRoot();
 
             // Nonce should increment by 1
@@ -628,8 +628,8 @@ contract BridgeTest is CommonTest {
         }
     }
 
-    function test_getLastOutgoingNonce() public {
-        uint64 nonce = bridge.getLastOutgoingNonce();
+    function test_getNextNonce() public {
+        uint64 nonce = bridge.getNextNonce();
         assertEq(nonce, 0);
 
         // Send a message
@@ -637,7 +637,7 @@ contract BridgeTest is CommonTest {
         vm.prank(user);
         bridge.bridgeCall(ixs);
 
-        assertEq(bridge.getLastOutgoingNonce(), 1);
+        assertEq(bridge.getNextNonce(), 1);
     }
 
     function test_generateProof_revertsOnEmptyMMR() public {
@@ -726,12 +726,12 @@ contract BridgeTest is CommonTest {
         Ix[] memory ixs = new Ix[](1);
         ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: new bytes[](0), data: abi.encodePacked("test")});
 
-        uint64 initialNonce = bridge.getLastOutgoingNonce();
+        uint64 initialNonce = bridge.getNextNonce();
 
         vm.prank(sender);
         bridge.bridgeCall(ixs);
 
-        assertEq(bridge.getLastOutgoingNonce(), initialNonce + 1);
+        assertEq(bridge.getNextNonce(), initialNonce + 1);
     }
 
     function testFuzz_relayMessage_withDifferentNonces(uint64 nonce) public {
@@ -843,12 +843,12 @@ contract BridgeTest is CommonTest {
         Ix[] memory ixs = new Ix[](1);
         ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: new bytes[](0), data: hex"deadbeef"});
 
-        uint64 initialNonce = bridge.getLastOutgoingNonce();
+        uint64 initialNonce = bridge.getNextNonce();
 
         vm.prank(user);
         bridge.bridgeCall(ixs); // Should not revert
 
-        assertEq(bridge.getLastOutgoingNonce(), initialNonce + 1, "Bridge call should succeed when unpaused");
+        assertEq(bridge.getNextNonce(), initialNonce + 1, "Bridge call should succeed when unpaused");
     }
 
     function test_scalars_returnsCorrectConversionValuesForTokenPairs() public {
@@ -978,7 +978,7 @@ contract BridgeTest is CommonTest {
     function test_getRoot_singleLeafShouldReturnLeafHash() public {
         // Get initial state
         bytes32 initialRoot = bridge.getRoot();
-        uint64 initialNonce = bridge.getLastOutgoingNonce();
+        uint64 initialNonce = bridge.getNextNonce();
         assertEq(initialRoot, bytes32(0));
         assertEq(initialNonce, 0);
 
@@ -990,7 +990,7 @@ contract BridgeTest is CommonTest {
         bridge.bridgeCall(ixs);
 
         // Verify we have exactly one outgoing message
-        uint64 finalNonce = bridge.getLastOutgoingNonce();
+        uint64 finalNonce = bridge.getNextNonce();
         assertEq(finalNonce, 1);
 
         // The root should be the hash of the single leaf, not bytes32(0)
@@ -1011,7 +1011,7 @@ contract BridgeTest is CommonTest {
     function test_getRoot_twoLeavesShouldReturnCombinedRoot() public {
         // Get initial state
         bytes32 initialRoot = bridge.getRoot();
-        uint64 initialNonce = bridge.getLastOutgoingNonce();
+        uint64 initialNonce = bridge.getNextNonce();
         assertEq(initialRoot, bytes32(0));
         assertEq(initialNonce, 0);
 

@@ -18,7 +18,7 @@ function neq(Pubkey a, Pubkey b) pure returns (bool) {
 
 using {neq as !=} for Pubkey global;
 
-/// @notice Program Derived Address specification.
+/// @notice Program-derived address (PDA) specification.
 ///
 /// @param seeds Array of seed bytes for PDA generation
 /// @param programId The program that owns this PDA
@@ -37,6 +37,8 @@ enum PubkeyOrPdaVariant {
 ///
 /// @param variant The type of key (Pubkey or PDA)
 /// @param variantData Serialized data for the variant
+/// - If `variant == Pubkey`, this is the 32-byte pubkey.
+/// - If `variant == PDA`, this is: [u32 LE seed_count] + [len-prefixed seed bytes...] + [32-byte programId].
 struct PubkeyOrPda {
     PubkeyOrPdaVariant variant;
     bytes variantData;
@@ -55,7 +57,8 @@ struct Ix {
 
 /// @title SVMLib - Solana Virtual Machine library for Solidity
 ///
-/// @notice Provides types and serialization for Solana instructions with Borsh compatibility
+/// @notice Provides types and serialization for Solana instructions using Borsh-like
+/// little-endian, length-prefixed encoding compatible with the Solana program in this repo.
 library SVMLib {
     using LibBit for uint256;
 
@@ -83,13 +86,16 @@ library SVMLib {
         return result;
     }
 
-    /// @notice Serializes an account with a Program Derived Address.
+    /// @notice Serializes an account with a Program Derived Address (PDA).
     ///
     /// @param pda The PDA specification
     /// @param isWritable Whether the account should be writable
     /// @param isSigner Whether the account should be a signer
     ///
     /// @return The serialized account
+    ///
+    /// Format: [variant=1] + [u32 LE seed_count] + [len-prefixed seed bytes...] + [32-byte programId]
+    ///         + [isWritable u8] + [isSigner u8]
     function serializePdaAccount(Pda memory pda, bool isWritable, bool isSigner) internal pure returns (bytes memory) {
         uint8 variant = uint8(PubkeyOrPdaVariant.PDA);
 
@@ -139,20 +145,20 @@ library SVMLib {
         return result;
     }
 
-    /// @notice Converts a value to a uint32 in little-endian format
+    /// @notice Converts a value to a uint32 in little-endian format.
     ///
     /// @param value The input value to convert
     ///
-    /// @return The little-endian encoded uint32 value
+    /// @return A uint32 whose ABI-packed big-endian bytes equal the little-endian representation of `value`
     function toU32LittleEndian(uint256 value) internal pure returns (uint32) {
         return uint32(value.reverseBytes() >> 224);
     }
 
-    /// @notice Converts a value to a uint64 in little-endian format
+    /// @notice Converts a value to a uint64 in little-endian format.
     ///
     /// @param value The input value to convert
     ///
-    /// @return The little-endian encoded uint64 value
+    /// @return A uint64 whose ABI-packed big-endian bytes equal the little-endian representation of `value`
     function toU64LittleEndian(uint256 value) internal pure returns (uint64) {
         return uint64(value.reverseBytes() >> 192);
     }
@@ -161,7 +167,7 @@ library SVMLib {
     ///                       Private Functions                ///
     //////////////////////////////////////////////////////////////
 
-    /// @dev Serializes bytes with length prefix
+    /// @dev Serializes bytes with a u32 little-endian length prefix
     function _serializeBytes(bytes memory data) private pure returns (bytes memory) {
         return abi.encodePacked(toU32LittleEndian(data.length), data);
     }

@@ -254,11 +254,11 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         return MessageStorageLib.getMessageStorageLibStorage().root;
     }
 
-    /// @notice Get the last outgoing Message nonce.
+    /// @notice Get the next outgoing Message nonce.
     ///
-    /// @return The last outgoing Message nonce.
-    function getLastOutgoingNonce() external view returns (uint64) {
-        return MessageStorageLib.getMessageStorageLibStorage().lastOutgoingNonce;
+    /// @return The next outgoing Message nonce.
+    function getNextNonce() external view returns (uint64) {
+        return MessageStorageLib.getMessageStorageLibStorage().nextNonce;
     }
 
     /// @notice Generates a Merkle proof for a specific leaf in the MMR.

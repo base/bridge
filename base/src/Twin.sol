@@ -36,7 +36,7 @@ contract Twin {
     ///                       Errors                           ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Thrown when the caller is neither the portal nor the twin itself.
+    /// @notice Thrown when the caller is neither the Bridge nor the Twin itself.
     error Unauthorized();
 
     /// @notice Thrown when a zero address is detected

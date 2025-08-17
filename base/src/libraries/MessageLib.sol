@@ -14,7 +14,8 @@ enum MessageType {
 ///
 /// @custom:field nonce Unique nonce for the message.
 /// @custom:field sender The Solana sender's pubkey.
-/// @custom:field operations The operations to be executed.
+/// @custom:field ty The message type to execute (Call, Transfer, or TransferAndCall).
+/// @custom:field data Encoded payload associated with the message type.
 struct IncomingMessage {
     uint64 nonce;
     Pubkey sender;

@@ -782,7 +782,7 @@ contract MessageStorageLibTest is Test {
     }
 
     function _getLeafCount() internal view returns (uint64) {
-        return MessageStorageLib.getMessageStorageLibStorage().lastOutgoingNonce;
+        return MessageStorageLib.getMessageStorageLibStorage().nextNonce;
     }
 
     function _getNodeCount() internal view returns (uint256) {
@@ -794,7 +794,7 @@ contract MessageStorageLibTest is Test {
     }
 
     function _isEmpty() internal view returns (bool) {
-        return MessageStorageLib.getMessageStorageLibStorage().lastOutgoingNonce == 0;
+        return MessageStorageLib.getMessageStorageLibStorage().nextNonce == 0;
     }
 
     function _getNode(uint256 index) internal view returns (bytes32) {

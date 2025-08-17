@@ -5,7 +5,7 @@ import {IncomingMessage} from "./MessageLib.sol";
 
 /// @notice Storage layout used by this library.
 ///
-/// @custom:storage-location erc7201:coinbase.storage.ISMVerificationLib
+/// @custom:storage-location erc7201:coinbase.storage.VerificationLib
 ///
 /// @custom:field validators Mapping of validator addresses to their status.
 /// @custom:field threshold Base signature threshold.
@@ -18,11 +18,11 @@ struct VerificationLibStorage {
 
 /// @title VerificationLib
 ///
-/// @notice A verification contract for Messages being broadcasted from Solana to Base by requiring
+/// @notice A verification library for Messages being broadcasted from Solana to Base by requiring
 ///         a specific minimum amount of validators to sign the message.
 ///
-/// @dev This contract is only relevant for Stage 0 of the bridge where offchain oracle handles the relaying
-///      of messages. This contract should be irrelevant for Stage 1, where messages will automatically be
+/// @dev This library is only relevant for Stage 0 of the bridge where offchain oracle handles the relaying
+///      of messages. This library should be irrelevant for Stage 1, where messages will automatically be
 ///      included by the Base sequencer.
 library VerificationLib {
     //////////////////////////////////////////////////////////////
@@ -104,9 +104,9 @@ library VerificationLib {
         $.threshold = threshold;
     }
 
-    /// @notice Sets the ISM verification threshold.
+    /// @notice Sets the verification threshold.
     ///
-    /// @param newThreshold The new ISM verification threshold.
+    /// @param newThreshold The new verification threshold.
     function setThreshold(uint256 newThreshold) internal {
         VerificationLibStorage storage $ = getVerificationLibStorage();
         require(newThreshold > 0 && newThreshold <= $.validatorCount, InvalidThreshold());
@@ -169,8 +169,8 @@ library VerificationLib {
 
     /// @notice Splits signature bytes into v, r, s components
     ///
-    /// @param signaturesCalldataOffset Calldata offset where signatures bytes starts
-    /// @param pos Position of signature to split (0-indexed)
+    /// @param signaturesCalldataOffset Calldata offset where signature bytes start
+    /// @param pos Index of the signature to split (0-indexed)
     ///
     /// @return v The recovery id
     /// @return r The r component of the signature
