@@ -30,7 +30,8 @@ use crate::{
     accounts,
     common::{
         bridge::{BufferConfig, Eip1559Config, GasConfig, PartnerOracleConfig, ProtocolConfig},
-        PartialTokenMetadata, BRIDGE_SEED, ORACLE_SIGNERS_SEED, WRAPPED_TOKEN_SEED,
+        BaseOracleConfig, Config, PartialTokenMetadata, BRIDGE_SEED, ORACLE_SIGNERS_SEED,
+        WRAPPED_TOKEN_SEED,
     },
     instruction::Initialize,
     ID,
@@ -75,6 +76,19 @@ impl BufferConfig {
     }
 }
 
+impl BaseOracleConfig {
+    pub fn test_new() -> Self {
+        let mut signer_addrs: [[u8; 20]; 16] = [[0u8; 20]; 16];
+        signer_addrs[0] = [1u8; 20];
+
+        Self {
+            oracle_threshold: 1,
+            signer_count: 1,
+            oracle_signer_addrs: signer_addrs,
+        }
+    }
+}
+
 pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
     let mut svm = LiteSVM::new();
     svm.add_program_from_file(ID, "../../target/deploy/bridge.so")
@@ -107,11 +121,14 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
         program_id: ID,
         accounts,
         data: Initialize {
-            eip1559_config: Eip1559Config::test_new(),
-            gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
-            protocol_config: ProtocolConfig::test_new(),
-            buffer_config: BufferConfig::test_new(),
-            partner_oracle_config: PartnerOracleConfig::default(),
+            cfg: Config {
+                eip1559_config: Eip1559Config::test_new(),
+                gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
+                protocol_config: ProtocolConfig::test_new(),
+                buffer_config: BufferConfig::test_new(),
+                partner_oracle_config: PartnerOracleConfig::default(),
+                base_oracle_config: BaseOracleConfig::test_new(),
+            },
         }
         .data(),
     };

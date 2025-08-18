@@ -273,6 +273,34 @@ mod tests {
         (sig65, addr)
     }
 
+    fn set_oracle_signers_threshold_one(svm: &mut LiteSVM, addr: [u8; 20]) {
+        let oracle_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
+        let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
+        let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
+        oracle.threshold = 1;
+        let mut fixed_signers = [[0u8; 20]; 16];
+        fixed_signers[0] = addr;
+        oracle.signers = fixed_signers;
+        oracle.signer_count = 1;
+        let mut new_data = Vec::new();
+        oracle.try_serialize(&mut new_data).unwrap();
+        oracle_acc.data = new_data;
+        svm.set_account(oracle_pda, oracle_acc).unwrap();
+    }
+
+    fn prepare_base_sig_and_set_oracle(
+        svm: &mut LiteSVM,
+        sk_bytes: [u8; 32],
+        output_root: [u8; 32],
+        base_block_number: u64,
+        total_leaf_count: u64,
+    ) -> [u8; 65] {
+        let (sig, addr) =
+            make_eth_sig_and_addr(sk_bytes, output_root, base_block_number, total_leaf_count);
+        set_oracle_signers_threshold_one(svm, addr);
+        sig
+    }
+
     #[test]
     fn test_register_output_root_success_sets_root() {
         let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
@@ -282,6 +310,15 @@ mod tests {
         let base_block_number = 600; // satisfies 300 interval and > 0
         let total_leaf_count = 42;
 
+        // Configure base oracle with a signer matching our generated signature
+        let sig = prepare_base_sig_and_set_oracle(
+            &mut svm,
+            [42u8; 32],
+            output_root,
+            base_block_number,
+            total_leaf_count,
+        );
+
         send_register(
             &mut svm,
             &payer,
@@ -290,7 +327,7 @@ mod tests {
             output_root,
             base_block_number,
             total_leaf_count,
-            vec![], // thresholds are 0 by default
+            vec![sig],
         )
         .expect("register_output_root should succeed");
 
@@ -310,6 +347,15 @@ mod tests {
         let base_block_number = 900; // satisfies 300 interval and > 0
         let total_leaf_count = 12345;
 
+        // Configure base oracle and provide a valid signature
+        let sig = prepare_base_sig_and_set_oracle(
+            &mut svm,
+            [43u8; 32],
+            output_root,
+            base_block_number,
+            total_leaf_count,
+        );
+
         send_register(
             &mut svm,
             &payer,
@@ -318,7 +364,7 @@ mod tests {
             output_root,
             base_block_number,
             total_leaf_count,
-            vec![],
+            vec![sig],
         )
         .expect("register_output_root should succeed");
 
@@ -338,6 +384,15 @@ mod tests {
         let base_block_number = 1200;
         let total_leaf_count = 7;
 
+        // Configure base oracle and provide a valid signature
+        let sig = prepare_base_sig_and_set_oracle(
+            &mut svm,
+            [44u8; 32],
+            output_root,
+            base_block_number,
+            total_leaf_count,
+        );
+
         send_register(
             &mut svm,
             &payer,
@@ -346,7 +401,7 @@ mod tests {
             output_root,
             base_block_number,
             total_leaf_count,
-            vec![],
+            vec![sig],
         )
         .expect("register_output_root should succeed");
 
@@ -390,15 +445,28 @@ mod tests {
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
         // Interval is 300 in tests; 150 is not aligned
+        let output_root = [4u8; 32];
+        let base_block_number = 150;
+        let total_leaf_count = 10;
+
+        // Configure base oracle and provide a valid signature so we hit the block interval check
+        let sig = prepare_base_sig_and_set_oracle(
+            &mut svm,
+            [45u8; 32],
+            output_root,
+            base_block_number,
+            total_leaf_count,
+        );
+
         let result = send_register(
             &mut svm,
             &payer,
             bridge_pda,
             partner_cfg,
-            [4u8; 32],
-            150,
-            10,
-            vec![],
+            output_root,
+            base_block_number,
+            total_leaf_count,
+            vec![sig],
         );
         assert!(
             result.is_err(),
@@ -423,15 +491,28 @@ mod tests {
         svm.set_account(bridge_pda, bridge_acc).unwrap();
 
         // Attempt to register an equal block number (aligned but not strictly greater)
+        let output_root = [5u8; 32];
+        let base_block_number = 600;
+        let total_leaf_count = 10;
+
+        // Configure base oracle and provide a valid signature so we hit the monotonicity check
+        let sig = prepare_base_sig_and_set_oracle(
+            &mut svm,
+            [46u8; 32],
+            output_root,
+            base_block_number,
+            total_leaf_count,
+        );
+
         let result = send_register(
             &mut svm,
             &payer,
             bridge_pda,
             partner_cfg,
-            [5u8; 32],
-            600,
-            10,
-            vec![],
+            output_root,
+            base_block_number,
+            total_leaf_count,
+            vec![sig],
         );
         assert!(
             result.is_err(),
@@ -451,7 +532,10 @@ mod tests {
         let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
         let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
         oracle.threshold = 1;
-        oracle.signers = vec![[7u8; 20]];
+        let mut fixed_signers = [[0u8; 20]; 16];
+        fixed_signers[0] = [7u8; 20];
+        oracle.signers = fixed_signers;
+        oracle.signer_count = 1;
         let mut new_data = Vec::new();
         oracle.try_serialize(&mut new_data).unwrap();
         oracle_acc.data = new_data;
@@ -491,15 +575,27 @@ mod tests {
         bridge_acc.data = new_data;
         svm.set_account(bridge_pda, bridge_acc).unwrap();
 
+        // Also satisfy base oracle threshold with a valid signature that partner does NOT accept
+        let output_root = [8u8; 32];
+        let base_block_number = 600;
+        let total_leaf_count = 10;
+        let sig = prepare_base_sig_and_set_oracle(
+            &mut svm,
+            [47u8; 32],
+            output_root,
+            base_block_number,
+            total_leaf_count,
+        );
+
         let result = send_register(
             &mut svm,
             &payer,
             bridge_pda,
             partner_cfg,
-            [8u8; 32],
-            600,
-            10,
-            vec![], // empty -> zero unique partner approvals
+            output_root,
+            base_block_number,
+            total_leaf_count,
+            vec![sig], // zero partner approvals -> should fail on partner threshold
         );
         assert!(
             result.is_err(),
@@ -530,7 +626,11 @@ mod tests {
             make_eth_sig_and_addr(sk2, output_root, base_block_number, total_leaf_count);
 
         oracle.threshold = 2;
-        oracle.signers = vec![addr1, addr2];
+        let mut fixed_signers = [[0u8; 20]; 16];
+        fixed_signers[0] = addr1;
+        fixed_signers[1] = addr2;
+        oracle.signers = fixed_signers;
+        oracle.signer_count = 2;
         let mut new_data = Vec::new();
         oracle.try_serialize(&mut new_data).unwrap();
         oracle_acc.data = new_data;
@@ -577,7 +677,10 @@ mod tests {
             make_eth_sig_and_addr(sk, output_root, base_block_number, total_leaf_count);
 
         oracle.threshold = 2;
-        oracle.signers = vec![addr];
+        let mut fixed_signers = [[0u8; 20]; 16];
+        fixed_signers[0] = addr;
+        oracle.signers = fixed_signers;
+        oracle.signer_count = 1;
         let mut new_data = Vec::new();
         oracle.try_serialize(&mut new_data).unwrap();
         oracle_acc.data = new_data;
@@ -615,7 +718,10 @@ mod tests {
         let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
         oracle.threshold = 1;
         // authorize some dummy address so that threshold logic would pass if signature were valid
-        oracle.signers = vec![[0xAA; 20]];
+        let mut fixed_signers = [[0u8; 20]; 16];
+        fixed_signers[0] = [0xAA; 20];
+        oracle.signers = fixed_signers;
+        oracle.signer_count = 1;
         let mut new_data = Vec::new();
         oracle.try_serialize(&mut new_data).unwrap();
         oracle_acc.data = new_data;

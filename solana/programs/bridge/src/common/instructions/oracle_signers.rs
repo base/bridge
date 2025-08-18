@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::common::{
-    bridge::Bridge, state::oracle_signers::OracleSigners, BRIDGE_SEED, ORACLE_SIGNERS_SEED,
+    bridge::Bridge, state::oracle_signers::OracleSigners, BaseOracleConfig, BRIDGE_SEED,
+    ORACLE_SIGNERS_SEED,
 };
 
 /// Accounts for initializing or updating the oracle signers list and threshold.
@@ -47,37 +48,11 @@ pub struct SetOracleSigners<'info> {
 /// oracle keys or adjust the required threshold for output root attestations.
 pub fn set_oracle_signers_handler(
     ctx: Context<SetOracleSigners>,
-    threshold: u8,
-    signers: Vec<[u8; 20]>,
+    cfg: BaseOracleConfig,
 ) -> Result<()> {
-    require!(
-        threshold > 0 && threshold as usize <= signers.len(),
-        OracleSignersError::InvalidThreshold
-    );
-    require!(signers.len() <= 32, OracleSignersError::TooManySigners);
-
-    // Ensure uniqueness
-    {
-        let mut sorted = signers.clone();
-        sorted.sort();
-        sorted.dedup();
-        require!(
-            sorted.len() == signers.len(),
-            OracleSignersError::DuplicateSigner
-        );
-    }
-
-    ctx.accounts.oracle_signers.threshold = threshold;
-    ctx.accounts.oracle_signers.signers = signers;
+    cfg.validate()?;
+    ctx.accounts.oracle_signers.threshold = cfg.oracle_threshold;
+    ctx.accounts.oracle_signers.signer_count = cfg.signer_count;
+    ctx.accounts.oracle_signers.signers = cfg.oracle_signer_addrs;
     Ok(())
-}
-
-#[error_code]
-pub enum OracleSignersError {
-    #[msg("Threshold must be <= number of signers")]
-    InvalidThreshold,
-    #[msg("Too many signers (max 32)")]
-    TooManySigners,
-    #[msg("Duplicate signer found")]
-    DuplicateSigner,
 }

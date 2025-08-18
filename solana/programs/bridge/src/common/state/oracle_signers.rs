@@ -8,9 +8,10 @@ use anchor_lang::prelude::*;
 pub struct OracleSigners {
     /// Number of required valid unique signatures
     pub threshold: u8,
+    /// Number of signers in `oracle_signer_addrs` array
+    pub signer_count: u8,
     /// Static list of authorized signer addresses
-    #[max_len(32)]
-    pub signers: Vec<[u8; 20]>,
+    pub signers: [[u8; 20]; 16],
 }
 
 impl OracleSigners {

@@ -11,7 +11,6 @@ use common::*;
 
 use common::instructions::oracle_signers::{set_oracle_signers_handler, SetOracleSigners};
 use common::{
-    bridge::{BufferConfig, Eip1559Config, GasConfig, PartnerOracleConfig, ProtocolConfig},
     config::{
         set_adjustment_denominator_handler, set_block_interval_requirement_handler,
         set_gas_cost_scaler_dp_handler, set_gas_cost_scaler_handler, set_gas_fee_receiver_handler,
@@ -39,28 +38,10 @@ pub mod bridge {
     /// This function sets up the initial bridge configuration and must be called once during deployment.
     ///
     /// # Arguments
-    /// * `ctx`                   - The context containing all accounts needed for initialization, including the guardian signer
-    /// * `eip1559_config`        - The EIP-1559 configuration, contains the gas target, adjustment denominator, window duration, and minimum base fee
-    /// * `gas_config`            - The gas configuration, contains the gas amount per cross-chain message, gas cost scaler, gas cost scaler decimal precision, and gas fee receiver
-    /// * `protocol_config`       - The protocol configuration, contains the block interval requirement for output root registration
-    /// * `buffer_config`         - The buffer configuration, contains the maximum call buffer size
-    /// * `partner_oracle_config` - Sets the program ID and account pubkey that own the partner oracle signer set, and the required signature threshold
-    pub fn initialize(
-        ctx: Context<Initialize>,
-        eip1559_config: Eip1559Config,
-        gas_config: GasConfig,
-        protocol_config: ProtocolConfig,
-        buffer_config: BufferConfig,
-        partner_oracle_config: PartnerOracleConfig,
-    ) -> Result<()> {
-        initialize_handler(
-            ctx,
-            eip1559_config,
-            gas_config,
-            protocol_config,
-            buffer_config,
-            partner_oracle_config,
-        )
+    /// * `ctx` - The context containing all accounts needed for initialization, including the guardian signer
+    /// * `cfg` - All the configuration parameters needed to initialize the bridge
+    pub fn initialize(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
+        initialize_handler(ctx, cfg)
     }
 
     // Base -> Solana
@@ -98,15 +79,10 @@ pub mod bridge {
     /// and can only be called by the guardian.
     ///
     /// # Arguments
-    /// * `ctx`       - The context containing the bridge, guardian signer, and oracle signers accounts
-    /// * `threshold` - The number of required unique valid signatures; must be <= number of signers
-    /// * `signers`   - The list of 20-byte Ethereum addresses allowed to sign (max 32, must be unique)
-    pub fn set_oracle_signers(
-        ctx: Context<SetOracleSigners>,
-        threshold: u8,
-        signers: Vec<[u8; 20]>,
-    ) -> Result<()> {
-        set_oracle_signers_handler(ctx, threshold, signers)
+    /// * `ctx` - The context containing the bridge, guardian signer, and oracle signers accounts
+    /// * `cfg` - Configuration parameters for Base oracle signers
+    pub fn set_oracle_signers(ctx: Context<SetOracleSigners>, cfg: BaseOracleConfig) -> Result<()> {
+        set_oracle_signers_handler(ctx, cfg)
     }
 
     /// Proves that a cross-chain message exists in the Base Bridge contract using an MMR proof.

@@ -1,10 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::common::{
-    bridge::{
-        Bridge, BufferConfig, Eip1559, Eip1559Config, GasConfig, PartnerOracleConfig,
-        ProtocolConfig,
-    },
+    bridge::{Bridge, Config, Eip1559},
     BRIDGE_SEED,
 };
 use crate::common::{state::oracle_signers::OracleSigners, ORACLE_SIGNERS_SEED};
@@ -55,16 +52,10 @@ pub struct Initialize<'info> {
 /// Initializes the `Bridge` state account with the provided configs, sets the guardian to the
 /// provided signer, starts unpaused, zeros counters, sets the EIP-1559 base fee to
 /// `eip1559_config.minimum_base_fee`, and records the current timestamp as the window start.
-pub fn initialize_handler(
-    ctx: Context<Initialize>,
-    eip1559_config: Eip1559Config,
-    gas_config: GasConfig,
-    protocol_config: ProtocolConfig,
-    buffer_config: BufferConfig,
-    partner_oracle_config: PartnerOracleConfig,
-) -> Result<()> {
+pub fn initialize_handler(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
     let current_timestamp = Clock::get()?.unix_timestamp;
-    let minimum_base_fee = eip1559_config.minimum_base_fee;
+    let minimum_base_fee = cfg.eip1559_config.minimum_base_fee;
+    cfg.base_oracle_config.validate()?;
 
     *ctx.accounts.bridge = Bridge {
         base_block_number: 0,
@@ -72,16 +63,21 @@ pub fn initialize_handler(
         guardian: ctx.accounts.guardian.key(),
         paused: false, // Initialize bridge as unpaused
         eip1559: Eip1559 {
-            config: eip1559_config,
+            config: cfg.eip1559_config,
             current_base_fee: minimum_base_fee,
             current_window_gas_used: 0,
             window_start_time: current_timestamp,
         },
-        gas_config,
-        protocol_config,
-        buffer_config,
-        partner_oracle_config,
+        gas_config: cfg.gas_config,
+        protocol_config: cfg.protocol_config,
+        buffer_config: cfg.buffer_config,
+        partner_oracle_config: cfg.partner_oracle_config,
     };
+
+    // Initialize oracle signers configuration with provided values
+    ctx.accounts.oracle_signers.threshold = cfg.base_oracle_config.oracle_threshold;
+    ctx.accounts.oracle_signers.signer_count = cfg.base_oracle_config.signer_count;
+    ctx.accounts.oracle_signers.signers = cfg.base_oracle_config.oracle_signer_addrs;
 
     Ok(())
 }
@@ -103,7 +99,16 @@ mod tests {
     use solana_signer::Signer;
     use solana_transaction::Transaction;
 
-    use crate::{accounts, instruction::Initialize, test_utils::mock_clock, ID};
+    use crate::{
+        accounts,
+        common::{
+            bridge::{BufferConfig, Eip1559Config, GasConfig, PartnerOracleConfig, ProtocolConfig},
+            BaseOracleConfig,
+        },
+        instruction::Initialize,
+        test_utils::mock_clock,
+        ID,
+    };
 
     #[test]
     fn test_initialize_handler() {
@@ -143,11 +148,14 @@ mod tests {
             program_id: ID,
             accounts,
             data: Initialize {
-                eip1559_config: Eip1559Config::test_new(),
-                gas_config: GasConfig::test_new(gas_fee_receiver),
-                protocol_config: ProtocolConfig::test_new(),
-                buffer_config: BufferConfig::test_new(),
-                partner_oracle_config: PartnerOracleConfig::default(),
+                cfg: Config {
+                    eip1559_config: Eip1559Config::test_new(),
+                    gas_config: GasConfig::test_new(gas_fee_receiver),
+                    protocol_config: ProtocolConfig::test_new(),
+                    buffer_config: BufferConfig::test_new(),
+                    partner_oracle_config: PartnerOracleConfig::default(),
+                    base_oracle_config: BaseOracleConfig::test_new(),
+                },
             }
             .data(),
         };
