@@ -66,6 +66,11 @@ pub fn initialize_handler(
     let current_timestamp = Clock::get()?.unix_timestamp;
     let minimum_base_fee = eip1559_config.minimum_base_fee;
 
+    require!(
+        partner_oracle_config.required_threshold <= 5,
+        InitializeError::InvalidPartnerThreshold
+    );
+
     *ctx.accounts.bridge = Bridge {
         base_block_number: 0,
         nonce: 0,
@@ -84,6 +89,12 @@ pub fn initialize_handler(
     };
 
     Ok(())
+}
+
+#[error_code]
+pub enum InitializeError {
+    #[msg("Invalid partner threshold")]
+    InvalidPartnerThreshold,
 }
 
 #[cfg(test)]
@@ -105,8 +116,9 @@ mod tests {
 
     use crate::{accounts, instruction::Initialize, test_utils::mock_clock, ID};
 
-    #[test]
-    fn test_initialize_handler() {
+    const TEST_TIMESTAMP: i64 = 1747440000; // May 16th, 2025
+
+    fn setup_env() -> (LiteSVM, Keypair, Keypair, Pubkey, Vec<AccountMeta>) {
         let mut svm = LiteSVM::new();
         svm.add_program_from_file(ID, "../../target/deploy/bridge.so")
             .unwrap();
@@ -121,21 +133,30 @@ mod tests {
         let guardian_pk = guardian.pubkey();
 
         // Mock the clock to ensure we get a proper timestamp
-        let timestamp = 1747440000; // May 16th, 2025
-        mock_clock(&mut svm, timestamp);
+        mock_clock(&mut svm, TEST_TIMESTAMP);
 
-        // Find the Bridge PDA
+        // Find the PDAs
         let bridge_pda = Pubkey::find_program_address(&[BRIDGE_SEED], &ID).0;
+        let oracle_signers_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
 
         // Build the Initialize instruction accounts
         let accounts = accounts::Initialize {
             payer: payer_pk,
             bridge: bridge_pda,
             guardian: guardian_pk,
-            oracle_signers: Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0,
+            oracle_signers: oracle_signers_pda,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
+
+        (svm, payer, guardian, bridge_pda, accounts)
+    }
+
+    #[test]
+    fn test_initialize_handler() {
+        let (mut svm, payer, guardian, bridge_pda, accounts) = setup_env();
+        let payer_pk = payer.pubkey();
+        let guardian_pk = guardian.pubkey();
 
         // Build the Initialize instruction (no guardian parameter needed)
         let gas_fee_receiver = Pubkey::new_unique();
@@ -180,7 +201,7 @@ mod tests {
                     config: Eip1559Config::test_new(),
                     current_base_fee: 1,
                     current_window_gas_used: 0,
-                    window_start_time: timestamp,
+                    window_start_time: TEST_TIMESTAMP,
                 },
                 gas_config: GasConfig::test_new(gas_fee_receiver),
                 protocol_config: ProtocolConfig::test_new(),
@@ -188,5 +209,41 @@ mod tests {
                 partner_oracle_config: PartnerOracleConfig::default(),
             }
         );
+    }
+
+    #[test]
+    fn test_initialize_partner_threshold_too_high_fails() {
+        let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
+        let payer_pk = payer.pubkey();
+
+        // Build the Initialize instruction with an invalid partner threshold (> 5)
+        let gas_fee_receiver = Pubkey::new_unique();
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: Initialize {
+                eip1559_config: Eip1559Config::test_new(),
+                gas_config: GasConfig::test_new(gas_fee_receiver),
+                protocol_config: ProtocolConfig::test_new(),
+                buffer_config: BufferConfig::test_new(),
+                partner_oracle_config: PartnerOracleConfig {
+                    program_id: Pubkey::default(),
+                    signers_account: Pubkey::default(),
+                    required_threshold: 6,
+                },
+            }
+            .data(),
+        };
+
+        // Build the transaction with both payer and guardian as signers
+        let tx = Transaction::new(
+            &[&payer, &guardian],
+            Message::new(&[ix], Some(&payer_pk)),
+            svm.latest_blockhash(),
+        );
+
+        // Send the transaction and expect failure
+        let result = svm.send_transaction(tx);
+        assert!(result.is_err());
     }
 }
