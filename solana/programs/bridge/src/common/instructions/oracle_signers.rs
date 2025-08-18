@@ -51,7 +51,7 @@ pub fn set_oracle_signers_handler(
     signers: Vec<[u8; 20]>,
 ) -> Result<()> {
     require!(
-        threshold as usize <= signers.len(),
+        threshold > 0 && threshold as usize <= signers.len(),
         OracleSignersError::InvalidThreshold
     );
     require!(signers.len() <= 32, OracleSignersError::TooManySigners);

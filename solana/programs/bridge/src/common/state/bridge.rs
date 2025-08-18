@@ -7,21 +7,21 @@ use crate::common::internal::math::{fixed_pow, SCALE};
 pub struct Bridge {
     /// The Base block number associated with the latest registered output root.
     pub base_block_number: u64,
-    /// Incremental nonce assigned to each message.
+    /// Incremental nonce assigned to each outgoing message.
     pub nonce: u64,
-    /// Guardian pubkey authorized to update configuration
+    /// Guardian pubkey authorized to update bridge configuration parameters
     pub guardian: Pubkey,
     /// Whether the bridge is paused (emergency stop mechanism)
     pub paused: bool,
     /// EIP-1559 state and configuration for dynamic pricing.
     pub eip1559: Eip1559,
-    /// Gas configuration
+    /// Configuration parameters for outgoing message pricing
     pub gas_config: GasConfig,
-    /// Protocol configuration
+    /// Configuration parameters for bridge protocol
     pub protocol_config: ProtocolConfig,
-    /// Buffer configuration
+    /// Configuration parameters for pre-loading Solana --> Base messages in buffer accounts
     pub buffer_config: BufferConfig,
-    /// Partner oracle configuration (program-owned account holding signer set)
+    /// Partner oracle configuration containing the required signature threshold
     pub partner_oracle_config: PartnerOracleConfig,
 }
 
@@ -39,13 +39,13 @@ pub struct Eip1559 {
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct Eip1559Config {
-    /// Gas target per window (configurable)
+    /// Gas target per window
     pub target: u64,
-    /// Adjustment denominator (controls rate of change) (configurable)
+    /// Adjustment denominator (controls rate of change)
     pub denominator: u64,
-    /// Window duration in seconds (configurable)
+    /// Window duration in seconds
     pub window_duration_seconds: u64,
-    /// Minimum base fee (configurable). Used to seed `current_base_fee` at initialization
+    /// Minimum base fee. Used to seed `current_base_fee` at initialization
     /// and as an underflow clamp during decreases; not enforced as a strict lower bound
     /// on every step.
     pub minimum_base_fee: u64,
@@ -153,28 +153,25 @@ pub struct GasConfig {
     pub gas_cost_scaler_dp: u64,
     /// Account that receives gas fees collected on Solana
     pub gas_fee_receiver: Pubkey,
-    /// Amount of gas per cross-chain message
+    /// Amount of gas per Solana --> Base message
     pub gas_per_call: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct ProtocolConfig {
-    /// Block interval requirement for output root registration
+    /// Block interval requirement for output root registration. Every Base block associated with a
+    /// submitted output root must be a multiple of this number.
     pub block_interval_requirement: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct BufferConfig {
-    /// Maximum call buffer size
+    /// Maximum call buffer size. This caps the max size of a Solana → Base message.
     pub max_call_buffer_size: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize, Default)]
 pub struct PartnerOracleConfig {
-    /// Partner program id that owns the signers account
-    pub program_id: Pubkey,
-    /// Account address within partner program that stores the signer set
-    pub signers_account: Pubkey,
     /// Partner signatures required by our bridge to accept an output root
     pub required_threshold: u8,
 }
