@@ -17,7 +17,8 @@ pub struct OracleSigners {
 
 impl OracleSigners {
     pub fn contains(&self, evm_addr: &[u8; 20]) -> bool {
-        self.signers.iter().any(|s| s == evm_addr)
+        let active_len = core::cmp::min(self.signer_count as usize, self.signers.len());
+        self.signers[..active_len].iter().any(|s| s == evm_addr)
     }
 
     pub fn count_approvals(&self, signers: &[[u8; 20]]) -> u32 {
