@@ -30,8 +30,8 @@ use crate::{
     accounts,
     common::{
         bridge::{BufferConfig, Eip1559Config, GasConfig, PartnerOracleConfig, ProtocolConfig},
-        BaseOracleConfig, Config, PartialTokenMetadata, BRIDGE_SEED, ORACLE_SIGNERS_SEED,
-        WRAPPED_TOKEN_SEED,
+        BaseOracleConfig, Config, PartialTokenMetadata, BRIDGE_SEED, MAX_SIGNER_COUNT,
+        ORACLE_SIGNERS_SEED, WRAPPED_TOKEN_SEED,
     },
     instruction::Initialize,
     ID,
@@ -78,7 +78,7 @@ impl BufferConfig {
 
 impl BaseOracleConfig {
     pub fn test_new() -> Self {
-        let mut signer_addrs: [[u8; 20]; 16] = [[0u8; 20]; 16];
+        let mut signer_addrs: [[u8; 20]; MAX_SIGNER_COUNT] = [[0u8; 20]; MAX_SIGNER_COUNT];
         signer_addrs[0] = [1u8; 20];
 
         Self {

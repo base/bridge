@@ -59,10 +59,10 @@ pub fn set_oracle_signers_handler(
 
 #[cfg(test)]
 mod tests {
-    use crate::common::state::{bridge::BaseOracleConfig, oracle_signers::OracleSigners};
+    use crate::common::{state::oracle_signers::OracleSigners, BaseOracleConfig, MAX_SIGNER_COUNT};
 
     fn base_cfg(threshold: u8, signer_count: u8, first_two_same: bool) -> BaseOracleConfig {
-        let mut addrs: [[u8; 20]; 16] = [[0u8; 20]; 16];
+        let mut addrs: [[u8; 20]; MAX_SIGNER_COUNT] = [[0u8; 20]; MAX_SIGNER_COUNT];
         if signer_count > 0 {
             addrs[0] = [1u8; 20];
         }
@@ -121,7 +121,7 @@ mod tests {
             threshold: 2,
             signer_count: 2,
             signers: {
-                let mut a = [[0u8; 20]; 16];
+                let mut a = [[0u8; 20]; MAX_SIGNER_COUNT];
                 a[0] = [1u8; 20];
                 a[1] = [2u8; 20];
                 a

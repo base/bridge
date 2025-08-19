@@ -150,9 +150,14 @@ mod tests {
 
     use crate::{
         accounts,
-        base_to_solana::constants::{OUTPUT_ROOT_SEED, PARTNER_SIGNERS_ACCOUNT_SEED},
-        base_to_solana::internal::compute_output_root_message_hash,
-        common::{bridge::Bridge, state::oracle_signers::OracleSigners, ORACLE_SIGNERS_SEED},
+        base_to_solana::{
+            constants::{OUTPUT_ROOT_SEED, PARTNER_SIGNERS_ACCOUNT_SEED},
+            internal::compute_output_root_message_hash,
+        },
+        common::{
+            bridge::Bridge, state::oracle_signers::OracleSigners, MAX_SIGNER_COUNT,
+            ORACLE_SIGNERS_SEED,
+        },
         instruction::RegisterOutputRoot as RegisterOutputRootIx,
         partner_config::PartnerConfig,
         test_utils::setup_bridge_and_svm,
@@ -172,9 +177,9 @@ mod tests {
 
     fn write_partner_config_account(svm: &mut LiteSVM, signers: &[[u8; 20]]) -> Pubkey {
         let pda = partner_config_pda();
-        // Build fixed-size array of up to 16 signers
-        let mut fixed: [[u8; 20]; 16] = [[0u8; 20]; 16];
-        let count = core::cmp::min(signers.len(), 16);
+        // Build fixed-size array of up to `MAX_SIGNER_COUNT` signers
+        let mut fixed: [[u8; 20]; MAX_SIGNER_COUNT] = [[0u8; 20]; MAX_SIGNER_COUNT];
+        let count = core::cmp::min(signers.len(), MAX_SIGNER_COUNT);
         fixed[..count].copy_from_slice(&signers[..count]);
         let cfg = PartnerConfig {
             signer_count: count as u8,
@@ -278,7 +283,7 @@ mod tests {
         let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
         let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
         oracle.threshold = 1;
-        let mut fixed_signers = [[0u8; 20]; 16];
+        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
         fixed_signers[0] = addr;
         oracle.signers = fixed_signers;
         oracle.signer_count = 1;
@@ -532,7 +537,7 @@ mod tests {
         let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
         let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
         oracle.threshold = 1;
-        let mut fixed_signers = [[0u8; 20]; 16];
+        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
         fixed_signers[0] = [7u8; 20];
         oracle.signers = fixed_signers;
         oracle.signer_count = 1;
@@ -626,7 +631,7 @@ mod tests {
             make_eth_sig_and_addr(sk2, output_root, base_block_number, total_leaf_count);
 
         oracle.threshold = 2;
-        let mut fixed_signers = [[0u8; 20]; 16];
+        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
         fixed_signers[0] = addr1;
         fixed_signers[1] = addr2;
         oracle.signers = fixed_signers;
@@ -677,7 +682,7 @@ mod tests {
             make_eth_sig_and_addr(sk, output_root, base_block_number, total_leaf_count);
 
         oracle.threshold = 2;
-        let mut fixed_signers = [[0u8; 20]; 16];
+        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
         fixed_signers[0] = addr;
         oracle.signers = fixed_signers;
         oracle.signer_count = 1;
@@ -718,7 +723,7 @@ mod tests {
         let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
         oracle.threshold = 1;
         // authorize some dummy address so that threshold logic would pass if signature were valid
-        let mut fixed_signers = [[0u8; 20]; 16];
+        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
         fixed_signers[0] = [0xAA; 20];
         oracle.signers = fixed_signers;
         oracle.signer_count = 1;

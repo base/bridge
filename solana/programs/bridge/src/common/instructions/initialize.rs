@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
 use crate::common::{
-    bridge::{Bridge, Config, Eip1559},
-    BRIDGE_SEED, MAX_PARTNER_VALIDATOR_THRESHOLD,
+    bridge::{Bridge, Eip1559},
+    Config, BRIDGE_SEED,
 };
 use crate::common::{state::oracle_signers::OracleSigners, ORACLE_SIGNERS_SEED};
 
@@ -55,12 +55,8 @@ pub struct Initialize<'info> {
 pub fn initialize_handler(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
     let current_timestamp = Clock::get()?.unix_timestamp;
     let minimum_base_fee = cfg.eip1559_config.minimum_base_fee;
-    cfg.base_oracle_config.validate()?;
 
-    require!(
-        cfg.partner_oracle_config.required_threshold <= MAX_PARTNER_VALIDATOR_THRESHOLD,
-        InitializeError::InvalidPartnerThreshold
-    );
+    cfg.validate()?;
 
     *ctx.accounts.bridge = Bridge {
         base_block_number: 0,
@@ -85,12 +81,6 @@ pub fn initialize_handler(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
     ctx.accounts.oracle_signers.signers = cfg.base_oracle_config.oracle_signer_addrs;
 
     Ok(())
-}
-
-#[error_code]
-pub enum InitializeError {
-    #[msg("Invalid partner threshold")]
-    InvalidPartnerThreshold,
 }
 
 #[cfg(test)]
@@ -337,10 +327,10 @@ mod tests {
         let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
         let payer_pk = payer.pubkey();
 
-        // Build the Initialize instruction with signer_count > oracle_signer_addrs.len() (17 > 16)
+        // Build the Initialize instruction with signer_count > oracle_signer_addrs.len()
         let gas_fee_receiver = Pubkey::new_unique();
         let mut base_oracle_config = BaseOracleConfig::test_new();
-        base_oracle_config.signer_count = 17; // exceed fixed array length (16)
+        base_oracle_config.signer_count = (base_oracle_config.oracle_signer_addrs.len() + 1) as u8; // exceed fixed array length
         base_oracle_config.oracle_threshold = 1; // keep valid threshold
 
         let ix = Instruction {

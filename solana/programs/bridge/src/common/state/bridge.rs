@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
 
-use crate::common::internal::math::{fixed_pow, SCALE};
+use crate::common::{
+    internal::math::{fixed_pow, SCALE},
+    MAX_PARTNER_VALIDATOR_THRESHOLD,
+};
 
 #[account]
 #[derive(Debug, PartialEq, Eq, InitSpace)]
@@ -26,69 +29,8 @@ pub struct Bridge {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct Config {
-    pub eip1559_config: Eip1559Config,
-    /// Configuration parameters for outgoing message pricing
-    pub gas_config: GasConfig,
-    /// Configuration parameters for bridge protocol
-    pub protocol_config: ProtocolConfig,
-    /// Configuration parameters for pre-loading Solana --> Base messages in buffer accounts
-    pub buffer_config: BufferConfig,
-    /// Partner oracle configuration containing the required signature threshold
-    pub partner_oracle_config: PartnerOracleConfig,
-    /// Configuration parameters for Base oracle signers
-    pub base_oracle_config: BaseOracleConfig,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
-pub struct BaseOracleConfig {
-    /// Number of required valid unique signatures
-    pub oracle_threshold: u8,
-    /// Number of signers in `oracle_signer_addrs` array
-    pub signer_count: u8,
-    /// Static list of authorized signer addresses
-    pub oracle_signer_addrs: [[u8; 20]; 16],
-}
-
-impl BaseOracleConfig {
-    pub fn validate(&self) -> Result<()> {
-        require!(
-            self.oracle_threshold > 0 && self.oracle_threshold <= self.signer_count,
-            OracleSignersError::InvalidThreshold
-        );
-        require!(
-            self.signer_count as usize <= self.oracle_signer_addrs.len(),
-            OracleSignersError::TooManySigners
-        );
-
-        // Ensure uniqueness among the provided signer_count entries
-        {
-            let provided_count = self.signer_count as usize;
-            let mut addrs: Vec<[u8; 20]> = self.oracle_signer_addrs[..provided_count].to_vec();
-            addrs.sort();
-            addrs.dedup();
-            require!(
-                addrs.len() == provided_count,
-                OracleSignersError::DuplicateSigner
-            );
-        }
-
-        Ok(())
-    }
-}
-
-#[error_code]
-pub enum OracleSignersError {
-    #[msg("Threshold must be <= number of signers")]
-    InvalidThreshold,
-    #[msg("Too many signers (max 32)")]
-    TooManySigners,
-    #[msg("Duplicate signer found")]
-    DuplicateSigner,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct Eip1559 {
+    /// Configuration parameters for EIP-1559-inspired fee calculations
     pub config: Eip1559Config,
     /// Current base fee used in fee computation (runtime state).
     /// Unitless value combined with `gas_per_call` and gas cost scaler to produce lamports.
@@ -236,6 +178,22 @@ pub struct BufferConfig {
 pub struct PartnerOracleConfig {
     /// Partner signatures required by our bridge to accept an output root
     pub required_threshold: u8,
+}
+
+impl PartnerOracleConfig {
+    pub fn validate(&self) -> Result<()> {
+        require!(
+            self.required_threshold <= MAX_PARTNER_VALIDATOR_THRESHOLD,
+            InitializeError::InvalidPartnerThreshold
+        );
+        Ok(())
+    }
+}
+
+#[error_code]
+pub enum InitializeError {
+    #[msg("Invalid partner threshold")]
+    InvalidPartnerThreshold,
 }
 
 #[cfg(test)]
