@@ -5,9 +5,7 @@ use crate::base_to_solana::state::partner_config::PartnerConfig;
 use crate::base_to_solana::{compute_output_root_message_hash, recover_unique_evm_addresses};
 use crate::{
     base_to_solana::{constants::OUTPUT_ROOT_SEED, state::OutputRoot},
-    common::{
-        bridge::Bridge, state::oracle_signers::OracleSigners, BRIDGE_SEED, ORACLE_SIGNERS_SEED,
-    },
+    common::{bridge::Bridge, BRIDGE_SEED},
 };
 
 /// Accounts struct for the `register_output_root` instruction that stores Base MMR roots
@@ -42,10 +40,6 @@ pub struct RegisterOutputRoot<'info> {
     /// - Enforces registrations are monotonic and aligned to the configured interval
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
-
-    /// Oracle signers and threshold configuration
-    #[account(seeds = [ORACLE_SIGNERS_SEED], bump)]
-    pub oracle_signers: Account<'info, OracleSigners>,
 
     /// Partner `Config` account (PDA with seed "config") owned by partner program.
     /// Unchecked to avoid Anchor pre-handler owner checks; PDA address is validated in the handler.
@@ -86,9 +80,13 @@ pub fn register_output_root_handler(
     let unique_signers = recover_unique_evm_addresses(&signatures, &message_hash)?;
 
     // Verify Base oracle approvals
-    let base_approved_count = ctx.accounts.oracle_signers.count_approvals(&unique_signers);
+    let base_approved_count = ctx
+        .accounts
+        .bridge
+        .base_oracle_config
+        .count_approvals(&unique_signers);
     require!(
-        base_approved_count as u8 >= ctx.accounts.oracle_signers.threshold,
+        base_approved_count as u8 >= ctx.accounts.bridge.base_oracle_config.threshold,
         RegisterOutputRootError::InsufficientBaseSignatures
     );
 
@@ -154,10 +152,7 @@ mod tests {
             constants::{OUTPUT_ROOT_SEED, PARTNER_SIGNERS_ACCOUNT_SEED},
             internal::compute_output_root_message_hash,
         },
-        common::{
-            bridge::Bridge, state::oracle_signers::OracleSigners, MAX_SIGNER_COUNT,
-            ORACLE_SIGNERS_SEED,
-        },
+        common::{bridge::Bridge, MAX_SIGNER_COUNT},
         instruction::RegisterOutputRoot as RegisterOutputRootIx,
         partner_config::PartnerConfig,
         test_utils::setup_bridge_and_svm,
@@ -217,7 +212,6 @@ mod tests {
             payer: payer.pubkey(),
             root: root_pda,
             bridge: bridge_pda,
-            oracle_signers: Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0,
             partner_config: partner_cfg_pda,
             system_program: system_program::ID,
         }
@@ -278,23 +272,27 @@ mod tests {
         (sig65, addr)
     }
 
-    fn set_oracle_signers_threshold_one(svm: &mut LiteSVM, addr: [u8; 20]) {
-        let oracle_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
-        let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
-        let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
-        oracle.threshold = 1;
+    fn set_base_oracle_signers_threshold_one(
+        svm: &mut LiteSVM,
+        bridge_pda: Pubkey,
+        addr: [u8; 20],
+    ) {
+        let mut bridge_acc = svm.get_account(&bridge_pda).unwrap();
+        let mut bridge = Bridge::try_deserialize(&mut &bridge_acc.data[..]).unwrap();
+        bridge.base_oracle_config.threshold = 1;
+        bridge.base_oracle_config.signer_count = 1;
         let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
         fixed_signers[0] = addr;
-        oracle.signers = fixed_signers;
-        oracle.signer_count = 1;
+        bridge.base_oracle_config.signers = fixed_signers;
         let mut new_data = Vec::new();
-        oracle.try_serialize(&mut new_data).unwrap();
-        oracle_acc.data = new_data;
-        svm.set_account(oracle_pda, oracle_acc).unwrap();
+        bridge.try_serialize(&mut new_data).unwrap();
+        bridge_acc.data = new_data;
+        svm.set_account(bridge_pda, bridge_acc).unwrap();
     }
 
     fn prepare_base_sig_and_set_oracle(
         svm: &mut LiteSVM,
+        bridge_pda: Pubkey,
         sk_bytes: [u8; 32],
         output_root: [u8; 32],
         base_block_number: u64,
@@ -302,7 +300,7 @@ mod tests {
     ) -> [u8; 65] {
         let (sig, addr) =
             make_eth_sig_and_addr(sk_bytes, output_root, base_block_number, total_leaf_count);
-        set_oracle_signers_threshold_one(svm, addr);
+        set_base_oracle_signers_threshold_one(svm, bridge_pda, addr);
         sig
     }
 
@@ -318,6 +316,7 @@ mod tests {
         // Configure base oracle with a signer matching our generated signature
         let sig = prepare_base_sig_and_set_oracle(
             &mut svm,
+            bridge_pda,
             [42u8; 32],
             output_root,
             base_block_number,
@@ -355,6 +354,7 @@ mod tests {
         // Configure base oracle and provide a valid signature
         let sig = prepare_base_sig_and_set_oracle(
             &mut svm,
+            bridge_pda,
             [43u8; 32],
             output_root,
             base_block_number,
@@ -392,6 +392,7 @@ mod tests {
         // Configure base oracle and provide a valid signature
         let sig = prepare_base_sig_and_set_oracle(
             &mut svm,
+            bridge_pda,
             [44u8; 32],
             output_root,
             base_block_number,
@@ -457,6 +458,7 @@ mod tests {
         // Configure base oracle and provide a valid signature so we hit the block interval check
         let sig = prepare_base_sig_and_set_oracle(
             &mut svm,
+            bridge_pda,
             [45u8; 32],
             output_root,
             base_block_number,
@@ -503,6 +505,7 @@ mod tests {
         // Configure base oracle and provide a valid signature so we hit the monotonicity check
         let sig = prepare_base_sig_and_set_oracle(
             &mut svm,
+            bridge_pda,
             [46u8; 32],
             output_root,
             base_block_number,
@@ -532,19 +535,18 @@ mod tests {
         let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
-        // Raise base oracle threshold to 1
-        let oracle_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
-        let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
-        let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
-        oracle.threshold = 1;
+        // Raise base oracle threshold to 1 and set a dummy signer on the bridge config
+        let mut bridge_acc = svm.get_account(&bridge_pda).unwrap();
+        let mut bridge = Bridge::try_deserialize(&mut &bridge_acc.data[..]).unwrap();
+        bridge.base_oracle_config.threshold = 1;
+        bridge.base_oracle_config.signer_count = 1;
         let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
         fixed_signers[0] = [7u8; 20];
-        oracle.signers = fixed_signers;
-        oracle.signer_count = 1;
+        bridge.base_oracle_config.signers = fixed_signers;
         let mut new_data = Vec::new();
-        oracle.try_serialize(&mut new_data).unwrap();
-        oracle_acc.data = new_data;
-        svm.set_account(oracle_pda, oracle_acc).unwrap();
+        bridge.try_serialize(&mut new_data).unwrap();
+        bridge_acc.data = new_data;
+        svm.set_account(bridge_pda, bridge_acc).unwrap();
 
         // No signatures provided -> not enough unique approvals
         let result = send_register(
@@ -586,6 +588,7 @@ mod tests {
         let total_leaf_count = 10;
         let sig = prepare_base_sig_and_set_oracle(
             &mut svm,
+            bridge_pda,
             [47u8; 32],
             output_root,
             base_block_number,
@@ -614,10 +617,9 @@ mod tests {
     fn test_signature_verification_success_with_thresholds() {
         let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
 
-        // Configure base oracle signers threshold = 2 with 2 authorized addrs
-        let oracle_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
-        let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
-        let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
+        // Configure base oracle signers threshold = 2 with 2 authorized addrs on the bridge config
+        let mut bridge_acc = svm.get_account(&bridge_pda).unwrap();
+        let mut bridge = Bridge::try_deserialize(&mut &bridge_acc.data[..]).unwrap();
 
         // Generate two ECDSA keypairs and signatures
         let sk1 = [1u8; 32];
@@ -630,16 +632,16 @@ mod tests {
         let (sig2, addr2) =
             make_eth_sig_and_addr(sk2, output_root, base_block_number, total_leaf_count);
 
-        oracle.threshold = 2;
+        bridge.base_oracle_config.threshold = 2;
         let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
         fixed_signers[0] = addr1;
         fixed_signers[1] = addr2;
-        oracle.signers = fixed_signers;
-        oracle.signer_count = 2;
+        bridge.base_oracle_config.signers = fixed_signers;
+        bridge.base_oracle_config.signer_count = 2;
         let mut new_data = Vec::new();
-        oracle.try_serialize(&mut new_data).unwrap();
-        oracle_acc.data = new_data;
-        svm.set_account(oracle_pda, oracle_acc).unwrap();
+        bridge.try_serialize(&mut new_data).unwrap();
+        bridge_acc.data = new_data;
+        svm.set_account(bridge_pda, bridge_acc).unwrap();
 
         // Partner requires 1 signature and authorizes signer addr1
         let partner_cfg = write_partner_config_account(&mut svm, &[addr1]);
@@ -670,9 +672,8 @@ mod tests {
         let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
 
         // Base oracle requires 2 unique approvals, but we will submit the same signer twice
-        let oracle_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
-        let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
-        let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
+        let mut bridge_acc = svm.get_account(&bridge_pda).unwrap();
+        let mut bridge = Bridge::try_deserialize(&mut &bridge_acc.data[..]).unwrap();
 
         let sk = [3u8; 32];
         let output_root = [12u8; 32];
@@ -681,15 +682,15 @@ mod tests {
         let (sig, addr) =
             make_eth_sig_and_addr(sk, output_root, base_block_number, total_leaf_count);
 
-        oracle.threshold = 2;
+        bridge.base_oracle_config.threshold = 2;
         let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
         fixed_signers[0] = addr;
-        oracle.signers = fixed_signers;
-        oracle.signer_count = 1;
+        bridge.base_oracle_config.signers = fixed_signers;
+        bridge.base_oracle_config.signer_count = 1;
         let mut new_data = Vec::new();
-        oracle.try_serialize(&mut new_data).unwrap();
-        oracle_acc.data = new_data;
-        svm.set_account(oracle_pda, oracle_acc).unwrap();
+        bridge.try_serialize(&mut new_data).unwrap();
+        bridge_acc.data = new_data;
+        svm.set_account(bridge_pda, bridge_acc).unwrap();
 
         // Partner threshold 0; focus on base signer dedup
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
@@ -718,19 +719,18 @@ mod tests {
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
         // Base oracle requires 1 signer but we'll submit an invalid signature (bad v)
-        let oracle_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
-        let mut oracle_acc = svm.get_account(&oracle_pda).unwrap();
-        let mut oracle = OracleSigners::try_deserialize(&mut &oracle_acc.data[..]).unwrap();
-        oracle.threshold = 1;
+        let mut bridge_acc = svm.get_account(&bridge_pda).unwrap();
+        let mut bridge = Bridge::try_deserialize(&mut &bridge_acc.data[..]).unwrap();
+        bridge.base_oracle_config.threshold = 1;
         // authorize some dummy address so that threshold logic would pass if signature were valid
         let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
         fixed_signers[0] = [0xAA; 20];
-        oracle.signers = fixed_signers;
-        oracle.signer_count = 1;
+        bridge.base_oracle_config.signers = fixed_signers;
+        bridge.base_oracle_config.signer_count = 1;
         let mut new_data = Vec::new();
-        oracle.try_serialize(&mut new_data).unwrap();
-        oracle_acc.data = new_data;
-        svm.set_account(oracle_pda, oracle_acc).unwrap();
+        bridge.try_serialize(&mut new_data).unwrap();
+        bridge_acc.data = new_data;
+        svm.set_account(bridge_pda, bridge_acc).unwrap();
 
         let output_root = [13u8; 32];
         let base_block_number = 1200;

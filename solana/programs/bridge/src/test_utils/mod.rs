@@ -31,7 +31,7 @@ use crate::{
     common::{
         bridge::{BufferConfig, Eip1559Config, GasConfig, PartnerOracleConfig, ProtocolConfig},
         BaseOracleConfig, Config, PartialTokenMetadata, BRIDGE_SEED, MAX_SIGNER_COUNT,
-        ORACLE_SIGNERS_SEED, WRAPPED_TOKEN_SEED,
+        WRAPPED_TOKEN_SEED,
     },
     instruction::Initialize,
     ID,
@@ -82,9 +82,9 @@ impl BaseOracleConfig {
         signer_addrs[0] = [1u8; 20];
 
         Self {
-            oracle_threshold: 1,
+            threshold: 1,
             signer_count: 1,
-            oracle_signer_addrs: signer_addrs,
+            signers: signer_addrs,
         }
     }
 }
@@ -112,7 +112,6 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
         payer: payer_pk,
         bridge: bridge_pda,
         guardian: guardian.pubkey(),
-        oracle_signers: Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0,
         system_program: system_program::ID,
     }
     .to_account_metas(None);

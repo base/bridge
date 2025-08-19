@@ -9,7 +9,6 @@ mod solana_to_base;
 use base_to_solana::*;
 use common::*;
 
-use common::instructions::oracle_signers::{set_oracle_signers_handler, SetOracleSigners};
 use common::{
     config::{
         set_adjustment_denominator_handler, set_block_interval_requirement_handler,
@@ -72,17 +71,6 @@ pub mod bridge {
             total_leaf_count,
             signatures,
         )
-    }
-
-    /// Sets the authorized oracle EVM signer addresses and the signature threshold used
-    /// when registering output roots. This function updates the `OracleSigners` account
-    /// and can only be called by the guardian.
-    ///
-    /// # Arguments
-    /// * `ctx` - The context containing the bridge, guardian signer, and oracle signers accounts
-    /// * `cfg` - Configuration parameters for Base oracle signers
-    pub fn set_oracle_signers(ctx: Context<SetOracleSigners>, cfg: BaseOracleConfig) -> Result<()> {
-        set_oracle_signers_handler(ctx, cfg)
     }
 
     /// Proves that a cross-chain message exists in the Base Bridge contract using an MMR proof.
@@ -321,6 +309,17 @@ pub mod bridge {
     /// * `new_guardian` - The pubkey of the new guardian
     pub fn transfer_guardian(ctx: Context<SetBridgeConfig>, new_guardian: Pubkey) -> Result<()> {
         transfer_guardian_handler(ctx, new_guardian)
+    }
+
+    /// Sets the authorized oracle EVM signer addresses and the signature threshold used
+    /// when registering output roots. This function updates the `OracleSigners` account
+    /// and can only be called by the guardian.
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge, guardian signer, and oracle signers accounts
+    /// * `cfg` - Configuration parameters for Base oracle signers
+    pub fn set_oracle_signers(ctx: Context<SetBridgeConfig>, cfg: BaseOracleConfig) -> Result<()> {
+        set_oracle_signers_handler(ctx, cfg)
     }
 
     // EIP-1559 Configuration Management

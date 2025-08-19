@@ -4,7 +4,6 @@ use crate::common::{
     bridge::{Bridge, Eip1559},
     Config, BRIDGE_SEED,
 };
-use crate::common::{state::oracle_signers::OracleSigners, ORACLE_SIGNERS_SEED};
 
 /// Accounts for the initialize instruction that sets up the bridge program's initial state.
 /// This instruction creates the main bridge account for cross-chain operations between Base and
@@ -33,16 +32,6 @@ pub struct Initialize<'info> {
     /// Must be a signer to prove ownership of the guardian key. The payer and guardian
     /// may be distinct signers.
     pub guardian: Signer<'info>,
-
-    /// Oracle signers config account storing Base signers and our required threshold for output root submissions
-    #[account(
-        init,
-        payer = payer,
-        seeds = [ORACLE_SIGNERS_SEED],
-        bump,
-        space = 8 + OracleSigners::INIT_SPACE,
-    )]
-    pub oracle_signers: Account<'info, OracleSigners>,
 
     /// System program required for creating new accounts.
     /// Used internally by Anchor for account initialization.
@@ -73,12 +62,8 @@ pub fn initialize_handler(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
         protocol_config: cfg.protocol_config,
         buffer_config: cfg.buffer_config,
         partner_oracle_config: cfg.partner_oracle_config,
+        base_oracle_config: cfg.base_oracle_config,
     };
-
-    // Initialize oracle signers configuration with provided values
-    ctx.accounts.oracle_signers.threshold = cfg.base_oracle_config.oracle_threshold;
-    ctx.accounts.oracle_signers.signer_count = cfg.base_oracle_config.signer_count;
-    ctx.accounts.oracle_signers.signers = cfg.base_oracle_config.oracle_signer_addrs;
 
     Ok(())
 }
@@ -132,14 +117,12 @@ mod tests {
 
         // Find the PDAs
         let bridge_pda = Pubkey::find_program_address(&[BRIDGE_SEED], &ID).0;
-        let oracle_signers_pda = Pubkey::find_program_address(&[ORACLE_SIGNERS_SEED], &ID).0;
 
         // Build the Initialize instruction accounts
         let accounts = accounts::Initialize {
             payer: payer_pk,
             bridge: bridge_pda,
             guardian: guardian_pk,
-            oracle_signers: oracle_signers_pda,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -205,6 +188,7 @@ mod tests {
                 protocol_config: ProtocolConfig::test_new(),
                 buffer_config: BufferConfig::test_new(),
                 partner_oracle_config: PartnerOracleConfig::default(),
+                base_oracle_config: BaseOracleConfig::test_new(),
             }
         );
     }
@@ -254,7 +238,7 @@ mod tests {
         // Build the Initialize instruction with an invalid base oracle threshold (== 0)
         let gas_fee_receiver = Pubkey::new_unique();
         let mut base_oracle_config = BaseOracleConfig::test_new();
-        base_oracle_config.oracle_threshold = 0;
+        base_oracle_config.threshold = 0;
 
         let ix = Instruction {
             program_id: ID,
@@ -292,7 +276,7 @@ mod tests {
         // Build the Initialize instruction with threshold > signer_count
         let gas_fee_receiver = Pubkey::new_unique();
         let mut base_oracle_config = BaseOracleConfig::test_new();
-        base_oracle_config.oracle_threshold = base_oracle_config.signer_count + 1; // 2 > 1
+        base_oracle_config.threshold = base_oracle_config.signer_count + 1; // 2 > 1
 
         let ix = Instruction {
             program_id: ID,
@@ -327,11 +311,11 @@ mod tests {
         let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
         let payer_pk = payer.pubkey();
 
-        // Build the Initialize instruction with signer_count > oracle_signer_addrs.len()
+        // Build the Initialize instruction with signer_count > signers.len()
         let gas_fee_receiver = Pubkey::new_unique();
         let mut base_oracle_config = BaseOracleConfig::test_new();
-        base_oracle_config.signer_count = (base_oracle_config.oracle_signer_addrs.len() + 1) as u8; // exceed fixed array length
-        base_oracle_config.oracle_threshold = 1; // keep valid threshold
+        base_oracle_config.signer_count = (base_oracle_config.signers.len() + 1) as u8; // exceed fixed array length
+        base_oracle_config.threshold = 1; // keep valid threshold
 
         let ix = Instruction {
             program_id: ID,
@@ -370,10 +354,10 @@ mod tests {
         let gas_fee_receiver = Pubkey::new_unique();
         let mut base_oracle_config = BaseOracleConfig::test_new();
         base_oracle_config.signer_count = 2; // consider first two entries
-        base_oracle_config.oracle_threshold = 1; // keep valid threshold
+        base_oracle_config.threshold = 1; // keep valid threshold
 
         // Force a duplicate among the first `signer_count` addresses
-        base_oracle_config.oracle_signer_addrs[1] = base_oracle_config.oracle_signer_addrs[0];
+        base_oracle_config.signers[1] = base_oracle_config.signers[0];
 
         let ix = Instruction {
             program_id: ID,
