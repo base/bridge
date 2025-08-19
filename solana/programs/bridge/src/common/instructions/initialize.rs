@@ -58,7 +58,7 @@ pub fn initialize_handler(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
     cfg.base_oracle_config.validate()?;
 
     require!(
-        partner_oracle_config.required_threshold <= 5,
+        cfg.partner_oracle_config.required_threshold <= 5,
         InitializeError::InvalidPartnerThreshold
     );
 
@@ -230,14 +230,15 @@ mod tests {
             program_id: ID,
             accounts,
             data: Initialize {
-                eip1559_config: Eip1559Config::test_new(),
-                gas_config: GasConfig::test_new(gas_fee_receiver),
-                protocol_config: ProtocolConfig::test_new(),
-                buffer_config: BufferConfig::test_new(),
-                partner_oracle_config: PartnerOracleConfig {
-                    program_id: Pubkey::default(),
-                    signers_account: Pubkey::default(),
-                    required_threshold: 6,
+                cfg: Config {
+                    eip1559_config: Eip1559Config::test_new(),
+                    gas_config: GasConfig::test_new(gas_fee_receiver),
+                    protocol_config: ProtocolConfig::test_new(),
+                    buffer_config: BufferConfig::test_new(),
+                    partner_oracle_config: PartnerOracleConfig {
+                        required_threshold: 6,
+                    },
+                    base_oracle_config: BaseOracleConfig::test_new(),
                 },
             }
             .data(),
