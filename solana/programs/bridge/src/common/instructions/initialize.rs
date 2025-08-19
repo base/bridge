@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::common::{
     bridge::{Bridge, Config, Eip1559},
-    BRIDGE_SEED,
+    BRIDGE_SEED, MAX_PARTNER_VALIDATOR_THRESHOLD,
 };
 use crate::common::{state::oracle_signers::OracleSigners, ORACLE_SIGNERS_SEED};
 
@@ -58,7 +58,7 @@ pub fn initialize_handler(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
     cfg.base_oracle_config.validate()?;
 
     require!(
-        cfg.partner_oracle_config.required_threshold <= 5,
+        cfg.partner_oracle_config.required_threshold <= MAX_PARTNER_VALIDATOR_THRESHOLD,
         InitializeError::InvalidPartnerThreshold
     );
 

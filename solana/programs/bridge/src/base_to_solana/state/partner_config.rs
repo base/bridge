@@ -22,6 +22,8 @@
 /// - Up to 16 signers are supported to keep the account small and rent-cheap.
 use anchor_lang::prelude::*;
 
+use crate::common::MAX_SIGNER_COUNT;
+
 #[account]
 #[derive(Debug)]
 pub struct PartnerConfig {
@@ -29,7 +31,7 @@ pub struct PartnerConfig {
     pub signer_count: u8,
     /// Fixed-capacity array of authorized EVM addresses (20-byte) for partner approvals.
     /// Only the first `signer_count` elements should be treated as initialized.
-    pub signers: [[u8; 20]; 16],
+    pub signers: [[u8; 20]; MAX_SIGNER_COUNT],
 }
 
 #[derive(Default)]

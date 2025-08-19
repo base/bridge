@@ -1,8 +1,9 @@
 use anchor_lang::prelude::*;
 
+use crate::common::MAX_SIGNER_COUNT;
+
 /// Stores the EVM addresses authorized to sign Base output roots and the
 /// minimum threshold required. Addresses are 20-byte Ethereum addresses
-/// (keccak(pubkey)[12..32]).
 #[account]
 #[derive(InitSpace)]
 pub struct OracleSigners {
@@ -11,7 +12,7 @@ pub struct OracleSigners {
     /// Number of signers in `oracle_signer_addrs` array
     pub signer_count: u8,
     /// Static list of authorized signer addresses
-    pub signers: [[u8; 20]; 16],
+    pub signers: [[u8; 20]; MAX_SIGNER_COUNT],
 }
 
 impl OracleSigners {
