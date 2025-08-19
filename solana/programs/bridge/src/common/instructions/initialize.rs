@@ -255,4 +255,161 @@ mod tests {
         let result = svm.send_transaction(tx);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_initialize_base_oracle_threshold_zero_fails() {
+        let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
+        let payer_pk = payer.pubkey();
+
+        // Build the Initialize instruction with an invalid base oracle threshold (== 0)
+        let gas_fee_receiver = Pubkey::new_unique();
+        let mut base_oracle_config = BaseOracleConfig::test_new();
+        base_oracle_config.oracle_threshold = 0;
+
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: Initialize {
+                cfg: Config {
+                    eip1559_config: Eip1559Config::test_new(),
+                    gas_config: GasConfig::test_new(gas_fee_receiver),
+                    protocol_config: ProtocolConfig::test_new(),
+                    buffer_config: BufferConfig::test_new(),
+                    partner_oracle_config: PartnerOracleConfig::default(),
+                    base_oracle_config,
+                },
+            }
+            .data(),
+        };
+
+        // Build the transaction with both payer and guardian as signers
+        let tx = Transaction::new(
+            &[&payer, &guardian],
+            Message::new(&[ix], Some(&payer_pk)),
+            svm.latest_blockhash(),
+        );
+
+        // Send the transaction and expect failure
+        let result = svm.send_transaction(tx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_initialize_base_oracle_threshold_gt_signer_count_fails() {
+        let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
+        let payer_pk = payer.pubkey();
+
+        // Build the Initialize instruction with threshold > signer_count
+        let gas_fee_receiver = Pubkey::new_unique();
+        let mut base_oracle_config = BaseOracleConfig::test_new();
+        base_oracle_config.oracle_threshold = base_oracle_config.signer_count + 1; // 2 > 1
+
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: Initialize {
+                cfg: Config {
+                    eip1559_config: Eip1559Config::test_new(),
+                    gas_config: GasConfig::test_new(gas_fee_receiver),
+                    protocol_config: ProtocolConfig::test_new(),
+                    buffer_config: BufferConfig::test_new(),
+                    partner_oracle_config: PartnerOracleConfig::default(),
+                    base_oracle_config,
+                },
+            }
+            .data(),
+        };
+
+        // Build the transaction with both payer and guardian as signers
+        let tx = Transaction::new(
+            &[&payer, &guardian],
+            Message::new(&[ix], Some(&payer_pk)),
+            svm.latest_blockhash(),
+        );
+
+        // Send the transaction and expect failure
+        let result = svm.send_transaction(tx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_initialize_base_oracle_signer_count_exceeds_array_len_fails() {
+        let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
+        let payer_pk = payer.pubkey();
+
+        // Build the Initialize instruction with signer_count > oracle_signer_addrs.len() (17 > 16)
+        let gas_fee_receiver = Pubkey::new_unique();
+        let mut base_oracle_config = BaseOracleConfig::test_new();
+        base_oracle_config.signer_count = 17; // exceed fixed array length (16)
+        base_oracle_config.oracle_threshold = 1; // keep valid threshold
+
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: Initialize {
+                cfg: Config {
+                    eip1559_config: Eip1559Config::test_new(),
+                    gas_config: GasConfig::test_new(gas_fee_receiver),
+                    protocol_config: ProtocolConfig::test_new(),
+                    buffer_config: BufferConfig::test_new(),
+                    partner_oracle_config: PartnerOracleConfig::default(),
+                    base_oracle_config,
+                },
+            }
+            .data(),
+        };
+
+        // Build the transaction with both payer and guardian as signers
+        let tx = Transaction::new(
+            &[&payer, &guardian],
+            Message::new(&[ix], Some(&payer_pk)),
+            svm.latest_blockhash(),
+        );
+
+        // Send the transaction and expect failure
+        let result = svm.send_transaction(tx);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_initialize_base_oracle_duplicate_signers_fails() {
+        let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
+        let payer_pk = payer.pubkey();
+
+        // Build the Initialize instruction with duplicate signer addresses among the provided entries
+        let gas_fee_receiver = Pubkey::new_unique();
+        let mut base_oracle_config = BaseOracleConfig::test_new();
+        base_oracle_config.signer_count = 2; // consider first two entries
+        base_oracle_config.oracle_threshold = 1; // keep valid threshold
+
+        // Force a duplicate among the first `signer_count` addresses
+        base_oracle_config.oracle_signer_addrs[1] = base_oracle_config.oracle_signer_addrs[0];
+
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: Initialize {
+                cfg: Config {
+                    eip1559_config: Eip1559Config::test_new(),
+                    gas_config: GasConfig::test_new(gas_fee_receiver),
+                    protocol_config: ProtocolConfig::test_new(),
+                    buffer_config: BufferConfig::test_new(),
+                    partner_oracle_config: PartnerOracleConfig::default(),
+                    base_oracle_config,
+                },
+            }
+            .data(),
+        };
+
+        // Build the transaction with both payer and guardian as signers
+        let tx = Transaction::new(
+            &[&payer, &guardian],
+            Message::new(&[ix], Some(&payer_pk)),
+            svm.latest_blockhash(),
+        );
+
+        // Send the transaction and expect failure due to duplicate signer detection
+        let result = svm.send_transaction(tx);
+        assert!(result.is_err());
+    }
 }

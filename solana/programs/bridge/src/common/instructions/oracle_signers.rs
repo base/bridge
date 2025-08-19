@@ -56,3 +56,83 @@ pub fn set_oracle_signers_handler(
     ctx.accounts.oracle_signers.signers = cfg.oracle_signer_addrs;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::common::state::{bridge::BaseOracleConfig, oracle_signers::OracleSigners};
+
+    fn base_cfg(threshold: u8, signer_count: u8, first_two_same: bool) -> BaseOracleConfig {
+        let mut addrs: [[u8; 20]; 16] = [[0u8; 20]; 16];
+        if signer_count > 0 {
+            addrs[0] = [1u8; 20];
+        }
+        if signer_count > 1 {
+            addrs[1] = if first_two_same { [1u8; 20] } else { [2u8; 20] };
+        }
+
+        BaseOracleConfig {
+            oracle_threshold: threshold,
+            signer_count,
+            oracle_signer_addrs: addrs,
+        }
+    }
+
+    #[test]
+    fn validate_ok() {
+        let cfg = base_cfg(1, 2, false);
+        assert!(cfg.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_invalid_threshold_zero() {
+        let cfg = base_cfg(0, 1, false);
+        let err = cfg.validate().unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("InvalidThreshold"));
+    }
+
+    #[test]
+    fn validate_invalid_threshold_gt_count() {
+        let cfg = base_cfg(3, 2, false);
+        let err = cfg.validate().unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("InvalidThreshold"));
+    }
+
+    #[test]
+    fn validate_too_many_signers() {
+        let cfg = base_cfg(1, 17, false);
+        let err = cfg.validate().unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("TooManySigners"));
+    }
+
+    #[test]
+    fn validate_duplicate_signer() {
+        let cfg = base_cfg(2, 2, true);
+        let err = cfg.validate().unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("DuplicateSigner"));
+    }
+
+    #[test]
+    fn oracle_signers_helpers() {
+        let oracle = OracleSigners {
+            threshold: 2,
+            signer_count: 2,
+            signers: {
+                let mut a = [[0u8; 20]; 16];
+                a[0] = [1u8; 20];
+                a[1] = [2u8; 20];
+                a
+            },
+        };
+
+        assert!(oracle.contains(&[1u8; 20]));
+        assert!(oracle.contains(&[2u8; 20]));
+        assert!(!oracle.contains(&[3u8; 20]));
+
+        let approvals = oracle.count_approvals(&[[1u8; 20], [3u8; 20]]);
+        assert_eq!(approvals, 1);
+    }
+}
