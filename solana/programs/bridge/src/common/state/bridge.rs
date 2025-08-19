@@ -196,7 +196,7 @@ impl PartnerOracleConfig {
 pub struct BaseOracleConfig {
     /// Number of required valid unique signatures
     pub threshold: u8,
-    /// Number of signers in `oracle_signer_addrs` array
+    /// Number of signers in `signers` array
     pub signer_count: u8,
     /// Static list of authorized signer addresses
     pub signers: [[u8; 20]; MAX_SIGNER_COUNT],
