@@ -136,6 +136,6 @@ impl OutgoingMessage {
     pub fn space<T: MessageSpace>(data_len: usize) -> usize {
         8 + // nonce
         32 + // sender
-        1 + T::space(data_len) // variant + transfer
+        1 + T::space(data_len) // message (variant + space)
     }
 }
