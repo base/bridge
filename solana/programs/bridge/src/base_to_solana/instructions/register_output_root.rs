@@ -148,13 +148,13 @@ mod tests {
 
     use crate::{
         accounts,
+        base_to_solana::state::partner_config::{PartnerConfig, PartnerSigner},
         base_to_solana::{
             constants::{OUTPUT_ROOT_SEED, PARTNER_SIGNERS_ACCOUNT_SEED},
             internal::compute_output_root_message_hash,
         },
         common::{bridge::Bridge, MAX_SIGNER_COUNT},
         instruction::RegisterOutputRoot as RegisterOutputRootIx,
-        partner_config::PartnerConfig,
         test_utils::setup_bridge_and_svm,
         ID,
     };
@@ -172,13 +172,12 @@ mod tests {
 
     fn write_partner_config_account(svm: &mut LiteSVM, signers: &[[u8; 20]]) -> Pubkey {
         let pda = partner_config_pda();
-        // Build fixed-size array of up to `MAX_SIGNER_COUNT` signers
-        let mut fixed: [[u8; 20]; MAX_SIGNER_COUNT] = [[0u8; 20]; MAX_SIGNER_COUNT];
-        let count = core::cmp::min(signers.len(), MAX_SIGNER_COUNT);
-        fixed[..count].copy_from_slice(&signers[..count]);
+        // Build PartnerConfig with provided EVM addresses; new_evm_address defaults to None
         let cfg = PartnerConfig {
-            signer_count: count as u8,
-            signers: fixed,
+            signers: signers
+                .iter()
+                .map(|addr| PartnerSigner::from_evm_address(*addr))
+                .collect(),
         };
         let mut data = Vec::new();
         cfg.try_serialize(&mut data).unwrap();

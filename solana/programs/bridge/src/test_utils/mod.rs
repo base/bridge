@@ -28,6 +28,7 @@ use solana_transaction::Transaction;
 
 use crate::{
     accounts,
+    base_to_solana::partner_config::PartnerSigner,
     common::{
         bridge::{BufferConfig, Eip1559Config, GasConfig, PartnerOracleConfig, ProtocolConfig},
         BaseOracleConfig, Config, PartialTokenMetadata, BRIDGE_SEED, MAX_SIGNER_COUNT,
@@ -85,6 +86,15 @@ impl BaseOracleConfig {
             threshold: 1,
             signer_count: 1,
             signers: signer_addrs,
+        }
+    }
+}
+
+impl PartnerSigner {
+    pub fn from_evm_address(evm_address: [u8; 20]) -> Self {
+        Self {
+            evm_address,
+            new_evm_address: None,
         }
     }
 }

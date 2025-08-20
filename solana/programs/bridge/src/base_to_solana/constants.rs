@@ -7,6 +7,6 @@ pub const OUTPUT_ROOT_SEED: &[u8] = b"output_root";
 #[constant]
 pub const BRIDGE_CPI_AUTHORITY_SEED: &[u8] = b"bridge_cpi_authority";
 #[constant]
-pub const PARTNER_SIGNERS_ACCOUNT_SEED: &[u8] = b"config";
+pub const PARTNER_SIGNERS_ACCOUNT_SEED: &[u8] = b"signers";
 #[constant]
 pub const PARTNER_PROGRAM_ID: Pubkey = pubkey!("offqSMQWgQud6WJz694LRzkeN5kMYpCHTpXQr3Rkcjm"); // TODO: placeholder

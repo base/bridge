@@ -22,23 +22,28 @@
 /// - Up to `MAX_SIGNER_COUNT` signers are supported to keep the account small and rent-cheap.
 use anchor_lang::prelude::*;
 
-use crate::common::MAX_SIGNER_COUNT;
-
 #[account]
-#[derive(Debug)]
+#[derive(InitSpace)]
 pub struct PartnerConfig {
-    /// Number of valid entries at the start of `signers` to consider.
-    pub signer_count: u8,
-    /// Fixed-capacity array of authorized EVM addresses (20-byte) for partner approvals.
-    /// Only the first `signer_count` elements should be treated as initialized.
-    pub signers: [[u8; 20]; MAX_SIGNER_COUNT],
+    // Static list of partner signers, max_len 20 to facilitate max of 4 concurrent validator rotations
+    // at regular operating capacity of 16 validators, while capping heap usage to 800b
+    #[max_len(20)]
+    pub signers: Vec<PartnerSigner>,
 }
 
-#[derive(Default)]
-/// Internal helper that materializes the configured signer set in a structure
-/// with fast membership checks.
-struct PartnerSet {
-    signers: std::collections::BTreeSet<[u8; 20]>,
+#[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize, InitSpace)]
+pub struct PartnerSigner {
+    // Regular active EVM address of the signer
+    pub evm_address: [u8; 20],
+    // New candidate address that each signer will sign with in a blue/green key rotation setting
+    // When this value is not empty, the signer will start exclusively signing with this key offchain
+    // However, from an onchain perspective, signature could arrive with either the old or new address for a while
+    //
+    // Since Base enforces that nonce ranges never skip, when a signature with the new address arrives,
+    // it should be safe to assume that because it's the latest nonce range, all previous nonce ranges that could've been
+    // signed with the old address must have already been consumed, at that point it'd be safe for partner Owner to
+    // move the new_address to address field
+    pub new_evm_address: Option<[u8; 20]>,
 }
 
 impl PartnerConfig {
@@ -49,28 +54,121 @@ impl PartnerConfig {
     ///   double counting.
     /// - Returns the number of addresses present in this config's allowlist.
     pub fn count_approvals(&self, signers: &[[u8; 20]]) -> u32 {
-        let mut partner_set = PartnerSet::default();
-        let n = self.signer_count as usize;
-        let max = core::cmp::min(n, MAX_SIGNER_COUNT);
-        for i in 0..max {
-            partner_set.signers.insert(self.signers[i]);
+        let mut count: u32 = 0;
+        // Track which indices of self.signers have already been matched so that
+        // the same configured signer is not counted more than once (e.g. if
+        // both its old and new addresses appear in `signers`).
+        let mut matched_indices = vec![false; self.signers.len()];
+
+        'outer: for provided in signers.iter() {
+            for (idx, configured) in self.signers.iter().enumerate() {
+                if matched_indices[idx] {
+                    continue;
+                }
+
+                let is_match_old = configured.evm_address == *provided;
+                let is_match_new = configured
+                    .new_evm_address
+                    .as_ref()
+                    .is_some_and(|new_addr| new_addr == provided);
+
+                if is_match_old || is_match_new {
+                    matched_indices[idx] = true;
+                    count += 1;
+                    // Move to next provided signer. This ensures a single
+                    // configured signer index cannot be matched more than once.
+                    continue 'outer;
+                }
+            }
         }
-        partner_set.count_approvals(signers)
+
+        count
     }
 }
 
-impl PartnerSet {
-    /// Returns how many of the provided addresses exist in the configured set.
-    ///
-    /// Caller should pass a deduplicated list; duplicates would be counted more
-    /// than once by this function.
-    pub fn count_approvals(&self, signers: &[[u8; 20]]) -> u32 {
-        let mut count: u32 = 0;
-        for signer in signers.iter() {
-            if self.signers.contains(signer) {
-                count += 1;
-            }
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    fn addr(byte: u8) -> [u8; 20] {
+        [byte; 20]
+    }
+
+    fn signer(old: u8, new: Option<u8>) -> PartnerSigner {
+        PartnerSigner {
+            evm_address: addr(old),
+            new_evm_address: new.map(addr),
         }
-        count
+    }
+
+    #[test]
+    fn returns_zero_when_no_configured_signers() {
+        let cfg = PartnerConfig { signers: vec![] };
+        let provided = [addr(1), addr(2)];
+        assert_eq!(cfg.count_approvals(&provided), 0);
+    }
+
+    #[test]
+    fn returns_zero_when_no_provided_addresses() {
+        let cfg = PartnerConfig {
+            signers: vec![signer(1, None)],
+        };
+        let provided: [[u8; 20]; 0] = [];
+        assert_eq!(cfg.count_approvals(&provided), 0);
+    }
+
+    #[test]
+    fn matches_old_address_counts_one() {
+        let cfg = PartnerConfig {
+            signers: vec![signer(1, None)],
+        };
+        let provided = [addr(1)];
+        assert_eq!(cfg.count_approvals(&provided), 1);
+    }
+
+    #[test]
+    fn matches_new_address_counts_one() {
+        let cfg = PartnerConfig {
+            signers: vec![signer(1, Some(2))],
+        };
+        let provided = [addr(2)];
+        assert_eq!(cfg.count_approvals(&provided), 1);
+    }
+
+    #[test]
+    fn old_and_new_for_same_signer_counts_once() {
+        let cfg = PartnerConfig {
+            signers: vec![signer(1, Some(2))],
+        };
+        let provided = [addr(1), addr(2)];
+        assert_eq!(cfg.count_approvals(&provided), 1);
+    }
+
+    #[test]
+    fn multiple_distinct_matches_count_correctly() {
+        let cfg = PartnerConfig {
+            signers: vec![signer(1, None), signer(2, None), signer(3, Some(4))],
+        };
+        let provided = [addr(1), addr(4)];
+        assert_eq!(cfg.count_approvals(&provided), 2);
+    }
+
+    #[test]
+    fn non_matching_addresses_count_zero() {
+        let cfg = PartnerConfig {
+            signers: vec![signer(1, None)],
+        };
+        let provided = [addr(9)];
+        assert_eq!(cfg.count_approvals(&provided), 0);
+    }
+
+    #[test]
+    fn duplicate_provided_addresses_do_not_increase_count() {
+        let cfg = PartnerConfig {
+            signers: vec![signer(1, None)],
+        };
+        let provided = [addr(1), addr(1)];
+        assert_eq!(cfg.count_approvals(&provided), 1);
     }
 }
