@@ -5,7 +5,6 @@ import {LibClone} from "solady/utils/LibClone.sol";
 
 import {DeployScript} from "../script/Deploy.s.sol";
 
-import {Bridge} from "../src/Bridge.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {CommonTest} from "./CommonTest.t.sol";

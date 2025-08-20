@@ -50,16 +50,16 @@ contract HelperConfig is Script {
     }
 
     function getBaseSepoliaDevConfig() public pure returns (NetworkConfig memory) {
-        address BASE_ORACLE = 0x6D0E9C04BD896608b7e10b87FB686E1Feba85510;
-        address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
+        address baseOracle = 0x6D0E9C04BD896608b7e10b87FB686E1Feba85510;
+        address bridgeAdmin = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
         address[] memory guardians = new address[](1);
         address[] memory baseValidators = new address[](1);
-        guardians[0] = BRIDGE_ADMIN;
-        baseValidators[0] = BASE_ORACLE;
+        guardians[0] = bridgeAdmin;
+        baseValidators[0] = baseOracle;
 
         return NetworkConfig({
-            initialOwner: BRIDGE_ADMIN,
+            initialOwner: bridgeAdmin,
             remoteBridge: Pubkey.wrap(0x890394bc966bf6a9d808ff4a700236444afbc430bd691db0f8118754ae023b6d), // ADr2FqCx35AFdS2j46gJtkoksxAFPRtjVMPo6u62tVfz
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             baseValidators: baseValidators,
@@ -71,16 +71,16 @@ contract HelperConfig is Script {
     }
 
     function getBaseSepoliaProdConfig() public pure returns (NetworkConfig memory) {
-        address BASE_ORACLE = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2;
-        address BRIDGE_ADMIN = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
+        address baseOracle = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2;
+        address bridgeAdmin = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
         address[] memory guardians = new address[](1);
         address[] memory baseValidators = new address[](1);
-        guardians[0] = BRIDGE_ADMIN;
-        baseValidators[0] = BASE_ORACLE;
+        guardians[0] = bridgeAdmin;
+        baseValidators[0] = baseOracle;
 
         return NetworkConfig({
-            initialOwner: BRIDGE_ADMIN,
+            initialOwner: bridgeAdmin,
             remoteBridge: Pubkey.wrap(0x083abe7dfcdf7b07b857e3b141d49bf0e5a959a0c3ad07445160417b31274a68), // Z8DUqPNTT4tZAX3hNoQjYdNoB7rLxDBDX6CrHG972c7
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             baseValidators: baseValidators,

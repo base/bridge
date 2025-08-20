@@ -7,7 +7,7 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {CrossChainERC20} from "../CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../CrossChainERC20Factory.sol";
 
-import {Ix, Pubkey} from "./SVMLib.sol";
+import {Pubkey} from "./SVMLib.sol";
 
 /// @notice Struct representing a token transfer.
 ///

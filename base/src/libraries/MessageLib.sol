@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
+
 import {Pubkey} from "./SVMLib.sol";
 
 /// @notice Enum containing operation types.
@@ -25,11 +27,15 @@ struct IncomingMessage {
 
 library MessageLib {
     function getMessageHashCd(IncomingMessage calldata message) internal pure returns (bytes32) {
-        return keccak256(abi.encode(message.nonce, getInnerMessageHashCd(message)));
+        return getMessageHash(message.nonce, getInnerMessageHashCd(message));
     }
 
     function getMessageHash(IncomingMessage memory message) internal pure returns (bytes32) {
-        return keccak256(abi.encode(message.nonce, getInnerMessageHash(message)));
+        return getMessageHash(message.nonce, getInnerMessageHash(message));
+    }
+
+    function getMessageHash(uint256 nonce, bytes32 innerMessageHash) internal pure returns (bytes32) {
+        return EfficientHashLib.hash(bytes32(nonce), innerMessageHash);
     }
 
     function getInnerMessageHashCd(IncomingMessage calldata message) internal pure returns (bytes32) {

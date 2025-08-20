@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
-import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
-
 import {DeployScript} from "../script/Deploy.s.sol";
-import {Bridge} from "../src/Bridge.sol";
-import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {CommonTest} from "./CommonTest.t.sol";
@@ -358,7 +353,8 @@ contract CrossChainERC20Test is CommonTest {
 
         // Test transfer
         vm.prank(user1);
-        token.transfer(user2, BURN_AMOUNT);
+        bool success = token.transfer(user2, BURN_AMOUNT);
+        assertTrue(success);
 
         assertEq(token.balanceOf(user1), MINT_AMOUNT - BURN_AMOUNT);
         assertEq(token.balanceOf(user2), BURN_AMOUNT);
@@ -369,7 +365,8 @@ contract CrossChainERC20Test is CommonTest {
         token.approve(user1, BURN_AMOUNT / 2);
 
         vm.prank(user1);
-        token.transferFrom(user2, user1, BURN_AMOUNT / 2);
+        success = token.transferFrom(user2, user1, BURN_AMOUNT / 2);
+        assertTrue(success);
 
         assertEq(token.balanceOf(user1), MINT_AMOUNT - BURN_AMOUNT + BURN_AMOUNT / 2);
         assertEq(token.balanceOf(user2), BURN_AMOUNT - BURN_AMOUNT / 2);

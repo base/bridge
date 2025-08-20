@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IncomingMessage} from "./MessageLib.sol";
-
 /// @notice Storage layout used by this library.
 ///
 /// @custom:storage-location erc7201:coinbase.storage.VerificationLib

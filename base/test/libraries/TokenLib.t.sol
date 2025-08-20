@@ -2,12 +2,8 @@
 pragma solidity 0.8.28;
 
 import {DeployScript} from "../../script/Deploy.s.sol";
-import {HelperConfig} from "../../script/HelperConfig.s.sol";
 
-import {Bridge} from "../../src/Bridge.sol";
-import {BridgeValidator} from "../../src/BridgeValidator.sol";
 import {CrossChainERC20} from "../../src/CrossChainERC20.sol";
-import {CrossChainERC20Factory} from "../../src/CrossChainERC20Factory.sol";
 import {Call, CallType} from "../../src/libraries/CallLib.sol";
 import {IncomingMessage, MessageType} from "../../src/libraries/MessageLib.sol";
 import {Ix, Pubkey} from "../../src/libraries/SVMLib.sol";
@@ -26,7 +22,7 @@ contract TokenLibTest is CommonTest {
     MockERC20 public mockToken;
     MockFeeERC20 public feeToken;
     CrossChainERC20 public crossChainToken;
-    CrossChainERC20 public crossChainSOLToken;
+    CrossChainERC20 public crossChainSolToken;
 
     // Test Solana pubkeys
     Pubkey public constant TEST_REMOTE_TOKEN =
@@ -53,7 +49,7 @@ contract TokenLibTest is CommonTest {
         crossChainToken = CrossChainERC20(factory.deploy(Pubkey.unwrap(TEST_SPL_TOKEN), "Cross Chain Token", "CCT", 9));
 
         // Deploy CrossChainERC20 for testing SOL tokens
-        crossChainSOLToken =
+        crossChainSolToken =
             CrossChainERC20(factory.deploy(Pubkey.unwrap(TEST_NATIVE_SOL), "Cross Chain SOL", "CSOL", 9));
 
         // Deploy mock tokens
@@ -405,13 +401,13 @@ contract TokenLibTest is CommonTest {
 
     function test_finalizeTransfer_crossChainSOL_success() public {
         Transfer memory transfer = Transfer({
-            localToken: address(crossChainSOLToken),
+            localToken: address(crossChainSolToken),
             remoteToken: TEST_NATIVE_SOL,
             to: bytes32(bytes20(alice)),
             remoteAmount: 1e9 // 1 SOL
         });
 
-        uint256 aliceInitialBalance = crossChainSOLToken.balanceOf(alice);
+        uint256 aliceInitialBalance = crossChainSolToken.balanceOf(alice);
 
         // Simulate message relay from Solana to finalize transfer
         // Use a different sender (NOT the remote bridge, that's only for token registration)
@@ -426,11 +422,11 @@ contract TokenLibTest is CommonTest {
         _registerMessage(messages[0]);
 
         vm.expectEmit(true, true, true, true);
-        emit TransferFinalized(address(crossChainSOLToken), TEST_NATIVE_SOL, alice, 1e9);
+        emit TransferFinalized(address(crossChainSolToken), TEST_NATIVE_SOL, alice, 1e9);
 
         bridge.relayMessages(messages);
 
-        assertEq(crossChainSOLToken.balanceOf(alice), aliceInitialBalance + 1e9, "Cross-chain tokens should be minted");
+        assertEq(crossChainSolToken.balanceOf(alice), aliceInitialBalance + 1e9, "Cross-chain tokens should be minted");
     }
 
     function test_finalizeTransfer_crossChainSPL_success() public {

@@ -72,9 +72,9 @@ contract DeployScript is DevOps {
         address erc20Beacon =
             address(new UpgradeableBeacon({initialOwner: cfg.initialOwner, initialImplementation: erc20Impl}));
 
-        address xChainERC20FactoryImpl = address(new CrossChainERC20Factory(erc20Beacon));
+        address xChainErc20FactoryImpl = address(new CrossChainERC20Factory(erc20Beacon));
         return
-            ERC1967Factory(cfg.erc1967Factory).deploy({implementation: xChainERC20FactoryImpl, admin: cfg.initialOwner});
+            ERC1967Factory(cfg.erc1967Factory).deploy({implementation: xChainErc20FactoryImpl, admin: cfg.initialOwner});
     }
 
     function _deployBridgeValidator(HelperConfig.NetworkConfig memory cfg, address bridge) private returns (address) {

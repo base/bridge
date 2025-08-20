@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {EfficientHashLib} from "solady/utils/EfficientHashLib.sol";
+
 /// @notice Storage layout used by this library.
 ///
 /// @custom:storage-location erc7201:coinbase.storage.MessageStorageLib
@@ -26,6 +28,13 @@ struct Message {
 }
 
 library MessageStorageLib {
+    //////////////////////////////////////////////////////////////
+    ///                       Constants                        ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice A bit to be used in bitshift operations
+    uint256 private constant _BIT = 1;
+
     //////////////////////////////////////////////////////////////
     ///                       Events                           ///
     //////////////////////////////////////////////////////////////
@@ -111,9 +120,9 @@ library MessageStorageLib {
 
             if (isRightChildInSubtree) {
                 parentNodePos = currentPathNodePos + 1;
-                siblingNodePos = parentNodePos - (1 << (hClimb + 1));
+                siblingNodePos = parentNodePos - (_BIT << (hClimb + 1));
             } else {
-                parentNodePos = currentPathNodePos + (1 << (hClimb + 1));
+                parentNodePos = currentPathNodePos + (_BIT << (hClimb + 1));
                 siblingNodePos = parentNodePos - 1;
             }
 
@@ -147,7 +156,7 @@ library MessageStorageLib {
 
         Message memory message = Message({nonce: $.nextNonce, sender: sender, data: data});
         bytes32 messageHash = _hashMessage(message);
-        bytes32 mmrRoot = _appendLeafToMMR({leafHash: messageHash, originalLeafCount: $.nextNonce});
+        bytes32 mmrRoot = _appendLeafToMmr({leafHash: messageHash, originalLeafCount: $.nextNonce});
 
         unchecked {
             ++$.nextNonce;
@@ -175,7 +184,7 @@ library MessageStorageLib {
     /// @param originalLeafCount The amount of MMR leaves before the append.
     ///
     /// @return newRoot The new root of the MMR after the append is complete.
-    function _appendLeafToMMR(bytes32 leafHash, uint64 originalLeafCount) private returns (bytes32) {
+    function _appendLeafToMmr(bytes32 leafHash, uint64 originalLeafCount) private returns (bytes32) {
         MessageStorageLibStorage storage $ = getMessageStorageLibStorage();
 
         // Add the leaf to the nodes array
@@ -204,7 +213,7 @@ library MessageStorageLib {
         uint256 currentHeight = 0;
 
         // Loop to create parent nodes when merging is possible
-        while (_shouldMergeAtHeight(originalLeafCount, currentHeight)) {
+        while (_hasCompleteMountainAtHeight(originalLeafCount, currentHeight)) {
             uint256 leftSiblingIndex = _calculateLeftSiblingIndex(currentNodeIndex, currentHeight);
 
             // Get the hashes to merge
@@ -259,7 +268,7 @@ library MessageStorageLib {
             uint256 height = h - 1;
 
             if (($.nextNonce >> height) & 1 == 1) {
-                uint64 mountainLeaves = uint64(1 << height);
+                uint64 mountainLeaves = uint64(_BIT << height);
 
                 if (leafIndex >= leafOffset && leafIndex < leafOffset + mountainLeaves) {
                     // Found the mountain
@@ -268,7 +277,7 @@ library MessageStorageLib {
                     return (nodeOffset + localNodePos, height, localLeafIdx);
                 }
 
-                nodeOffset += (1 << (height + 1)) - 1;
+                nodeOffset += _calculateTreeSize(height);
                 leafOffset += mountainLeaves;
             }
         }
@@ -295,15 +304,16 @@ library MessageStorageLib {
             uint256 height = h - 1;
 
             if (($.nextNonce >> height) & 1 == 1) {
-                uint64 mountainLeaves = uint64(1 << height);
+                uint64 mountainLeaves = uint64(_BIT << height);
                 bool isLeafMountain = (leafIndex >= leafOffset && leafIndex < leafOffset + mountainLeaves);
+                uint256 treeSize = _calculateTreeSize(height);
 
                 if (!isLeafMountain) {
-                    uint256 peakPos = nodeOffset + (1 << (height + 1)) - 2;
+                    uint256 peakPos = nodeOffset + treeSize - 1;
                     tempPeaks[peakCount++] = $.nodes[peakPos];
                 }
 
-                nodeOffset += (1 << (height + 1)) - 1;
+                nodeOffset += treeSize;
                 leafOffset += mountainLeaves;
             }
         }
@@ -399,7 +409,7 @@ library MessageStorageLib {
                 peakCount++;
 
                 // Update state for next iteration
-                nodeOffset += _calculateMountainSize(currentHeight);
+                nodeOffset += _calculateTreeSize(currentHeight);
             }
         }
 
@@ -411,16 +421,6 @@ library MessageStorageLib {
         return tempPeakIndices;
     }
 
-    /// @notice Checks if nodes should be merged at the given height based on leaf count.
-    ///
-    /// @param leafCount The number of leaves in the MMR.
-    /// @param height The height at which to check for merging.
-    ///
-    /// @return True if nodes should be merged at this height.
-    function _shouldMergeAtHeight(uint64 leafCount, uint256 height) private pure returns (bool) {
-        return (leafCount >> height) & 1 == 1;
-    }
-
     /// @notice Calculates the index of the left sibling node
     ///
     /// @param currentNodeIndex The index of the current node
@@ -428,7 +428,7 @@ library MessageStorageLib {
     ///
     /// @return leftSiblingIndex The index of the left sibling node
     function _calculateLeftSiblingIndex(uint256 currentNodeIndex, uint256 height) private pure returns (uint256) {
-        uint256 leftSubtreeSize = (1 << (height + 1)) - 1;
+        uint256 leftSubtreeSize = _calculateTreeSize(height);
         return currentNodeIndex - leftSubtreeSize;
     }
 
@@ -466,7 +466,7 @@ library MessageStorageLib {
     ///
     /// @return Index of the peak node.
     function _calculatePeakIndex(uint256 nodeOffset, uint256 height) private pure returns (uint256) {
-        uint256 mountainSize = _calculateMountainSize(height);
+        uint256 mountainSize = _calculateTreeSize(height);
         return nodeOffset + mountainSize - 1;
     }
 
@@ -475,8 +475,8 @@ library MessageStorageLib {
     /// @param height Height of the mountain.
     ///
     /// @return Number of nodes in the mountain.
-    function _calculateMountainSize(uint256 height) private pure returns (uint256) {
-        return (1 << (height + 1)) - 1;
+    function _calculateTreeSize(uint256 height) private pure returns (uint256) {
+        return (_BIT << (height + 1)) - 1;
     }
 
     /// @notice Hashes two node hashes together for intra-mountain merges.
@@ -486,16 +486,16 @@ library MessageStorageLib {
     ///      may not be deterministic.
     function _hashInternalNode(bytes32 left, bytes32 right) private pure returns (bytes32) {
         if (left < right) {
-            return keccak256(abi.encodePacked(left, right));
+            return EfficientHashLib.hash(left, right);
         }
-        return keccak256(abi.encodePacked(right, left));
+        return EfficientHashLib.hash(right, left);
     }
 
     /// @notice Ordered hash for bagging peaks left-to-right (non-commutative).
     ///
     /// @dev The order is significant to bind each peak to its position and size.
     function _hashOrderedPair(bytes32 left, bytes32 right) private pure returns (bytes32) {
-        return keccak256(abi.encodePacked(left, right));
+        return EfficientHashLib.hash(left, right);
     }
 
     /// @notice Calculates the population count (number of 1 bits) in a uint64.

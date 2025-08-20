@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
+import {Initializable} from "solady/utils/Initializable.sol";
+
 import {DeployScript} from "../script/Deploy.s.sol";
-import {HelperConfig} from "../script/HelperConfig.s.sol";
 
 import {BridgeValidator} from "../src/BridgeValidator.sol";
-import {VerificationLib} from "../src/libraries/VerificationLib.sol";
+
 import {IPartner} from "../src/interfaces/IPartner.sol";
+import {VerificationLib} from "../src/libraries/VerificationLib.sol";
 import {MockPartnerValidators} from "./mocks/MockPartnerValidators.sol";
 
 import {CommonTest} from "./CommonTest.t.sol";
-import {Initializable} from "solady/utils/Initializable.sol";
-import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 
 contract BridgeValidatorTest is CommonTest {
     //////////////////////////////////////////////////////////////
@@ -237,7 +238,7 @@ contract BridgeValidatorTest is CommonTest {
         MockPartnerValidators pv = MockPartnerValidators(cfg.partnerValidators);
         address partnerAddr1 = vm.addr(100);
         address partnerAddr2 = vm.addr(101);
-        pv.addSigner(IPartner.Signer({evmAddress: partnerAddr1, newEVMAddress: partnerAddr2}));
+        pv.addSigner(IPartner.Signer({evmAddress: partnerAddr1, newEvmAddress: partnerAddr2}));
 
         // Prepare a single message
         bytes32[] memory innerMessageHashes = new bytes32[](1);
@@ -308,7 +309,7 @@ contract BridgeValidatorTest is CommonTest {
         // Add a partner signer to the mock partner validators
         MockPartnerValidators pv = MockPartnerValidators(cfg.partnerValidators);
         address partnerAddr = vm.addr(100);
-        pv.addSigner(IPartner.Signer({evmAddress: partnerAddr, newEVMAddress: address(0)}));
+        pv.addSigner(IPartner.Signer({evmAddress: partnerAddr, newEvmAddress: address(0)}));
 
         // Upgrade existing bridgeValidator proxy to a new implementation requiring 1 partner signature
         address newImpl = address(new BridgeValidator(1, address(bridge), cfg.partnerValidators));
@@ -327,9 +328,8 @@ contract BridgeValidatorTest is CommonTest {
         address baseAddr = vm.addr(1);
         bytes memory sigBase = _createSignature(signedHash, 1);
         bytes memory sigPartner = _createSignature(signedHash, 100);
-        bytes memory orderedSigs = baseAddr < partnerAddr
-            ? abi.encodePacked(sigBase, sigPartner)
-            : abi.encodePacked(sigPartner, sigBase);
+        bytes memory orderedSigs =
+            baseAddr < partnerAddr ? abi.encodePacked(sigBase, sigPartner) : abi.encodePacked(sigPartner, sigBase);
 
         // Should succeed when both Base and partner thresholds are met
         bridgeValidator.registerMessages(innerMessageHashes, orderedSigs);

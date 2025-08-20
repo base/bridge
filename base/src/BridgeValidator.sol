@@ -5,8 +5,8 @@ import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 
-import {Bridge} from "./Bridge.sol";
 import {IPartner} from "./interfaces/IPartner.sol";
+import {MessageLib} from "./libraries/MessageLib.sol";
 import {VerificationLib} from "./libraries/VerificationLib.sol";
 
 /// @title BridgeValidator
@@ -34,6 +34,9 @@ contract BridgeValidator is Initializable {
 
     /// @notice Address of the contract holding the partner validator set
     address public immutable PARTNER_VALIDATORS;
+
+    /// @notice A bit to be used in bitshift operations
+    uint256 private constant _BIT = 1;
 
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
@@ -142,7 +145,7 @@ contract BridgeValidator is Initializable {
         uint256 currentNonce = nextNonce;
 
         for (uint256 i; i < len; i++) {
-            messageHashes[i] = keccak256(abi.encode(currentNonce++, innerMessageHashes[i]));
+            messageHashes[i] = MessageLib.getMessageHash(currentNonce++, innerMessageHashes[i]);
         }
 
         _validateSigs({messageHashes: messageHashes, sigData: validatorSigs});
@@ -195,7 +198,8 @@ contract BridgeValidator is Initializable {
         IPartner.Signer[] memory partnerValidators = IPartner(PARTNER_VALIDATORS).getSigners();
         require(_countBaseSigners(recoveredSigners) >= VerificationLib.getBaseThreshold(), BaseThresholdNotMet());
         require(
-            _countPartnerSigners(partnerValidators, recoveredSigners) >= PARTNER_VALIDATOR_THRESHOLD, PartnerThresholdNotMet()
+            _countPartnerSigners(partnerValidators, recoveredSigners) >= PARTNER_VALIDATOR_THRESHOLD,
+            PartnerThresholdNotMet()
         );
     }
 
@@ -256,11 +260,11 @@ contract BridgeValidator is Initializable {
                 continue;
             }
 
-            if (signedBitMap & (0x1 << partnerIndex) != 0) {
+            if (signedBitMap & (_BIT << partnerIndex) != 0) {
                 revert DuplicateSigner();
             }
 
-            signedBitMap |= 0x1 << partnerIndex;
+            signedBitMap |= _BIT << partnerIndex;
             unchecked {
                 count++;
             }
@@ -272,7 +276,7 @@ contract BridgeValidator is Initializable {
     /// @dev Linear search for `addr` in memory array `addrs`.
     function _indexOf(IPartner.Signer[] memory addrs, address addr) private pure returns (uint256) {
         for (uint256 i; i < addrs.length; i++) {
-            if (addr == addrs[i].evmAddress || addr == addrs[i].newEVMAddress) {
+            if (addr == addrs[i].evmAddress || addr == addrs[i].newEvmAddress) {
                 return i;
             }
         }

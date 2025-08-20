@@ -16,8 +16,8 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 contract UpgradeScript is DevOps {
     // Upgrade Config:
     bool upgradeTwin = false; // MODIFY THIS WHEN UPGRADING
-    bool upgradeERC20 = false; // MODIFY THIS WHEN UPGRADING
-    bool upgradeERC20Factory = false; // MODIFY THIS WHEN UPGRADING
+    bool upgradeErc20 = false; // MODIFY THIS WHEN UPGRADING
+    bool upgradeErc20Factory = false; // MODIFY THIS WHEN UPGRADING
     bool upgradeBridgeValidator = false; // MODIFY THIS WHEN UPGRADING
     bool upgradeBridge = false; // MODIFY THIS WHEN UPGRADING
 
@@ -26,14 +26,14 @@ contract UpgradeScript is DevOps {
     address bridgeAddress;
     address erc20FactoryAddress;
     address twinBeaconAddress;
-    address crossChainERC20BeaconAddress;
+    address crossChainErc20BeaconAddress;
 
     function setUp() external {
         // Read existing deployment addresses
         (bridgeAddress, erc20FactoryAddress, twinBeaconAddress) = _readAndParseDeploymentFile();
 
         // Upgrade CrossChainERC20Beacon and CrossChainERC20Factory
-        crossChainERC20BeaconAddress = CrossChainERC20Factory(erc20FactoryAddress).BEACON();
+        crossChainErc20BeaconAddress = CrossChainERC20Factory(erc20FactoryAddress).BEACON();
     }
 
     function run() public {
@@ -47,12 +47,12 @@ contract UpgradeScript is DevOps {
             _upgradeTwinBeacon();
         }
 
-        if (upgradeERC20) {
-            _upgradeCrossChainERC20Beacon();
+        if (upgradeErc20) {
+            _upgradeCrossChainErc20Beacon();
         }
 
-        if (upgradeERC20Factory) {
-            _upgradeCrossChainERC20Factory(cfg);
+        if (upgradeErc20Factory) {
+            _upgradeCrossChainErc20Factory(cfg);
         }
 
         if (upgradeBridgeValidator) {
@@ -82,24 +82,24 @@ contract UpgradeScript is DevOps {
         console.log("Upgraded TwinBeacon!");
     }
 
-    function _upgradeCrossChainERC20Beacon() internal {
+    function _upgradeCrossChainErc20Beacon() internal {
         // Deploy new erc20 implementation
         address erc20Impl = address(new CrossChainERC20(bridgeAddress));
 
         // Upgrade CrossChainERC20Beacon to new implementation --> This will automatically upgrade the Factory contract
         // as well
-        UpgradeableBeacon beacon = UpgradeableBeacon(crossChainERC20BeaconAddress);
+        UpgradeableBeacon beacon = UpgradeableBeacon(crossChainErc20BeaconAddress);
         beacon.upgradeTo(erc20Impl);
         console.log("Upgraded CrossChainERC20Beacon!");
     }
 
-    function _upgradeCrossChainERC20Factory(HelperConfig.NetworkConfig memory cfg) internal {
+    function _upgradeCrossChainErc20Factory(HelperConfig.NetworkConfig memory cfg) internal {
         // Deploy new Factory implementation
-        address xChainERC20FactoryImpl = address(new CrossChainERC20Factory(crossChainERC20BeaconAddress));
-        console.log("Deployed new CrossChainERC20Factory implementation: %s", xChainERC20FactoryImpl);
+        address xChainErc20FactoryImpl = address(new CrossChainERC20Factory(crossChainErc20BeaconAddress));
+        console.log("Deployed new CrossChainERC20Factory implementation: %s", xChainErc20FactoryImpl);
 
         // Upgrade CrossChainERC20Factory to new implementation
-        ERC1967Factory(cfg.erc1967Factory).upgrade(erc20FactoryAddress, xChainERC20FactoryImpl);
+        ERC1967Factory(cfg.erc1967Factory).upgrade(erc20FactoryAddress, xChainErc20FactoryImpl);
         console.log("Upgraded CrossChainERC20Factory!");
     }
 

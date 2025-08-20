@@ -34,7 +34,7 @@ contract MessageStorageLibTest is Test {
         MessageStorageLib.sendMessage({sender: address(this), data: testData});
 
         // Assert
-        _verifyMMRBasicStructure(1, 1);
+        _verifyMmrBasicStructure(1, 1);
         assertNotEq(_getNode(0), bytes32(0), "First node should not be zero");
     }
 
@@ -46,7 +46,7 @@ contract MessageStorageLibTest is Test {
         MessageStorageLib.sendMessage({sender: address(this), data: emptyData});
 
         // Assert
-        _verifyMMRBasicStructure(1, 1);
+        _verifyMmrBasicStructure(1, 1);
     }
 
     function test_SendMessage_WithLargeData_HandlesSuccessfully() public {
@@ -60,7 +60,7 @@ contract MessageStorageLibTest is Test {
         MessageStorageLib.sendMessage({sender: address(this), data: largeData});
 
         // Assert
-        _verifyMMRBasicStructure(1, 1);
+        _verifyMmrBasicStructure(1, 1);
     }
 
     function test_SendMessage_MultipleMessages_IncrementsNonceCorrectly() public {
@@ -147,7 +147,7 @@ contract MessageStorageLibTest is Test {
         MessageStorageLib.sendMessage({sender: address(this), data: singleLeafData});
 
         // Assert
-        _verifyMMRBasicStructure(1, 1);
+        _verifyMmrBasicStructure(1, 1);
         bytes32 leaf = _getNode(0);
         assertNotEq(leaf, bytes32(0), "Single leaf should not be zero");
 
@@ -166,7 +166,7 @@ contract MessageStorageLibTest is Test {
         MessageStorageLib.sendMessage({sender: address(this), data: secondLeaf});
 
         // Assert
-        _verifyMMRBasicStructure(2, 3); // 2 leaves + 1 internal node
+        _verifyMmrBasicStructure(2, 3); // 2 leaves + 1 internal node
 
         bytes32 leaf1 = _getNode(0);
         bytes32 leaf2 = _getNode(1);
@@ -221,7 +221,7 @@ contract MessageStorageLibTest is Test {
         }
 
         // Assert
-        _verifyMMRBasicStructure(3, 4); // 3 leaves + 1 internal node
+        _verifyMmrBasicStructure(3, 4); // 3 leaves + 1 internal node
         _verifyAllNodesExist(4);
         assertNotEq(_getRoot(), bytes32(0), "Root should be calculated correctly");
     }
@@ -236,7 +236,7 @@ contract MessageStorageLibTest is Test {
         }
 
         // Assert
-        _verifyMMRBasicStructure(4, 7); // 4 leaves + 2 internal + 1 root
+        _verifyMmrBasicStructure(4, 7); // 4 leaves + 2 internal + 1 root
         _verifyAllNodesExist(7);
         assertNotEq(_getRoot(), bytes32(0), "Root should be properly calculated");
     }
@@ -251,7 +251,7 @@ contract MessageStorageLibTest is Test {
         }
 
         // Assert
-        _verifyMMRBasicStructure(8, 15); // Perfect binary tree: 2^4 - 1 = 15
+        _verifyMmrBasicStructure(8, 15); // Perfect binary tree: 2^4 - 1 = 15
         _verifyAllNodesExist(15);
         assertNotEq(_getRoot(), bytes32(0), "Root should be properly calculated");
     }
@@ -427,7 +427,7 @@ contract MessageStorageLibTest is Test {
         }
 
         // Final verification
-        _verifyMMRBasicStructure(3, 4); // 3 leaves + 1 internal node
+        _verifyMmrBasicStructure(3, 4); // 3 leaves + 1 internal node
         _verifyAllNodesExist(_getNodeCount());
     }
 
@@ -772,15 +772,6 @@ contract MessageStorageLibTest is Test {
         return abi.encodePacked("test data ", suffix);
     }
 
-    function _sendMessagesFromSender(address sender, bytes memory data, uint256 count) internal {
-        for (uint256 i = 0; i < count; i++) {
-            if (sender != address(this)) {
-                vm.prank(sender);
-            }
-            MessageStorageLib.sendMessage({sender: sender, data: data});
-        }
-    }
-
     function _getLeafCount() internal view returns (uint64) {
         return MessageStorageLib.getMessageStorageLibStorage().nextNonce;
     }
@@ -801,7 +792,7 @@ contract MessageStorageLibTest is Test {
         return MessageStorageLib.getMessageStorageLibStorage().nodes[index];
     }
 
-    function _verifyMMRBasicStructure(uint256 expectedLeafCount, uint256 expectedNodeCount) internal view {
+    function _verifyMmrBasicStructure(uint256 expectedLeafCount, uint256 expectedNodeCount) internal view {
         assertEq(_getLeafCount(), expectedLeafCount, "Leaf count mismatch");
         assertEq(_getNodeCount(), expectedNodeCount, "Node count mismatch");
         assertFalse(_isEmpty(), "MMR should not be empty");

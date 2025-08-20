@@ -9,7 +9,7 @@ interface IPartner {
         address evmAddress;
         // New candidate EVM address that each signer will sign with during key rotation.
         // Upon completion of rotation, this will be promoted to evm_address.
-        address newEVMAddress;
+        address newEvmAddress;
     }
 
     /// @notice Returns the full signer set.

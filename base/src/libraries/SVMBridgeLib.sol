@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ix, Pda, Pubkey, SVMLib} from "./SVMLib.sol";
+import {Ix, Pubkey, SVMLib} from "./SVMLib.sol";
 import {SolanaTokenType, Transfer} from "./TokenLib.sol";
 
 library SVMBridgeLib {
