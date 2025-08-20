@@ -132,11 +132,10 @@ impl OutgoingMessage {
     }
 
     /// Returns the serialized size of an `OutgoingMessage` payload, excluding the 8-byte Anchor
-    /// account discriminator. Uses the `Transfer` variant for sizing because it is larger than
-    /// `Call` (it embeds an optional `Call`), ensuring sufficient capacity for either variant.
+    /// account discriminator.
     pub fn space<T: MessageSpace>(data_len: usize) -> usize {
         8 + // nonce
         32 + // sender
-        1 + T::space(data_len) // variant + transfer (the transfer variant is always bigger as it embeds an optional call)
+        1 + T::space(data_len) // variant + transfer
     }
 }
