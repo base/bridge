@@ -72,7 +72,7 @@ pub struct BridgeSpl<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space::<Transfer>(call.as_ref().map(|c| c.data.len())),
+        space = 8 + OutgoingMessage::space::<Transfer>(call.as_ref().map(|c| c.data.len()).unwrap_or_default()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 

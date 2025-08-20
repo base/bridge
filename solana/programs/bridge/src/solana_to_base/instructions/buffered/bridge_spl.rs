@@ -84,7 +84,7 @@ pub struct BridgeSplWithBufferedCall<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space::<Transfer>(Some(call_buffer.data.len())),
+        space = 8 + OutgoingMessage::space::<Transfer>(call_buffer.data.len()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 

@@ -68,7 +68,7 @@ pub struct BridgeSolWithBufferedCall<'info> {
     /// - Created fresh for each bridge; address determined by the provided keypair
     /// - Funded by `payer`
     /// - Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`
-    #[account(init, payer = payer, space = 8 + OutgoingMessage::space::<Transfer>(Some(call_buffer.data.len())))]
+    #[account(init, payer = payer, space = 8 + OutgoingMessage::space::<Transfer>(call_buffer.data.len()))]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
     /// System program required for account creation and the SOL transfer CPI.
