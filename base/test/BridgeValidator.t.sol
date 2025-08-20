@@ -6,9 +6,12 @@ import {HelperConfig} from "../script/HelperConfig.s.sol";
 
 import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {VerificationLib} from "../src/libraries/VerificationLib.sol";
+import {IPartner} from "../src/interfaces/IPartner.sol";
+import {MockPartnerValidators} from "./mocks/MockPartnerValidators.sol";
 
 import {CommonTest} from "./CommonTest.t.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
+import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 
 contract BridgeValidatorTest is CommonTest {
     //////////////////////////////////////////////////////////////
@@ -42,19 +45,19 @@ contract BridgeValidatorTest is CommonTest {
     }
 
     function test_constructor_withZeroThreshold() public {
-        BridgeValidator testValidator = new BridgeValidator(0, address(bridge));
+        BridgeValidator testValidator = new BridgeValidator(0, address(bridge), cfg.partnerValidators);
         assertEq(testValidator.PARTNER_VALIDATOR_THRESHOLD(), 0);
     }
 
     function test_constructor_revertsWhenThresholdAboveMax() public {
         uint256 tooHigh = bridgeValidator.MAX_PARTNER_VALIDATOR_THRESHOLD() + 1;
         vm.expectRevert(BridgeValidator.ThresholdTooHigh.selector);
-        new BridgeValidator(tooHigh, address(bridge));
+        new BridgeValidator(tooHigh, address(bridge), cfg.partnerValidators);
     }
 
     function test_constructor_revertsWhenZeroBridge() public {
         vm.expectRevert(BridgeValidator.ZeroAddress.selector);
-        new BridgeValidator(0, address(0));
+        new BridgeValidator(0, address(0), cfg.partnerValidators);
     }
 
     //////////////////////////////////////////////////////////////
@@ -144,13 +147,13 @@ contract BridgeValidatorTest is CommonTest {
         bridgeValidator.registerMessages(innerMessageHashes, invalidSig);
     }
 
-    function test_registerMessages_revertsWhenThresholdNotMet() public {
+    function test_registerMessages_revertsWhenPartnerThresholdNotMet() public {
         bytes32[] memory innerMessageHashes = new bytes32[](1);
         innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
 
         // Create a validator with threshold 1 and call with only BASE_ORACLE signature
         address testOracle = vm.addr(77);
-        BridgeValidator testValidator = new BridgeValidator(1, address(bridge));
+        BridgeValidator testValidator = new BridgeValidator(1, address(bridge), cfg.partnerValidators);
 
         // Calculate message hash for nonce 0
         bytes32[] memory finalHashes = new bytes32[](1);
@@ -159,7 +162,7 @@ contract BridgeValidatorTest is CommonTest {
 
         // Only oracle signature -> should fail ThresholdNotMet
         bytes memory oracleSig = _createSignature(signedHash, 77);
-        vm.expectRevert(BridgeValidator.ThresholdNotMet.selector);
+        vm.expectRevert(BridgeValidator.PartnerThresholdNotMet.selector);
         vm.prank(testOracle);
         testValidator.registerMessages(innerMessageHashes, oracleSig);
     }
@@ -168,7 +171,7 @@ contract BridgeValidatorTest is CommonTest {
         bytes32[] memory innerMessageHashes = new bytes32[](1);
         innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
 
-        vm.expectRevert(BridgeValidator.ThresholdNotMet.selector);
+        vm.expectRevert(BridgeValidator.BaseThresholdNotMet.selector);
         bridgeValidator.registerMessages(innerMessageHashes, "");
     }
 
@@ -197,7 +200,7 @@ contract BridgeValidatorTest is CommonTest {
         bytes memory sig2 = _createSignature(signedHash, 1);
         bytes memory duplicateSigs = abi.encodePacked(sig1, sig2);
 
-        vm.expectRevert(BridgeValidator.Unauthenticated.selector);
+        vm.expectRevert(BridgeValidator.UnsortedSigners.selector);
         bridgeValidator.registerMessages(innerMessageHashes, duplicateSigs);
     }
 
@@ -225,14 +228,65 @@ contract BridgeValidatorTest is CommonTest {
         bytes memory sig2 = _createSignature(signedHash, key1); // Lower address second
         bytes memory unsortedSigs = abi.encodePacked(sig1, sig2);
 
-        vm.expectRevert(BridgeValidator.Unauthenticated.selector);
+        vm.expectRevert(BridgeValidator.UnsortedSigners.selector);
         bridgeValidator.registerMessages(innerMessageHashes, unsortedSigs);
+    }
+
+    function test_registerMessages_revertsOnDuplicatePartnerEntitySigners() public {
+        // Setup a single partner with two keys that map to the same partner index
+        MockPartnerValidators pv = MockPartnerValidators(cfg.partnerValidators);
+        address partnerAddr1 = vm.addr(100);
+        address partnerAddr2 = vm.addr(101);
+        pv.addSigner(IPartner.Signer({evmAddress: partnerAddr1, newEVMAddress: partnerAddr2}));
+
+        // Prepare a single message
+        bytes32[] memory innerMessageHashes = new bytes32[](1);
+        innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
+        bytes32[] memory finalHashes = _calculateFinalHashes(innerMessageHashes);
+        bytes memory signedHash = abi.encode(finalHashes);
+
+        // Create signatures from: base validator and both partner keys
+        address baseAddr = vm.addr(1);
+        bytes memory sigBase = _createSignature(signedHash, 1);
+        bytes memory sigP1 = _createSignature(signedHash, 100);
+        bytes memory sigP2 = _createSignature(signedHash, 101);
+
+        // Concatenate in strictly ascending address order to satisfy UnsortedSigners check
+        address a0 = baseAddr;
+        address a1 = partnerAddr1;
+        address a2 = partnerAddr2;
+        bytes memory s0 = sigBase;
+        bytes memory s1 = sigP1;
+        bytes memory s2 = sigP2;
+
+        bytes memory orderedSigs;
+        if (a0 < a1) {
+            if (a1 < a2) {
+                orderedSigs = abi.encodePacked(s0, s1, s2);
+            } else if (a0 < a2) {
+                orderedSigs = abi.encodePacked(s0, s2, s1);
+            } else {
+                orderedSigs = abi.encodePacked(s2, s0, s1);
+            }
+        } else {
+            if (a0 < a2) {
+                orderedSigs = abi.encodePacked(s1, s0, s2);
+            } else if (a1 < a2) {
+                orderedSigs = abi.encodePacked(s1, s2, s0);
+            } else {
+                orderedSigs = abi.encodePacked(s2, s1, s0);
+            }
+        }
+
+        // Expect revert due to duplicate partner entity (same index) detected by the bitmap
+        vm.expectRevert(BridgeValidator.DuplicateSigner.selector);
+        bridgeValidator.registerMessages(innerMessageHashes, orderedSigs);
     }
 
     function test_registerMessages_withPartnerValidatorThreshold() public {
         // Create a BridgeValidator with partner validator threshold > 0
         address testOracle = vm.addr(100);
-        BridgeValidator testValidator = new BridgeValidator(1, address(bridge));
+        BridgeValidator testValidator = new BridgeValidator(1, address(bridge), cfg.partnerValidators);
 
         bytes32[] memory innerMessageHashes = new bytes32[](1);
         innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
@@ -245,9 +299,43 @@ contract BridgeValidatorTest is CommonTest {
         // Only BASE_ORACLE signature should fail threshold check
         bytes memory oracleSig = _createSignature(signedHash, 100);
 
-        vm.expectRevert(BridgeValidator.ThresholdNotMet.selector);
+        vm.expectRevert(BridgeValidator.PartnerThresholdNotMet.selector);
         vm.prank(testOracle);
         testValidator.registerMessages(innerMessageHashes, oracleSig);
+    }
+
+    function test_registerMessages_withBaseAndPartnerSignatures_success() public {
+        // Add a partner signer to the mock partner validators
+        MockPartnerValidators pv = MockPartnerValidators(cfg.partnerValidators);
+        address partnerAddr = vm.addr(100);
+        pv.addSigner(IPartner.Signer({evmAddress: partnerAddr, newEVMAddress: address(0)}));
+
+        // Upgrade existing bridgeValidator proxy to a new implementation requiring 1 partner signature
+        address newImpl = address(new BridgeValidator(1, address(bridge), cfg.partnerValidators));
+        vm.prank(cfg.initialOwner);
+        ERC1967Factory(cfg.erc1967Factory).upgrade(address(bridgeValidator), newImpl);
+
+        // Prepare a single message
+        bytes32[] memory innerMessageHashes = new bytes32[](1);
+        innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
+
+        // Compute final hash using the proxy's current nonce
+        bytes32[] memory finalHashes = _calculateFinalHashes(innerMessageHashes);
+        bytes memory signedHash = abi.encode(finalHashes);
+
+        // Create Base and partner signatures and order them by ascending signer address
+        address baseAddr = vm.addr(1);
+        bytes memory sigBase = _createSignature(signedHash, 1);
+        bytes memory sigPartner = _createSignature(signedHash, 100);
+        bytes memory orderedSigs = baseAddr < partnerAddr
+            ? abi.encodePacked(sigBase, sigPartner)
+            : abi.encodePacked(sigPartner, sigBase);
+
+        // Should succeed when both Base and partner thresholds are met
+        bridgeValidator.registerMessages(innerMessageHashes, orderedSigs);
+
+        // Verify the message is registered
+        assertTrue(bridgeValidator.validMessages(finalHashes[0]));
     }
 
     //////////////////////////////////////////////////////////////
@@ -419,7 +507,7 @@ contract BridgeValidatorTest is CommonTest {
 
     function testFuzz_constructor_withRandomThreshold(uint256 threshold) public {
         vm.assume(threshold <= bridgeValidator.MAX_PARTNER_VALIDATOR_THRESHOLD());
-        BridgeValidator testValidator = new BridgeValidator(threshold, address(bridge));
+        BridgeValidator testValidator = new BridgeValidator(threshold, address(bridge), cfg.partnerValidators);
         assertEq(testValidator.PARTNER_VALIDATOR_THRESHOLD(), threshold);
     }
 

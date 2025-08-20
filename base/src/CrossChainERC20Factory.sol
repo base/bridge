@@ -48,9 +48,9 @@ contract CrossChainERC20Factory {
     ///                       Public Functions                 ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Constructs the CrossChainERC20Factory contract
+    /// @notice Stores the beacon address for proxies and reverts if the beacon is the zero address.
     ///
-    /// @dev Stores the beacon address for proxies and reverts if the beacon is the zero address.
+    /// @param beacon Address of the ERC-1967 beacon contract used by deployed proxies for CrossChainERC20.
     constructor(address beacon) {
         require(beacon != address(0), ZeroAddress());
         BEACON = beacon;

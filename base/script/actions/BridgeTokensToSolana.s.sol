@@ -2,7 +2,6 @@
 pragma solidity 0.8.28;
 
 import {stdJson} from "forge-std/StdJson.sol";
-import {console} from "forge-std/console.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
 import {Bridge} from "../../src/Bridge.sol";

@@ -45,7 +45,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     address public immutable CROSS_CHAIN_ERC20_FACTORY;
 
     /// @notice Address of the BridgeValidator contract. Messages will be pre-validated there by our oracle & bridge
-    /// partner.
+    ///         partner.
     address public immutable BRIDGE_VALIDATOR;
 
     /// @notice Guardian Role to pause the bridge.

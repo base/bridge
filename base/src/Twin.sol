@@ -39,7 +39,7 @@ contract Twin {
     /// @notice Thrown when the caller is neither the Bridge nor the Twin itself.
     error Unauthorized();
 
-    /// @notice Thrown when a zero address is detected
+    /// @notice Thrown when a zero address is detected.
     error ZeroAddress();
 
     //////////////////////////////////////////////////////////////

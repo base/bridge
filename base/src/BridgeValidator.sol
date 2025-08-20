@@ -6,6 +6,7 @@ import {ECDSA} from "solady/utils/ECDSA.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 
 import {Bridge} from "./Bridge.sol";
+import {IPartner} from "./interfaces/IPartner.sol";
 import {VerificationLib} from "./libraries/VerificationLib.sol";
 
 /// @title BridgeValidator
@@ -31,6 +32,9 @@ contract BridgeValidator is Initializable {
     /// @notice Address of the Base Bridge contract. Used for authenticating guardian roles
     address public immutable BRIDGE;
 
+    /// @notice Address of the contract holding the partner validator set
+    address public immutable PARTNER_VALIDATORS;
+
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
@@ -48,23 +52,22 @@ contract BridgeValidator is Initializable {
 
     /// @notice Emitted when a single message is registered (pre-validated).
     ///
-    /// @param messageHashes The pre-validated message hash (derived from the inner message hash and an incremental
-    ///                      nonce) corresponding to an `IncomingMessage` in the `Bridge` contract.
-    event MessageRegistered(bytes32 indexed messageHashes);
+    /// @param messageHash The pre-validated message hash (derived from the inner message hash and an incremental
+    ///                    nonce) corresponding to an `IncomingMessage` in the `Bridge` contract.
+    event MessageRegistered(bytes32 indexed messageHash);
 
     //////////////////////////////////////////////////////////////
     ///                       Errors                           ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Thrown when `validatorSigs` verification fails (Base and/or external signatures invalid or
-    /// insufficient).
-    error Unauthenticated();
-
     /// @notice Thrown when the provided `validatorSigs` byte string length is not a multiple of 65
     error InvalidSignatureLength();
 
-    /// @notice Thrown when the required amount of signatures is not included with a `registerMessages` call
-    error ThresholdNotMet();
+    /// @notice Thrown when the required amount of Base signatures is not included with a `registerMessages` call
+    error BaseThresholdNotMet();
+
+    /// @notice Thrown when the required amount of partner signatures is not included with a `registerMessages` call
+    error PartnerThresholdNotMet();
 
     /// @notice Thrown when a zero address is detected
     error ZeroAddress();
@@ -75,30 +78,43 @@ contract BridgeValidator is Initializable {
     /// @notice Thrown when the caller of a protected function is not a Base Bridge guardian
     error CallerNotGuardian();
 
+    /// @notice Thrown when a duplicate partner validator is detected during signature verification
+    error DuplicateSigner();
+
+    /// @notice Thrown when the recovered signers are not sorted
+    error UnsortedSigners();
+
+    //////////////////////////////////////////////////////////////
+    ///                       Modifiers                        ///
+    //////////////////////////////////////////////////////////////
+
+    /// @dev Restricts function to `Bridge` guardians (as defined by `GUARDIAN_ROLE`).
+    modifier isGuardian() {
+        require(OwnableRoles(BRIDGE).hasAnyRole(msg.sender, GUARDIAN_ROLE), CallerNotGuardian());
+        _;
+    }
+
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
     //////////////////////////////////////////////////////////////
 
     /// @notice Deploys the BridgeValidator contract with configuration for partner signatures and the `Bridge` address.
     ///
-    /// @param partnerValidatorThreshold The number of partner (external) validator signatures required for
-    ///                                  message pre-validation.
-    /// @param bridge The address of the `Bridge` contract used to check guardian roles.
-    ///
-    /// @dev Reverts with `ThresholdTooHigh()` if `partnerValidatorThreshold` exceeds
+    /// @dev Reverts with `ThresholdTooHigh()` if `partnerThreshold` exceeds
     ///      `MAX_PARTNER_VALIDATOR_THRESHOLD`. Reverts with `ZeroAddress()` if `bridge` is the zero address.
-    constructor(uint256 partnerValidatorThreshold, address bridge) {
-        require(partnerValidatorThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
-        require(bridge != address(0), ZeroAddress());
-        PARTNER_VALIDATOR_THRESHOLD = partnerValidatorThreshold;
-        BRIDGE = bridge;
+    ///
+    /// @param partnerThreshold  The number of partner (external) validator signatures required for message
+    ///                          pre-validation.
+    /// @param bridgeAddress     The address of the `Bridge` contract used to check guardian roles.
+    /// @param partnerValidators Address of the contract holding the partner validator set
+    constructor(uint256 partnerThreshold, address bridgeAddress, address partnerValidators) {
+        require(partnerThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
+        require(bridgeAddress != address(0), ZeroAddress());
+        require(partnerValidators != address(0), ZeroAddress());
+        PARTNER_VALIDATOR_THRESHOLD = partnerThreshold;
+        BRIDGE = bridgeAddress;
+        PARTNER_VALIDATORS = partnerValidators;
         _disableInitializers();
-    }
-
-    /// @dev Restricts function to `Bridge` guardians (as defined by `GUARDIAN_ROLE`).
-    modifier isGuardian() {
-        require(OwnableRoles(BRIDGE).hasAnyRole(msg.sender, GUARDIAN_ROLE), CallerNotGuardian());
-        _;
     }
 
     /// @notice Initializes Base validator set and threshold.
@@ -115,7 +131,7 @@ contract BridgeValidator is Initializable {
     ///
     /// @param innerMessageHashes An array of inner message hashes to pre-validate (hash over message data excluding the
     ///                           nonce). Each is combined with a monotonically increasing nonce to form
-    /// `messageHashes`.
+    ///                           `messageHashes`.
     /// @param validatorSigs A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
     ///                      `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
     ///                      Must include at least `getBaseThreshold()` Base validator signatures. The external
@@ -129,7 +145,7 @@ contract BridgeValidator is Initializable {
             messageHashes[i] = keccak256(abi.encode(currentNonce++, innerMessageHashes[i]));
         }
 
-        require(_validatorSigsAreValid({messageHashes: messageHashes, sigData: validatorSigs}), Unauthenticated());
+        _validateSigs({messageHashes: messageHashes, sigData: validatorSigs});
 
         for (uint256 i; i < len; i++) {
             validMessages[messageHashes[i]] = true;
@@ -174,67 +190,92 @@ contract BridgeValidator is Initializable {
     ///
     /// @param messageHashes The derived message hashes (inner hash + nonce) for the batch.
     /// @param sigData Concatenated signatures over `toEthSignedMessageHash(abi.encode(messageHashes))`.
-    ///
-    /// @return True if thresholds are met by valid signers with strictly ascending signer order.
-    function _validatorSigsAreValid(bytes32[] memory messageHashes, bytes calldata sigData)
+    function _validateSigs(bytes32[] memory messageHashes, bytes calldata sigData) private view {
+        address[] memory recoveredSigners = _getSignersFromSigs(messageHashes, sigData);
+        IPartner.Signer[] memory partnerValidators = IPartner(PARTNER_VALIDATORS).getSigners();
+        require(_countBaseSigners(recoveredSigners) >= VerificationLib.getBaseThreshold(), BaseThresholdNotMet());
+        require(
+            _countPartnerSigners(partnerValidators, recoveredSigners) >= PARTNER_VALIDATOR_THRESHOLD, PartnerThresholdNotMet()
+        );
+    }
+
+    function _getSignersFromSigs(bytes32[] memory messageHashes, bytes calldata sigData)
         private
         view
-        returns (bool)
+        returns (address[] memory)
     {
         // Check that the provided signature data is a multiple of the valid sig length
         require(sigData.length % VerificationLib.SIGNATURE_LENGTH_THRESHOLD == 0, InvalidSignatureLength());
 
         uint256 sigCount = sigData.length / VerificationLib.SIGNATURE_LENGTH_THRESHOLD;
-        // Placeholder for an external contract lookup to be introduced soon
-        address[] memory partnerValidators = new address[](0);
         bytes32 signedHash = ECDSA.toEthSignedMessageHash(abi.encode(messageHashes));
         address lastValidator = address(0);
+        address[] memory recoveredSigners = new address[](sigCount);
 
         uint256 offset;
         assembly {
             offset := sigData.offset
         }
 
-        uint256 baseSigners;
-        uint256 externalSigners;
-
         for (uint256 i; i < sigCount; i++) {
             (uint8 v, bytes32 r, bytes32 s) = VerificationLib.signatureSplit(offset, i);
             address currentValidator = signedHash.recover(v, r, s);
-
-            if (currentValidator <= lastValidator) {
-                return false;
-            }
-
-            // Verify signer is valid
-            if (VerificationLib.isBaseValidator(currentValidator)) {
-                unchecked {
-                    baseSigners++;
-                }
-            } else if (_addressInList(partnerValidators, currentValidator)) {
-                unchecked {
-                    externalSigners++;
-                }
-            }
-
+            require(currentValidator > lastValidator, UnsortedSigners());
+            recoveredSigners[i] = currentValidator;
             lastValidator = currentValidator;
         }
 
-        require(baseSigners >= VerificationLib.getBaseThreshold(), ThresholdNotMet());
-        require(externalSigners >= PARTNER_VALIDATOR_THRESHOLD, ThresholdNotMet());
+        return recoveredSigners;
+    }
 
-        return true;
+    function _countBaseSigners(address[] memory signers) private view returns (uint256) {
+        uint256 count;
+
+        for (uint256 i; i < signers.length; i++) {
+            if (VerificationLib.isBaseValidator(signers[i])) {
+                unchecked {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    function _countPartnerSigners(IPartner.Signer[] memory partnerValidators, address[] memory signers)
+        private
+        pure
+        returns (uint256)
+    {
+        uint256 count;
+        uint256 signedBitMap;
+
+        for (uint256 i; i < signers.length; i++) {
+            uint256 partnerIndex = _indexOf(partnerValidators, signers[i]);
+            if (partnerIndex == partnerValidators.length) {
+                continue;
+            }
+
+            if (signedBitMap & (0x1 << partnerIndex) != 0) {
+                revert DuplicateSigner();
+            }
+
+            signedBitMap |= 0x1 << partnerIndex;
+            unchecked {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     /// @dev Linear search for `addr` in memory array `addrs`.
-    ///
-    /// @return True if found, false otherwise.
-    function _addressInList(address[] memory addrs, address addr) private pure returns (bool) {
+    function _indexOf(IPartner.Signer[] memory addrs, address addr) private pure returns (uint256) {
         for (uint256 i; i < addrs.length; i++) {
-            if (addr == addrs[i]) {
-                return true;
+            if (addr == addrs[i].evmAddress || addr == addrs[i].newEVMAddress) {
+                return i;
             }
         }
-        return false;
+        return addrs.length;
     }
 }

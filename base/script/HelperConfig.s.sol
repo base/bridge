@@ -8,6 +8,7 @@ import {ERC1967FactoryConstants} from "solady/utils/ERC1967FactoryConstants.sol"
 import {LibString} from "solady/utils/LibString.sol";
 
 import {Pubkey} from "../src/libraries/SVMLib.sol";
+import {MockPartnerValidators} from "../test/mocks/MockPartnerValidators.sol";
 
 contract HelperConfig is Script {
     string environment = vm.envOr("BRIDGE_ENVIRONMENT", string(""));
@@ -20,6 +21,7 @@ contract HelperConfig is Script {
         uint128 baseSignatureThreshold;
         address[] guardians;
         uint256 partnerValidatorThreshold;
+        address partnerValidators;
     }
 
     NetworkConfig private _activeNetworkConfig;
@@ -63,7 +65,8 @@ contract HelperConfig is Script {
             baseValidators: baseValidators,
             baseSignatureThreshold: 1,
             guardians: guardians,
-            partnerValidatorThreshold: 0
+            partnerValidatorThreshold: 0,
+            partnerValidators: address(0)
         });
     }
 
@@ -83,7 +86,8 @@ contract HelperConfig is Script {
             baseValidators: baseValidators,
             baseSignatureThreshold: 1,
             guardians: guardians,
-            partnerValidatorThreshold: 0
+            partnerValidatorThreshold: 0,
+            partnerValidators: address(0)
         });
     }
 
@@ -93,6 +97,7 @@ contract HelperConfig is Script {
         }
 
         ERC1967Factory f = new ERC1967Factory();
+        MockPartnerValidators pv = new MockPartnerValidators();
 
         address[] memory guardians = new address[](1);
         address[] memory baseValidators = new address[](1);
@@ -106,7 +111,8 @@ contract HelperConfig is Script {
             baseValidators: baseValidators,
             baseSignatureThreshold: 1,
             guardians: guardians,
-            partnerValidatorThreshold: 0
+            partnerValidatorThreshold: 0,
+            partnerValidators: address(pv)
         });
     }
 }
