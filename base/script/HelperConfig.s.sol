@@ -50,44 +50,50 @@ contract HelperConfig is Script {
     }
 
     function getBaseSepoliaDevConfig() public pure returns (NetworkConfig memory) {
-        address baseOracle = 0x6D0E9C04BD896608b7e10b87FB686E1Feba85510;
         address bridgeAdmin = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
+        address baseLocalSigner = 0x0e9a877906EBc3b7098DA2404412BF0Ed1A5EFb4;
+        address baseKeychainSigner = 0x6D0E9C04BD896608b7e10b87FB686E1Feba85510;
+
         address[] memory guardians = new address[](1);
-        address[] memory baseValidators = new address[](1);
+        address[] memory baseValidators = new address[](2);
         guardians[0] = bridgeAdmin;
-        baseValidators[0] = baseOracle;
+        baseValidators[0] = baseLocalSigner;
+        baseValidators[1] = baseKeychainSigner;
 
         return NetworkConfig({
             initialOwner: bridgeAdmin,
-            remoteBridge: Pubkey.wrap(0x890394bc966bf6a9d808ff4a700236444afbc430bd691db0f8118754ae023b6d), // ADr2FqCx35AFdS2j46gJtkoksxAFPRtjVMPo6u62tVfz
+            remoteBridge: Pubkey.wrap(0x855c6fd7faf45040430300dda103f45c6a5a708377c45db31a7a5f7b6c9c70fe), // 9yayaS8TwWHcysZT6H45Hw421FbB84G4caQt4SVEGenq
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             baseValidators: baseValidators,
-            baseSignatureThreshold: 1,
+            baseSignatureThreshold: 2,
             guardians: guardians,
             partnerValidatorThreshold: 0,
-            partnerValidators: address(0)
+            partnerValidators: address(1)
         });
     }
 
     function getBaseSepoliaProdConfig() public pure returns (NetworkConfig memory) {
-        address baseOracle = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2;
         address bridgeAdmin = 0x20624CA8d0dF80B8bd67C25Bc19A9E10AfB67733;
 
+        address baseLocalSigner = 0x2880a6DcC8c87dD2874bCBB9ad7E627a407Cf3C2;
+        address baseKeychainSigner = 0xc5fe09f194C01e56fB89cC1155daE033D20cDCc7;
+
         address[] memory guardians = new address[](1);
-        address[] memory baseValidators = new address[](1);
+        address[] memory baseValidators = new address[](2);
         guardians[0] = bridgeAdmin;
-        baseValidators[0] = baseOracle;
+        baseValidators[0] = baseLocalSigner;
+        baseValidators[1] = baseKeychainSigner;
 
         return NetworkConfig({
             initialOwner: bridgeAdmin,
-            remoteBridge: Pubkey.wrap(0x083abe7dfcdf7b07b857e3b141d49bf0e5a959a0c3ad07445160417b31274a68), // Z8DUqPNTT4tZAX3hNoQjYdNoB7rLxDBDX6CrHG972c7
+            remoteBridge: Pubkey.wrap(0x5b4145339163fcb5a9f28281da3a913909baff580b9f5cdac115133b28e45062), // 79DpuKKNPSk9BDnQVVAExvh55waf1zvFszVsotx9wfqT
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             baseValidators: baseValidators,
-            baseSignatureThreshold: 1,
+            baseSignatureThreshold: 2,
             guardians: guardians,
             partnerValidatorThreshold: 0,
-            partnerValidators: address(0)
+            partnerValidators: address(1)
         });
     }
 

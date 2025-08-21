@@ -199,7 +199,7 @@ pub struct BaseOracleConfig {
     /// Number of signers in `signers` array
     pub signer_count: u8,
     /// Static list of authorized signer addresses
-    pub signers: [[u8; 20]; MAX_SIGNER_COUNT],
+    pub signers: [[u8; 20]; MAX_SIGNER_COUNT as usize],
 }
 
 impl BaseOracleConfig {

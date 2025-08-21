@@ -195,12 +195,15 @@ contract BridgeValidator is Initializable {
     /// @param sigData Concatenated signatures over `toEthSignedMessageHash(abi.encode(messageHashes))`.
     function _validateSigs(bytes32[] memory messageHashes, bytes calldata sigData) private view {
         address[] memory recoveredSigners = _getSignersFromSigs(messageHashes, sigData);
-        IPartner.Signer[] memory partnerValidators = IPartner(PARTNER_VALIDATORS).getSigners();
         require(_countBaseSigners(recoveredSigners) >= VerificationLib.getBaseThreshold(), BaseThresholdNotMet());
-        require(
-            _countPartnerSigners(partnerValidators, recoveredSigners) >= PARTNER_VALIDATOR_THRESHOLD,
-            PartnerThresholdNotMet()
-        );
+
+        if (PARTNER_VALIDATOR_THRESHOLD > 0) {
+            IPartner.Signer[] memory partnerValidators = IPartner(PARTNER_VALIDATORS).getSigners();
+            require(
+                _countPartnerSigners(partnerValidators, recoveredSigners) >= PARTNER_VALIDATOR_THRESHOLD,
+                PartnerThresholdNotMet()
+            );
+        }
     }
 
     function _getSignersFromSigs(bytes32[] memory messageHashes, bytes calldata sigData)

@@ -19,7 +19,7 @@
     "tx:bridge-sol": "bun ./scripts/onchain/solana-to-base/bridge-sol.ts",
     "tx:bridge-spl": "bun ./scripts/onchain/solana-to-base/bridge-spl.ts",
     "tx:bridge-wrapped-token": "bun ./scripts/onchain/solana-to-base/bridge-wrapped-token.ts",
-    "tx:prove-message": "bun ./scripts/onchain/base-to-solana/prove-message.ts",
+    "tx:prove-and-relay-message": "bun ./scripts/onchain/base-to-solana/prove-and-relay-message.ts",
     "tx:relay-message": "bun ./scripts/onchain/base-to-solana/relay-message.ts",
     "pubkey-to-bytes32": "bun ./scripts/utils/pubkey-to-bytes32.ts"
   },

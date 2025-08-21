@@ -4,7 +4,7 @@ A cross-chain bridge implementation that enables seamless message passing and to
 
 ## Contract Addresses
 
-- **Base Sepolia Bridge**: `0x9BA58C63b341B3560693610aF2b2555301Fd3AEC`
+- **Base Sepolia Bridge**: `0x0Bec82590219F7cD5AE97d118760Ceb1E0BEC849`
 
 ## Overview
 
@@ -45,43 +45,22 @@ make deps
 cast wallet import testnet-admin --interactive
 ```
 
+3. Ensure this account has enough ETH to pay for gas.
+
 ## Development
 
 ### Building
 
 ```bash
-# Compile contracts
 forge build
 ```
 
 ### Testing
 
 ```bash
-# Run tests
 forge test
-
-# Run tests with coverage
 make coverage
 ```
-
-## Deployment
-
-### Initial Deployment
-
-Deploy all core contracts:
-
-Set `ENV_NAME` in [`Makefile`](./Makefile), then:
-
-```bash
-# Deploy to alpha environment (saves to deployments/{network}_{environment}.json)
-make deploy
-```
-
-This will deploy:
-
-- Bridge contract
-- Twin beacon (for proxy patterns)
-- CrossChainERC20Factory
 
 ### Creating Wrapped Tokens
 
@@ -130,45 +109,3 @@ BRIDGE_ENVIRONMENT=alpha LOCAL_TOKEN=0x123... REMOTE_TOKEN=0x456... TO=0x789... 
 - `REMOTE_TOKEN`: bytes32 representation of SPL mint pubkey on Solana (`0x069be72ab836d4eacc02525b7350a78a395da2f1253a40ebafd6630000000000` for native SOL)
 - `TO`: bytes32 representation of Solana pubkey receiver (this is your Solana wallet address if bridging SOL and it should be your associated token account if bridging into an SPL token)
 - `AMOUNT`: The amount of Base tokens to bridge in wei
-
-### Testing Utilities
-
-```bash
-# Deploy mock ERC20 for testing
-make create-mock-token
-
-# Check bridge state
-make check-root
-```
-
-## Contract Upgrades
-
-The system uses upgradeable beacon proxies. To upgrade contracts:
-
-1. Edit `UpgradeScript.s.sol` and set the appropriate upgrade flags:
-
-```solidity
-bool upgradeTwin = true;         // Enable to upgrade Twin implementation
-bool upgradeERC20 = true;        // Enable to upgrade CrossChainERC20 implementation
-bool upgradeERC20Factory = true; // Enable to upgrade factory
-bool upgradeBridge = true;       // Enable to upgrade Bridge implementation
-```
-
-2. Run the upgrade:
-
-```bash
-forge script UpgradeScript --account testnet-admin --rpc-url $BASE_RPC --broadcast -vvvv
-```
-
-## Scripts Reference
-
-### Main Scripts
-
-- **`Deploy.s.sol`**: Deploys all core bridge contracts and saves addresses
-- **`UpgradeScript.s.sol`**: Upgrades existing deployed contracts using beacon proxy pattern
-
-### Action Scripts
-
-- **`CreateToken.s.sol`**: Creates wrapped ERC20 tokens representing Solana tokens
-- **`BridgeTokensToSolana.s.sol`**: Initiates token transfers from Base to Solana
-- **`DeployERC20.s.sol`**: Deploys mock ERC20 tokens for testing

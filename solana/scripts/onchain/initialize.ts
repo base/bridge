@@ -10,6 +10,7 @@ import { getIdlConstant } from "../utils/idl-constants";
 import { CONSTANTS } from "../constants";
 import { buildAndSendTransaction, getPayer } from "./utils/transaction";
 import { getTarget } from "../utils/argv";
+import { toBytes } from "viem";
 
 async function main() {
   const target = getTarget();
@@ -48,19 +49,29 @@ async function main() {
         windowDurationSeconds: 1,
         minimumBaseFee: 1,
       },
-      gasCostConfig: {
+      gasConfig: {
+        gasPerCall: 50_000,
         gasCostScaler: 1_000_000,
         gasCostScalerDp: 1_000_000,
         gasFeeReceiver: payer.address,
-      },
-      gasConfig: {
-        gasPerCall: 50_000,
       },
       protocolConfig: {
         blockIntervalRequirement: 300,
       },
       bufferConfig: {
         maxCallBufferSize: 8 * 1024,
+      },
+      baseOracleConfig: {
+        threshold: 2,
+        signerCount: 2,
+        signers: [
+          toBytes(constants.solanaEvmLocalKey),
+          toBytes(constants.solanaEvmKeychainKey),
+          ...Array(14).fill(0),
+        ],
+      },
+      partnerOracleConfig: {
+        requiredThreshold: 0,
       },
     },
     { programAddress: constants.solanaBridge }

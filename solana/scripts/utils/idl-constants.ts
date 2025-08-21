@@ -59,8 +59,8 @@ export const getIdlConstant = <T extends BridgeConstantNames>(
     case "string":
       return JSON.parse(value) as unknown as ParsedConstantValue<T>;
 
-    case "u64":
-      return BigInt(value) as unknown as ParsedConstantValue<T>;
+    case "u8":
+      return Number(value) as unknown as ParsedConstantValue<T>;
 
     case "bytes":
       return JSON.parse(value) as unknown as ParsedConstantValue<T>;
