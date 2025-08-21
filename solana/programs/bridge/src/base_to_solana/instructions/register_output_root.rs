@@ -81,7 +81,6 @@ pub fn register_output_root_handler(
         RegisterOutputRootError::InsufficientBaseSignatures
     );
 
-    // TODO: Uncomment this once testing is done
     if ctx.accounts.bridge.partner_oracle_config.required_threshold > 0 {
         // Validate partner_config PDA using seed with the partner program id
         let expected_partner_cfg =
