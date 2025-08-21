@@ -28,7 +28,7 @@ contract BuilderCodeTest is Test {
     // Test constants
     bytes32 public constant TEST_CODE = keccak256("test_code");
     bytes32 public constant OTHER_CODE = keccak256("other_code");
-    uint256 public constant VALID_FEE_PERCENT = 100; // 1.00%
+    uint96 public constant VALID_FEE_PERCENT = 100; // 1.00%
     uint256 public constant TEST_AMOUNT = 1000e18;
 
     function setUp() public {
@@ -123,7 +123,7 @@ contract BuilderCodeTest is Test {
         builderCode.registerBuilderCode({code: TEST_CODE, registration: registration});
 
         // Reset to valid and test invalid fee percent (too high)
-        registration.feePercent = builderCode.MAX_FEE_PERCENT() + 1;
+        registration.feePercent = uint96(builderCode.MAX_FEE_PERCENT() + 1);
         vm.expectRevert(BuilderCode.InvalidFeePercent.selector);
         vm.prank(owner);
         builderCode.registerBuilderCode({code: TEST_CODE, registration: registration});
@@ -142,7 +142,7 @@ contract BuilderCodeTest is Test {
 
         // Update registration
         address newRecipient = makeAddr("newRecipient");
-        uint256 newFeePercent = 150; // 1.50%
+        uint96 newFeePercent = 150; // 1.50%
         BuilderCode.Registration memory newRegistration =
             BuilderCode.Registration({recipient: newRecipient, feePercent: newFeePercent});
 
@@ -199,7 +199,7 @@ contract BuilderCodeTest is Test {
         builderCode.updateRegistration({code: TEST_CODE, registration: updateRegistration});
 
         // Reset to valid and test invalid fee percent (too high)
-        updateRegistration.feePercent = builderCode.MAX_FEE_PERCENT() + 1;
+        updateRegistration.feePercent = uint96(builderCode.MAX_FEE_PERCENT() + 1);
         vm.expectRevert(BuilderCode.InvalidFeePercent.selector);
         vm.prank(owner);
         builderCode.updateRegistration({code: TEST_CODE, registration: updateRegistration});
@@ -230,7 +230,7 @@ contract BuilderCodeTest is Test {
             code: TEST_CODE,
             token: TokenLib.ETH_ADDRESS,
             recipient: user,
-            balance: ethAmount,
+            amount: ethAmount - expectedFees,
             fees: expectedFees
         });
 
@@ -266,7 +266,7 @@ contract BuilderCodeTest is Test {
             code: TEST_CODE,
             token: address(mockToken),
             recipient: user,
-            balance: tokenAmount,
+            amount: tokenAmount - expectedFees,
             fees: expectedFees
         });
 
@@ -314,7 +314,7 @@ contract BuilderCodeTest is Test {
         // Register builder code with 2% fee (max)
         BuilderCode.Registration memory registration = BuilderCode.Registration({
             recipient: feeRecipient,
-            feePercent: builderCode.MAX_FEE_PERCENT() // 2%
+            feePercent: uint96(builderCode.MAX_FEE_PERCENT()) // 2%
         });
         vm.prank(owner);
         builderCode.registerBuilderCode({code: TEST_CODE, registration: registration});

@@ -10,6 +10,9 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 import {TokenLib} from "../libraries/TokenLib.sol";
 
+/// @title Builder Code
+///
+/// @notice A contract for registering and using builder codes.
 contract BuilderCode is ERC721, Initializable {
     //////////////////////////////////////////////////////////////
     ///                       Structs                          ///
@@ -21,46 +24,8 @@ contract BuilderCode is ERC721, Initializable {
     /// @custom:field feePercent Percentage of the fees to be paid to the recipient.
     struct Registration {
         address recipient;
-        uint256 feePercent;
+        uint96 feePercent;
     }
-
-    //////////////////////////////////////////////////////////////
-    ///                       Errors                           ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice Error thrown when the Builder Code is already registered.
-    error AlreadyRegistered();
-
-    /// @notice Error thrown when the sender is not the owner.
-    error SenderIsNotOwner();
-
-    /// @notice Error thrown when the owner is the zero address.
-    error OwnerCannotBeZeroAddress();
-
-    /// @notice Error thrown when the recipient is the zero address.
-    error RecipientCannotBeZeroAddress();
-
-    /// @notice Error thrown when the fee percentage is invalid.
-    error InvalidFeePercent();
-
-    /// @notice Error thrown when the Builder Code is not registered.
-    error CodeNotRegistered();
-
-    /// @notice Error thrown when the balance is zero.
-    error BalanceIsZero();
-
-    //////////////////////////////////////////////////////////////
-    ///                       Events                           ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice Event emitted when a builder code is registered.
-    event BuilderCodeRegistered(bytes32 code, Registration registration);
-
-    /// @notice Event emitted when a builder code is updated.
-    event BuilderCodeUpdated(bytes32 code, Registration registration);
-
-    /// @notice Event emitted when a builder code is used.
-    event BuilderCodeUsed(bytes32 code, address token, address recipient, uint256 balance, uint256 fees);
 
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
@@ -87,6 +52,56 @@ contract BuilderCode is ERC721, Initializable {
 
     /// @notice Mapping of builder codes to registrations.
     mapping(bytes32 code => Registration registration) public registrations;
+
+    //////////////////////////////////////////////////////////////
+    ///                       Events                           ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice Event emitted when a builder code is registered.
+    ///
+    /// @param code The builder code that was registered.
+    /// @param registration The builder code's registration.
+    event BuilderCodeRegistered(bytes32 indexed code, Registration registration);
+
+    /// @notice Event emitted when a builder code is updated.
+    ///
+    /// @param code The builder code that was updated.
+    /// @param registration The builder code's updated registration.
+    event BuilderCodeUpdated(bytes32 indexed code, Registration registration);
+
+    /// @notice Event emitted when a builder code is used.
+    ///
+    /// @param code The builder code that was used.
+    /// @param token The token transferred.
+    /// @param recipient The recipient of the post-fee amount.
+    /// @param amount The amount of the token transferred (post-fee).
+    /// @param fees The fees that were paid to the recipient.
+    event BuilderCodeUsed(bytes32 indexed code, address token, address recipient, uint256 amount, uint256 fees);
+
+    //////////////////////////////////////////////////////////////
+    ///                       Errors                           ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice Error thrown when the Builder Code is already registered.
+    error AlreadyRegistered();
+
+    /// @notice Error thrown when the sender is not the owner.
+    error SenderIsNotOwner();
+
+    /// @notice Error thrown when the owner is the zero address.
+    error OwnerCannotBeZeroAddress();
+
+    /// @notice Error thrown when the recipient is the zero address.
+    error RecipientCannotBeZeroAddress();
+
+    /// @notice Error thrown when the fee percentage is invalid.
+    error InvalidFeePercent();
+
+    /// @notice Error thrown when the Builder Code is not registered.
+    error CodeNotRegistered();
+
+    /// @notice Error thrown when the balance is zero.
+    error BalanceIsZero();
 
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                ///
@@ -182,7 +197,7 @@ contract BuilderCode is ERC721, Initializable {
             SafeTransferLib.safeTransfer({token: token, to: recipient, amount: balance - fees});
         }
 
-        emit BuilderCodeUsed({code: code, token: token, recipient: recipient, balance: balance, fees: fees});
+        emit BuilderCodeUsed({code: code, token: token, recipient: recipient, amount: balance - fees, fees: fees});
     }
 
     //////////////////////////////////////////////////////////////
