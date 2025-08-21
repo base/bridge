@@ -6,7 +6,6 @@ import {Test} from "forge-std/Test.sol";
 import {TokenLib} from "../../src/libraries/TokenLib.sol";
 import {BuilderCode} from "../../src/periphery/BuilderCode.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
-import {LibString} from "solady/utils/LibString.sol";
 
 contract BuilderCodeTest is Test {
     //////////////////////////////////////////////////////////////

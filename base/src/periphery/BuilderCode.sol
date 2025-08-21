@@ -107,7 +107,6 @@ contract BuilderCode is ERC721, Initializable {
     ///                       Public Functions                ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Constructor.
     constructor(string memory name_, string memory symbol_) {
         _NAME = LibString.toSmallString(name_);
         _SYMBOL = LibString.toSmallString(symbol_);
@@ -116,7 +115,6 @@ contract BuilderCode is ERC721, Initializable {
     }
 
     /// @notice Receives ETH.
-    ///
     receive() external payable {}
 
     /// @inheritdoc ERC721
