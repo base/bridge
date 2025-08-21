@@ -91,14 +91,16 @@ pub fn register_output_root_handler(
     );
 
     // Verify partner approvals using partner's signers (deserialize manually)
-    let partner_oracle_config = &ctx.accounts.bridge.partner_oracle_config;
-    let partner_config =
-        PartnerConfig::try_deserialize(&mut &ctx.accounts.partner_config.data.borrow()[..])?;
-    let partner_approved_count = partner_config.count_approvals(&unique_signers);
-    require!(
-        partner_approved_count as u8 >= partner_oracle_config.required_threshold,
-        RegisterOutputRootError::InsufficientPartnerSignatures
-    );
+    if ctx.accounts.bridge.partner_oracle_config.required_threshold > 0 {
+        let partner_oracle_config = &ctx.accounts.bridge.partner_oracle_config;
+        let partner_config =
+            PartnerConfig::try_deserialize(&mut &ctx.accounts.partner_config.data.borrow()[..])?;
+        let partner_approved_count = partner_config.count_approvals(&unique_signers);
+        require!(
+            partner_approved_count as u8 >= partner_oracle_config.required_threshold,
+            RegisterOutputRootError::InsufficientPartnerSignatures
+        );
+    }
 
     require!(
         base_block_number > ctx.accounts.bridge.base_block_number
