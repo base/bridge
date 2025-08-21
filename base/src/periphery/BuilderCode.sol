@@ -2,22 +2,24 @@
 pragma solidity 0.8.28;
 
 import {ERC20} from "solady/tokens/ERC20.sol";
+import {ERC721} from "solady/tokens/ERC721.sol";
+
+import {Initializable} from "solady/utils/Initializable.sol";
+import {LibString} from "solady/utils/LibString.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 import {TokenLib} from "../libraries/TokenLib.sol";
 
-contract BuilderCode {
+contract BuilderCode is ERC721, Initializable {
     //////////////////////////////////////////////////////////////
     ///                       Structs                          ///
     //////////////////////////////////////////////////////////////
 
     /// @notice Struct representing a Builder Code registration.
     ///
-    /// @custom:field owner Address of the owner of the builder code.
     /// @custom:field recipient Address of the recipient of the fees.
     /// @custom:field feePercent Percentage of the fees to be paid to the recipient.
     struct Registration {
-        address owner;
         address recipient;
         uint256 feePercent;
     }
@@ -64,6 +66,12 @@ contract BuilderCode {
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
 
+    /// @notice Name of the token.
+    bytes32 private immutable _NAME;
+
+    /// @notice Symbol of the token.
+    bytes32 private immutable _SYMBOL;
+
     /// @notice Maximum fee percentage (2.00%).
     uint256 public constant MAX_FEE_PERCENT = 2_00;
 
@@ -74,6 +82,9 @@ contract BuilderCode {
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
 
+    /// @notice Base URI for builder code metadata.
+    string private _uriPrefix;
+
     /// @notice Mapping of builder codes to registrations.
     mapping(bytes32 code => Registration registration) public registrations;
 
@@ -81,19 +92,51 @@ contract BuilderCode {
     ///                       Public Functions                ///
     //////////////////////////////////////////////////////////////
 
+    /// @notice Constructor.
+    constructor(string memory name_, string memory symbol_) {
+        _NAME = LibString.toSmallString(name_);
+        _SYMBOL = LibString.toSmallString(symbol_);
+
+        _disableInitializers();
+    }
+
     /// @notice Receives ETH.
     ///
     receive() external payable {}
+
+    /// @inheritdoc ERC721
+    function name() public view override returns (string memory) {
+        return LibString.fromSmallString(_NAME);
+    }
+
+    /// @inheritdoc ERC721
+    function symbol() public view override returns (string memory) {
+        return LibString.fromSmallString(_SYMBOL);
+    }
+
+    /// @inheritdoc ERC721
+    function tokenURI(uint256 id) public view override returns (string memory) {
+        require(_exists(id), CodeNotRegistered());
+        return LibString.concat(_uriPrefix, LibString.toString(id));
+    }
+
+    /// @notice Initializes the contract.
+    ///
+    /// @param uriPrefix_ The base URI for builder code metadata.
+    function initialize(string calldata uriPrefix_) external reinitializer(0) {
+        _uriPrefix = LibString.encodeURIComponent(uriPrefix_);
+    }
 
     /// @notice Registers a builder code.
     ///
     /// @param code The Builder Code to register.
     /// @param registration The registration of the Builder Code.
     function registerBuilderCode(bytes32 code, Registration calldata registration) external {
-        require(registrations[code].owner == address(0), AlreadyRegistered());
+        require(!_exists(uint256(code)), AlreadyRegistered());
         _validateRegistration(registration);
 
         registrations[code] = registration;
+        _mint({to: msg.sender, id: uint256(code)});
 
         emit BuilderCodeRegistered({code: code, registration: registration});
     }
@@ -103,7 +146,7 @@ contract BuilderCode {
     /// @param code The Builder Code to update.
     /// @param registration The registration of the Builder Code.
     function updateRegistration(bytes32 code, Registration calldata registration) external {
-        require(msg.sender == registrations[code].owner, SenderIsNotOwner());
+        require(msg.sender == _ownerOf(uint256(code)), SenderIsNotOwner());
         _validateRegistration(registration);
 
         registrations[code] = registration;
@@ -121,7 +164,7 @@ contract BuilderCode {
     /// @param token The token to use for the fees.
     /// @param recipient The recipient of the post-fee amount.
     function useBuilderCode(bytes32 code, address token, address recipient) external payable {
-        require(registrations[code].owner != address(0), CodeNotRegistered());
+        require(_exists(uint256(code)), CodeNotRegistered());
 
         uint256 balance = token == TokenLib.ETH_ADDRESS ? address(this).balance : ERC20(token).balanceOf(address(this));
         require(balance > 0, BalanceIsZero());
@@ -150,7 +193,6 @@ contract BuilderCode {
     ///
     /// @param registration The registration to validate.
     function _validateRegistration(Registration calldata registration) private pure {
-        require(registration.owner != address(0), OwnerCannotBeZeroAddress());
         require(registration.recipient != address(0), RecipientCannotBeZeroAddress());
         require(registration.feePercent > 0 && registration.feePercent <= MAX_FEE_PERCENT, InvalidFeePercent());
     }
