@@ -3,17 +3,30 @@ use anchor_lang::{
     solana_program::{keccak, secp256k1_recover::secp256k1_recover},
 };
 
-/// message = keccak256(output_root || base_block_number_be || total_leaf_count_be)
+/// message = keccak256("\x19Ethereum Signed Message:\n" || len || (output_root || base_block_number_be || total_leaf_count_be))
 pub fn compute_output_root_message_hash(
     output_root: &[u8; 32],
     base_block_number: u64,
     total_leaf_count: u64,
 ) -> [u8; 32] {
-    let mut bytes = Vec::with_capacity(32 + 8 + 8);
-    bytes.extend_from_slice(output_root);
-    bytes.extend_from_slice(&base_block_number.to_be_bytes());
-    bytes.extend_from_slice(&total_leaf_count.to_be_bytes());
-    keccak::hash(&bytes).0
+    // Construct the original message bytes
+    let mut message_bytes = Vec::with_capacity(32 + 8 + 8);
+    message_bytes.extend_from_slice(output_root);
+    message_bytes.extend_from_slice(&base_block_number.to_be_bytes());
+    message_bytes.extend_from_slice(&total_leaf_count.to_be_bytes());
+
+    // Apply the Ethereum signed message prefix per EIP-191
+    // "\x19Ethereum Signed Message:\n" + len(message) + message
+    let prefix: &[u8] = b"\x19Ethereum Signed Message:\n";
+    let len_dec_string = message_bytes.len().to_string();
+
+    let mut prefixed =
+        Vec::with_capacity(prefix.len() + len_dec_string.len() + message_bytes.len());
+    prefixed.extend_from_slice(prefix);
+    prefixed.extend_from_slice(len_dec_string.as_bytes());
+    prefixed.extend_from_slice(&message_bytes);
+
+    keccak::hash(&prefixed).0
 }
 
 /// Recover unique 20-byte EVM addresses from signatures over the given message hash
