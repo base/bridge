@@ -72,7 +72,7 @@ pub struct WrapToken<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space(Some(REGISTER_REMOTE_TOKEN_DATA_LEN)),
+        space = 8 + OutgoingMessage::space::<Call>(REGISTER_REMOTE_TOKEN_DATA_LEN),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 

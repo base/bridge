@@ -8,7 +8,7 @@ use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
     solana_to_base::{
         internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, CallBuffer,
-        OutgoingMessage,
+        OutgoingMessage, Transfer,
     },
 };
 
@@ -74,7 +74,7 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space(Some(call_buffer.data.len())),
+        space = 8 + OutgoingMessage::space::<Transfer>(call_buffer.data.len()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 

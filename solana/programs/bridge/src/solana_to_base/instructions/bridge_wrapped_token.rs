@@ -7,7 +7,7 @@ use anchor_spl::{
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
     solana_to_base::{
-        internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, OutgoingMessage,
+        internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, OutgoingMessage, Transfer,
     },
 };
 
@@ -58,7 +58,7 @@ pub struct BridgeWrappedToken<'info> {
     #[account(
         init,       
         payer = payer,
-        space = 8 + OutgoingMessage::space(call.as_ref().map(|c| c.data.len())),
+        space = 8 + OutgoingMessage::space::<Transfer>(call.as_ref().map(|c| c.data.len()).unwrap_or_default()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 

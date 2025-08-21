@@ -43,7 +43,7 @@ pub struct BridgeCall<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space(Some(call.data.len())),
+        space = 8 + OutgoingMessage::space::<Call>(call.data.len()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 

@@ -1,5 +1,10 @@
 use anchor_lang::prelude::*;
 
+/// Trait for calculating the space required for a message.
+pub trait MessageSpace {
+    fn space(data_len: usize) -> usize;
+}
+
 /// Represents a token transfer from Solana to Base with optional contract execution.
 /// This struct contains all the information needed to bridge tokens between chains
 /// and optionally execute additional logic on the destination chain after the transfer.
@@ -26,13 +31,13 @@ pub struct Transfer {
     pub call: Option<Call>,
 }
 
-impl Transfer {
-    pub fn space(data_len: Option<usize>) -> usize {
+impl MessageSpace for Transfer {
+    fn space(data_len: usize) -> usize {
         20 + // to
         32 + // local_token
         20 + // remote_token
         8 + // amount
-        1 + Call::space(data_len.unwrap_or_default()) // option_flag + call
+        1 + Call::space(data_len) // option_flag + call
     }
 }
 
@@ -66,8 +71,8 @@ pub struct Call {
     pub data: Vec<u8>,
 }
 
-impl Call {
-    pub fn space(data_len: usize) -> usize {
+impl MessageSpace for Call {
+    fn space(data_len: usize) -> usize {
         CallType::INIT_SPACE + // call type
         20 + // to
         16 + // value
@@ -127,13 +132,10 @@ impl OutgoingMessage {
     }
 
     /// Returns the serialized size of an `OutgoingMessage` payload, excluding the 8-byte Anchor
-    /// account discriminator. Uses the `Transfer` variant for sizing because it is larger than
-    /// `Call` (it embeds an optional `Call`), ensuring sufficient capacity for either variant.
-    pub fn space(data_len: Option<usize>) -> usize {
+    /// account discriminator.
+    pub fn space<T: MessageSpace>(data_len: usize) -> usize {
         8 + // nonce
         32 + // sender
-
-        // TODO: Accept the message type as a parameter, so we can use the correct space calculation.
-        1 + Transfer::space(data_len) // variant + transfer (the transfer variant is always bigger as it embeds an optional call)
+        1 + T::space(data_len) // message (variant + space)
     }
 }

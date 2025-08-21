@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, SOL_VAULT_SEED},
-    solana_to_base::{internal::bridge_sol::bridge_sol_internal, Call, OutgoingMessage},
+    solana_to_base::{internal::bridge_sol::bridge_sol_internal, Call, OutgoingMessage, Transfer},
 };
 
 /// Accounts struct for the bridge_sol instruction that transfers native SOL from Solana to Base
@@ -54,7 +54,7 @@ pub struct BridgeSol<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space(call.as_ref().map(|c| c.data.len())),
+        space = 8 + OutgoingMessage::space::<Transfer>(call.map(|c| c.data.len()).unwrap_or_default()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
