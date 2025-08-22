@@ -66,7 +66,7 @@ async function main() {
       // Accounts
       payer,
       from: payer,
-      gasFeeReceiver: bridge.data.gasCostConfig.gasFeeReceiver,
+      gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
       solVault: solVaultAddress,
       bridge: bridgeAddress,
       outgoingMessage: outgoingMessageSigner,

@@ -24,7 +24,7 @@ use solana_to_base::*;
 #[cfg(test)]
 mod test_utils;
 
-declare_id!("ADr2FqCx35AFdS2j46gJtkoksxAFPRtjVMPo6u62tVfz");
+declare_id!("Z8DUqPNTT4tZAX3hNoQjYdNoB7rLxDBDX6CrHG972c7");
 
 #[program]
 pub mod bridge {

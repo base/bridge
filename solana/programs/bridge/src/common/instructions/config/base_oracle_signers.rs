@@ -21,7 +21,7 @@ mod tests {
     use crate::common::{BaseOracleConfig, MAX_SIGNER_COUNT};
 
     fn base_cfg(threshold: u8, signer_count: u8, first_two_same: bool) -> BaseOracleConfig {
-        let mut signers: [[u8; 20]; MAX_SIGNER_COUNT] = [[0u8; 20]; MAX_SIGNER_COUNT];
+        let mut signers = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
         if signer_count > 0 {
             signers[0] = [1u8; 20];
         }
@@ -80,7 +80,7 @@ mod tests {
             threshold: 2,
             signer_count: 2,
             signers: {
-                let mut a = [[0u8; 20]; MAX_SIGNER_COUNT];
+                let mut a = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
                 a[0] = [1u8; 20];
                 a[1] = [2u8; 20];
                 a

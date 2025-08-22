@@ -1,7 +1,7 @@
 import { getBase58Codec } from "@solana/kit";
 import { CONSTANTS } from "../constants";
 
-const ADDRESS = CONSTANTS["devnet-alpha"].wEth;
+const ADDRESS = CONSTANTS["devnet-prod"].wErc20;
 
 function main() {
   const bytes32 = getBase58Codec().encode(ADDRESS).toHex();

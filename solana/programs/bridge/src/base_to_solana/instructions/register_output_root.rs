@@ -43,6 +43,7 @@ pub struct RegisterOutputRoot<'info> {
 
     /// Partner `Config` account (PDA with seed "config") owned by partner program.
     /// Unchecked to avoid Anchor pre-handler owner checks; PDA address is validated in the handler.
+    /// CHECK: This is validated in the handler.
     pub partner_config: AccountInfo<'info>,
 
     /// System program required for creating new accounts.
@@ -57,15 +58,6 @@ pub fn register_output_root_handler(
     total_leaf_count: u64,
     signatures: Vec<[u8; 65]>,
 ) -> Result<()> {
-    // Validate partner_config PDA using seed with the partner program id
-    let expected_partner_cfg =
-        Pubkey::find_program_address(&[PARTNER_SIGNERS_ACCOUNT_SEED], &PARTNER_PROGRAM_ID).0;
-    require_keys_eq!(
-        ctx.accounts.partner_config.key(),
-        expected_partner_cfg,
-        anchor_lang::error::ErrorCode::ConstraintSeeds
-    );
-
     // Check if bridge is paused
     require!(
         !ctx.accounts.bridge.paused,
@@ -85,20 +77,32 @@ pub fn register_output_root_handler(
         .bridge
         .base_oracle_config
         .count_approvals(&unique_signers);
+
     require!(
         base_approved_count as u8 >= ctx.accounts.bridge.base_oracle_config.threshold,
         RegisterOutputRootError::InsufficientBaseSignatures
     );
 
-    // Verify partner approvals using partner's signers (deserialize manually)
-    let partner_oracle_config = &ctx.accounts.bridge.partner_oracle_config;
-    let partner_config =
-        PartnerConfig::try_deserialize(&mut &ctx.accounts.partner_config.data.borrow()[..])?;
-    let partner_approved_count = partner_config.count_approvals(&unique_signers);
-    require!(
-        partner_approved_count as u8 >= partner_oracle_config.required_threshold,
-        RegisterOutputRootError::InsufficientPartnerSignatures
-    );
+    if ctx.accounts.bridge.partner_oracle_config.required_threshold > 0 {
+        // Validate partner_config PDA using seed with the partner program id
+        let expected_partner_cfg =
+            Pubkey::find_program_address(&[PARTNER_SIGNERS_ACCOUNT_SEED], &PARTNER_PROGRAM_ID).0;
+        require_keys_eq!(
+            ctx.accounts.partner_config.key(),
+            expected_partner_cfg,
+            anchor_lang::error::ErrorCode::ConstraintSeeds
+        );
+
+        // Verify partner approvals using partner's signers (deserialize manually)
+        let partner_oracle_config = &ctx.accounts.bridge.partner_oracle_config;
+        let partner_config =
+            PartnerConfig::try_deserialize(&mut &ctx.accounts.partner_config.data.borrow()[..])?;
+        let partner_approved_count = partner_config.count_approvals(&unique_signers);
+        require!(
+            partner_approved_count as u8 >= partner_oracle_config.required_threshold,
+            RegisterOutputRootError::InsufficientPartnerSignatures
+        );
+    }
 
     require!(
         base_block_number > ctx.accounts.bridge.base_block_number
@@ -280,7 +284,7 @@ mod tests {
         let mut bridge = Bridge::try_deserialize(&mut &bridge_acc.data[..]).unwrap();
         bridge.base_oracle_config.threshold = 1;
         bridge.base_oracle_config.signer_count = 1;
-        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
+        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
         fixed_signers[0] = addr;
         bridge.base_oracle_config.signers = fixed_signers;
         let mut new_data = Vec::new();
@@ -539,7 +543,7 @@ mod tests {
         let mut bridge = Bridge::try_deserialize(&mut &bridge_acc.data[..]).unwrap();
         bridge.base_oracle_config.threshold = 1;
         bridge.base_oracle_config.signer_count = 1;
-        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
+        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
         fixed_signers[0] = [7u8; 20];
         bridge.base_oracle_config.signers = fixed_signers;
         let mut new_data = Vec::new();
@@ -632,7 +636,7 @@ mod tests {
             make_eth_sig_and_addr(sk2, output_root, base_block_number, total_leaf_count);
 
         bridge.base_oracle_config.threshold = 2;
-        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
+        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
         fixed_signers[0] = addr1;
         fixed_signers[1] = addr2;
         bridge.base_oracle_config.signers = fixed_signers;
@@ -682,7 +686,7 @@ mod tests {
             make_eth_sig_and_addr(sk, output_root, base_block_number, total_leaf_count);
 
         bridge.base_oracle_config.threshold = 2;
-        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
+        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
         fixed_signers[0] = addr;
         bridge.base_oracle_config.signers = fixed_signers;
         bridge.base_oracle_config.signer_count = 1;
@@ -722,7 +726,7 @@ mod tests {
         let mut bridge = Bridge::try_deserialize(&mut &bridge_acc.data[..]).unwrap();
         bridge.base_oracle_config.threshold = 1;
         // authorize some dummy address so that threshold logic would pass if signature were valid
-        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT];
+        let mut fixed_signers = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
         fixed_signers[0] = [0xAA; 20];
         bridge.base_oracle_config.signers = fixed_signers;
         bridge.base_oracle_config.signer_count = 1;

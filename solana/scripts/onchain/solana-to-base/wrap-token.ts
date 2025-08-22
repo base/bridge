@@ -87,7 +87,7 @@ async function main() {
     {
       // Accounts
       payer,
-      gasFeeReceiver: bridge.data.gasCostConfig.gasFeeReceiver,
+      gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
       mint: mintAddress,
       bridge: bridgeAddress,
       outgoingMessage: outgoingMessageSigner,

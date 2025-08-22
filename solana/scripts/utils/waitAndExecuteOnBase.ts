@@ -25,6 +25,8 @@ const MessageType = {
 } as const;
 
 export async function waitAndExecuteOnBase(outgoingMessagePubkey: SolAddress) {
+  console.log("🔄 Waiting for oracle to prevalidate...");
+
   const target = getTarget();
   const constants = CONSTANTS[target];
 

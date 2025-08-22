@@ -79,7 +79,7 @@ impl BufferConfig {
 
 impl BaseOracleConfig {
     pub fn test_new() -> Self {
-        let mut signer_addrs: [[u8; 20]; MAX_SIGNER_COUNT] = [[0u8; 20]; MAX_SIGNER_COUNT];
+        let mut signer_addrs = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
         signer_addrs[0] = [1u8; 20];
 
         Self {

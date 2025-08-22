@@ -20,7 +20,7 @@ import { BRIDGE_ABI } from "../../abi/bridge.abi";
 import { relayMessage } from "./relay-message";
 
 const TRANSACTION_HASH =
-  "0x30b961b75231b2711cfd511e9de42aa43096feecd05466356d20bd0e123519f3";
+  "0xa8428e7fc5cf92b1af17af6f0e2b470e6cc49bb78bdf6435564060dd8c4086af";
 
 async function generateProof(
   transactionHash: Hash,
@@ -39,6 +39,12 @@ async function generateProof(
   // Extract and decode MessageRegistered events
   const messageRegisteredEvents = txReceipt.logs
     .map((log) => {
+      if (bridgeBaseBlockNumber < log.blockNumber) {
+        throw new Error(
+          `Transaction not finaized yet: ${bridgeBaseBlockNumber} < ${log.blockNumber}`
+        );
+      }
+
       try {
         const decodedLog = decodeEventLog({
           abi: BRIDGE_ABI,
@@ -90,7 +96,6 @@ async function generateProof(
   return {
     event,
     rawProof,
-    leafIndex: event.message.nonce,
   };
 }
 
@@ -115,6 +120,7 @@ async function main() {
 
   const bridge = await fetchBridge(rpc, bridgeAddress);
   const baseBlockNumber = bridge.data.baseBlockNumber;
+  console.log(`🔗 Base Block Number: ${baseBlockNumber}`);
 
   const [outputRootAddress] = await getProgramDerivedAddress({
     programAddress: constants.solanaBridge,
@@ -124,7 +130,7 @@ async function main() {
     ],
   });
 
-  const { event, rawProof, leafIndex } = await generateProof(
+  const { event, rawProof } = await generateProof(
     TRANSACTION_HASH,
     baseBlockNumber,
     constants.baseBridge
@@ -161,7 +167,6 @@ async function main() {
       sender: toBytes(event.message.sender),
       data: toBytes(event.message.data),
       proof: rawProof.map((e) => toBytes(e)),
-      leafIndex,
       messageHash: toBytes(event.messageHash),
     },
     { programAddress: constants.solanaBridge }

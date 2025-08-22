@@ -866,7 +866,7 @@ dependencies = [
 
 [[package]]
 name = "bridge"
-version = "0.1.0"
+version = "0.0.4"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-type-parser",

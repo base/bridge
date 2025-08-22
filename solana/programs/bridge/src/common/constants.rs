@@ -11,4 +11,4 @@ pub const WRAPPED_TOKEN_SEED: &[u8] = b"wrapped_token";
 #[constant]
 pub const MAX_PARTNER_VALIDATOR_THRESHOLD: u8 = 5;
 #[constant]
-pub const MAX_SIGNER_COUNT: usize = 16;
+pub const MAX_SIGNER_COUNT: u8 = 16;

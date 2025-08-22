@@ -1,7 +1,7 @@
 export const IDL = {
   "metadata": {
     "name": "bridge",
-    "version": "0.1.0",
+    "version": "0.0.4",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
@@ -30,8 +30,8 @@ export const IDL = {
         {
           "name": "owner",
           "docs": [
-            "The account paying for the transaction fees.",
-            "It must be the owner of the call buffer account."
+            "The signer authorized to modify this call buffer.",
+            "Must match `call_buffer.owner`."
           ],
           "writable": true,
           "signer": true
@@ -39,7 +39,10 @@ export const IDL = {
         {
           "name": "call_buffer",
           "docs": [
-            "The call buffer account to append data to"
+            "The call buffer account to append data to.",
+            "Must have been initialized with enough space to hold the resulting",
+            "data; this instruction does not reallocate and will revert if",
+            "serialization would exceed the account's allocated size."
           ],
           "writable": true
         }
@@ -60,7 +63,7 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx`  - The context containing accounts for the bridge operation",
-        "* `call` - The contract call details including target address and calldata"
+        "* `call` - The contract call details including call type, target address, value, and calldata"
       ],
       "discriminator": [
         90,
@@ -111,9 +114,10 @@ export const IDL = {
           "name": "outgoing_message",
           "docs": [
             "The outgoing message account that stores the cross-chain call data.",
-            "- Created fresh for each bridge call with unique address",
+            "- Created fresh for each bridge call at a client-provided address (not a PDA)",
             "- Payer funds the account creation",
-            "- Space calculated dynamically based on call data length (8-byte discriminator + message data)",
+            "- Space is `8 (anchor discriminator) + OutgoingMessage::space(...)` and is sized using",
+            "the worst-case message variant to ensure sufficient capacity even for large payloads",
             "- Contains all information needed for execution on Base"
           ],
           "writable": true,
@@ -162,8 +166,8 @@ export const IDL = {
         {
           "name": "payer",
           "docs": [
-            "The account that pays for the transaction fees and outgoing message account creation.",
-            "Must be mutable to deduct lamports for account rent and gas fees."
+            "The account that pays for outgoing message account creation and the gas fee.",
+            "Must be mutable to deduct lamports for rent and the EIP-1559-based gas fee."
           ],
           "writable": true,
           "signer": true
@@ -172,7 +176,7 @@ export const IDL = {
           "name": "from",
           "docs": [
             "The account initiating the bridge call on Solana.",
-            "This account's public key will be used as the sender in the cross-chain message."
+            "This account's public key is recorded as the `sender` in the cross-chain message."
           ],
           "signer": true
         },
@@ -186,9 +190,9 @@ export const IDL = {
         {
           "name": "bridge",
           "docs": [
-            "The main bridge state account containing global bridge configuration.",
-            "- Uses PDA with BRIDGE_SEED for deterministic address",
-            "- Mutable to increment the nonce and update EIP-1559 gas pricing",
+            "The main bridge state account containing global configuration and runtime state.",
+            "- PDA with `BRIDGE_SEED`",
+            "- Mutable to charge gas (EIP-1559 accounting) and increment the message nonce",
             "- Provides the current nonce for message ordering"
           ],
           "writable": true
@@ -204,19 +208,23 @@ export const IDL = {
         {
           "name": "call_buffer",
           "docs": [
-            "The call buffer account that stores the call data.",
-            "This account will be closed and rent returned to the owner."
+            "The call buffer account that stores the call parameters and data.",
+            "Its contents are copied into the outgoing message. The account is then",
+            "closed by Anchor (via `close = owner`), refunding its rent to `owner`."
           ],
           "writable": true
         },
         {
           "name": "outgoing_message",
           "docs": [
-            "The outgoing message account that stores the cross-chain call data.",
-            "- Created fresh for each bridge call with unique address",
-            "- Payer funds the account creation",
-            "- Space calculated dynamically based on call data length (8-byte discriminator + message data)",
-            "- Contains all information needed for execution on Base"
+            "The outgoing message account that stores the cross-chain message (header + payload).",
+            "- Created fresh for each call; the provided keypair determines its address",
+            "- Funded by `payer`",
+            "- Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`",
+            "Sizing uses `OutgoingMessage::space(Some(call_buffer.data.len()))`, which",
+            "intentionally allocates for the Transfer variant (worst case) to safely",
+            "cover the Call variant",
+            "- Includes `nonce` and `sender` metadata used on Base"
           ],
           "writable": true,
           "signer": true
@@ -316,7 +324,7 @@ export const IDL = {
           "name": "system_program",
           "docs": [
             "System program required for SOL transfers and account creation.",
-            "Used for transferring SOL from user to vault and creating outgoing message account."
+            "Used for transferring SOL from user to vault and creating outgoing message accounts."
           ]
         }
       ],
@@ -382,8 +390,8 @@ export const IDL = {
         {
           "name": "payer",
           "docs": [
-            "The account that pays for transaction fees and account creation.",
-            "Must be mutable to deduct lamports for account rent and gas fees."
+            "The account that pays for account creation and the gas fee (EIP-1559 based) on Solana.",
+            "Must be mutable to deduct lamports for rent and to transfer the gas fee to `gas_fee_receiver`."
           ],
           "writable": true,
           "signer": true
@@ -408,8 +416,8 @@ export const IDL = {
           "name": "sol_vault",
           "docs": [
             "The SOL vault account that holds locked tokens for the specific remote token.",
-            "- Uses PDA with SOL_VAULT_SEED and remote_token for deterministic address",
-            "- Mutable to receive the locked SOL tokens",
+            "- PDA of this program using `[SOL_VAULT_SEED, remote_token]`",
+            "- Mutable to receive the locked SOL",
             "- Each remote token has its own dedicated vault",
             ""
           ],
@@ -419,8 +427,8 @@ export const IDL = {
           "name": "bridge",
           "docs": [
             "The main bridge state account that tracks nonces and fee parameters.",
-            "- Uses PDA with BRIDGE_SEED for deterministic address",
-            "- Mutable to increment nonce and update EIP1559 fee data"
+            "- PDA with `BRIDGE_SEED`",
+            "- Mutable to charge gas (EIP-1559 accounting) and increment the message nonce"
           ],
           "writable": true
         },
@@ -435,15 +443,19 @@ export const IDL = {
         {
           "name": "call_buffer",
           "docs": [
-            "The call buffer account that stores the call data.",
-            "This account will be closed and rent returned to the owner."
+            "The call buffer account that stores the call parameters and data.",
+            "Its contents are copied into the outgoing message, then the account is closed",
+            "(rent refunded to `owner`)."
           ],
           "writable": true
         },
         {
           "name": "outgoing_message",
           "docs": [
-            "The outgoing message account that stores the cross-chain transfer details."
+            "The outgoing message account that stores the cross-chain transfer details.",
+            "- Created fresh for each bridge; address determined by the provided keypair",
+            "- Funded by `payer`",
+            "- Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`"
           ],
           "writable": true,
           "signer": true
@@ -451,7 +463,7 @@ export const IDL = {
         {
           "name": "system_program",
           "docs": [
-            "System program required for SOL transfers and account creation."
+            "System program required for account creation and the SOL transfer CPI."
           ]
         }
       ],
@@ -491,7 +503,7 @@ export const IDL = {
         "* `ctx`          - The context containing accounts for the SPL token bridge operation",
         "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
         "* `remote_token` - The 20-byte address of the ERC20 token contract on Base",
-        "* `amount`       - Amount of SPL tokens to bridge (in lamports)",
+        "* `amount`       - Amount of SPL tokens to bridge (in the token's smallest units)",
         "* `call`         - Optional additional contract call to execute with the token transfer"
       ],
       "discriminator": [
@@ -517,8 +529,8 @@ export const IDL = {
         {
           "name": "from",
           "docs": [
-            "The token owner authorizing the transfer of SPL tokens.",
-            "This account must sign the transaction and own the tokens being bridged."
+            "The token authority authorizing the transfer of SPL tokens.",
+            "This signer must be the owner or an approved delegate for the source token account."
           ],
           "writable": true,
           "signer": true
@@ -535,7 +547,7 @@ export const IDL = {
           "docs": [
             "The SPL token mint account for the token being bridged.",
             "- Must not be a wrapped token (wrapped tokens use bridge_wrapped_token)",
-            "- Used to validate transfer amounts and get token metadata"
+            "- Used to read token decimals and validate it is not a wrapped token"
           ],
           "writable": true
         },
@@ -543,7 +555,7 @@ export const IDL = {
           "name": "from_token_account",
           "docs": [
             "The user's token account containing the SPL tokens to be bridged.",
-            "- Must be owned by the 'from' signer",
+            "- Must be owned by, or delegated to, the `from` signer (transfer authority)",
             "- Tokens will be transferred from this account to the token vault"
           ],
           "writable": true
@@ -564,6 +576,7 @@ export const IDL = {
             "The token vault account that holds locked SPL tokens during the bridge process.",
             "- PDA derived from TOKEN_VAULT_SEED, mint pubkey, and remote_token address",
             "- Created if it doesn't exist for this mint/remote_token pair",
+            "- Token account authority is set to this vault PDA; the program signs using the PDA seeds",
             "- Acts as the custody account for tokens being bridged to Base"
           ],
           "writable": true
@@ -574,7 +587,8 @@ export const IDL = {
             "The outgoing message account that represents this bridge operation.",
             "- Contains transfer details and optional call data for the destination chain",
             "- Space is calculated based on the size of optional call data",
-            "- Used by relayers to execute the bridge operation on Base"
+            "- Used by relayers to execute the bridge operation on Base",
+            "- The recorded transfer amount equals the net increase in `token_vault` balance"
           ],
           "writable": true,
           "signer": true
@@ -589,7 +603,8 @@ export const IDL = {
         {
           "name": "system_program",
           "docs": [
-            "System program required for creating the outgoing message account."
+            "System program required for creating the outgoing message account and",
+            "initializing the token vault when needed."
           ]
         }
       ],
@@ -639,7 +654,7 @@ export const IDL = {
         "* `ctx`          - The context containing accounts for the SPL token bridge operation",
         "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
         "* `remote_token` - The 20-byte address of the ERC20 token contract on Base",
-        "* `amount`       - Amount of SPL tokens to bridge (in lamports)"
+        "* `amount`       - Amount of SPL tokens to bridge (in the token's smallest units)"
       ],
       "discriminator": [
         86,
@@ -664,8 +679,8 @@ export const IDL = {
         {
           "name": "from",
           "docs": [
-            "The token owner authorizing the transfer of SPL tokens.",
-            "This account must sign the transaction and own the tokens being bridged."
+            "The token authority authorizing the transfer of SPL tokens.",
+            "This signer must be the owner or an approved delegate for the source token account."
           ],
           "writable": true,
           "signer": true
@@ -690,7 +705,7 @@ export const IDL = {
           "name": "from_token_account",
           "docs": [
             "The user's token account containing the SPL tokens to be bridged.",
-            "- Must be owned by the 'from' signer",
+            "- Must be owned by, or delegated to, the `from` signer (transfer authority)",
             "- Tokens will be transferred from this account to the token vault"
           ],
           "writable": true
@@ -711,6 +726,7 @@ export const IDL = {
             "The token vault account that holds locked SPL tokens during the bridge process.",
             "- PDA derived from TOKEN_VAULT_SEED, mint pubkey, and remote_token address",
             "- Created if it doesn't exist for this mint/remote_token pair",
+            "- Token account authority is set to this vault PDA; the program signs using the PDA seeds",
             "- Acts as the custody account for tokens being bridged to Base"
           ],
           "writable": true
@@ -749,7 +765,8 @@ export const IDL = {
         {
           "name": "system_program",
           "docs": [
-            "System program required for creating the outgoing message account."
+            "System program required for creating the outgoing message account and",
+            "initializing the token vault when needed."
           ]
         }
       ],
@@ -788,7 +805,7 @@ export const IDL = {
         "# Arguments",
         "* `ctx`    - The context containing accounts for the wrapped token bridge operation",
         "* `to`     - The 20-byte Ethereum address that will receive the original tokens on Base",
-        "* `amount` - Amount of wrapped tokens to bridge back (in lamports)",
+        "* `amount` - Amount of wrapped tokens to bridge back (in the token's smallest units)",
         "* `call`   - Optional additional contract call to execute with the token transfer"
       ],
       "discriminator": [
@@ -874,7 +891,8 @@ export const IDL = {
         {
           "name": "system_program",
           "docs": [
-            "System program required for creating the outgoing message account."
+            "System program required for creating the outgoing message account",
+            "and transferring the gas payment to the `gas_fee_receiver`."
           ]
         }
       ],
@@ -914,7 +932,7 @@ export const IDL = {
         "# Arguments",
         "* `ctx`    - The context containing accounts for the wrapped token bridge operation",
         "* `to`     - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `amount` - Amount of wrapped tokens to bridge back (in lamports)"
+        "* `amount` - Amount of wrapped tokens to bridge back (in the token's smallest units)"
       ],
       "discriminator": [
         117,
@@ -930,8 +948,8 @@ export const IDL = {
         {
           "name": "payer",
           "docs": [
-            "The account that pays for transaction fees and outgoing message account creation.",
-            "Must be mutable to deduct lamports for account rent and gas fees."
+            "The account that pays for transaction fees, gas fees, and outgoing message account creation.",
+            "Must be mutable to deduct lamports for account rent and gas fees (sent to `gas_fee_receiver`)."
           ],
           "writable": true,
           "signer": true
@@ -947,7 +965,8 @@ export const IDL = {
         {
           "name": "gas_fee_receiver",
           "docs": [
-            "The account that receives payment for the gas costs of bridging the wrapped token to Base."
+            "The account that receives payment for the gas costs of bridging the wrapped token to Base.",
+            "Mutable because lamports are transferred to this account."
           ],
           "writable": true
         },
@@ -956,7 +975,7 @@ export const IDL = {
           "docs": [
             "The wrapped token mint account representing the original Base token.",
             "- Contains metadata linking to the original token on Base",
-            "- Tokens will be burned from this mint"
+            "- Supply will be reduced by burning tokens from the user's token account for this mint"
           ],
           "writable": true
         },
@@ -965,7 +984,8 @@ export const IDL = {
           "docs": [
             "The user's token account holding the wrapped tokens to be bridged.",
             "- Must contain sufficient token balance for the bridge amount",
-            "- Tokens will be burned from this account"
+            "- Tokens will be burned from this account",
+            "- The burn authority must be the `from` signer (or a valid delegate)"
           ],
           "writable": true
         },
@@ -973,8 +993,8 @@ export const IDL = {
           "name": "bridge",
           "docs": [
             "The main bridge state account storing global bridge configuration.",
-            "- Uses PDA with BRIDGE_SEED for deterministic address",
-            "- Tracks nonce for message ordering and EIP-1559 gas pricing"
+            "- Uses PDA with `BRIDGE_SEED` for deterministic address",
+            "- Tracks `nonce` for message ordering and maintains EIP-1559 fee state"
           ],
           "writable": true
         },
@@ -997,7 +1017,8 @@ export const IDL = {
         {
           "name": "outgoing_message",
           "docs": [
-            "The outgoing message account that stores the cross-chain transfer details."
+            "The outgoing message account that stores the cross-chain transfer details.",
+            "Space is sized based on the current call buffer length so the call data fits."
           ],
           "writable": true,
           "signer": true
@@ -1005,14 +1026,13 @@ export const IDL = {
         {
           "name": "token_program",
           "docs": [
-            "Token2022 program used for burning the wrapped tokens.",
-            "Required for all token operations including burn_checked."
+            "Token2022 program used for burning the wrapped tokens (burn_checked)."
           ]
         },
         {
           "name": "system_program",
           "docs": [
-            "System program required for creating the outgoing message account."
+            "System program required for creating the outgoing message account and transferring gas fees."
           ]
         }
       ],
@@ -1040,7 +1060,7 @@ export const IDL = {
         "changed their mind or made a mistake and wants to recover the rent.",
         "",
         "# Arguments",
-        "* `ctx` - The context containing the call buffer to close and rent receiver"
+        "* `ctx` - The context containing the call buffer to close and rent receiver (owner)"
       ],
       "discriminator": [
         132,
@@ -1079,11 +1099,7 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx` - The context containing all accounts needed for initialization, including the guardian signer",
-        "* `eip1559_config` - The EIP-1559 configuration, contains the gas target, adjustment denominator, window duration, and minimum base fee",
-        "* `gas_cost_config` - The gas cost configuration, contains the gas cost scaler, gas cost scaler decimal precision, and gas fee receiver",
-        "* `gas_config` - The gas configuration, contains the extra relay buffer, execution prologue buffer, execution buffer, execution epilogue buffer, base transaction cost, and max gas limit per message",
-        "* `protocol_config` - The protocol configuration, contains the block interval requirement for output root registration",
-        "* `buffer_config` - The buffer configuration, contains the maximum call buffer size"
+        "* `cfg` - All the configuration parameters needed to initialize the bridge"
       ],
       "discriminator": [
         175,
@@ -1119,7 +1135,8 @@ export const IDL = {
           "name": "guardian",
           "docs": [
             "The guardian account that will have administrative authority over the bridge.",
-            "Must be a signer to ensure the initializer controls this account."
+            "Must be a signer to prove ownership of the guardian key. The payer and guardian",
+            "may be distinct signers."
           ],
           "signer": true
         },
@@ -1133,42 +1150,10 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "eip1559_config",
+          "name": "cfg",
           "type": {
             "defined": {
-              "name": "Eip1559Config"
-            }
-          }
-        },
-        {
-          "name": "gas_cost_config",
-          "type": {
-            "defined": {
-              "name": "GasCostConfig"
-            }
-          }
-        },
-        {
-          "name": "gas_config",
-          "type": {
-            "defined": {
-              "name": "GasConfig"
-            }
-          }
-        },
-        {
-          "name": "protocol_config",
-          "type": {
-            "defined": {
-              "name": "ProtocolConfig"
-            }
-          }
-        },
-        {
-          "name": "buffer_config",
-          "type": {
-            "defined": {
-              "name": "BufferConfig"
+              "name": "Config"
             }
           }
         }
@@ -1203,7 +1188,8 @@ export const IDL = {
         {
           "name": "payer",
           "docs": [
-            "The account that pays for the transaction and call buffer account creation"
+            "The account that pays for the transaction and call buffer account creation.",
+            "This signer becomes the `CallBuffer.owner`."
           ],
           "writable": true,
           "signer": true
@@ -1217,7 +1203,9 @@ export const IDL = {
         {
           "name": "call_buffer",
           "docs": [
-            "The call buffer account being initialized"
+            "The call buffer account being initialized.",
+            "Space is allocated for up to `max_data_len` bytes of `data` (plus the Vec length prefix).",
+            "The bridge configuration enforces an upper bound via `buffer_config.max_call_buffer_size`."
           ],
           "writable": true,
           "signer": true
@@ -1299,7 +1287,7 @@ export const IDL = {
         {
           "name": "output_root",
           "docs": [
-            "The output root account containing the merkle root from Base.",
+            "The output root account containing the MMR root from Base.",
             "Used to verify that the message proof is valid against the committed state.",
             "This root must have been previously registered via register_output_root instruction."
           ]
@@ -1351,8 +1339,11 @@ export const IDL = {
         {
           "name": "proof",
           "type": {
-            "defined": {
-              "name": "Proof"
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
             }
           }
         },
@@ -1373,12 +1364,15 @@ export const IDL = {
         "Registers an output root from Base to enable message verification.",
         "This function stores the MMR root of Base message state at a specific block number,",
         "which is required before any messages from that block can be proven and relayed.",
+        "Authorization is enforced via EVM signatures from authorized Base oracles and partner",
+        "signers per configured thresholds; the Solana payer only funds account creation.",
         "",
         "# Arguments",
-        "* `ctx`               - The context containing accounts for storing the output root",
+        "* `ctx`               - The context containing accounts for storing the output root (payer signs for fees; authorization is provided via EVM signatures)",
         "* `output_root`       - The 32-byte MMR root of Base messages for the given block",
         "* `base_block_number` - The Base block number this output root corresponds to",
-        "* `total_leaf_count`  - The total amount of leaves in the MMR with this root"
+        "* `total_leaf_count`  - The total number of leaves in the MMR with this root",
+        "* `signatures`        - A list of ECDSA signatures from authorized oracles attesting to the output root"
       ],
       "discriminator": [
         215,
@@ -1394,7 +1388,7 @@ export const IDL = {
         {
           "name": "payer",
           "docs": [
-            "The trusted oracle account that submits MMR roots from Base."
+            "Payer funds the account creation. Authorization is enforced via oracle EVM signature."
           ],
           "writable": true,
           "signer": true
@@ -1402,9 +1396,9 @@ export const IDL = {
         {
           "name": "root",
           "docs": [
-            "The output root account being created to store the Base MMR root.",
+            "The output root account being created to store the Base MMR root and total leaf count.",
             "- Uses PDA with OUTPUT_ROOT_SEED and base_block_number for deterministic address",
-            "- Payer (trusted oracle) funds the account creation",
+            "- Payer funds the account creation (authorization is enforced via EVM signatures)",
             "- Space allocated for output root state (8-byte discriminator + OutputRoot::INIT_SPACE)",
             "- Each output root corresponds to a specific Base block number"
           ],
@@ -1414,11 +1408,18 @@ export const IDL = {
           "name": "bridge",
           "docs": [
             "The main bridge state account that tracks the latest registered Base block number.",
-            "- Uses PDA with BRIDGE_SEED for deterministic address",
+            "- Uses PDA with BRIDGE_SEED",
             "- Must be mutable to update the base_block_number field",
-            "- Ensures output roots are registered in sequential order"
+            "- Enforces registrations are monotonic and aligned to the configured interval"
           ],
           "writable": true
+        },
+        {
+          "name": "partner_config",
+          "docs": [
+            "Partner `Config` account (PDA with seed \"config\") owned by partner program.",
+            "Unchecked to avoid Anchor pre-handler owner checks; PDA address is validated in the handler."
+          ]
         },
         {
           "name": "system_program",
@@ -1445,6 +1446,17 @@ export const IDL = {
         {
           "name": "total_leaf_count",
           "type": "u64"
+        },
+        {
+          "name": "signatures",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                65
+              ]
+            }
+          }
         }
       ]
     },
@@ -1453,7 +1465,7 @@ export const IDL = {
       "docs": [
         "Executes a previously proven cross-chain message on Solana.",
         "This function takes a message that has been proven via `prove_message` and executes",
-        "its payload, completing the cross-chain message transfer from Base to Solana.",
+        "its payload using a bridge CPI authority derived from the message sender.",
         "",
         "# Arguments",
         "* `ctx` - The transaction context"
@@ -1472,10 +1484,9 @@ export const IDL = {
         {
           "name": "payer",
           "docs": [
-            "The account that pays for the transaction execution fees.",
-            "Must be mutable to deduct lamports for transaction costs."
+            "A signer for the transaction. This instruction does not read or debit this",
+            "account directly; transaction fees are paid at the transaction level."
           ],
-          "writable": true,
           "signer": true
         },
         {
@@ -1506,7 +1517,7 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx` - The context containing the bridge account and guardian",
-        "* `new_denominator` - The new adjustment denominator (must be >= 1 and <= 100)"
+        "* `new_denominator` - The new adjustment denominator"
       ],
       "discriminator": [
         31,
@@ -1592,7 +1603,7 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx` - The context containing the bridge account and guardian",
-        "* `new_scaler` - The new gas cost scaler value (must be > 0 and <= 1,000,000,000)"
+        "* `new_scaler` - The new gas cost scaler value"
       ],
       "discriminator": [
         148,
@@ -1635,7 +1646,7 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx` - The context containing the bridge account and guardian",
-        "* `new_dp` - The new gas cost scaler DP value (must be > 0 and <= 1,000,000,000)"
+        "* `new_dp` - The new gas cost scaler DP value"
       ],
       "discriminator": [
         198,
@@ -1764,7 +1775,7 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx` - The context containing the bridge account and guardian",
-        "* `new_target` - The new gas target value (must be > 0 and <= 1,000,000,000)"
+        "* `new_target` - The new gas target value"
       ],
       "discriminator": [
         132,
@@ -1850,7 +1861,7 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx` - The context containing the bridge account and guardian",
-        "* `new_fee` - The new minimum base fee value (must be > 0 and <= 1,000,000,000)"
+        "* `new_fee` - The new minimum base fee value"
       ],
       "discriminator": [
         56,
@@ -1882,6 +1893,54 @@ export const IDL = {
         {
           "name": "new_fee",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_oracle_signers",
+      "docs": [
+        "Sets the authorized oracle EVM signer addresses and the signature threshold used",
+        "when registering output roots. This function updates the `OracleSigners` account",
+        "and can only be called by the guardian.",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the bridge, guardian signer, and oracle signers accounts",
+        "* `cfg` - Configuration parameters for Base oracle signers"
+      ],
+      "discriminator": [
+        38,
+        183,
+        212,
+        67,
+        28,
+        241,
+        25,
+        160
+      ],
+      "accounts": [
+        {
+          "name": "bridge",
+          "docs": [
+            "The bridge account containing configuration"
+          ],
+          "writable": true
+        },
+        {
+          "name": "guardian",
+          "docs": [
+            "The guardian account authorized to update configuration"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "cfg",
+          "type": {
+            "defined": {
+              "name": "BaseOracleConfig"
+            }
+          }
         }
       ]
     },
@@ -1936,7 +1995,7 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx` - The context containing the bridge account and guardian",
-        "* `new_duration` - The new window duration in seconds (must be > 0 and <= 3600)"
+        "* `new_duration` - The new window duration in seconds"
       ],
       "discriminator": [
         229,
@@ -1994,10 +2053,16 @@ export const IDL = {
       "accounts": [
         {
           "name": "bridge",
+          "docs": [
+            "The bridge account containing configuration"
+          ],
           "writable": true
         },
         {
           "name": "guardian",
+          "docs": [
+            "The guardian account authorized to update configuration"
+          ],
           "signer": true
         }
       ],
@@ -2019,7 +2084,7 @@ export const IDL = {
         "# Arguments",
         "* `ctx`                    - The transaction context",
         "* `decimals`               - Number of decimal places for the token",
-        "* `partial_token_metadata` - Token name, symbol, and other metadata for the ERC20 contract"
+        "* `partial_token_metadata` - Token name, symbol, remote Base token address, and scaler exponent"
       ],
       "discriminator": [
         203,
@@ -2081,7 +2146,7 @@ export const IDL = {
           "name": "token_program",
           "docs": [
             "SPL Token-2022 program for creating the mint with metadata extensions.",
-            "Required for initializing tokens with advanced features like metadata pointer."
+            "Required for initializing tokens with advanced features like metadata pointers."
           ]
         },
         {
@@ -2204,6 +2269,45 @@ export const IDL = {
   ],
   "types": [
     {
+      "name": "BaseOracleConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "threshold",
+            "docs": [
+              "Number of required valid unique signatures"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "signer_count",
+            "docs": [
+              "Number of signers in `signers` array"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "signers",
+            "docs": [
+              "Static list of authorized signer addresses"
+            ],
+            "type": {
+              "array": [
+                {
+                  "array": [
+                    "u8",
+                    20
+                  ]
+                },
+                16
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "Bridge",
       "type": {
         "kind": "struct",
@@ -2218,14 +2322,14 @@ export const IDL = {
           {
             "name": "nonce",
             "docs": [
-              "Incremental nonce assigned to each message."
+              "Incremental nonce assigned to each outgoing message."
             ],
             "type": "u64"
           },
           {
             "name": "guardian",
             "docs": [
-              "Guardian pubkey authorized to update configuration"
+              "Guardian pubkey authorized to update bridge configuration parameters"
             ],
             "type": "pubkey"
           },
@@ -2248,20 +2352,9 @@ export const IDL = {
             }
           },
           {
-            "name": "gas_cost_config",
-            "docs": [
-              "Gas cost configuration"
-            ],
-            "type": {
-              "defined": {
-                "name": "GasCostConfig"
-              }
-            }
-          },
-          {
             "name": "gas_config",
             "docs": [
-              "Gas configuration"
+              "Configuration parameters for outgoing message pricing"
             ],
             "type": {
               "defined": {
@@ -2272,7 +2365,7 @@ export const IDL = {
           {
             "name": "protocol_config",
             "docs": [
-              "Protocol configuration"
+              "Configuration parameters for bridge protocol"
             ],
             "type": {
               "defined": {
@@ -2283,11 +2376,33 @@ export const IDL = {
           {
             "name": "buffer_config",
             "docs": [
-              "Buffer configuration"
+              "Configuration parameters for pre-loading Solana --> Base messages in buffer accounts"
             ],
             "type": {
               "defined": {
                 "name": "BufferConfig"
+              }
+            }
+          },
+          {
+            "name": "partner_oracle_config",
+            "docs": [
+              "Partner oracle configuration containing the required signature threshold"
+            ],
+            "type": {
+              "defined": {
+                "name": "PartnerOracleConfig"
+              }
+            }
+          },
+          {
+            "name": "base_oracle_config",
+            "docs": [
+              "Configuration parameters for Base oracle signers"
+            ],
+            "type": {
+              "defined": {
+                "name": "BaseOracleConfig"
               }
             }
           }
@@ -2302,7 +2417,7 @@ export const IDL = {
           {
             "name": "max_call_buffer_size",
             "docs": [
-              "Maximum call buffer size"
+              "Maximum call buffer size. This caps the max size of a Solana → Base message."
             ],
             "type": "u64"
           }
@@ -2347,7 +2462,7 @@ export const IDL = {
           {
             "name": "value",
             "docs": [
-              "The amount of native currency (ETH) to send with this call, in wei."
+              "Amount of ETH to send with this call on Base, in wei."
             ],
             "type": "u128"
           },
@@ -2367,8 +2482,9 @@ export const IDL = {
       "name": "CallBuffer",
       "docs": [
         "A buffer account that stores call parameters which can be built up over multiple transactions",
-        "to bypass Solana's transaction size limits. The data field can be appended to incrementally",
-        "and the account is consumed when the call is bridged to Base."
+        "to bypass Solana's transaction size limits. The `data` field can be appended incrementally, and",
+        "the account is typically consumed (closed via `close = owner`) by the buffered bridge",
+        "instructions when the call is bridged to Base."
       ],
       "type": {
         "kind": "struct",
@@ -2408,7 +2524,7 @@ export const IDL = {
           {
             "name": "value",
             "docs": [
-              "The amount of native currency (ETH) to send with this call, in wei."
+              "The amount of Base native currency (ETH) to send with this call, in wei."
             ],
             "type": "u128"
           },
@@ -2445,12 +2561,89 @@ export const IDL = {
       }
     },
     {
+      "name": "Config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "eip1559_config",
+            "docs": [
+              "Configuration parameters for EIP-1559-inspired fee calculations"
+            ],
+            "type": {
+              "defined": {
+                "name": "Eip1559Config"
+              }
+            }
+          },
+          {
+            "name": "gas_config",
+            "docs": [
+              "Configuration parameters for outgoing message pricing"
+            ],
+            "type": {
+              "defined": {
+                "name": "GasConfig"
+              }
+            }
+          },
+          {
+            "name": "protocol_config",
+            "docs": [
+              "Configuration parameters for bridge protocol"
+            ],
+            "type": {
+              "defined": {
+                "name": "ProtocolConfig"
+              }
+            }
+          },
+          {
+            "name": "buffer_config",
+            "docs": [
+              "Configuration parameters for pre-loading Solana --> Base messages in buffer accounts"
+            ],
+            "type": {
+              "defined": {
+                "name": "BufferConfig"
+              }
+            }
+          },
+          {
+            "name": "partner_oracle_config",
+            "docs": [
+              "Partner oracle configuration containing the required signature threshold"
+            ],
+            "type": {
+              "defined": {
+                "name": "PartnerOracleConfig"
+              }
+            }
+          },
+          {
+            "name": "base_oracle_config",
+            "docs": [
+              "Configuration parameters for Base oracle signers"
+            ],
+            "type": {
+              "defined": {
+                "name": "BaseOracleConfig"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "Eip1559",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "config",
+            "docs": [
+              "Configuration parameters for EIP-1559-inspired fee calculations"
+            ],
             "type": {
               "defined": {
                 "name": "Eip1559Config"
@@ -2460,7 +2653,8 @@ export const IDL = {
           {
             "name": "current_base_fee",
             "docs": [
-              "Current base fee in gwei (runtime state)"
+              "Current base fee used in fee computation (runtime state).",
+              "Unitless value combined with `gas_per_call` and gas cost scaler to produce lamports."
             ],
             "type": "u64"
           },
@@ -2489,28 +2683,30 @@ export const IDL = {
           {
             "name": "target",
             "docs": [
-              "Gas target per window (configurable)"
+              "Gas target per window"
             ],
             "type": "u64"
           },
           {
             "name": "denominator",
             "docs": [
-              "Adjustment denominator (controls rate of change) (configurable)"
+              "Adjustment denominator (controls rate of change)"
             ],
             "type": "u64"
           },
           {
             "name": "window_duration_seconds",
             "docs": [
-              "Window duration in seconds (configurable)"
+              "Window duration in seconds"
             ],
             "type": "u64"
           },
           {
             "name": "minimum_base_fee",
             "docs": [
-              "Minimum base fee floor (configurable)"
+              "Minimum base fee. Used to seed `current_base_fee` at initialization",
+              "and as an underflow clamp during decreases; not enforced as a strict lower bound",
+              "on every step."
             ],
             "type": "u64"
           }
@@ -2520,11 +2716,11 @@ export const IDL = {
     {
       "name": "FinalizeBridgeSol",
       "docs": [
-        "Parameters for finalizing a SOL transfer from Base to Solana.",
+        "Instruction data for finalizing a native SOL transfer from Base to Solana.",
         "",
-        "This struct contains all the necessary information to complete a cross-chain",
-        "SOL transfer that was initiated on Base. The SOL is held in",
-        "a program-derived account (vault) until the transfer is finalized on Solana."
+        "Contains the data needed to release escrowed SOL on Solana that corresponds",
+        "to a transfer initiated on Base. SOL is held in a PDA vault and released to",
+        "the recipient when finalized."
       ],
       "type": {
         "kind": "struct",
@@ -2532,10 +2728,9 @@ export const IDL = {
           {
             "name": "remote_token",
             "docs": [
-              "The 20-byte address of the token contract on Base.",
-              "This is used as a seed to derive the SOL vault PDA that holds the escrowed SOL.",
-              "Even though this is a SOL transfer, we need the remote token identifier",
-              "to locate the correct vault."
+              "The 20-byte EVM address on Base of the ERC-20 token that represents SOL for this bridge.",
+              "Used as a seed to derive the SOL vault PDA that escrows SOL for this mapping.",
+              "This identifier names the vault even though the asset released here is native SOL."
             ],
             "type": {
               "array": [
@@ -2555,7 +2750,7 @@ export const IDL = {
           {
             "name": "amount",
             "docs": [
-              "The amount of SOL to transfer, denominated in lamports (1 SOL = 1,000,000,000 lamports).",
+              "The amount of SOL to transfer, denominated in lamports (1 SOL = 1_000_000_000 lamports).",
               "This amount will be transferred from the SOL vault to the recipient."
             ],
             "type": "u64"
@@ -2566,12 +2761,10 @@ export const IDL = {
     {
       "name": "FinalizeBridgeSpl",
       "docs": [
-        "Data structure for finalizing SPL token transfers from Base to Solana.",
+        "Instruction data for finalizing a bridged SPL token transfer from Base to Solana.",
         "",
-        "This struct contains all the necessary information to complete a cross-chain",
-        "SPL token transfer that was initiated on Base and is being finalized on Solana.",
-        "It handles the release of tokens from a program-controlled vault to the",
-        "designated recipient on Solana."
+        "Releases tokens from a program-controlled vault PDA to the specified recipient",
+        "token account on Solana."
       ],
       "type": {
         "kind": "struct",
@@ -2579,10 +2772,8 @@ export const IDL = {
           {
             "name": "remote_token",
             "docs": [
-              "The token contract address on Base.",
-              "This is a 20-byte address representing the ERC-20 token",
-              "contract on Base that was originally bridged. Used to derive the",
-              "token vault PDA and ensure proper token mapping between chains."
+              "The 20-byte ERC-20 contract address on Base that corresponds to the SPL mint.",
+              "Used, together with the SPL mint, to derive the token-vault PDA for this mapping."
             ],
             "type": {
               "array": [
@@ -2594,29 +2785,27 @@ export const IDL = {
           {
             "name": "local_token",
             "docs": [
-              "The SPL token mint public key on Solana.",
-              "This represents the corresponding SPL token on Solana that mirrors",
-              "the remote token."
+              "The SPL token mint on Solana that mirrors the `remote_token`."
             ],
             "type": "pubkey"
           },
           {
             "name": "to",
             "docs": [
-              "The recipient's token account public key on Solana.",
-              "This is the SPL token account that will receive the bridged tokens.",
-              "Must be an associated token account or valid token account owned",
-              "by the intended recipient and matching the local_token mint."
+              "The recipient SPL token account address on Solana that will receive tokens.",
+              "This must be a valid token account for `local_token`.",
+              "Note: this program does not enforce ownership or ATA semantics; the account",
+              "is authenticated by address equality (`self.to`) and `transfer_checked`",
+              "enforces the mint match."
             ],
             "type": "pubkey"
           },
           {
             "name": "amount",
             "docs": [
-              "The amount of tokens to transfer in the token's base units.",
-              "This amount respects the token's decimal precision as defined by",
-              "the mint. The transfer will be validated using transfer_checked",
-              "to ensure decimal accuracy."
+              "The amount to transfer, in base units of the mint (respecting mint decimals).",
+              "`transfer_checked` enforces that the destination account's mint matches and",
+              "the decimals are correct."
             ],
             "type": "u64"
           }
@@ -2654,7 +2843,9 @@ export const IDL = {
             "docs": [
               "The destination token account that will receive the wrapped tokens.",
               "This must be a valid token account that is associated with the wrapped",
-              "token mint and owned by the intended recipient of the bridged tokens."
+              "token mint. It is expected to be controlled by the intended recipient of",
+              "the bridged tokens; recipient ownership is not enforced by this",
+              "instruction."
             ],
             "type": "pubkey"
           },
@@ -2675,40 +2866,32 @@ export const IDL = {
         "kind": "struct",
         "fields": [
           {
-            "name": "gas_per_call",
-            "docs": [
-              "Amount of gas per cross-chain message"
-            ],
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "GasCostConfig",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
             "name": "gas_cost_scaler",
             "docs": [
-              "Scaling factor for gas cost calculations"
+              "Scaling factor applied when converting (gas_per_call * base_fee) into lamports"
             ],
             "type": "u64"
           },
           {
             "name": "gas_cost_scaler_dp",
             "docs": [
-              "Decimal precision for gas cost calculations"
+              "Decimal precision for the gas cost scaler (denominator)"
             ],
             "type": "u64"
           },
           {
             "name": "gas_fee_receiver",
             "docs": [
-              "Account that receives gas fees"
+              "Account that receives gas fees collected on Solana"
             ],
             "type": "pubkey"
+          },
+          {
+            "name": "gas_per_call",
+            "docs": [
+              "Amount of gas per Solana --> Base message"
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -2716,7 +2899,8 @@ export const IDL = {
     {
       "name": "GuardianTransferred",
       "docs": [
-        "Event for monitoring guardian transfers"
+        "Event emitted when guardian authority is transferred.",
+        "Emitted by [`transfer_guardian_handler`]."
       ],
       "type": {
         "kind": "struct",
@@ -2739,7 +2923,10 @@ export const IDL = {
         "that is waiting to be processed or has already been executed.",
         "",
         "This struct stores the essential information needed to validate and execute",
-        "bridge operations from Base to Solana, including both simple calls and token transfers."
+        "bridge operations from Base to Solana, including both simple calls and token transfers.",
+        "",
+        "Messages are created by the `prove_message` instruction (after MMR verification)",
+        "and executed by the `relay_message` instruction."
       ],
       "type": {
         "kind": "struct",
@@ -2747,8 +2934,9 @@ export const IDL = {
           {
             "name": "sender",
             "docs": [
-              "The 20-byte Ethereum address of the sender on Base who initiated this bridge operation.",
-              "This is used for verification and access control during message execution."
+              "The 20-byte EVM address of the sender on Base who initiated this bridge operation.",
+              "Used to derive the bridge CPI authority PDA that signs downstream CPIs during relay.",
+              "This field does not restrict who can call the relay instruction."
             ],
             "type": {
               "array": [
@@ -2783,8 +2971,8 @@ export const IDL = {
     {
       "name": "Ix",
       "docs": [
-        "Instruction to be executed by the wallet.",
-        "Functionally equivalent to a Solana Instruction."
+        "Instruction to be executed by the bridge program via signed CPI during message relay.",
+        "Functionally equivalent to a Solana `Instruction`, but serialized with Anchor for cross-program messaging."
       ],
       "type": {
         "kind": "struct",
@@ -2823,7 +3011,7 @@ export const IDL = {
       "name": "IxAccount",
       "docs": [
         "Account used in an instruction.",
-        "Identical to Solana's AccountMeta but implements AnchorSerialize and AnchorDeserialize."
+        "Similar to Solana's `AccountMeta`, but serializable with Anchor and supports PDAs via `PubkeyOrPda`."
       ],
       "type": {
         "kind": "struct",
@@ -2869,16 +3057,17 @@ export const IDL = {
           {
             "name": "nonce",
             "docs": [
-              "Sequential number for this message to ensure ordering and prevent replay attacks.",
-              "Starts at 1 and is incremented for each new message."
+              "Monotonic message nonce used for ordering and replay protection on Base.",
+              "Starts at 0 and is incremented by the `Bridge` for each new message."
             ],
             "type": "u64"
           },
           {
             "name": "sender",
             "docs": [
-              "The Solana public key of the account that initiated this cross-chain message.",
-              "This is used for authentication and to identify the message originator on Base."
+              "The Solana public key of the signer that initiated this cross-chain message.",
+              "Carried to Base for use by destination logic; Solana-side authentication is enforced",
+              "via signer constraints."
             ],
             "type": "pubkey"
           },
@@ -2900,17 +3089,18 @@ export const IDL = {
     {
       "name": "OutputRoot",
       "docs": [
-        "Represents a cryptographic commitment to the state of the Base L2 chain at a specific block.",
+        "Represents a cryptographic commitment to the set of Base L2 bridge messages",
+        "at a specific Base block number.",
         "",
-        "OutputRoots are submitted by proposers and serve as checkpoints that allow messages",
-        "and state from Base to be proven and relayed to Solana. Each OutputRoot contains",
-        "an MMR root that commits to the state of all messages on Base at",
-        "a particular block height.",
+        "Output roots are registered on Solana by a trusted oracle and serve as",
+        "checkpoints that allow messages from Base to be proven and relayed to",
+        "Solana. Each output root contains an MMR root that commits to all bridge",
+        "messages as of a particular Base block number.",
         "",
-        "This struct is used in the Base → Solana message passing flow, where:",
-        "1. Proposers submit OutputRoots for Base blocks",
-        "2. Users can prove their messages were included in Base using these roots",
-        "3. Messages are then relayed and executed on Solana"
+        "This account is used in the Base → Solana message passing flow, where:",
+        "1. A trusted oracle registers output roots for specific Base blocks",
+        "2. Users prove their messages were included on Base using these roots and an MMR proof",
+        "3. Proven messages are then relayed and executed on Solana"
       ],
       "type": {
         "kind": "struct",
@@ -2918,8 +3108,8 @@ export const IDL = {
           {
             "name": "root",
             "docs": [
-              "The 32-byte MMR root that commits to the complete state of the Bridge contract on Base",
-              "at a specific block height."
+              "The 32-byte MMR root that commits to all outgoing bridge messages on Base",
+              "as of the specified Base block number."
             ],
             "type": {
               "array": [
@@ -2949,8 +3139,9 @@ export const IDL = {
         "chains, including information about its remote counterpart and any scaling factors needed",
         "to handle differences between the chains (such as decimal precision).",
         "",
-        "The metadata is stored in the Solana Token-2022 program's additional metadata field and",
-        "can be used to reconstruct the relationship between tokens on both sides of the bridge."
+        "The metadata is stored using the SPL Token-2022 metadata interface's",
+        "`additional_metadata` key/value field and can be used to reconstruct the relationship",
+        "between tokens on both sides of the bridge."
       ],
       "type": {
         "kind": "struct",
@@ -2972,7 +3163,7 @@ export const IDL = {
           {
             "name": "remote_token",
             "docs": [
-              "The 20-byte address of the corresponding token contract on Base.",
+              "The 20-byte address of the corresponding token contract on Base (EVM address bytes).",
               "This allows the bridge to identify which Base token this Solana token represents."
             ],
             "type": {
@@ -2986,9 +3177,11 @@ export const IDL = {
             "name": "scaler_exponent",
             "docs": [
               "The scaling exponent used to convert between token amounts on different chains.",
-              "This handles cases where tokens have different decimal precision on Base vs Solana.",
-              "For example, if Base token has 18 decimals and Solana token has 9 decimals,",
-              "this would be used to scale amounts appropriately during bridging operations."
+              "This handles cases where tokens have differing decimal precision on Base vs Solana.",
+              "For example, when Base token has 18 decimals and the Solana wrapped mint has 9,",
+              "this value conveys the decimal relationship so bridging logic can scale amounts.",
+              "The exact conversion is performed by the EVM-side contract; Solana propagates this",
+              "value but does not apply arithmetic with it."
             ],
             "type": "u8"
           }
@@ -2996,44 +3189,16 @@ export const IDL = {
       }
     },
     {
-      "name": "Proof",
-      "docs": [
-        "Represents a Merkle Mountain Range (MMR) proof that can be used to verify",
-        "the inclusion of a specific leaf in the MMR.",
-        "",
-        "An MMR proof contains all the necessary information to reconstruct the MMR root",
-        "from a given leaf, proving that the leaf was included in the MMR at the time",
-        "the proof was generated."
-      ],
+      "name": "PartnerOracleConfig",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "proof",
+            "name": "required_threshold",
             "docs": [
-              "The proof elements consisting of:",
-              "1. Sibling hashes along the path from the leaf to its mountain's peak",
-              "2. The hashes of all other mountain peaks (in left-to-right order)",
-              "",
-              "These elements are used to reconstruct the MMR root and verify leaf inclusion."
+              "Partner signatures required by our bridge to accept an output root"
             ],
-            "type": {
-              "vec": {
-                "array": [
-                  "u8",
-                  32
-                ]
-              }
-            }
-          },
-          {
-            "name": "leaf_index",
-            "docs": [
-              "The 0-indexed position of the leaf being proven within the MMR.",
-              "This index determines which mountain the leaf belongs to and its position",
-              "within that mountain."
-            ],
-            "type": "u64"
+            "type": "u8"
           }
         ]
       }
@@ -3046,7 +3211,8 @@ export const IDL = {
           {
             "name": "block_interval_requirement",
             "docs": [
-              "Block interval requirement for output root registration"
+              "Block interval requirement for output root registration. Every Base block associated with a",
+              "submitted output root must be a multiple of this number."
             ],
             "type": "u64"
           }
@@ -3055,6 +3221,10 @@ export const IDL = {
     },
     {
       "name": "PubkeyOrPda",
+      "docs": [
+        "Either a concrete `Pubkey` or a PDA described by seeds and a program id.",
+        "When converting to `AccountMeta`, PDAs are derived with `Pubkey::find_program_address`."
+      ],
       "type": {
         "kind": "enum",
         "variants": [
@@ -3065,7 +3235,7 @@ export const IDL = {
             ]
           },
           {
-            "name": "PDA",
+            "name": "Pda",
             "fields": [
               {
                 "name": "seeds",
@@ -3140,8 +3310,8 @@ export const IDL = {
     {
       "name": "bridge::base_to_solana::state::incoming_message::Transfer",
       "docs": [
-        "Specifies the type of token being transferred from Base to Solana and contains",
-        "the necessary data to finalize the transfer on the Solana side.",
+        "Specifies the type of token being finalized on Solana for a Base→Solana bridge",
+        "and contains the necessary data to complete the transfer on the Solana side.",
         "",
         "Each variant corresponds to a different token type that can be bridged,",
         "with variant-specific data needed to complete the transfer operation."
@@ -3241,7 +3411,7 @@ export const IDL = {
             "name": "local_token",
             "docs": [
               "The token mint address on Solana that is being bridged.",
-              "This identifies which token on Solana is being transferred cross-chain."
+              "For SOL this is `NATIVE_SOL_PUBKEY`."
             ],
             "type": "pubkey"
           },
@@ -3261,8 +3431,9 @@ export const IDL = {
           {
             "name": "amount",
             "docs": [
-              "The amount of tokens to transfer, in the token's smallest unit.",
-              "This amount will be burned/locked on Solana and minted/unlocked on Base."
+              "The amount to transfer, in the token's smallest unit.",
+              "For SPL tokens and SOL, funds are locked on Solana; for wrapped tokens, they are burned.",
+              "On Base, the corresponding amount is minted or unlocked."
             ],
             "type": "u64"
           },
@@ -3301,6 +3472,16 @@ export const IDL = {
       "value": "[105, 110, 99, 111, 109, 105, 110, 103, 95, 109, 101, 115, 115, 97, 103, 101]"
     },
     {
+      "name": "MAX_PARTNER_VALIDATOR_THRESHOLD",
+      "type": "u8",
+      "value": "5"
+    },
+    {
+      "name": "MAX_SIGNER_COUNT",
+      "type": "u8",
+      "value": "16"
+    },
+    {
       "name": "NATIVE_SOL_PUBKEY",
       "type": "pubkey",
       "value": "SoL1111111111111111111111111111111111111111"
@@ -3309,6 +3490,16 @@ export const IDL = {
       "name": "OUTPUT_ROOT_SEED",
       "type": "bytes",
       "value": "[111, 117, 116, 112, 117, 116, 95, 114, 111, 111, 116]"
+    },
+    {
+      "name": "PARTNER_PROGRAM_ID",
+      "type": "pubkey",
+      "value": "offqSMQWgQud6WJz694LRzkeN5kMYpCHTpXQr3Rkcjm"
+    },
+    {
+      "name": "PARTNER_SIGNERS_ACCOUNT_SEED",
+      "type": "bytes",
+      "value": "[115, 105, 103, 110, 101, 114, 115]"
     },
     {
       "name": "REMOTE_TOKEN_METADATA_KEY",
@@ -3329,11 +3520,6 @@ export const IDL = {
       "name": "TOKEN_VAULT_SEED",
       "type": "bytes",
       "value": "[116, 111, 107, 101, 110, 95, 118, 97, 117, 108, 116]"
-    },
-    {
-      "name": "TRUSTED_ORACLE",
-      "type": "pubkey",
-      "value": "4vTj5kmBrmds3zWogiyUxtZPggcVUmG44EXRy2CxTcEZ"
     },
     {
       "name": "WRAPPED_TOKEN_SEED",
