@@ -16,3 +16,5 @@ docs/
 lib/
 deployments/anvil.json
 deployments/Anvil.json
+
+helper-scripts

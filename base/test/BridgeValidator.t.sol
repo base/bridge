@@ -234,6 +234,10 @@ contract BridgeValidatorTest is CommonTest {
     }
 
     function test_registerMessages_revertsOnDuplicatePartnerEntitySigners() public {
+        address newImpl = address(new BridgeValidator(1, address(bridge), cfg.partnerValidators));
+        vm.prank(cfg.initialOwner);
+        ERC1967Factory(cfg.erc1967Factory).upgrade(address(bridgeValidator), newImpl);
+
         // Setup a single partner with two keys that map to the same partner index
         MockPartnerValidators pv = MockPartnerValidators(cfg.partnerValidators);
         address partnerAddr1 = vm.addr(100);
