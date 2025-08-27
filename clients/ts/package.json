@@ -1,0 +1,55 @@
+{
+  "name": "@base/bridge",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for Base-Solana bridge operations",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "./dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun run clean && bun run tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "bun run build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "keywords": [
+    "base",
+    "solana",
+    "bridge",
+    "cross-chain",
+    "typescript",
+    "sdk"
+  ],
+  "author": "Base Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/base/bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/base/bridge/issues"
+  },
+  "homepage": "https://github.com/base/bridge#readme",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  },
+  "peerDependencies": {
+    "@solana/kit": "^2.3.0"
+  }
+}
