@@ -1,7 +1,7 @@
 import { createKeyPairFromPrivateKeyBytes } from "@solana/keys";
 import { getAddressFromPublicKey } from "@solana/addresses";
 
-import { logger } from "../../internal/logger";
+import { logger } from "@internal/logger";
 
 export async function handleGenerateKeypair(): Promise<void> {
   try {

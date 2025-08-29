@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { text, select, confirm, isCancel, cancel } from "@clack/prompts";
 import { existsSync } from "fs";
 
-import { logger } from "../../../../../internal/logger";
+import { logger } from "@internal/logger";
 import { argsSchema, handleWrapToken } from "./wrap-token.handler";
 
 type CommanderOptions = {

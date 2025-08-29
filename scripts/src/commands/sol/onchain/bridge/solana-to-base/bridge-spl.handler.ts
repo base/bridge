@@ -26,7 +26,7 @@ import {
   getBridgeSplInstruction,
 } from "../../../../../../../clients/ts/src";
 
-import { logger } from "../../../../../internal/logger";
+import { logger } from "@internal/logger";
 import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
@@ -35,7 +35,7 @@ import {
   CONSTANTS,
   type Rpc,
   relayMessageToBase,
-} from "../../../../../internal/sol";
+} from "@internal/sol";
 
 export const argsSchema = z.object({
   cluster: z

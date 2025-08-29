@@ -3,9 +3,9 @@ import { $ } from "bun";
 import { existsSync } from "fs";
 import { join } from "path";
 
-import { logger } from "../../../internal/logger";
-import { findGitRoot } from "../../../internal/utils";
-import { getKeypairSignerFromPath, CONSTANTS } from "../../../internal/sol";
+import { logger } from "@internal/logger";
+import { findGitRoot } from "@internal/utils";
+import { getKeypairSignerFromPath, CONSTANTS } from "@internal/sol";
 
 export const argsSchema = z.object({
   cluster: z

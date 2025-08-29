@@ -1,6 +1,6 @@
 import { Command } from "commander";
 
-import { logger } from "../../../internal/logger";
+import { logger } from "@internal/logger";
 import { handleGenerateClient } from "./generate-client.handler";
 
 export const generateClientCommand = new Command("generate-client")

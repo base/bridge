@@ -2,8 +2,8 @@ import { z } from "zod";
 import { $ } from "bun";
 import { join } from "path";
 
-import { logger } from "../../../internal/logger";
-import { findGitRoot } from "../../../internal/utils";
+import { logger } from "@internal/logger";
+import { findGitRoot } from "@internal/utils";
 
 export const argsSchema = z.object({
   cluster: z

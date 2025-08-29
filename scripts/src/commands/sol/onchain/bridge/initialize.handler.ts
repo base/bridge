@@ -10,14 +10,14 @@ import { toBytes } from "viem";
 
 import { getInitializeInstruction } from "../../../../../../clients/ts/src";
 
-import { logger } from "../../../../internal/logger";
+import { logger } from "@internal/logger";
 import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
   getKeypairSignerFromPath,
   getIdlConstant,
   CONSTANTS,
-} from "../../../../internal/sol";
+} from "@internal/sol";
 
 export const argsSchema = z.object({
   cluster: z

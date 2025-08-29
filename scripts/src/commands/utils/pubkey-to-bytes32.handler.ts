@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getBase58Codec } from "@solana/kit";
 
-import { logger } from "../../internal/logger";
+import { logger } from "@internal/logger";
 
 export const argsSchema = z.object({
   pubkey: z.string().min(1, "Pubkey is required"),

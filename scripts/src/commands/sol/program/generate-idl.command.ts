@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { select, confirm, isCancel, cancel } from "@clack/prompts";
 
-import { logger } from "../../../internal/logger";
+import { logger } from "@internal/logger";
 import { argsSchema, handleGenerateIdl } from "./generate-idl.handler";
 import { handleGenerateClient } from "./generate-client.handler";
 

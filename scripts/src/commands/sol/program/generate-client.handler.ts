@@ -3,8 +3,8 @@ import * as c from "codama";
 import { rootNodeFromAnchor } from "@codama/nodes-from-anchor";
 import { renderVisitor as renderJavaScriptVisitor } from "@codama/renderers-js";
 
-import { logger } from "../../../internal/logger";
-import { findGitRoot } from "../../../internal/utils";
+import { logger } from "@internal/logger";
+import { findGitRoot } from "@internal/utils";
 
 export async function handleGenerateClient(): Promise<void> {
   try {

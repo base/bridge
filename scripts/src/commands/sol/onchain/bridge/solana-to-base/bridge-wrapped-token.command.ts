@@ -3,7 +3,7 @@ import { select, text, isCancel, cancel } from "@clack/prompts";
 import { existsSync } from "fs";
 import { isAddress } from "@solana/kit";
 
-import { logger } from "../../../../../internal/logger";
+import { logger } from "@internal/logger";
 import {
   argsSchema,
   handleBridgeWrappedToken,

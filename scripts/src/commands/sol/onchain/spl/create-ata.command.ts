@@ -1,10 +1,10 @@
 import { Command } from "commander";
 import { text, confirm, isCancel, cancel, select } from "@clack/prompts";
 import { existsSync } from "fs";
-
-import { logger } from "../../../../internal/logger";
-import { argsSchema, handleCreateAta } from "./create-ata.handler";
 import { isAddress } from "@solana/kit";
+
+import { logger } from "@internal/logger";
+import { argsSchema, handleCreateAta } from "./create-ata.handler";
 
 type CommanderOptions = {
   cluster?: string;

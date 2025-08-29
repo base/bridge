@@ -22,9 +22,8 @@ import { baseSepolia } from "viem/chains";
 import { fetchOutgoingMessage, type Call } from "../../../../clients/ts/src";
 
 import { BRIDGE_ABI, BRIDGE_VALIDATOR_ABI } from "../base/abi";
-
-import { CONSTANTS } from "./constants";
 import { logger } from "../logger";
+import { CONSTANTS } from "./constants";
 
 // See MessageType enum in MessageLib.sol
 const MessageType = {

@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { select, text, confirm, isCancel, cancel } from "@clack/prompts";
 import { existsSync } from "fs";
 
-import { logger } from "../../../../../internal/logger";
+import { logger } from "@internal/logger";
 import { argsSchema, handleRelayMessage } from "./relay-message.handler";
 
 type CommanderOptions = {

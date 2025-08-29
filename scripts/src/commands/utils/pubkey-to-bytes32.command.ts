@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { text, isCancel, cancel } from "@clack/prompts";
 import { isAddress } from "@solana/kit";
 
-import { logger } from "../../internal/logger";
+import { logger } from "@internal/logger";
 
 import { argsSchema, handlePubkeyToBytes32 } from "./pubkey-to-bytes32.handler";
 

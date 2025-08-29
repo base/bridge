@@ -3,7 +3,7 @@ import { Command } from "commander";
 import { text, isCancel, cancel, select } from "@clack/prompts";
 import { isAddress } from "@solana/kit";
 
-import { logger } from "../../../../internal/logger";
+import { logger } from "@internal/logger";
 import { argsSchema, handleMint } from "./mint.handler";
 
 type CommanderOptions = {

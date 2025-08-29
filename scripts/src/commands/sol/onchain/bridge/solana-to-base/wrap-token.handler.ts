@@ -17,7 +17,7 @@ import {
   type WrapTokenInstructionDataArgs,
 } from "../../../../../../../clients/ts/src";
 
-import { logger } from "../../../../../internal/logger";
+import { logger } from "@internal/logger";
 import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
@@ -25,7 +25,7 @@ import {
   getIdlConstant,
   CONSTANTS,
   relayMessageToBase,
-} from "../../../../../internal/sol";
+} from "@internal/sol";
 
 export const argsSchema = z.object({
   cluster: z

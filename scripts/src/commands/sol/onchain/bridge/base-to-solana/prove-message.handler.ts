@@ -23,16 +23,16 @@ import {
   getProveMessageInstruction,
 } from "../../../../../../../clients/ts/src";
 
-import { logger } from "../../../../../internal/logger";
+import { logger } from "@internal/logger";
 import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
   getKeypairSignerFromPath,
   getIdlConstant,
   CONSTANTS,
-} from "../../../../../internal/sol";
+} from "@internal/sol";
 
-import { BRIDGE_ABI } from "../../../../../internal/base/abi/bridge.abi";
+import { BRIDGE_ABI } from "@internal/base/abi/bridge.abi";
 
 export const argsSchema = z.object({
   cluster: z
