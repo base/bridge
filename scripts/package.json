@@ -4,7 +4,7 @@
     "type": "module",
     "private": true,
     "scripts": {
-        "bridge-cli": "bun run src/bin.ts"
+        "cli": "bun run src/bin.ts"
     },
     "devDependencies": {
         "@codama/nodes-from-anchor": "^1.2.5",
