@@ -25,7 +25,7 @@ contract CrossChainERC20Test is CommonTest {
 
     function setUp() public {
         DeployScript deployer = new DeployScript();
-        (,, bridge, factory,) = deployer.run();
+        (,, bridge, factory,,) = deployer.run();
         token = CrossChainERC20(factory.deploy(REMOTE_TOKEN, TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS));
     }
 
@@ -249,7 +249,7 @@ contract CrossChainERC20Test is CommonTest {
     function test_initialize_revertsOnZeroRemoteToken() public {
         // Deploy fresh infra to access a new factory instance
         DeployScript deployer = new DeployScript();
-        (,, /* bridgeLocal */, CrossChainERC20Factory factoryLocal,) = deployer.run();
+        (,,, CrossChainERC20Factory factoryLocal,,) = deployer.run();
 
         // Expect the initialize validation to bubble up through the factory deployment
         vm.expectRevert(CrossChainERC20.ZeroAddress.selector);

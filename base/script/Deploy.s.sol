@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {console} from "forge-std/console.sol";
-
 import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
@@ -11,13 +9,17 @@ import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {Twin} from "../src/Twin.sol";
+import {RelayerOrchestrator} from "../src/periphery/RelayerOrchestrator.sol";
 import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployScript is DevOps {
     bytes12 salt = bytes12(keccak256(abi.encode(block.timestamp)));
 
-    function run() public returns (Twin, BridgeValidator, Bridge, CrossChainERC20Factory, HelperConfig) {
+    function run()
+        public
+        returns (Twin, BridgeValidator, Bridge, CrossChainERC20Factory, RelayerOrchestrator, HelperConfig)
+    {
         HelperConfig helperConfig = new HelperConfig();
         HelperConfig.NetworkConfig memory cfg = helperConfig.getConfig();
 
@@ -33,25 +35,24 @@ contract DeployScript is DevOps {
             crossChainErc20Factory: factory,
             bridgeValidator: bridgeValidator
         });
+        address relayerOrchestrator =
+            _deployRelayerOrchestrator({cfg: cfg, bridge: bridge, bridgeValidator: bridgeValidator});
         vm.stopBroadcast();
 
         require(address(bridge) == precomputedBridgeAddress, "Bridge address mismatch");
-
-        console.log("Deployed TwinBeacon at: %s", twinBeacon);
-        console.log("Deployed BridgeValidator at: %s", bridgeValidator);
-        console.log("Deployed Bridge at: %s", bridge);
-        console.log("Deployed CrossChainERC20Factory at: %s", factory);
 
         _serializeAddress({key: "Bridge", value: bridge});
         _serializeAddress({key: "BridgeValidator", value: bridgeValidator});
         _serializeAddress({key: "CrossChainERC20Factory", value: factory});
         _serializeAddress({key: "Twin", value: twinBeacon});
+        _serializeAddress({key: "RelayerOrchestrator", value: relayerOrchestrator});
 
         return (
             Twin(payable(twinBeacon)),
             BridgeValidator(bridgeValidator),
             Bridge(bridge),
             CrossChainERC20Factory(factory),
+            RelayerOrchestrator(relayerOrchestrator),
             helperConfig
         );
     }
@@ -111,6 +112,19 @@ contract DeployScript is DevOps {
             admin: cfg.initialOwner,
             salt: _salt(salt),
             data: abi.encodeCall(Bridge.initialize, (cfg.initialOwner, cfg.guardians))
+        });
+    }
+
+    function _deployRelayerOrchestrator(HelperConfig.NetworkConfig memory cfg, address bridge, address bridgeValidator)
+        private
+        returns (address)
+    {
+        address relayerOrchestratorImpl =
+            address(new RelayerOrchestrator({bridge: bridge, bridgeValidator: bridgeValidator}));
+
+        return ERC1967Factory(cfg.erc1967Factory).deploy({
+            implementation: relayerOrchestratorImpl,
+            admin: cfg.initialOwner
         });
     }
 

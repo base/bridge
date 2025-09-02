@@ -12,12 +12,16 @@ import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {Twin} from "../src/Twin.sol";
 import {MessageLib} from "../src/libraries/MessageLib.sol";
 import {IncomingMessage} from "../src/libraries/MessageLib.sol";
+import {RelayerOrchestrator} from "../src/periphery/RelayerOrchestrator.sol";
 
 contract CommonTest is Test {
+    uint64 public constant GAS_LIMIT = 1_000_000;
+
     BridgeValidator public bridgeValidator;
     Bridge public bridge;
     Twin public twinBeacon;
     CrossChainERC20Factory public factory;
+    RelayerOrchestrator public relayerOrchestrator;
     HelperConfig public helperConfig;
     HelperConfig.NetworkConfig public cfg;
 

@@ -76,13 +76,15 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
 
     /// @notice Emitted whenever a message is successfully relayed and executed.
     ///
+    /// @param submitter   The caller that executed the message
     /// @param messageHash Keccak256 hash of the message that was successfully relayed.
-    event MessageSuccessfullyRelayed(bytes32 indexed messageHash);
+    event MessageSuccessfullyRelayed(address indexed submitter, bytes32 indexed messageHash);
 
     /// @notice Emitted whenever a message fails to be relayed.
     ///
+    /// @param submitter   The caller that attempted execution of the message
     /// @param messageHash Keccak256 hash of the message that failed to be relayed.
-    event FailedToRelayMessage(bytes32 indexed messageHash);
+    event FailedToRelayMessage(address indexed submitter, bytes32 indexed messageHash);
 
     /// @notice Emitted whenever the bridge is paused or unpaused.
     ///
@@ -336,15 +338,15 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
 
         require(BridgeValidator(BRIDGE_VALIDATOR).validMessages(messageHash), InvalidMessage());
 
-        try this.__relayMessage(message) {
+        try this.__relayMessage{gas: message.gasLimit}(message) {
             // Register the message as successfully relayed.
             delete failures[messageHash];
             successes[messageHash] = true;
-            emit MessageSuccessfullyRelayed(messageHash);
+            emit MessageSuccessfullyRelayed(msg.sender, messageHash);
         } catch {
             // Register the message as failed to relay.
             failures[messageHash] = true;
-            emit FailedToRelayMessage(messageHash);
+            emit FailedToRelayMessage(msg.sender, messageHash);
         }
     }
 

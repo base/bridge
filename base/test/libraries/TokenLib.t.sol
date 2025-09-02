@@ -41,7 +41,7 @@ contract TokenLibTest is CommonTest {
     function setUp() public {
         // Use the DeployScript normally - now it uses deterministic validator keys
         DeployScript deployer = new DeployScript();
-        (, bridgeValidator, bridge, factory, helperConfig) = deployer.run();
+        (, bridgeValidator, bridge, factory, relayerOrchestrator, helperConfig) = deployer.run();
 
         cfg = helperConfig.getConfig();
 
@@ -342,6 +342,7 @@ contract TokenLibTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 1,
             sender: TEST_TRANSFER_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
         });
@@ -377,6 +378,7 @@ contract TokenLibTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 1,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
         });
@@ -415,6 +417,7 @@ contract TokenLibTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
         });
@@ -445,6 +448,7 @@ contract TokenLibTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
         });
@@ -472,6 +476,7 @@ contract TokenLibTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_TRANSFER_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
         });
@@ -497,6 +502,7 @@ contract TokenLibTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_TRANSFER_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
         });
@@ -522,6 +528,7 @@ contract TokenLibTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_TRANSFER_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Transfer,
             data: abi.encode(transfer)
         });
@@ -616,6 +623,7 @@ contract TokenLibTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 1,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Transfer,
             data: abi.encode(incomingTransfer)
         });
@@ -647,6 +655,7 @@ contract TokenLibTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Transfer,
             data: abi.encode(incomingTransfer)
         });
@@ -691,8 +700,13 @@ contract TokenLibTest is CommonTest {
         bytes memory data = abi.encode(call);
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] =
-            IncomingMessage({nonce: uint64(nonce), sender: cfg.remoteBridge, ty: MessageType.Call, data: data});
+        messages[0] = IncomingMessage({
+            nonce: uint64(nonce),
+            sender: cfg.remoteBridge,
+            gasLimit: GAS_LIMIT,
+            ty: MessageType.Call,
+            data: data
+        });
 
         _registerMessage(messages[0]);
         bridge.relayMessages(messages);

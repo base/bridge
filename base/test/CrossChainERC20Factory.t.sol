@@ -28,7 +28,7 @@ contract CrossChainERC20FactoryTest is CommonTest {
 
     function setUp() public {
         DeployScript deployerScript = new DeployScript();
-        (,, bridge, factory,) = deployerScript.run();
+        (,, bridge, factory,,) = deployerScript.run();
 
         // Initialize the beacon and tokenBridge variables
         beacon = factory.BEACON();
