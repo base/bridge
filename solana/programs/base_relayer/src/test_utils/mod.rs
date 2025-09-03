@@ -38,11 +38,6 @@ impl Eip1559 {
 impl GasConfig {
     pub fn test_new(gas_fee_receiver: Pubkey) -> Self {
         Self {
-            extra: 10_000,
-            execution_prologue: 20_000,
-            execution: 5_000,
-            execution_epilogue: 25_000,
-            base_transaction_cost: 21_000,
             max_gas_limit_per_message: 100_000_000,
             gas_cost_scaler: 1_000_000,
             gas_cost_scaler_dp: 10u64.pow(6),

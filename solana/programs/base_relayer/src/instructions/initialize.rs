@@ -61,11 +61,6 @@ mod tests {
 
     fn sample_gas_config(receiver: Pubkey) -> GasConfig {
         GasConfig {
-            extra: 1,
-            execution_prologue: 2,
-            execution: 3,
-            execution_epilogue: 4,
-            base_transaction_cost: 21_000,
             max_gas_limit_per_message: 10_000_000,
             gas_cost_scaler: 1,
             gas_cost_scaler_dp: 1,
