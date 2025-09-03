@@ -79,3 +79,214 @@ pub enum GasConfigError {
     #[msg("Gas limit exceeded")]
     GasLimitExceeded,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::Cfg;
+    use crate::test_utils::{mock_clock, setup_program_and_svm, TEST_GAS_FEE_RECEIVER};
+    use crate::{accounts, instruction};
+    use anchor_lang::solana_program::{instruction::Instruction, system_program};
+    use anchor_lang::InstructionData;
+    use solana_keypair::Keypair;
+    use solana_message::Message;
+    use solana_signer::Signer as _;
+    use solana_transaction::Transaction;
+
+    fn fetch_cfg(svm: &litesvm::LiteSVM, cfg_pk: &Pubkey) -> Cfg {
+        let account = svm.get_account(cfg_pk).unwrap();
+        Cfg::try_deserialize(&mut &account.data[..]).unwrap()
+    }
+
+    #[test]
+    fn check_gas_limit_allows_equal_limit() {
+        let mut cfg = Cfg {
+            guardian: Pubkey::new_unique(),
+            eip1559: crate::internal::Eip1559::test_new(),
+            gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
+        };
+        cfg.gas_config.max_gas_limit_per_message = 100;
+
+        let res = super::check_gas_limit(100, &cfg);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn check_gas_limit_errors_above_limit() {
+        let mut cfg = Cfg {
+            guardian: Pubkey::new_unique(),
+            eip1559: crate::internal::Eip1559::test_new(),
+            gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
+        };
+        cfg.gas_config.max_gas_limit_per_message = 100;
+
+        let res = super::check_gas_limit(101, &cfg);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn check_and_pay_transfers_scaled_amount() {
+        let (mut svm, payer, guardian, cfg_pda) = setup_program_and_svm();
+        let payer_pk = payer.pubkey();
+
+        // Ensure receiver exists for transfer
+        svm.airdrop(&TEST_GAS_FEE_RECEIVER, 1).unwrap();
+        let initial_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
+
+        // Double the gas cost via scaler/decimal
+        let original = fetch_cfg(&svm, &cfg_pda);
+        let mut new_gas = original.gas_config.clone();
+        new_gas.gas_cost_scaler = 2;
+        new_gas.gas_cost_scaler_dp = 1;
+        let new_cfg = Cfg {
+            guardian: original.guardian,
+            eip1559: original.eip1559.clone(),
+            gas_config: new_gas,
+        };
+
+        let accounts = accounts::SetConfig {
+            cfg: cfg_pda,
+            guardian: guardian.pubkey(),
+        }
+        .to_account_metas(None);
+
+        let ix = Instruction {
+            program_id: crate::ID,
+            accounts,
+            data: instruction::SetConfig { cfg: new_cfg }.data(),
+        };
+
+        let tx = Transaction::new(
+            &[&payer, &guardian],
+            Message::new(&[ix], Some(&payer_pk)),
+            svm.latest_blockhash(),
+        );
+        svm.send_transaction(tx).unwrap();
+
+        // Now pay for relay with gas_limit=123; base_fee=1 => transfer=246
+        let message_to_relay = Keypair::new();
+        let accounts = accounts::PayForRelay {
+            payer: payer_pk,
+            cfg: cfg_pda,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
+            message_to_relay: message_to_relay.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        let gas_limit = 123u64;
+        let ix = Instruction {
+            program_id: crate::ID,
+            accounts,
+            data: crate::instruction::PayForRelay {
+                outgoing_message: Pubkey::new_unique(),
+                gas_limit,
+            }
+            .data(),
+        };
+
+        let tx = Transaction::new(
+            &[&payer, &message_to_relay],
+            Message::new(&[ix], Some(&payer_pk)),
+            svm.latest_blockhash(),
+        );
+        svm.send_transaction(tx).unwrap();
+
+        let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
+        assert_eq!(final_receiver_balance - initial_receiver_balance, 246);
+    }
+
+    #[test]
+    fn check_and_pay_uses_refreshed_base_fee_after_window_expiry() {
+        let (mut svm, payer, guardian, cfg_pda) = setup_program_and_svm();
+        let payer_pk = payer.pubkey();
+
+        // Ensure receiver exists
+        svm.airdrop(&TEST_GAS_FEE_RECEIVER, 1).unwrap();
+        let initial_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
+
+        // Configure EIP-1559 so that after one expired window base_fee halves from 100 -> 50
+        let original = fetch_cfg(&svm, &cfg_pda);
+        let start_time = original.eip1559.window_start_time;
+        let new_eip = crate::internal::Eip1559 {
+            config: crate::internal::Eip1559Config {
+                target: 5_000_000,
+                denominator: 2,
+                window_duration_seconds: 1,
+                minimum_base_fee: 1,
+            },
+            current_base_fee: 100,
+            current_window_gas_used: 0,
+            window_start_time: start_time,
+        };
+
+        let mut new_gas = original.gas_config.clone();
+        new_gas.gas_cost_scaler = 1;
+        new_gas.gas_cost_scaler_dp = 1;
+        let new_cfg = Cfg {
+            guardian: guardian.pubkey(),
+            eip1559: new_eip.clone(),
+            gas_config: new_gas,
+        };
+
+        let accounts = accounts::SetConfig {
+            cfg: cfg_pda,
+            guardian: guardian.pubkey(),
+        }
+        .to_account_metas(None);
+
+        let ix = Instruction {
+            program_id: crate::ID,
+            accounts,
+            data: instruction::SetConfig { cfg: new_cfg }.data(),
+        };
+
+        let tx = Transaction::new(
+            &[&payer, &guardian],
+            Message::new(&[ix], Some(&payer_pk)),
+            svm.latest_blockhash(),
+        );
+        svm.send_transaction(tx).unwrap();
+
+        // Advance clock by one window so refresh_base_fee applies 100 -> 50
+        mock_clock(&mut svm, start_time + 1);
+
+        let gas_limit = 1_000u64;
+        let message_to_relay = Keypair::new();
+        let accounts = accounts::PayForRelay {
+            payer: payer_pk,
+            cfg: cfg_pda,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
+            message_to_relay: message_to_relay.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        let ix = Instruction {
+            program_id: crate::ID,
+            accounts,
+            data: crate::instruction::PayForRelay {
+                outgoing_message: Pubkey::new_unique(),
+                gas_limit,
+            }
+            .data(),
+        };
+
+        let tx = Transaction::new(
+            &[&payer, &message_to_relay],
+            Message::new(&[ix], Some(&payer_pk)),
+            svm.latest_blockhash(),
+        );
+        svm.send_transaction(tx).unwrap();
+
+        let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
+        // base_fee 50 * gas_limit 1000 = 50_000
+        assert_eq!(final_receiver_balance - initial_receiver_balance, 50_000);
+
+        // Validate EIP-1559 state was updated for the new window and usage accounted
+        let updated = fetch_cfg(&svm, &cfg_pda);
+        assert_eq!(updated.eip1559.current_base_fee, 50);
+        assert_eq!(updated.eip1559.current_window_gas_used, gas_limit);
+        assert_eq!(updated.eip1559.window_start_time, start_time + 1);
+    }
+}

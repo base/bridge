@@ -54,3 +54,72 @@ pub enum PayForRelayError {
     #[msg("Incorrect gas fee receiver")]
     IncorrectGasFeeReceiver,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::{setup_program_and_svm, TEST_GAS_FEE_RECEIVER};
+    use crate::{accounts, state::MessageToRelay};
+    use anchor_lang::{
+        solana_program::{instruction::Instruction, system_program},
+        InstructionData,
+    };
+    use solana_keypair::Keypair;
+    use solana_message::Message;
+    use solana_signer::Signer;
+    use solana_transaction::Transaction;
+
+    #[test]
+    fn pay_for_relay_initializes_message_and_transfers_gas() {
+        let (mut svm, payer, _guardian, config_pda) = setup_program_and_svm();
+        let payer_pk = payer.pubkey();
+
+        // // Ensure gas fee receiver account exists so system transfer succeeds
+        svm.airdrop(&TEST_GAS_FEE_RECEIVER, 1).unwrap();
+        let initial_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
+
+        let outgoing_message = Pubkey::new_unique();
+        let gas_limit: u64 = 123_456;
+
+        // New account to be initialized by the instruction
+        let message_to_relay = Keypair::new();
+
+        let accounts = accounts::PayForRelay {
+            payer: payer_pk,
+            cfg: config_pda,
+            gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
+            message_to_relay: message_to_relay.pubkey(),
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        let ix = Instruction {
+            program_id: crate::ID,
+            accounts,
+            data: crate::instruction::PayForRelay {
+                outgoing_message,
+                gas_limit,
+            }
+            .data(),
+        };
+
+        let tx = Transaction::new(
+            &[&payer, &message_to_relay],
+            Message::new(&[ix], Some(&payer_pk)),
+            svm.latest_blockhash(),
+        );
+
+        svm.send_transaction(tx)
+            .expect("failed to send transaction");
+
+        // Assert message account was initialized with expected fields
+        let msg_account = svm.get_account(&message_to_relay.pubkey()).unwrap();
+        let msg = MessageToRelay::try_deserialize(&mut &msg_account.data[..]).unwrap();
+        assert_eq!(msg.outgoing_message, outgoing_message);
+        assert_eq!(msg.gas_limit, gas_limit);
+
+        // With base_fee = 1 in tests, gas_cost == gas_limit
+        let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
+        assert_eq!(final_receiver_balance - initial_receiver_balance, gas_limit);
+    }
+}

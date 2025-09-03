@@ -10,6 +10,9 @@ mod state;
 use instructions::*;
 use state::*;
 
+#[cfg(test)]
+mod test_utils;
+
 declare_id!("4sW86ZszkmjoNLUrmWdNbsjC1DQhwBWX2a45nzjhCZpZ");
 
 #[program]

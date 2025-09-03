@@ -117,3 +117,143 @@ impl Eip1559 {
             / self.config.window_duration_seconds
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn new_eip() -> Eip1559 {
+        Eip1559::test_new()
+    }
+
+    #[test]
+    fn expired_windows_count_zero_when_not_expired() {
+        let eip = new_eip();
+
+        assert_eq!(eip.expired_windows_count(eip.window_start_time), 0);
+    }
+
+    #[test]
+    fn expired_windows_count_one_at_exact_boundary() {
+        let eip = new_eip();
+        let ts = eip.window_start_time + eip.config.window_duration_seconds as i64;
+
+        assert_eq!(eip.expired_windows_count(ts), 1);
+    }
+
+    #[test]
+    fn expired_windows_count_multiple_windows() {
+        let eip = new_eip();
+        let ts = eip.window_start_time + (10 * eip.config.window_duration_seconds as i64);
+
+        assert_eq!(eip.expired_windows_count(ts), 10);
+    }
+
+    #[test]
+    fn calc_base_fee_unchanged_when_gas_equals_target() {
+        let eip = new_eip();
+
+        assert_eq!(eip.calc_base_fee(eip.config.target), eip.current_base_fee);
+    }
+
+    #[test]
+    fn calc_base_fee_increase_has_min_step_one() {
+        let mut eip = new_eip();
+        eip.current_base_fee = 1;
+
+        assert_eq!(eip.calc_base_fee(eip.config.target + 1), 2);
+    }
+
+    #[test]
+    fn calc_base_fee_increase_scales_with_excess_usage() {
+        let mut eip = new_eip();
+        eip.current_base_fee = 100;
+        let gas_used = eip.config.target * 2;
+
+        assert_eq!(eip.calc_base_fee(gas_used), 150);
+    }
+
+    #[test]
+    fn calc_base_fee_decrease_when_usage_below_target() {
+        let mut eip = new_eip();
+        eip.current_base_fee = 100;
+
+        assert_eq!(eip.calc_base_fee(0), 50);
+    }
+
+    #[test]
+    fn add_gas_usage_accumulates() {
+        let mut eip = new_eip();
+        eip.add_gas_usage(10);
+        eip.add_gas_usage(5);
+
+        assert_eq!(eip.current_window_gas_used, 15);
+    }
+
+    #[test]
+    fn refresh_base_fee_no_expiry_keeps_base_fee() {
+        let eip = new_eip();
+        let mut eip = Eip1559 { ..eip };
+        let ret = eip.refresh_base_fee(eip.window_start_time);
+
+        assert_eq!(ret, eip.current_base_fee);
+    }
+
+    #[test]
+    fn refresh_base_fee_no_expiry_keeps_usage() {
+        let mut eip = new_eip();
+        eip.current_window_gas_used = 123;
+        let _ = eip.refresh_base_fee(eip.window_start_time);
+
+        assert_eq!(eip.current_window_gas_used, 123);
+    }
+
+    #[test]
+    fn refresh_base_fee_no_expiry_keeps_start_time() {
+        let eip = new_eip();
+        let mut eip = Eip1559 { ..eip };
+        let _ = eip.refresh_base_fee(eip.window_start_time);
+
+        assert_eq!(eip.window_start_time, Eip1559::test_new().window_start_time);
+    }
+
+    #[test]
+    fn refresh_base_fee_single_window_updates_base_fee() {
+        let mut eip = new_eip();
+        eip.current_window_gas_used = eip.config.target + 1; // ensures min +1 increase
+        let ts = eip.window_start_time + eip.config.window_duration_seconds as i64;
+        let ret = eip.refresh_base_fee(ts);
+
+        assert_eq!(ret, 2);
+    }
+
+    #[test]
+    fn refresh_base_fee_single_window_resets_usage() {
+        let mut eip = new_eip();
+        eip.current_window_gas_used = 999;
+        let ts = eip.window_start_time + eip.config.window_duration_seconds as i64;
+        let _ = eip.refresh_base_fee(ts);
+
+        assert_eq!(eip.current_window_gas_used, 0);
+    }
+
+    #[test]
+    fn refresh_base_fee_single_window_updates_start_time() {
+        let mut eip = new_eip();
+        let ts = eip.window_start_time + eip.config.window_duration_seconds as i64;
+        let _ = eip.refresh_base_fee(ts);
+
+        assert_eq!(eip.window_start_time, ts);
+    }
+
+    #[test]
+    fn refresh_base_fee_multiple_windows_apply_decay_factor() {
+        let mut eip = new_eip();
+        eip.current_base_fee = 100;
+        eip.current_window_gas_used = eip.config.target; // first window keeps base fee
+        let ts = eip.window_start_time + 3 * eip.config.window_duration_seconds as i64;
+        let ret = eip.refresh_base_fee(ts);
+
+        assert_eq!(ret, 25);
+    }
+}

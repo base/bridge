@@ -721,6 +721,12 @@ name = "base_relayer"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "litesvm",
+ "solana-account",
+ "solana-keypair",
+ "solana-message",
+ "solana-signer",
+ "solana-transaction",
 ]
 
 [[package]]
