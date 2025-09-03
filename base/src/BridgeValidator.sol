@@ -133,7 +133,7 @@ contract BridgeValidator is Initializable {
     /// @notice Pre-validates a batch of Solana --> Base messages.
     ///
     /// @param innerMessageHashes An array of inner message hashes to pre-validate (hash over message data excluding the
-    ///                           nonce). Each is combined with a monotonically increasing nonce to form
+    ///                           nonce and gasLimit). Each is combined with a monotonically increasing nonce to form
     ///                           `messageHashes`.
     /// @param validatorSigs      A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
     ///                           `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.

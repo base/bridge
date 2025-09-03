@@ -47,12 +47,10 @@ contract RelayerOrchestrator {
     /// @notice Open function to atomically pre-validate and execute a batch of messages in the same transaction
     ///
     /// @param innerMessageHashes An array of inner message hashes to pre-validate (hash over message data excluding the
-    ///                           nonce).
+    ///                           nonce and gasLimit).
     /// @param messages           The messages to relay. Not necessarily a 1:1 mapping with innerMessageHashes.
     /// @param validatorSigs      A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
     ///                           `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
-    ///                           Must include at least `getBaseThreshold()` Base validator signatures. The external
-    ///                           signature threshold is controlled by `PARTNER_VALIDATOR_THRESHOLD`.
     function validateAndRelay(
         bytes32[] calldata innerMessageHashes,
         IncomingMessage[] calldata messages,
