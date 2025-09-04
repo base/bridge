@@ -76,7 +76,7 @@ pub fn setup_program_and_svm() -> (
         program_id: ID,
         accounts,
         data: Initialize {
-            guardian: guardian.pubkey(),
+            new_guardian: guardian.pubkey(),
             eip1559_config: Eip1559Config::test_new(),
             gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
         }

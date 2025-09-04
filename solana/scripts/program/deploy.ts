@@ -4,6 +4,7 @@ import { CONSTANTS } from "../constants";
 import { fileFromPath } from "../utils/file";
 import { getTarget } from "../utils/argv";
 import { keyPairToAddress } from "../utils/keypair";
+import { getBase58Codec } from "@solana/kit";
 
 async function main() {
   const target = getTarget();
@@ -28,7 +29,13 @@ async function main() {
   console.log(`Network: ${constants.cluster}`);
   console.log(`Environment: ${constants.environment}`);
   console.log(`Bridge: ${bridgeAddress}`);
+  console.log(
+    `Bridge (bytes32): ${getBase58Codec().encode(bridgeAddress).toHex()}`
+  );
   console.log(`Base Relayer Program: ${relayerAddress}`);
+  console.log(
+    `Base Relayer Program (bytes32): ${getBase58Codec().encode(relayerAddress).toHex()}`
+  );
   console.log(`Deployer: ${deployerAddress}`);
   console.log(`Program Binary: ${programFile.name}`);
   console.log(`Relayer program Binary: ${relayerProgramFile.name}`);

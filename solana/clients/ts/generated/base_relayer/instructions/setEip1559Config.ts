@@ -68,16 +68,18 @@ export type SetEip1559ConfigInstruction<
 
 export type SetEip1559ConfigInstructionData = {
   discriminator: ReadonlyUint8Array;
-  cfg: Eip1559Config;
+  eip1559Config: Eip1559Config;
 };
 
-export type SetEip1559ConfigInstructionDataArgs = { cfg: Eip1559ConfigArgs };
+export type SetEip1559ConfigInstructionDataArgs = {
+  eip1559Config: Eip1559ConfigArgs;
+};
 
 export function getSetEip1559ConfigInstructionDataEncoder(): Encoder<SetEip1559ConfigInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['cfg', getEip1559ConfigEncoder()],
+      ['eip1559Config', getEip1559ConfigEncoder()],
     ]),
     (value) => ({ ...value, discriminator: SET_EIP1559_CONFIG_DISCRIMINATOR })
   );
@@ -86,7 +88,7 @@ export function getSetEip1559ConfigInstructionDataEncoder(): Encoder<SetEip1559C
 export function getSetEip1559ConfigInstructionDataDecoder(): Decoder<SetEip1559ConfigInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['cfg', getEip1559ConfigDecoder()],
+    ['eip1559Config', getEip1559ConfigDecoder()],
   ]);
 }
 
@@ -108,7 +110,7 @@ export type SetEip1559ConfigInput<
   cfg: Address<TAccountCfg>;
   /** The guardian account authorized to update configuration */
   guardian: TransactionSigner<TAccountGuardian>;
-  cfgArg: SetEip1559ConfigInstructionDataArgs['cfg'];
+  eip1559Config: SetEip1559ConfigInstructionDataArgs['eip1559Config'];
 };
 
 export function getSetEip1559ConfigInstruction<
@@ -133,7 +135,7 @@ export function getSetEip1559ConfigInstruction<
   >;
 
   // Original args.
-  const args = { ...input, cfg: input.cfgArg };
+  const args = { ...input };
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {

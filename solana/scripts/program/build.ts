@@ -69,6 +69,8 @@ async function main() {
   console.log("🧹 Restoring lib.rs...");
   await Bun.write(libRsFile, await libRsBackupFile.text());
   await libRsBackupFile.delete();
+  await Bun.write(relayerLibRsFile, await relayerLibRsBackupFile.text());
+  await relayerLibRsBackupFile.delete();
 
   console.log("✅ Done!");
 }

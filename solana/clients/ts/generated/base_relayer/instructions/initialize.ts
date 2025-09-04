@@ -10,6 +10,8 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
+  getAddressDecoder,
+  getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getStructDecoder,
@@ -33,7 +35,16 @@ import {
 } from '@solana/kit';
 import { BASE_RELAYER_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
-import { getCfgDecoder, getCfgEncoder, type Cfg, type CfgArgs } from '../types';
+import {
+  getEip1559ConfigDecoder,
+  getEip1559ConfigEncoder,
+  getGasConfigDecoder,
+  getGasConfigEncoder,
+  type Eip1559Config,
+  type Eip1559ConfigArgs,
+  type GasConfig,
+  type GasConfigArgs,
+} from '../types';
 
 export const INITIALIZE_DISCRIMINATOR = new Uint8Array([
   175, 175, 109, 31, 13, 152, 155, 237,
@@ -74,16 +85,24 @@ export type InitializeInstruction<
 
 export type InitializeInstructionData = {
   discriminator: ReadonlyUint8Array;
-  cfg: Cfg;
+  newGuardian: Address;
+  eip1559Config: Eip1559Config;
+  gasConfig: GasConfig;
 };
 
-export type InitializeInstructionDataArgs = { cfg: CfgArgs };
+export type InitializeInstructionDataArgs = {
+  newGuardian: Address;
+  eip1559Config: Eip1559ConfigArgs;
+  gasConfig: GasConfigArgs;
+};
 
 export function getInitializeInstructionDataEncoder(): Encoder<InitializeInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['cfg', getCfgEncoder()],
+      ['newGuardian', getAddressEncoder()],
+      ['eip1559Config', getEip1559ConfigEncoder()],
+      ['gasConfig', getGasConfigEncoder()],
     ]),
     (value) => ({ ...value, discriminator: INITIALIZE_DISCRIMINATOR })
   );
@@ -92,7 +111,9 @@ export function getInitializeInstructionDataEncoder(): Encoder<InitializeInstruc
 export function getInitializeInstructionDataDecoder(): Decoder<InitializeInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['cfg', getCfgDecoder()],
+    ['newGuardian', getAddressDecoder()],
+    ['eip1559Config', getEip1559ConfigDecoder()],
+    ['gasConfig', getGasConfigDecoder()],
   ]);
 }
 
@@ -134,7 +155,9 @@ export type InitializeInput<
    * Used internally by Anchor for account initialization.
    */
   systemProgram?: Address<TAccountSystemProgram>;
-  cfgArg: InitializeInstructionDataArgs['cfg'];
+  newGuardian: InitializeInstructionDataArgs['newGuardian'];
+  eip1559Config: InitializeInstructionDataArgs['eip1559Config'];
+  gasConfig: InitializeInstructionDataArgs['gasConfig'];
 };
 
 export function getInitializeInstruction<
@@ -174,7 +197,7 @@ export function getInitializeInstruction<
   >;
 
   // Original args.
-  const args = { ...input, cfg: input.cfgArg };
+  const args = { ...input };
 
   // Resolve default values.
   if (!accounts.systemProgram.value) {

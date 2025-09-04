@@ -34,11 +34,11 @@ pub mod base_relayer {
     ///           config, and gas-cost configuration.
     pub fn initialize(
         ctx: Context<Initialize>,
-        guardian: Pubkey,
+        new_guardian: Pubkey,
         eip1559_config: Eip1559Config,
         gas_config: GasConfig,
     ) -> Result<()> {
-        initialize_handler(ctx, guardian, eip1559_config, gas_config)
+        initialize_handler(ctx, new_guardian, eip1559_config, gas_config)
     }
 
     /// Updates the EIP1559 configuration.
@@ -73,8 +73,8 @@ pub mod base_relayer {
     /// * `ctx` - The context containing the `cfg` PDA and the `guardian` signer.
     ///           Authorization is enforced via an Anchor `has_one` constraint.
     /// * `cfg` - The new guardian with permissions to update other configs.
-    pub fn set_guardian(ctx: Context<SetConfig>, guardian: Pubkey) -> Result<()> {
-        set_guardian_handler(ctx, guardian)
+    pub fn set_guardian(ctx: Context<SetConfig>, new_guardian: Pubkey) -> Result<()> {
+        set_guardian_handler(ctx, new_guardian)
     }
 
     /// Pays the gas cost for relaying a message to Base and records the request.

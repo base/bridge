@@ -68,16 +68,16 @@ export type SetGasConfigInstruction<
 
 export type SetGasConfigInstructionData = {
   discriminator: ReadonlyUint8Array;
-  cfg: GasConfig;
+  gasConfig: GasConfig;
 };
 
-export type SetGasConfigInstructionDataArgs = { cfg: GasConfigArgs };
+export type SetGasConfigInstructionDataArgs = { gasConfig: GasConfigArgs };
 
 export function getSetGasConfigInstructionDataEncoder(): Encoder<SetGasConfigInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['cfg', getGasConfigEncoder()],
+      ['gasConfig', getGasConfigEncoder()],
     ]),
     (value) => ({ ...value, discriminator: SET_GAS_CONFIG_DISCRIMINATOR })
   );
@@ -86,7 +86,7 @@ export function getSetGasConfigInstructionDataEncoder(): Encoder<SetGasConfigIns
 export function getSetGasConfigInstructionDataDecoder(): Decoder<SetGasConfigInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['cfg', getGasConfigDecoder()],
+    ['gasConfig', getGasConfigDecoder()],
   ]);
 }
 
@@ -108,7 +108,7 @@ export type SetGasConfigInput<
   cfg: Address<TAccountCfg>;
   /** The guardian account authorized to update configuration */
   guardian: TransactionSigner<TAccountGuardian>;
-  cfgArg: SetGasConfigInstructionDataArgs['cfg'];
+  gasConfig: SetGasConfigInstructionDataArgs['gasConfig'];
 };
 
 export function getSetGasConfigInstruction<
@@ -133,7 +133,7 @@ export function getSetGasConfigInstruction<
   >;
 
   // Original args.
-  const args = { ...input, cfg: input.cfgArg };
+  const args = { ...input };
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {

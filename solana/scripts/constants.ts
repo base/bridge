@@ -22,18 +22,18 @@ export const CONSTANTS = {
     solanaEvmKeychainKey: "0xfc85de3f52047b993b2dda967b606a8b9caa2c29",
 
     // Solana addresses
-    solanaBridge: address("FkcvE7A3jRpeTJWaxBNQ6vhh5xQ3krv6r9uNndxadUqn"),
-    baseRelayerProgram: address("H83uxCfMz9wGtshMNjXvAkjfSYdKSZC3SVKp2zuZjGJ"),
+    solanaBridge: address("GRE8tJqDueG2p7mzBrBZgrJCTQNj1RmdqhH3kdRXqN4D"),
+    baseRelayerProgram: address("HFKmJaaPYmhPJ5MoAqnLK6iJTb8TBx3M13kHgy4Aki8q"),
     spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
     wEth: address("6qbhLNZjXno9dN62thraKZNRCYoYgKvd15NqtwreqfQb"),
     wErc20: address("47f9psvcESd2ekAQYJQ2HL7An44VQ76jZnfgoXrmsL6H"),
 
     // Base addresses
-    baseBridge: "FkcvE7A3jRpeTJWaxBNQ6vhh5xQ3krv6r9uNndxadUqn",
+    baseBridge: "0xE9787A1AAD6A2769030E807ce30f4d6A6643f6aF",
     eth: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
     erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
-    wSol: "0x5267009FE9c5FAa329856b88Bbdf881fEE01A8b7",
-    wSpl: "0x4BB9978f622F9a74e3945e4deDd281A6Ca4E4A63",
+    wSol: "0xF0BF237745BDb6ef88679B991dfC145e01b71781",
+    wSpl: "0x6b4097D0f0902DeF463b1f67e7b9bf21F2be7a78",
     recipient: "0x8c1a617bdb47342f9c17ac8750e0b070c372c721",
     counter: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
   },

@@ -64,16 +64,16 @@ export type SetGuardianInstruction<
 
 export type SetGuardianInstructionData = {
   discriminator: ReadonlyUint8Array;
-  guardian: Address;
+  newGuardian: Address;
 };
 
-export type SetGuardianInstructionDataArgs = { guardian: Address };
+export type SetGuardianInstructionDataArgs = { newGuardian: Address };
 
 export function getSetGuardianInstructionDataEncoder(): Encoder<SetGuardianInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['guardian', getAddressEncoder()],
+      ['newGuardian', getAddressEncoder()],
     ]),
     (value) => ({ ...value, discriminator: SET_GUARDIAN_DISCRIMINATOR })
   );
@@ -82,7 +82,7 @@ export function getSetGuardianInstructionDataEncoder(): Encoder<SetGuardianInstr
 export function getSetGuardianInstructionDataDecoder(): Decoder<SetGuardianInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['guardian', getAddressDecoder()],
+    ['newGuardian', getAddressDecoder()],
   ]);
 }
 
@@ -104,7 +104,7 @@ export type SetGuardianInput<
   cfg: Address<TAccountCfg>;
   /** The guardian account authorized to update configuration */
   guardian: TransactionSigner<TAccountGuardian>;
-  guardianArg: SetGuardianInstructionDataArgs['guardian'];
+  newGuardian: SetGuardianInstructionDataArgs['newGuardian'];
 };
 
 export function getSetGuardianInstruction<
@@ -129,7 +129,7 @@ export function getSetGuardianInstruction<
   >;
 
   // Original args.
-  const args = { ...input, guardian: input.guardianArg };
+  const args = { ...input };
 
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {

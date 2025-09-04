@@ -1,4 +1,5 @@
 import {
+  address,
   createSignerFromKeyPair,
   generateKeyPair,
   getProgramDerivedAddress,
@@ -42,28 +43,21 @@ async function main() {
       cfg: cfgAddress,
       guardian,
       systemProgram: SYSTEM_PROGRAM_ADDRESS,
-      cfgArg: {
-        guardian,
-        eip1559: {
-          config: {
-            target: 5_000_000,
-            denominator: 2,
-            windowDurationSeconds: 1,
-            minimumBaseFee: 1,
-          },
-          currentBaseFee: 1,
-          currentWindowGasUsed: 0,
-          windowStartTime: Date.now() / 1000,
-        },
-        gasConfig: {
-          gasPerCall: 50_000,
-          gasCostScaler: 1_000_000,
-          gasCostScalerDp: 1_000_000,
-          gasFeeReceiver: payer.address,
-        },
+      newGuardian: address(guardian.address),
+      eip1559Config: {
+        target: 5_000_000,
+        denominator: 2,
+        windowDurationSeconds: 1,
+        minimumBaseFee: 1,
+      },
+      gasConfig: {
+        maxGasLimitPerMessage: 5_000_000,
+        gasCostScaler: 1_000_000,
+        gasCostScalerDp: 1_000_000,
+        gasFeeReceiver: payer.address,
       },
     },
-    { programAddress: constants.solanaBridge }
+    { programAddress: constants.baseRelayerProgram }
   );
 
   // Send the transaction.

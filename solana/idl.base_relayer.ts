@@ -69,10 +69,22 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "cfg",
+          "name": "new_guardian",
+          "type": "pubkey"
+        },
+        {
+          "name": "eip1559_config",
           "type": {
             "defined": {
-              "name": "Cfg"
+              "name": "Eip1559Config"
+            }
+          }
+        },
+        {
+          "name": "gas_config",
+          "type": {
+            "defined": {
+              "name": "GasConfig"
             }
           }
         }
@@ -200,7 +212,7 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "cfg",
+          "name": "eip1559_config",
           "type": {
             "defined": {
               "name": "Eip1559Config"
@@ -248,7 +260,7 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "cfg",
+          "name": "gas_config",
           "type": {
             "defined": {
               "name": "GasConfig"
@@ -296,7 +308,7 @@ export const IDL = {
       ],
       "args": [
         {
-          "name": "guardian",
+          "name": "new_guardian",
           "type": "pubkey"
         }
       ]
