@@ -8,6 +8,7 @@ mod internal;
 mod state;
 
 use instructions::*;
+use internal::*;
 use state::*;
 
 #[cfg(test)]
@@ -17,6 +18,8 @@ declare_id!("4sW86ZszkmjoNLUrmWdNbsjC1DQhwBWX2a45nzjhCZpZ");
 
 #[program]
 pub mod base_relayer {
+
+    use crate::internal::Eip1559Config;
 
     use super::*;
 
@@ -35,16 +38,37 @@ pub mod base_relayer {
         initialize_handler(ctx, cfg)
     }
 
-    /// Updates the relayer configuration.
-    /// Only the recorded `guardian` may call this instruction. Replaces the
-    /// guardian, EIP-1559 state/config, and gas configuration atomically.
+    /// Updates the EIP1559 configuration.
+    /// Only the recorded `guardian` may call this instruction.
     ///
     /// # Arguments
     /// * `ctx` - The context containing the `cfg` PDA and the `guardian` signer.
     ///           Authorization is enforced via an Anchor `has_one` constraint.
-    /// * `cfg` - The new configuration to write in full.
-    pub fn set_config(ctx: Context<SetConfig>, cfg: Cfg) -> Result<()> {
-        set_config_handler(ctx, cfg)
+    /// * `cfg` - The new EIP1559 configuration to write in full.
+    pub fn set_eip1559_config(ctx: Context<SetConfig>, cfg: Eip1559Config) -> Result<()> {
+        set_eip1559_config_handler(ctx, cfg)
+    }
+
+    /// Updates the Gas configuration.
+    /// Only the recorded `guardian` may call this instruction.
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the `cfg` PDA and the `guardian` signer.
+    ///           Authorization is enforced via an Anchor `has_one` constraint.
+    /// * `cfg` - The new Gas configuration to write in full.
+    pub fn set_gas_config(ctx: Context<SetConfig>, cfg: GasConfig) -> Result<()> {
+        set_gas_config_handler(ctx, cfg)
+    }
+
+    /// Updates the configured guardian.
+    /// Only the current `guardian` may call this instruction.
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the `cfg` PDA and the `guardian` signer.
+    ///           Authorization is enforced via an Anchor `has_one` constraint.
+    /// * `cfg` - The new guardian with permissions to update other configs.
+    pub fn set_guardian(ctx: Context<SetConfig>, guardian: Pubkey) -> Result<()> {
+        set_guardian_handler(ctx, guardian)
     }
 
     /// Pays the gas cost for relaying a message to Base and records the request.

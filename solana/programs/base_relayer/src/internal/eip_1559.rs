@@ -224,7 +224,7 @@ mod tests {
         let ts = eip.window_start_time + eip.config.window_duration_seconds as i64;
         let ret = eip.refresh_base_fee(ts);
 
-        assert_eq!(ret, 2);
+        assert_eq!(ret, 101);
     }
 
     #[test]

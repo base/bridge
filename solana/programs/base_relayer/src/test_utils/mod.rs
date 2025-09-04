@@ -28,7 +28,7 @@ impl Eip1559 {
                 window_duration_seconds: 1,
                 minimum_base_fee: 1,
             },
-            current_base_fee: 1,
+            current_base_fee: 100,
             current_window_gas_used: 0,
             window_start_time: 1747440000,
         }

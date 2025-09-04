@@ -128,11 +128,6 @@ mod tests {
         let mut new_gas = original.gas_config.clone();
         new_gas.gas_cost_scaler = 2;
         new_gas.gas_cost_scaler_dp = 1;
-        let new_cfg = Cfg {
-            guardian: original.guardian,
-            eip1559: original.eip1559.clone(),
-            gas_config: new_gas,
-        };
 
         let accounts = accounts::SetConfig {
             cfg: cfg_pda,
@@ -143,7 +138,7 @@ mod tests {
         let ix = Instruction {
             program_id: crate::ID,
             accounts,
-            data: instruction::SetConfig { cfg: new_cfg }.data(),
+            data: instruction::SetGasConfig { cfg: new_gas }.data(),
         };
 
         let tx = Transaction::new(
@@ -183,7 +178,7 @@ mod tests {
         svm.send_transaction(tx).unwrap();
 
         let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
-        assert_eq!(final_receiver_balance - initial_receiver_balance, 246);
+        assert_eq!(final_receiver_balance - initial_receiver_balance, 246 * 100);
     }
 
     #[test]
@@ -198,26 +193,16 @@ mod tests {
         // Configure EIP-1559 so that after one expired window base_fee halves from 100 -> 50
         let original = fetch_cfg(&svm, &cfg_pda);
         let start_time = original.eip1559.window_start_time;
-        let new_eip = crate::internal::Eip1559 {
-            config: crate::internal::Eip1559Config {
-                target: 5_000_000,
-                denominator: 2,
-                window_duration_seconds: 1,
-                minimum_base_fee: 1,
-            },
-            current_base_fee: 100,
-            current_window_gas_used: 0,
-            window_start_time: start_time,
+        let new_eip = crate::internal::Eip1559Config {
+            target: 5_000_000,
+            denominator: 2,
+            window_duration_seconds: 1,
+            minimum_base_fee: 1,
         };
 
         let mut new_gas = original.gas_config.clone();
         new_gas.gas_cost_scaler = 1;
         new_gas.gas_cost_scaler_dp = 1;
-        let new_cfg = Cfg {
-            guardian: guardian.pubkey(),
-            eip1559: new_eip.clone(),
-            gas_config: new_gas,
-        };
 
         let accounts = accounts::SetConfig {
             cfg: cfg_pda,
@@ -227,13 +212,18 @@ mod tests {
 
         let ix = Instruction {
             program_id: crate::ID,
+            accounts: accounts.clone(),
+            data: instruction::SetGasConfig { cfg: new_gas }.data(),
+        };
+        let new_eip_ix = Instruction {
+            program_id: crate::ID,
             accounts,
-            data: instruction::SetConfig { cfg: new_cfg }.data(),
+            data: instruction::SetEip1559Config { cfg: new_eip }.data(),
         };
 
         let tx = Transaction::new(
             &[&payer, &guardian],
-            Message::new(&[ix], Some(&payer_pk)),
+            Message::new(&[ix, new_eip_ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
         svm.send_transaction(tx).unwrap();
