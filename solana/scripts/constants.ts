@@ -23,7 +23,7 @@ export const CONSTANTS = {
 
     // Solana addresses
     solanaBridge: address("GRE8tJqDueG2p7mzBrBZgrJCTQNj1RmdqhH3kdRXqN4D"),
-    baseRelayerProgram: address("HFKmJaaPYmhPJ5MoAqnLK6iJTb8TBx3M13kHgy4Aki8q"),
+    baseRelayerProgram: address("4YuAT37HHR7TznHVTqsVcEmfZETccnN4dxBLyBeMmKKy"),
     spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
     wEth: address("6qbhLNZjXno9dN62thraKZNRCYoYgKvd15NqtwreqfQb"),
     wErc20: address("47f9psvcESd2ekAQYJQ2HL7An44VQ76jZnfgoXrmsL6H"),

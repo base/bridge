@@ -14,15 +14,16 @@ import {
 } from '@solana/kit';
 import { BASE_RELAYER_PROGRAM_ADDRESS } from '../programs';
 
-/** GasLimitExceeded: Gas limit exceeded */
-export const BASE_RELAYER_ERROR__GAS_LIMIT_EXCEEDED = 0x1770; // 6000
+/** UnauthorizedConfigUpdate: Unauthorized to update configuration */
+export const BASE_RELAYER_ERROR__UNAUTHORIZED_CONFIG_UPDATE = 0x2ee0; // 12000
 
-export type BaseRelayerError = typeof BASE_RELAYER_ERROR__GAS_LIMIT_EXCEEDED;
+export type BaseRelayerError =
+  typeof BASE_RELAYER_ERROR__UNAUTHORIZED_CONFIG_UPDATE;
 
 let baseRelayerErrorMessages: Record<BaseRelayerError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   baseRelayerErrorMessages = {
-    [BASE_RELAYER_ERROR__GAS_LIMIT_EXCEEDED]: `Gas limit exceeded`,
+    [BASE_RELAYER_ERROR__UNAUTHORIZED_CONFIG_UPDATE]: `Unauthorized to update configuration`,
   };
 }
 

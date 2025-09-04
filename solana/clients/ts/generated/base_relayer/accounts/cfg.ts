@@ -21,6 +21,8 @@ import {
   getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
+  getU64Decoder,
+  getU64Encoder,
   transformEncoder,
   type Account,
   type Address,
@@ -61,6 +63,8 @@ export type Cfg = {
   eip1559: Eip1559;
   /** Gas configuration */
   gasConfig: GasConfig;
+  /** Canonical nonce */
+  nonce: bigint;
 };
 
 export type CfgArgs = {
@@ -70,6 +74,8 @@ export type CfgArgs = {
   eip1559: Eip1559Args;
   /** Gas configuration */
   gasConfig: GasConfigArgs;
+  /** Canonical nonce */
+  nonce: number | bigint;
 };
 
 export function getCfgEncoder(): Encoder<CfgArgs> {
@@ -79,6 +85,7 @@ export function getCfgEncoder(): Encoder<CfgArgs> {
       ['guardian', getAddressEncoder()],
       ['eip1559', getEip1559Encoder()],
       ['gasConfig', getGasConfigEncoder()],
+      ['nonce', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: CFG_DISCRIMINATOR })
   );
@@ -90,6 +97,7 @@ export function getCfgDecoder(): Decoder<Cfg> {
     ['guardian', getAddressDecoder()],
     ['eip1559', getEip1559Decoder()],
     ['gasConfig', getGasConfigDecoder()],
+    ['nonce', getU64Decoder()],
   ]);
 }
 
@@ -151,5 +159,5 @@ export async function fetchAllMaybeCfg(
 }
 
 export function getCfgSize(): number {
-  return 152;
+  return 160;
 }

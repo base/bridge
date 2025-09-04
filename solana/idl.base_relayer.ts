@@ -344,9 +344,9 @@ export const IDL = {
   ],
   "errors": [
     {
-      "code": 6000,
-      "name": "GasLimitExceeded",
-      "msg": "Gas limit exceeded"
+      "code": 12000,
+      "name": "UnauthorizedConfigUpdate",
+      "msg": "Unauthorized to update configuration"
     }
   ],
   "types": [
@@ -383,6 +383,13 @@ export const IDL = {
                 "name": "GasConfig"
               }
             }
+          },
+          {
+            "name": "nonce",
+            "docs": [
+              "Canonical nonce"
+            ],
+            "type": "u64"
           }
         ]
       }
@@ -504,6 +511,10 @@ export const IDL = {
           {
             "name": "outgoing_message",
             "type": "pubkey"
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
           },
           {
             "name": "gas_limit",
