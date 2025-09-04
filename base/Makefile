@@ -42,6 +42,15 @@ forge-deps:
 	forge install --no-git github.com/foundry-rs/forge-std \
 		github.com/Vectorized/solady@92e647bb2b387e952480a5a37800e9b4d54f7a06
 
+.PHONY: bindings
+bindings:
+	go install github.com/ethereum/go-ethereum/cmd/abigen@v1.14.11
+	forge build
+	abigen --abi ./out/BridgeValidator.sol/BridgeValidator.abi.json --pkg bindings --type BridgeValidator --out bindings/bridge_validator.go
+	abigen --abi ./out/Bridge.sol/Bridge.abi.json --pkg bindings --type Bridge --out bindings/bridge.go
+	abigen --abi ./out/MessageLib.sol/MessageLib.abi.json --pkg bindings --type MessageLib --out bindings/message_lib.go
+	abigen --abi ./out/RelayerOrchestrator.sol/RelayerOrchestrator.abi.json --pkg bindings --type RelayerOrchestrator --out bindings/relayer_orchestrator.go
+
 .PHONY: coverage
 coverage:
 	@ forge coverage --no-match-coverage "(script|test)"

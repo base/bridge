@@ -104,6 +104,7 @@ mod tests {
             guardian: Pubkey::new_unique(),
             eip1559: new_eip(),
             gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
+            nonce: 0,
         };
         cfg.gas_config.max_gas_limit_per_message = 100;
 
@@ -117,6 +118,7 @@ mod tests {
             guardian: Pubkey::new_unique(),
             eip1559: new_eip(),
             gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
+            nonce: 0,
         };
         cfg.gas_config.max_gas_limit_per_message = 100;
 

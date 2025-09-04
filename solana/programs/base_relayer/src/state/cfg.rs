@@ -11,4 +11,6 @@ pub struct Cfg {
     pub eip1559: Eip1559,
     /// Gas configuration
     pub gas_config: GasConfig,
+    /// Canonical nonce
+    pub nonce: u64,
 }

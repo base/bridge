@@ -46,6 +46,7 @@ pub fn initialize_handler(
         window_start_time: current_timestamp,
     };
     ctx.accounts.cfg.gas_config = gas_config;
+    ctx.accounts.cfg.nonce = 0;
 
     Ok(())
 }
