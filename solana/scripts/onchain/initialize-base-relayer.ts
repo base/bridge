@@ -5,12 +5,11 @@ import {
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 
-import { getInitializeInstruction } from "../../clients/ts/generated/bridge";
-import { getIdlConstant } from "../utils/idl-constants";
+import { getInitializeInstruction } from "../../clients/ts/generated/base_relayer";
+import { getIdlConstant } from "../utils/base-relayer-idl-constants";
 import { CONSTANTS } from "../constants";
 import { buildAndSendTransaction, getPayer } from "./utils/transaction";
 import { getTarget } from "../utils/argv";
-import { toBytes } from "viem";
 
 async function main() {
   const target = getTarget();
@@ -21,15 +20,15 @@ async function main() {
   console.log("=".repeat(40));
   console.log(`Target: ${target}`);
   console.log(`RPC URL: ${constants.rpcUrl}`);
-  console.log(`Bridge: ${constants.solanaBridge}`);
+  console.log(`Base Relayer Program: ${constants.baseRelayerProgram}`);
   console.log(`Payer: ${payer.address}`);
   console.log("=".repeat(40));
   console.log("");
 
   // Derive the bridge PDA.
-  const [bridgeAddress] = await getProgramDerivedAddress({
-    programAddress: constants.solanaBridge,
-    seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
+  const [cfgAddress] = await getProgramDerivedAddress({
+    programAddress: constants.baseRelayerProgram,
+    seeds: [Buffer.from(getIdlConstant("CFG_SEED"))],
   });
 
   // TODO: Use the real guardian.
@@ -40,38 +39,28 @@ async function main() {
   const ix = getInitializeInstruction(
     {
       payer: payer,
-      bridge: bridgeAddress,
-      systemProgram: SYSTEM_PROGRAM_ADDRESS,
+      cfg: cfgAddress,
       guardian,
-      eip1559Config: {
-        target: 5_000_000,
-        denominator: 2,
-        windowDurationSeconds: 1,
-        minimumBaseFee: 1,
-      },
-      gasConfig: {
-        gasPerCall: 50_000,
-        gasCostScaler: 1_000_000,
-        gasCostScalerDp: 1_000_000,
-        gasFeeReceiver: payer.address,
-      },
-      protocolConfig: {
-        blockIntervalRequirement: 300,
-      },
-      bufferConfig: {
-        maxCallBufferSize: 8 * 1024,
-      },
-      baseOracleConfig: {
-        threshold: 2,
-        signerCount: 2,
-        signers: [
-          toBytes(constants.solanaEvmLocalKey),
-          toBytes(constants.solanaEvmKeychainKey),
-          ...Array(14).fill(0),
-        ],
-      },
-      partnerOracleConfig: {
-        requiredThreshold: 0,
+      systemProgram: SYSTEM_PROGRAM_ADDRESS,
+      cfgArg: {
+        guardian,
+        eip1559: {
+          config: {
+            target: 5_000_000,
+            denominator: 2,
+            windowDurationSeconds: 1,
+            minimumBaseFee: 1,
+          },
+          currentBaseFee: 1,
+          currentWindowGasUsed: 0,
+          windowStartTime: Date.now() / 1000,
+        },
+        gasConfig: {
+          gasPerCall: 50_000,
+          gasCostScaler: 1_000_000,
+          gasCostScalerDp: 1_000_000,
+          gasFeeReceiver: payer.address,
+        },
       },
     },
     { programAddress: constants.solanaBridge }

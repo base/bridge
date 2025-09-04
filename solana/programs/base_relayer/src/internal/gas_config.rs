@@ -73,6 +73,7 @@ pub enum GasConfigError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::internal::{Eip1559, Eip1559Config};
     use crate::state::Cfg;
     use crate::test_utils::{mock_clock, setup_program_and_svm, TEST_GAS_FEE_RECEIVER};
     use crate::{accounts, instruction};
@@ -88,11 +89,20 @@ mod tests {
         Cfg::try_deserialize(&mut &account.data[..]).unwrap()
     }
 
+    fn new_eip() -> Eip1559 {
+        Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 100,
+            current_window_gas_used: 0,
+            window_start_time: 0,
+        }
+    }
+
     #[test]
     fn check_gas_limit_allows_equal_limit() {
         let mut cfg = Cfg {
             guardian: Pubkey::new_unique(),
-            eip1559: crate::internal::Eip1559::test_new(),
+            eip1559: new_eip(),
             gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
         };
         cfg.gas_config.max_gas_limit_per_message = 100;
@@ -105,7 +115,7 @@ mod tests {
     fn check_gas_limit_errors_above_limit() {
         let mut cfg = Cfg {
             guardian: Pubkey::new_unique(),
-            eip1559: crate::internal::Eip1559::test_new(),
+            eip1559: new_eip(),
             gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
         };
         cfg.gas_config.max_gas_limit_per_message = 100;
@@ -138,7 +148,10 @@ mod tests {
         let ix = Instruction {
             program_id: crate::ID,
             accounts,
-            data: instruction::SetGasConfig { cfg: new_gas }.data(),
+            data: instruction::SetGasConfig {
+                gas_config: new_gas,
+            }
+            .data(),
         };
 
         let tx = Transaction::new(
@@ -178,7 +191,7 @@ mod tests {
         svm.send_transaction(tx).unwrap();
 
         let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
-        assert_eq!(final_receiver_balance - initial_receiver_balance, 246 * 100);
+        assert_eq!(final_receiver_balance - initial_receiver_balance, 246);
     }
 
     #[test]
@@ -213,12 +226,18 @@ mod tests {
         let ix = Instruction {
             program_id: crate::ID,
             accounts: accounts.clone(),
-            data: instruction::SetGasConfig { cfg: new_gas }.data(),
+            data: instruction::SetGasConfig {
+                gas_config: new_gas,
+            }
+            .data(),
         };
         let new_eip_ix = Instruction {
             program_id: crate::ID,
             accounts,
-            data: instruction::SetEip1559Config { cfg: new_eip }.data(),
+            data: instruction::SetEip1559Config {
+                eip1559_config: new_eip,
+            }
+            .data(),
         };
 
         let tx = Transaction::new(
@@ -260,12 +279,12 @@ mod tests {
         svm.send_transaction(tx).unwrap();
 
         let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
-        // base_fee 50 * gas_limit 1000 = 50_000
-        assert_eq!(final_receiver_balance - initial_receiver_balance, 50_000);
+        // base_fee 1 * gas_limit 1000 = 1_000
+        assert_eq!(final_receiver_balance - initial_receiver_balance, 1_000);
 
         // Validate EIP-1559 state was updated for the new window and usage accounted
         let updated = fetch_cfg(&svm, &cfg_pda);
-        assert_eq!(updated.eip1559.current_base_fee, 50);
+        assert_eq!(updated.eip1559.current_base_fee, 1);
         assert_eq!(updated.eip1559.current_window_gas_used, gas_limit);
         assert_eq!(updated.eip1559.window_start_time, start_time + 1);
     }

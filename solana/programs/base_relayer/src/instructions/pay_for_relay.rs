@@ -120,9 +120,6 @@ mod tests {
 
         // With base_fee = 1 in tests, gas_cost == gas_limit
         let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
-        assert_eq!(
-            final_receiver_balance - initial_receiver_balance,
-            gas_limit * 100
-        );
+        assert_eq!(final_receiver_balance - initial_receiver_balance, gas_limit);
     }
 }

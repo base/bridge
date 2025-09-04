@@ -1,7 +1,7 @@
 export const IDL = {
   "metadata": {
     "name": "bridge",
-    "version": "0.0.4",
+    "version": "0.1.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
