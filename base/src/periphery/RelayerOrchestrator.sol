@@ -56,7 +56,12 @@ contract RelayerOrchestrator {
         IncomingMessage[] calldata messages,
         bytes calldata validatorSigs
     ) external {
-        BridgeValidator(BRIDGE_VALIDATOR).registerMessages(innerMessageHashes, validatorSigs);
-        Bridge(BRIDGE).relayMessages(messages);
+        if (innerMessageHashes.length > 0) {
+            BridgeValidator(BRIDGE_VALIDATOR).registerMessages(innerMessageHashes, validatorSigs);
+        }
+
+        if (messages.length > 0) {
+            Bridge(BRIDGE).relayMessages(messages);
+        }
     }
 }
