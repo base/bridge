@@ -46,6 +46,8 @@ pub fn pay_for_relay_handler(
     )?;
     ctx.accounts.message_to_relay.outgoing_message = outgoing_message;
     ctx.accounts.message_to_relay.gas_limit = gas_limit;
+    ctx.accounts.message_to_relay.nonce = ctx.accounts.cfg.nonce;
+    ctx.accounts.cfg.nonce += 1;
     Ok(())
 }
 
@@ -120,9 +122,6 @@ mod tests {
 
         // With base_fee = 1 in tests, gas_cost == gas_limit
         let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
-        assert_eq!(
-            final_receiver_balance - initial_receiver_balance,
-            gas_limit * 100
-        );
+        assert_eq!(final_receiver_balance - initial_receiver_balance, gas_limit);
     }
 }

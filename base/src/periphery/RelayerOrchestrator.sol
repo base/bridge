@@ -10,6 +10,13 @@ import {IncomingMessage} from "../libraries/MessageLib.sol";
 /// @notice An orchestration contract that allows a relayer to submit message pre-validation + execution in the same
 ///         transaction.
 contract RelayerOrchestrator {
+    /// @dev Represents a message to be executed on Base
+    struct MessageToExecute {
+        /// @dev The nonce value from the `MessageToRelay` account on Solana from the base_relayer program
+        uint256 nonce;
+        /// @dev The incoming message to execute through the Bridge contract
+        IncomingMessage message;
+    }
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
     //////////////////////////////////////////////////////////////
@@ -20,6 +27,9 @@ contract RelayerOrchestrator {
     /// @notice Address of the BridgeValidator contract. Messages will be pre-validated there by our oracle & bridge
     ///         partner.
     address public immutable BRIDGE_VALIDATOR;
+
+    /// @notice The next expected nonce of a message to be executed
+    uint256 public nextNonce;
 
     //////////////////////////////////////////////////////////////
     ///                       Errors                           ///
@@ -48,20 +58,37 @@ contract RelayerOrchestrator {
     ///
     /// @param innerMessageHashes An array of inner message hashes to pre-validate (hash over message data excluding the
     ///                           nonce and gasLimit).
-    /// @param messages           The messages to relay. Not necessarily a 1:1 mapping with innerMessageHashes.
+    /// @param messagesToExecute  The messages to relay. Not necessarily a 1:1 mapping with innerMessageHashes.
     /// @param validatorSigs      A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
     ///                           `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
     function validateAndRelay(
         bytes32[] calldata innerMessageHashes,
-        IncomingMessage[] calldata messages,
+        MessageToExecute[] calldata messagesToExecute,
         bytes calldata validatorSigs
     ) external {
         if (innerMessageHashes.length > 0) {
             BridgeValidator(BRIDGE_VALIDATOR).registerMessages(innerMessageHashes, validatorSigs);
         }
 
-        if (messages.length > 0) {
-            Bridge(BRIDGE).relayMessages(messages);
+        uint256 msgCount = messagesToExecute.length;
+
+        if (msgCount > 0) {
+            uint256 currentNextNonce = nextNonce;
+            uint256 i;
+            IncomingMessage[] memory messages = new IncomingMessage[](msgCount);
+
+            for (; i < msgCount; i++) {
+                if (messagesToExecute[i].nonce != currentNextNonce + i) {
+                    break;
+                }
+                messages[i] = messagesToExecute[i].message;
+            }
+
+            // Only process messages if entire batch passed the nonce check
+            if (i == msgCount) {
+                nextNonce = currentNextNonce + msgCount;
+                Bridge(BRIDGE).relayMessages(messages);
+            }
         }
     }
 }

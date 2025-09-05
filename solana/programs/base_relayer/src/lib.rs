@@ -19,8 +19,6 @@ declare_id!("4sW86ZszkmjoNLUrmWdNbsjC1DQhwBWX2a45nzjhCZpZ");
 #[program]
 pub mod base_relayer {
 
-    use crate::internal::Eip1559Config;
-
     use super::*;
 
     /// Initializes the Base relayer program configuration.
@@ -34,8 +32,13 @@ pub mod base_relayer {
     ///           is recorded as the admin authority.
     /// * `cfg` - Initial configuration values: guardian pubkey, EIP-1559 state and
     ///           config, and gas-cost configuration.
-    pub fn initialize(ctx: Context<Initialize>, cfg: Cfg) -> Result<()> {
-        initialize_handler(ctx, cfg)
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        new_guardian: Pubkey,
+        eip1559_config: Eip1559Config,
+        gas_config: GasConfig,
+    ) -> Result<()> {
+        initialize_handler(ctx, new_guardian, eip1559_config, gas_config)
     }
 
     /// Updates the EIP1559 configuration.
@@ -45,8 +48,11 @@ pub mod base_relayer {
     /// * `ctx` - The context containing the `cfg` PDA and the `guardian` signer.
     ///           Authorization is enforced via an Anchor `has_one` constraint.
     /// * `cfg` - The new EIP1559 configuration to write in full.
-    pub fn set_eip1559_config(ctx: Context<SetConfig>, cfg: Eip1559Config) -> Result<()> {
-        set_eip1559_config_handler(ctx, cfg)
+    pub fn set_eip1559_config(
+        ctx: Context<SetConfig>,
+        eip1559_config: Eip1559Config,
+    ) -> Result<()> {
+        set_eip1559_config_handler(ctx, eip1559_config)
     }
 
     /// Updates the Gas configuration.
@@ -56,8 +62,8 @@ pub mod base_relayer {
     /// * `ctx` - The context containing the `cfg` PDA and the `guardian` signer.
     ///           Authorization is enforced via an Anchor `has_one` constraint.
     /// * `cfg` - The new Gas configuration to write in full.
-    pub fn set_gas_config(ctx: Context<SetConfig>, cfg: GasConfig) -> Result<()> {
-        set_gas_config_handler(ctx, cfg)
+    pub fn set_gas_config(ctx: Context<SetConfig>, gas_config: GasConfig) -> Result<()> {
+        set_gas_config_handler(ctx, gas_config)
     }
 
     /// Updates the configured guardian.
@@ -67,8 +73,8 @@ pub mod base_relayer {
     /// * `ctx` - The context containing the `cfg` PDA and the `guardian` signer.
     ///           Authorization is enforced via an Anchor `has_one` constraint.
     /// * `cfg` - The new guardian with permissions to update other configs.
-    pub fn set_guardian(ctx: Context<SetConfig>, guardian: Pubkey) -> Result<()> {
-        set_guardian_handler(ctx, guardian)
+    pub fn set_guardian(ctx: Context<SetConfig>, new_guardian: Pubkey) -> Result<()> {
+        set_guardian_handler(ctx, new_guardian)
     }
 
     /// Pays the gas cost for relaying a message to Base and records the request.

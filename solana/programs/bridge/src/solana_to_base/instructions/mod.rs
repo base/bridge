@@ -20,14 +20,6 @@ pub use bridge_wrapped_token::*;
 pub mod buffered;
 pub use buffered::*;
 
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct TransferParams {
-    pub to: [u8; 20],
-    pub remote_token: [u8; 20],
-    pub amount: u64,
-    pub call: Option<Call>,
-}
-
 pub fn check_call(call: &Call) -> Result<()> {
     require!(
         matches!(call.ty, CallType::Call | CallType::DelegateCall) || call.to == [0; 20],

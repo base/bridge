@@ -13,24 +13,18 @@ use crate::{
     accounts,
     constants::CFG_SEED,
     instruction::Initialize,
-    internal::{Eip1559, Eip1559Config, GasConfig},
-    state::Cfg,
+    internal::{Eip1559Config, GasConfig},
     ID,
 };
 pub const TEST_GAS_FEE_RECEIVER: Pubkey = pubkey!("eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt");
 
-impl Eip1559 {
+impl Eip1559Config {
     pub fn test_new() -> Self {
         Self {
-            config: Eip1559Config {
-                target: 5_000_000,
-                denominator: 2,
-                window_duration_seconds: 1,
-                minimum_base_fee: 1,
-            },
-            current_base_fee: 100,
-            current_window_gas_used: 0,
-            window_start_time: 1747440000,
+            target: 5_000_000,
+            denominator: 2,
+            window_duration_seconds: 1,
+            minimum_base_fee: 1,
         }
     }
 }
@@ -82,11 +76,9 @@ pub fn setup_program_and_svm() -> (
         program_id: ID,
         accounts,
         data: Initialize {
-            cfg: Cfg {
-                guardian: guardian.pubkey(),
-                eip1559: Eip1559::test_new(),
-                gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
-            },
+            new_guardian: guardian.pubkey(),
+            eip1559_config: Eip1559Config::test_new(),
+            gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
         }
         .data(),
     };
