@@ -10,6 +10,7 @@ import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {Twin} from "../src/Twin.sol";
+import {RelayerOrchestrator} from "../src/periphery/RelayerOrchestrator.sol";
 import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
@@ -20,6 +21,7 @@ contract UpgradeScript is DevOps {
     bool upgradeErc20Factory = false; // MODIFY THIS WHEN UPGRADING
     bool upgradeBridgeValidator = false; // MODIFY THIS WHEN UPGRADING
     bool upgradeBridge = false; // MODIFY THIS WHEN UPGRADING
+    bool upgradeRelayerOrchestrator = false; // MODIFY THIS WHEN UPGRADING
 
     // Deployment addresss
     address bridgeValidatorAddress;
@@ -27,10 +29,12 @@ contract UpgradeScript is DevOps {
     address erc20FactoryAddress;
     address twinBeaconAddress;
     address crossChainErc20BeaconAddress;
+    address relayerOrchestratorAddress;
 
     function setUp() external {
         // Read existing deployment addresses
-        (bridgeAddress, erc20FactoryAddress, twinBeaconAddress) = _readAndParseDeploymentFile();
+        (bridgeAddress, erc20FactoryAddress, twinBeaconAddress, bridgeValidatorAddress, relayerOrchestratorAddress) =
+            _readAndParseDeploymentFile();
 
         // Upgrade CrossChainERC20Beacon and CrossChainERC20Factory
         crossChainErc20BeaconAddress = CrossChainERC20Factory(erc20FactoryAddress).BEACON();
@@ -42,7 +46,6 @@ contract UpgradeScript is DevOps {
 
         vm.startBroadcast();
 
-        // Upgrade TwinBeacon
         if (upgradeTwin) {
             _upgradeTwinBeacon();
         }
@@ -59,16 +62,25 @@ contract UpgradeScript is DevOps {
             _upgradeBridgeValidator(cfg);
         }
 
-        // Upgrade Bridge
         if (upgradeBridge) {
             _upgradeBridge(cfg);
+        }
+
+        if (upgradeRelayerOrchestrator) {
+            _upgradeRelayerOrchestrator(cfg);
         }
 
         vm.stopBroadcast();
     }
 
-    function _readAndParseDeploymentFile() internal returns (address, address, address) {
-        return (_getAddress("Bridge"), _getAddress("CrossChainERC20Factory"), _getAddress("Twin"));
+    function _readAndParseDeploymentFile() internal returns (address, address, address, address, address) {
+        return (
+            _getAddress("Bridge"),
+            _getAddress("CrossChainERC20Factory"),
+            _getAddress("Twin"),
+            _getAddress("BridgeValidator"),
+            _getAddress("RelayerOrchestrator")
+        );
     }
 
     function _upgradeTwinBeacon() internal {
@@ -132,5 +144,15 @@ contract UpgradeScript is DevOps {
         // Use ERC1967Factory to upgrade the proxy
         ERC1967Factory(cfg.erc1967Factory).upgrade(bridgeAddress, bridgeImpl);
         console.log("Upgraded Bridge proxy!");
+    }
+
+    function _upgradeRelayerOrchestrator(HelperConfig.NetworkConfig memory cfg) internal {
+        address relayerOrchestratorImpl =
+            address(new RelayerOrchestrator({bridge: bridgeAddress, bridgeValidator: bridgeValidatorAddress}));
+
+        console.log("Deployed new RelayerOrchestrator implementation: %s", relayerOrchestratorImpl);
+        // Use ERC1967Factory to upgrade the proxy
+        ERC1967Factory(cfg.erc1967Factory).upgrade(relayerOrchestratorAddress, relayerOrchestratorImpl);
+        console.log("Upgraded RelayerOrchestrator proxy!");
     }
 }

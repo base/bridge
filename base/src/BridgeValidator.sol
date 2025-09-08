@@ -125,7 +125,7 @@ contract BridgeValidator is Initializable {
     /// @dev Callable only once due to `initializer` modifier.
     ///
     /// @param baseValidators The initial list of Base validators.
-    /// @param baseThreshold The minimum number of Base validator signatures required.
+    /// @param baseThreshold  The minimum number of Base validator signatures required.
     function initialize(address[] calldata baseValidators, uint128 baseThreshold) external initializer {
         VerificationLib.initialize(baseValidators, baseThreshold);
     }
@@ -133,12 +133,12 @@ contract BridgeValidator is Initializable {
     /// @notice Pre-validates a batch of Solana --> Base messages.
     ///
     /// @param innerMessageHashes An array of inner message hashes to pre-validate (hash over message data excluding the
-    ///                           nonce). Each is combined with a monotonically increasing nonce to form
+    ///                           nonce and gasLimit). Each is combined with a monotonically increasing nonce to form
     ///                           `messageHashes`.
-    /// @param validatorSigs A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
-    ///                      `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
-    ///                      Must include at least `getBaseThreshold()` Base validator signatures. The external
-    ///                      signature threshold is controlled by `PARTNER_VALIDATOR_THRESHOLD`.
+    /// @param validatorSigs      A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
+    ///                           `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
+    ///                           Must include at least `getBaseThreshold()` Base validator signatures. The external
+    ///                           signature threshold is controlled by `PARTNER_VALIDATOR_THRESHOLD`.
     function registerMessages(bytes32[] calldata innerMessageHashes, bytes calldata validatorSigs) external {
         uint256 len = innerMessageHashes.length;
         bytes32[] memory messageHashes = new bytes32[](len);
@@ -192,7 +192,7 @@ contract BridgeValidator is Initializable {
     /// @dev Verifies that the provided signatures satisfy Base and partner thresholds for `messageHashes`.
     ///
     /// @param messageHashes The derived message hashes (inner hash + nonce) for the batch.
-    /// @param sigData Concatenated signatures over `toEthSignedMessageHash(abi.encode(messageHashes))`.
+    /// @param sigData       Concatenated signatures over `toEthSignedMessageHash(abi.encode(messageHashes))`.
     function _validateSigs(bytes32[] memory messageHashes, bytes calldata sigData) private view {
         address[] memory recoveredSigners = _getSignersFromSigs(messageHashes, sigData);
         require(_countBaseSigners(recoveredSigners) >= VerificationLib.getBaseThreshold(), BaseThresholdNotMet());

@@ -30,11 +30,11 @@ contract BridgeTest is CommonTest {
     CrossChainERC20 public crossChainToken;
 
     // Events to test
-    event MessageSuccessfullyRelayed(bytes32 indexed messageHash);
+    event MessageSuccessfullyRelayed(address indexed submitter, bytes32 indexed messageHash);
 
     function setUp() public {
         DeployScript deployer = new DeployScript();
-        (twinBeacon, bridgeValidator, bridge, factory, helperConfig) = deployer.run();
+        (twinBeacon, bridgeValidator, bridge, factory, relayerOrchestrator, helperConfig) = deployer.run();
 
         cfg = helperConfig.getConfig();
 
@@ -179,6 +179,7 @@ contract BridgeTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Call,
             data: abi.encode(
                 Call({
@@ -202,6 +203,7 @@ contract BridgeTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Call,
             data: abi.encode(
                 Call({
@@ -225,6 +227,7 @@ contract BridgeTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Call,
             data: abi.encode(
                 Call({
@@ -241,7 +244,7 @@ contract BridgeTest is CommonTest {
         _registerMessage(messages[0]);
 
         vm.expectEmit(true, false, false, false);
-        emit MessageSuccessfullyRelayed(expectedHash);
+        emit MessageSuccessfullyRelayed(address(this), expectedHash);
 
         bridge.relayMessages(messages);
     }
@@ -255,6 +258,7 @@ contract BridgeTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Call,
             data: abi.encode(
                 Call({
@@ -286,8 +290,13 @@ contract BridgeTest is CommonTest {
         });
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] =
-            IncomingMessage({nonce: 0, sender: TEST_SENDER, ty: MessageType.Transfer, data: abi.encode(transfer)});
+        messages[0] = IncomingMessage({
+            nonce: 0,
+            sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
+            ty: MessageType.Transfer,
+            data: abi.encode(transfer)
+        });
 
         _registerMessage(messages[0]);
         bridge.relayMessages(messages);
@@ -315,6 +324,7 @@ contract BridgeTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.TransferAndCall,
             data: abi.encode(transfer, call)
         });
@@ -369,6 +379,7 @@ contract BridgeTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Call,
             data: abi.encode(
                 Call({
@@ -388,6 +399,7 @@ contract BridgeTest is CommonTest {
         IncomingMessage memory message = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Call,
             data: abi.encode(
                 Call({
@@ -408,6 +420,7 @@ contract BridgeTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: cfg.remoteBridge,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Call,
             data: abi.encode(
                 Call({
@@ -651,6 +664,7 @@ contract BridgeTest is CommonTest {
             messages[i] = IncomingMessage({
                 nonce: uint64(i),
                 sender: TEST_SENDER,
+                gasLimit: GAS_LIMIT,
                 ty: MessageType.Call,
                 data: abi.encode(
                     Call({
@@ -675,6 +689,7 @@ contract BridgeTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: 0,
             sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Call,
             data: abi.encode(
                 Call({
@@ -739,6 +754,7 @@ contract BridgeTest is CommonTest {
             tempMessages[0] = IncomingMessage({
                 nonce: i,
                 sender: TEST_SENDER,
+                gasLimit: GAS_LIMIT,
                 ty: MessageType.Call,
                 data: abi.encode(
                     Call({
@@ -759,6 +775,7 @@ contract BridgeTest is CommonTest {
         messages[0] = IncomingMessage({
             nonce: nonce,
             sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
             ty: MessageType.Call,
             data: abi.encode(
                 Call({
@@ -1084,7 +1101,13 @@ contract BridgeTest is CommonTest {
         bytes memory data = abi.encode(call);
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] = IncomingMessage({nonce: nonce, sender: cfg.remoteBridge, ty: MessageType.Call, data: data});
+        messages[0] = IncomingMessage({
+            nonce: nonce,
+            sender: cfg.remoteBridge,
+            gasLimit: GAS_LIMIT,
+            ty: MessageType.Call,
+            data: data
+        });
 
         _registerMessage(messages[0]);
         bridge.relayMessages(messages);
