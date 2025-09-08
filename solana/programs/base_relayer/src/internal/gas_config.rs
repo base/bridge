@@ -4,6 +4,8 @@ use crate::state::Cfg;
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct GasConfig {
+    /// Minimum gas limit per cross-chain message
+    pub min_gas_limit_per_message: u64,
     /// Maximum gas limit per cross-chain message
     pub max_gas_limit_per_message: u64,
     /// Scaling factor for gas cost calculations
@@ -26,6 +28,10 @@ pub fn check_and_pay_for_gas<'info>(
 }
 
 fn check_gas_limit(gas_limit: u64, cfg: &Cfg) -> Result<()> {
+    require!(
+        gas_limit >= cfg.gas_config.min_gas_limit_per_message,
+        GasConfigError::GasLimitTooLow
+    );
     require!(
         gas_limit <= cfg.gas_config.max_gas_limit_per_message,
         GasConfigError::GasLimitExceeded
@@ -66,6 +72,8 @@ fn pay_for_gas<'info>(
 
 #[error_code]
 pub enum GasConfigError {
+    #[msg("Gas limit too low")]
+    GasLimitTooLow,
     #[msg("Gas limit exceeded")]
     GasLimitExceeded,
 }
@@ -100,15 +108,14 @@ mod tests {
 
     #[test]
     fn check_gas_limit_allows_equal_limit() {
-        let mut cfg = Cfg {
+        let cfg = Cfg {
             guardian: Pubkey::new_unique(),
             eip1559: new_eip(),
             gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
             nonce: 0,
         };
-        cfg.gas_config.max_gas_limit_per_message = 100;
 
-        let res = super::check_gas_limit(100, &cfg);
+        let res = super::check_gas_limit(cfg.gas_config.max_gas_limit_per_message, &cfg);
         assert!(res.is_ok());
     }
 
@@ -175,7 +182,7 @@ mod tests {
         }
         .to_account_metas(None);
 
-        let gas_limit = 123u64;
+        let gas_limit = 123_000u64;
         let ix = Instruction {
             program_id: crate::ID,
             accounts,
@@ -194,7 +201,7 @@ mod tests {
         svm.send_transaction(tx).unwrap();
 
         let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
-        assert_eq!(final_receiver_balance - initial_receiver_balance, 246);
+        assert_eq!(final_receiver_balance - initial_receiver_balance, 246_000);
     }
 
     #[test]
@@ -253,7 +260,7 @@ mod tests {
         // Advance clock by one window so refresh_base_fee applies 100 -> 50
         mock_clock(&mut svm, start_time + 1);
 
-        let gas_limit = 1_000u64;
+        let gas_limit = 100_000u64;
         let outgoing_message = Pubkey::new_unique();
         let message_to_relay = Keypair::new();
         let accounts = accounts::PayForRelay {
@@ -284,7 +291,7 @@ mod tests {
 
         let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
         // base_fee 1 * gas_limit 1000 = 1_000
-        assert_eq!(final_receiver_balance - initial_receiver_balance, 1_000);
+        assert_eq!(final_receiver_balance - initial_receiver_balance, 100_000);
 
         // Validate EIP-1559 state was updated for the new window and usage accounted
         let updated = fetch_cfg(&svm, &cfg_pda);
