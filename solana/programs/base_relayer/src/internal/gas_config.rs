@@ -73,13 +73,13 @@ pub enum GasConfigError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::constants::MSG_SEED;
     use crate::internal::{Eip1559, Eip1559Config};
     use crate::state::Cfg;
     use crate::test_utils::{mock_clock, setup_program_and_svm, TEST_GAS_FEE_RECEIVER};
     use crate::{accounts, instruction};
     use anchor_lang::solana_program::{instruction::Instruction, system_program};
     use anchor_lang::InstructionData;
-    use solana_keypair::Keypair;
     use solana_message::Message;
     use solana_signer::Signer as _;
     use solana_transaction::Transaction;
@@ -164,12 +164,14 @@ mod tests {
         svm.send_transaction(tx).unwrap();
 
         // Now pay for relay with gas_limit=123; base_fee=1 => transfer=246
-        let message_to_relay = Keypair::new();
+        let outgoing_message = Pubkey::new_unique();
+        let (message_to_relay, _) =
+            Pubkey::find_program_address(&[MSG_SEED, outgoing_message.as_ref()], &crate::ID);
         let accounts = accounts::PayForRelay {
             payer: payer_pk,
             cfg: cfg_pda,
             gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
-            message_to_relay: message_to_relay.pubkey(),
+            message_to_relay,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -179,14 +181,14 @@ mod tests {
             program_id: crate::ID,
             accounts,
             data: crate::instruction::PayForRelay {
-                outgoing_message: Pubkey::new_unique(),
+                outgoing_message,
                 gas_limit,
             }
             .data(),
         };
 
         let tx = Transaction::new(
-            &[&payer, &message_to_relay],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
@@ -253,12 +255,14 @@ mod tests {
         mock_clock(&mut svm, start_time + 1);
 
         let gas_limit = 1_000u64;
-        let message_to_relay = Keypair::new();
+        let outgoing_message = Pubkey::new_unique();
+        let (message_to_relay, _) =
+            Pubkey::find_program_address(&[MSG_SEED, outgoing_message.as_ref()], &crate::ID);
         let accounts = accounts::PayForRelay {
             payer: payer_pk,
             cfg: cfg_pda,
             gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
-            message_to_relay: message_to_relay.pubkey(),
+            message_to_relay,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -267,14 +271,14 @@ mod tests {
             program_id: crate::ID,
             accounts,
             data: crate::instruction::PayForRelay {
-                outgoing_message: Pubkey::new_unique(),
+                outgoing_message,
                 gas_limit,
             }
             .data(),
         };
 
         let tx = Transaction::new(
-            &[&payer, &message_to_relay],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
