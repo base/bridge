@@ -98,8 +98,7 @@ library MessageStorageLib {
     /// @param leafIndex The 0-indexed position of the leaf to prove.
     ///
     /// @return proof Array of sibling hashes for the proof.
-    /// @return totalLeafCount The total number of leaves when proof was generated.
-    function generateProof(uint64 leafIndex) internal view returns (bytes32[] memory proof, uint64 totalLeafCount) {
+    function generateProof(uint64 leafIndex) internal view returns (bytes32[] memory proof) {
         MessageStorageLibStorage storage $ = getMessageStorageLibStorage();
 
         require($.nextNonce != 0, EmptyMMR());
@@ -143,8 +142,6 @@ library MessageStorageLib {
         for (uint256 i = 0; i < otherPeaks.length; i++) {
             proof[proofIndex++] = otherPeaks[i];
         }
-
-        totalLeafCount = $.nextNonce;
     }
 
     /// @notice Sends a message to the Solana bridge.
