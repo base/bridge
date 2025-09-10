@@ -5,6 +5,5 @@ use anchor_lang::prelude::*;
 pub struct MessageToRelay {
     pub nonce: u64,
     pub outgoing_message: Pubkey,
-    pub nonce: u64,
     pub gas_limit: u64,
 }
