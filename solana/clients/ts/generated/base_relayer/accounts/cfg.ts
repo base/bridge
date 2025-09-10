@@ -57,35 +57,35 @@ export function getCfgDiscriminatorBytes() {
 
 export type Cfg = {
   discriminator: ReadonlyUint8Array;
+  /** Canonical nonce */
+  nonce: bigint;
   /** Guardian pubkey authorized to update configuration */
   guardian: Address;
   /** EIP-1559 state and configuration for dynamic pricing. */
   eip1559: Eip1559;
   /** Gas configuration */
   gasConfig: GasConfig;
-  /** Canonical nonce */
-  nonce: bigint;
 };
 
 export type CfgArgs = {
+  /** Canonical nonce */
+  nonce: number | bigint;
   /** Guardian pubkey authorized to update configuration */
   guardian: Address;
   /** EIP-1559 state and configuration for dynamic pricing. */
   eip1559: Eip1559Args;
   /** Gas configuration */
   gasConfig: GasConfigArgs;
-  /** Canonical nonce */
-  nonce: number | bigint;
 };
 
 export function getCfgEncoder(): Encoder<CfgArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['nonce', getU64Encoder()],
       ['guardian', getAddressEncoder()],
       ['eip1559', getEip1559Encoder()],
       ['gasConfig', getGasConfigEncoder()],
-      ['nonce', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: CFG_DISCRIMINATOR })
   );
@@ -94,10 +94,10 @@ export function getCfgEncoder(): Encoder<CfgArgs> {
 export function getCfgDecoder(): Decoder<Cfg> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['nonce', getU64Decoder()],
     ['guardian', getAddressDecoder()],
     ['eip1559', getEip1559Decoder()],
     ['gasConfig', getGasConfigDecoder()],
-    ['nonce', getU64Decoder()],
   ]);
 }
 
@@ -159,5 +159,5 @@ export async function fetchAllMaybeCfg(
 }
 
 export function getCfgSize(): number {
-  return 160;
+  return 168;
 }

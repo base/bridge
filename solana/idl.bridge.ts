@@ -2263,8 +2263,13 @@ export const IDL = {
     },
     {
       "code": 6001,
+      "name": "Unauthorized",
+      "msg": "Only the owner can close this call buffer"
+    },
+    {
+      "code": 6002,
       "name": "BridgePaused",
-      "msg": "Bridge is paused"
+      "msg": "Bridge is currently paused"
     }
   ],
   "types": [

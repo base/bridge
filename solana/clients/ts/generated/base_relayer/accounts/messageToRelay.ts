@@ -49,14 +49,14 @@ export function getMessageToRelayDiscriminatorBytes() {
 
 export type MessageToRelay = {
   discriminator: ReadonlyUint8Array;
-  outgoingMessage: Address;
   nonce: bigint;
+  outgoingMessage: Address;
   gasLimit: bigint;
 };
 
 export type MessageToRelayArgs = {
-  outgoingMessage: Address;
   nonce: number | bigint;
+  outgoingMessage: Address;
   gasLimit: number | bigint;
 };
 
@@ -64,8 +64,8 @@ export function getMessageToRelayEncoder(): Encoder<MessageToRelayArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['outgoingMessage', getAddressEncoder()],
       ['nonce', getU64Encoder()],
+      ['outgoingMessage', getAddressEncoder()],
       ['gasLimit', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: MESSAGE_TO_RELAY_DISCRIMINATOR })
@@ -75,8 +75,8 @@ export function getMessageToRelayEncoder(): Encoder<MessageToRelayArgs> {
 export function getMessageToRelayDecoder(): Decoder<MessageToRelay> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['outgoingMessage', getAddressDecoder()],
     ['nonce', getU64Decoder()],
+    ['outgoingMessage', getAddressDecoder()],
     ['gasLimit', getU64Decoder()],
   ]);
 }

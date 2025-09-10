@@ -344,9 +344,14 @@ export const IDL = {
   ],
   "errors": [
     {
-      "code": 12000,
-      "name": "UnauthorizedConfigUpdate",
-      "msg": "Unauthorized to update configuration"
+      "code": 6000,
+      "name": "GasLimitTooLow",
+      "msg": "Gas limit too low"
+    },
+    {
+      "code": 6001,
+      "name": "GasLimitExceeded",
+      "msg": "Gas limit exceeded"
     }
   ],
   "types": [
@@ -355,6 +360,13 @@ export const IDL = {
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "nonce",
+            "docs": [
+              "Canonical nonce"
+            ],
+            "type": "u64"
+          },
           {
             "name": "guardian",
             "docs": [
@@ -383,13 +395,6 @@ export const IDL = {
                 "name": "GasConfig"
               }
             }
-          },
-          {
-            "name": "nonce",
-            "docs": [
-              "Canonical nonce"
-            ],
-            "type": "u64"
           }
         ]
       }
@@ -473,6 +478,13 @@ export const IDL = {
         "kind": "struct",
         "fields": [
           {
+            "name": "min_gas_limit_per_message",
+            "docs": [
+              "Minimum gas limit per cross-chain message"
+            ],
+            "type": "u64"
+          },
+          {
             "name": "max_gas_limit_per_message",
             "docs": [
               "Maximum gas limit per cross-chain message"
@@ -509,12 +521,12 @@ export const IDL = {
         "kind": "struct",
         "fields": [
           {
-            "name": "outgoing_message",
-            "type": "pubkey"
-          },
-          {
             "name": "nonce",
             "type": "u64"
+          },
+          {
+            "name": "outgoing_message",
+            "type": "pubkey"
           },
           {
             "name": "gas_limit",

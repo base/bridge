@@ -51,6 +51,7 @@ async function main() {
         minimumBaseFee: 1,
       },
       gasConfig: {
+        minGasLimitPerMessage: 100_000,
         maxGasLimitPerMessage: 5_000_000,
         gasCostScaler: 1_000_000,
         gasCostScalerDp: 1_000_000,

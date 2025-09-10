@@ -21,6 +21,8 @@ import {
 } from '@solana/kit';
 
 export type GasConfig = {
+  /** Minimum gas limit per cross-chain message */
+  minGasLimitPerMessage: bigint;
   /** Maximum gas limit per cross-chain message */
   maxGasLimitPerMessage: bigint;
   /** Scaling factor for gas cost calculations */
@@ -32,6 +34,8 @@ export type GasConfig = {
 };
 
 export type GasConfigArgs = {
+  /** Minimum gas limit per cross-chain message */
+  minGasLimitPerMessage: number | bigint;
   /** Maximum gas limit per cross-chain message */
   maxGasLimitPerMessage: number | bigint;
   /** Scaling factor for gas cost calculations */
@@ -44,6 +48,7 @@ export type GasConfigArgs = {
 
 export function getGasConfigEncoder(): Encoder<GasConfigArgs> {
   return getStructEncoder([
+    ['minGasLimitPerMessage', getU64Encoder()],
     ['maxGasLimitPerMessage', getU64Encoder()],
     ['gasCostScaler', getU64Encoder()],
     ['gasCostScalerDp', getU64Encoder()],
@@ -53,6 +58,7 @@ export function getGasConfigEncoder(): Encoder<GasConfigArgs> {
 
 export function getGasConfigDecoder(): Decoder<GasConfig> {
   return getStructDecoder([
+    ['minGasLimitPerMessage', getU64Decoder()],
     ['maxGasLimitPerMessage', getU64Decoder()],
     ['gasCostScaler', getU64Decoder()],
     ['gasCostScalerDp', getU64Decoder()],
