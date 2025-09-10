@@ -270,8 +270,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @param leafIndex The 0-indexed position of the leaf to prove.
     ///
     /// @return proof          Array of sibling hashes for the proof.
-    /// @return totalLeafCount The total number of leaves when proof was generated.
-    function generateProof(uint64 leafIndex) external view returns (bytes32[] memory proof, uint64 totalLeafCount) {
+    function generateProof(uint64 leafIndex) external view returns (bytes32[] memory proof) {
         return MessageStorageLib.generateProof(leafIndex);
     }
 

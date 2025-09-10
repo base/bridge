@@ -38,15 +38,17 @@ pub fn initialize_handler(
     let current_timestamp = Clock::get()?.unix_timestamp;
     let minimum_base_fee = eip1559_config.minimum_base_fee;
 
-    ctx.accounts.cfg.guardian = guardian;
-    ctx.accounts.cfg.eip1559 = Eip1559 {
-        config: eip1559_config,
-        current_base_fee: minimum_base_fee,
-        current_window_gas_used: 0,
-        window_start_time: current_timestamp,
+    *ctx.accounts.cfg = Cfg {
+        guardian,
+        eip1559: Eip1559 {
+            config: eip1559_config,
+            current_base_fee: minimum_base_fee,
+            current_window_gas_used: 0,
+            window_start_time: current_timestamp,
+        },
+        gas_config,
+        nonce: 0,
     };
-    ctx.accounts.cfg.gas_config = gas_config;
-    ctx.accounts.cfg.nonce = 0;
 
     Ok(())
 }

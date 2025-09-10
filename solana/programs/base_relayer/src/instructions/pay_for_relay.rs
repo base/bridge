@@ -44,10 +44,14 @@ pub fn pay_for_relay_handler(
         &mut ctx.accounts.cfg,
         gas_limit,
     )?;
-    ctx.accounts.message_to_relay.outgoing_message = outgoing_message;
-    ctx.accounts.message_to_relay.gas_limit = gas_limit;
-    ctx.accounts.message_to_relay.nonce = ctx.accounts.cfg.nonce;
+
+    *ctx.accounts.message_to_relay = MessageToRelay {
+        nonce: ctx.accounts.cfg.nonce,
+        outgoing_message,
+        gas_limit,
+    };
     ctx.accounts.cfg.nonce += 1;
+
     Ok(())
 }
 
