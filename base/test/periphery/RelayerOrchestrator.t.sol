@@ -44,20 +44,17 @@ contract RelayerOrchestratorTest is CommonTest {
         });
 
         // Build message aligned with current BridgeValidator nonce
-        RelayerOrchestrator.MessageToExecute[] memory messages = new RelayerOrchestrator.MessageToExecute[](1);
-        messages[0] = RelayerOrchestrator.MessageToExecute({
-            nonce: relayerOrchestrator.nextNonce(),
-            message: IncomingMessage({
-                nonce: uint64(bridgeValidator.nextNonce()),
-                sender: Pubkey.wrap(bytes32(uint256(0x01))),
-                gasLimit: GAS_LIMIT,
-                ty: MessageType.Call,
-                data: abi.encode(call_)
-            })
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
+            nonce: uint64(bridgeValidator.nextNonce()),
+            sender: Pubkey.wrap(bytes32(uint256(0x01))),
+            gasLimit: GAS_LIMIT,
+            ty: MessageType.Call,
+            data: abi.encode(call_)
         });
 
         // Compute inner message hash and corresponding validator signatures
-        (, bytes32[] memory innerMessageHashes) = _messageToMessageHashes(messages[0].message);
+        (, bytes32[] memory innerMessageHashes) = _messageToMessageHashes(messages[0]);
         bytes memory sigs = _getValidatorSigs(innerMessageHashes);
 
         // Call orchestrator
@@ -68,7 +65,7 @@ contract RelayerOrchestratorTest is CommonTest {
         // Effects: target updated, success recorded, nonce incremented
         assertEq(target.value(), newValue, "call not executed");
 
-        bytes32 msgHash = bridge.getMessageHash(messages[0].message);
+        bytes32 msgHash = bridge.getMessageHash(messages[0]);
         assertTrue(bridge.successes(msgHash), "message not marked success");
         assertEq(bridgeValidator.nextNonce(), uint256(messages[0].nonce) + 1, "nonce not incremented");
     }
