@@ -39,25 +39,4 @@ cargo test
 
 Make sure you have a funded solana keypair in `~/.config/solana/id.json`. You can use the `solana-keygen new` command to generate a new keypair. You can use this solana faucet to fund your account on devnet: https://solfaucet.com/.
 
-```bash
-# Create wrapped version of a Base token on Solana
-bun run tx:wrap-token
-
-# Bridge SOL from Solana to Base
-bun run tx:bridge-sol
-
-# Bridge SPL tokens from Solana to Base
-bun run tx:bridge-spl
-
-# Bridge back wrapped tokens from Solana to Base
-bun run tx:bridge-wrapped-token
-
-# Bridge a call from Solana to Base
-bun run tx:bridge-call
-
-# Prove message from Base and relay it to Solana
-bun run tx:prove-and-relay-message
-
-# Relay message from Base
-bun run tx:relay-message
-```
+The `scripts/` directory contains an interactive CLI for interacting with the program. See [scripts/README.md](../scripts/README.md) for detailed usage instructions and available commands.
