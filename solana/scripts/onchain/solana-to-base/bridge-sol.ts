@@ -10,22 +10,18 @@ import {
   fetchBridge,
   getBridgeSolInstruction,
 } from "../../../clients/ts/generated/bridge";
-import {
-  getPayForRelayInstruction,
-  fetchCfg,
-} from "../../../clients/ts/generated/base_relayer";
 import { CONSTANTS } from "../../constants";
-import { getTarget } from "../../utils/argv";
+import { getTarget, getBooleanFlag } from "../../utils/argv";
 import { getIdlConstant } from "../../utils/idl-constants";
-import { getRelayerIdlConstant } from "../../utils/base-relayer-idl-constants";
 import {
   buildAndSendTransaction,
   getPayer,
   getRpc,
 } from "../utils/transaction";
 import { waitAndExecuteOnBase } from "../../utils";
+import { getRelayIx } from "../utils";
 
-const AUTO_EXECUTE = true;
+const AUTO_EXECUTE = getBooleanFlag("auto-execute", true);
 
 async function main() {
   const target = getTarget();
@@ -47,13 +43,8 @@ async function main() {
     programAddress: constants.solanaBridge,
     seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
   });
-  const [cfgAddress] = await getProgramDerivedAddress({
-    programAddress: constants.baseRelayerProgram,
-    seeds: [Buffer.from(getRelayerIdlConstant("CFG_SEED"))],
-  });
 
   const bridge = await fetchBridge(rpc, bridgeAddress);
-  const cfg = await fetchCfg(rpc, cfgAddress);
 
   const [solVaultAddress] = await getProgramDerivedAddress({
     programAddress: constants.solanaBridge,
@@ -68,31 +59,13 @@ async function main() {
     outgoingMessageKeypair
   );
 
-  const mtrKeypair = await generateKeyPair();
-  const mtrSigner = await createSignerFromKeyPair(mtrKeypair);
-
   console.log(`🔗 Bridge: ${bridgeAddress}`);
   console.log(`🔗 Sol Vault: ${solVaultAddress}`);
   console.log(`🔗 Outgoing Message: ${outgoingMessageSigner.address}`);
-  console.log(`🔗 Message To Relay: ${mtrSigner.address}`);
+
+  const relayIx = await getRelayIx(outgoingMessageSigner.address, payer);
 
   console.log("🛠️  Building instruction...");
-  const relayIx = getPayForRelayInstruction(
-    {
-      // Accounts
-      payer,
-      cfg: cfgAddress,
-      gasFeeReceiver: cfg.data.gasConfig.gasFeeReceiver,
-      messageToRelay: mtrSigner,
-      systemProgram: SYSTEM_PROGRAM_ADDRESS,
-
-      // Arguments
-      outgoingMessage: outgoingMessageSigner.address,
-      gasLimit: BigInt(200_000),
-    },
-    { programAddress: constants.baseRelayerProgram }
-  );
-
   const ix = getBridgeSolInstruction(
     {
       // Accounts

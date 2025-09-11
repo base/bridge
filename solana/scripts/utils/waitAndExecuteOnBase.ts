@@ -9,7 +9,7 @@ import { toHex, keccak256, encodeAbiParameters, padHex, type Hex } from "viem";
 import { BRIDGE_ABI, BRIDGE_VALIDATOR_ABI } from "../abi";
 
 import { CONSTANTS } from "../constants";
-import { getTarget } from "./argv";
+import { getTarget, getBooleanFlag } from "./argv";
 import {
   fetchOutgoingMessage,
   type Call,
@@ -19,6 +19,7 @@ import {
   writeContractTx,
   getDefaultChainFromEnv,
 } from "../onchain/utils/evmTransaction";
+import { sleep } from "bun";
 
 // See MessageType enum in MessageLib.sol
 const MessageType = {
@@ -27,7 +28,7 @@ const MessageType = {
   TransferAndCall: 2,
 } as const;
 
-const AUTO_EXECUTE = true;
+const AUTO_EXECUTE = getBooleanFlag("auto-execute", true);
 
 export async function waitAndExecuteOnBase(outgoingMessagePubkey: SolAddress) {
   console.log("🔄 Waiting for oracle to prevalidate...");
@@ -123,12 +124,18 @@ export async function waitAndExecuteOnBase(outgoingMessagePubkey: SolAddress) {
     isSuccessful = true;
   } else {
     // Check if message has been executed
-    isSuccessful = await publicClient.readContract({
-      address: bridgeAddress,
-      abi: BRIDGE_ABI,
-      functionName: "successes",
-      args: [sanity],
-    });
+    console.log("Waiting for message execution...");
+    let attempt = 0;
+    while (!isSuccessful && attempt++ < 30) {
+      isSuccessful = await publicClient.readContract({
+        address: bridgeAddress,
+        abi: BRIDGE_ABI,
+        functionName: "successes",
+        args: [sanity],
+      });
+
+      await sleep(1000);
+    }
   }
 
   if (isSuccessful) {
