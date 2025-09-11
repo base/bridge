@@ -71,7 +71,7 @@ async function main() {
         ],
       },
       partnerOracleConfig: {
-        requiredThreshold: 0,
+        requiredThreshold: 3,
       },
     },
     { programAddress: constants.solanaBridge }

@@ -68,8 +68,8 @@ contract HelperConfig is Script {
             baseValidators: baseValidators,
             baseSignatureThreshold: 2,
             guardians: guardians,
-            partnerValidatorThreshold: 0,
-            partnerValidators: address(1)
+            partnerValidatorThreshold: 3,
+            partnerValidators: 0x4EdB7D4944a04B6230a5F496e3a1F6E74DA3C593
         });
     }
 
