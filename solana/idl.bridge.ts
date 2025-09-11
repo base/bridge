@@ -2263,13 +2263,8 @@ export const IDL = {
     },
     {
       "code": 6001,
-      "name": "Unauthorized",
-      "msg": "Only the owner can close this call buffer"
-    },
-    {
-      "code": 6002,
       "name": "BridgePaused",
-      "msg": "Bridge is currently paused"
+      "msg": "Bridge is paused"
     }
   ],
   "types": [
@@ -3499,7 +3494,7 @@ export const IDL = {
     {
       "name": "PARTNER_PROGRAM_ID",
       "type": "pubkey",
-      "value": "offqSMQWgQud6WJz694LRzkeN5kMYpCHTpXQr3Rkcjm"
+      "value": "S1GN4jus9XzKVVnoHqfkjo1GN8bX46gjXZQwsdGBPHE"
     },
     {
       "name": "PARTNER_SIGNERS_ACCOUNT_SEED",
