@@ -7,7 +7,7 @@ import {
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 
 import { getInitializeInstruction } from "../../clients/ts/generated/base_relayer";
-import { getIdlConstant } from "../utils/base-relayer-idl-constants";
+import { getRelayerIdlConstant } from "../utils/base-relayer-idl-constants";
 import { CONSTANTS } from "../constants";
 import { buildAndSendTransaction, getPayer } from "./utils/transaction";
 import { getTarget } from "../utils/argv";
@@ -29,7 +29,7 @@ async function main() {
   // Derive the bridge PDA.
   const [cfgAddress] = await getProgramDerivedAddress({
     programAddress: constants.baseRelayerProgram,
-    seeds: [Buffer.from(getIdlConstant("CFG_SEED"))],
+    seeds: [Buffer.from(getRelayerIdlConstant("CFG_SEED"))],
   });
 
   // TODO: Use the real guardian.

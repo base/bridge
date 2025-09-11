@@ -50,7 +50,7 @@ async function main() {
         minimumBaseFee: 1,
       },
       gasConfig: {
-        gasPerCall: 50_000,
+        gasPerCall: 125_000,
         gasCostScaler: 1_000_000,
         gasCostScalerDp: 1_000_000,
         gasFeeReceiver: payer.address,

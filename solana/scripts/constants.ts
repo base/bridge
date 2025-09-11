@@ -25,8 +25,8 @@ export const CONSTANTS = {
     solanaBridge: address("Gt7WMGQpqn95JrCtr4HLACyhWQ2LAz1uZnv3Fi8MzC3i"),
     baseRelayerProgram: address("A8iGgHY7WfMc2HJCYVemt5QmotPhU1SSh9q6AHfCKuGB"),
     spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
-    wEth: address("6qbhLNZjXno9dN62thraKZNRCYoYgKvd15NqtwreqfQb"),
-    wErc20: address("47f9psvcESd2ekAQYJQ2HL7An44VQ76jZnfgoXrmsL6H"),
+    wEth: address("BHWbmCEjyFKWhzcMzn7sxc5hBpGxmnyBc7fHLSRhVq1U"),
+    wErc20: address("71Q9qjgz5AFKQHZE6dFx7cPvs2biRPDfcEAM9Z8bNBw5"),
 
     // Base addresses
     baseBridge: "0xB405c0b9c7F7a5495f48FaaE337D6237AE9a5e01",

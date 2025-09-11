@@ -1,6 +1,7 @@
 import {
   createSignerFromKeyPair,
   generateKeyPair,
+  getBase58Codec,
   getProgramDerivedAddress,
   getU8Codec,
 } from "@solana/kit";
@@ -12,7 +13,7 @@ import {
   fetchBridge,
   getWrapTokenInstruction,
   type WrapTokenInstructionDataArgs,
-} from "../../../clients/ts/generated";
+} from "../../../clients/ts/generated/bridge";
 import { CONSTANTS } from "../../constants";
 import { getTarget } from "../../utils/argv";
 import { getIdlConstant } from "../../utils/idl-constants";
@@ -80,6 +81,9 @@ async function main() {
 
   console.log(`🔗 Bridge: ${bridgeAddress}`);
   console.log(`🔗 Mint: ${mintAddress}`);
+  console.log(
+    `🔗 Mint (bytes32): ${getBase58Codec().encode(mintAddress).toHex()}`
+  );
   console.log(`🔗 Outgoing Message: ${outgoingMessageSigner.address}`);
 
   console.log("🛠️  Building instruction...");

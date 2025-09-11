@@ -48,7 +48,7 @@ type ParsedConstantValue<Name extends BaseRelayerConstantNames> =
               ? string
               : never;
 
-export const getIdlConstant = <T extends BaseRelayerConstantNames>(
+export const getRelayerIdlConstant = <T extends BaseRelayerConstantNames>(
   name: T
 ): ParsedConstantValue<T> => {
   const constant = IDL.constants.find((c) => c.name === name);

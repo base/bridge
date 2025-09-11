@@ -10,7 +10,10 @@ import { BRIDGE_ABI, BRIDGE_VALIDATOR_ABI } from "../abi";
 
 import { CONSTANTS } from "../constants";
 import { getTarget } from "./argv";
-import { fetchOutgoingMessage, type Call } from "../../clients/ts/generated";
+import {
+  fetchOutgoingMessage,
+  type Call,
+} from "../../clients/ts/generated/bridge";
 import {
   getPublicClient,
   writeContractTx,
@@ -23,6 +26,8 @@ const MessageType = {
   Transfer: 1,
   TransferAndCall: 2,
 } as const;
+
+const AUTO_EXECUTE = true;
 
 export async function waitAndExecuteOnBase(outgoingMessagePubkey: SolAddress) {
   console.log("🔄 Waiting for oracle to prevalidate...");
@@ -83,6 +88,7 @@ export async function waitAndExecuteOnBase(outgoingMessagePubkey: SolAddress) {
   const evmMessage = {
     nonce,
     sender: senderBytes32,
+    gasLimit: BigInt(100_000), // TODO: estimate gasLimit
     ty,
     data,
   } as const;
@@ -100,19 +106,36 @@ export async function waitAndExecuteOnBase(outgoingMessagePubkey: SolAddress) {
     );
   }
 
-  // Execute the message on Base
-  console.log("Executing Bridge.relayMessages([...]) on Base...");
-  await writeContractTx(
-    {
+  let isSuccessful = false;
+
+  if (!AUTO_EXECUTE) {
+    // Execute the message on Base
+    console.log("Executing Bridge.relayMessages([...]) on Base...");
+    await writeContractTx(
+      {
+        address: bridgeAddress,
+        abi: BRIDGE_ABI,
+        functionName: "relayMessages",
+        args: [[evmMessage] as never],
+      },
+      { chain }
+    );
+    isSuccessful = true;
+  } else {
+    // Check if message has been executed
+    isSuccessful = await publicClient.readContract({
       address: bridgeAddress,
       abi: BRIDGE_ABI,
-      functionName: "relayMessages",
-      args: [[evmMessage] as never],
-    },
-    { chain }
-  );
+      functionName: "successes",
+      args: [sanity],
+    });
+  }
 
-  console.log("✅ Message executed on Base.");
+  if (isSuccessful) {
+    console.log("✅ Message executed on Base.");
+  } else {
+    console.log("Something went wrong");
+  }
 }
 
 function bytes32FromPubkey(pubkey: SolAddress): Hex {

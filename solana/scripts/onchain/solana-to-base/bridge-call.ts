@@ -10,7 +10,7 @@ import {
   CallType,
   fetchBridge,
   getBridgeCallInstruction,
-} from "../../../clients/ts/generated";
+} from "../../../clients/ts/generated/bridge";
 import { CONSTANTS } from "../../constants";
 import { getTarget } from "../../utils/argv";
 import { getIdlConstant } from "../../utils/idl-constants";
