@@ -46,11 +46,7 @@ pub fn recover_unique_evm_addresses(
 
 /// Recovers the Ethereum address from a 65-byte Secp256k1 signature over the given message hash.
 /// Returns the 20-byte EVM address (keccak(pubkey)[12..32]).
-pub fn recover_eth_address(signature: &[u8], message_hash: &[u8; 32]) -> Result<[u8; 20]> {
-    if signature.len() != 65 {
-        return err!(SignatureError::InvalidSignatureLength);
-    }
-
+pub fn recover_eth_address(signature: &[u8; 65], message_hash: &[u8; 32]) -> Result<[u8; 20]> {
     let recovery_id = signature[64];
     let recovery_id = recovery_id - 27;
     if recovery_id >= 4 {
