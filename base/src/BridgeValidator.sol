@@ -9,6 +9,8 @@ import {IPartner} from "./interfaces/IPartner.sol";
 import {MessageLib} from "./libraries/MessageLib.sol";
 import {VerificationLib} from "./libraries/VerificationLib.sol";
 
+import {console} from "forge-std/console.sol";
+
 /// @title BridgeValidator
 ///
 /// @notice A validator contract to be used during the Stage 0 phase of Base Bridge. This will likely later be replaced
@@ -26,9 +28,6 @@ contract BridgeValidator is Initializable {
     /// @notice Guardian role bit used by the `Bridge` contract for privileged actions on this contract.
     uint256 public constant GUARDIAN_ROLE = 1 << 0;
 
-    /// @notice Required number of external (non-Base) signatures
-    uint256 public immutable PARTNER_VALIDATOR_THRESHOLD;
-
     /// @notice Address of the Base Bridge contract. Used for authenticating guardian roles
     address public immutable BRIDGE;
 
@@ -41,6 +40,9 @@ contract BridgeValidator is Initializable {
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
+
+    /// @notice Required number of partner signatures
+    uint256 public partnerValidatorThreshold;
 
     /// @notice The next expected nonce to be received in `registerMessages`
     uint256 public nextNonce;
@@ -58,6 +60,12 @@ contract BridgeValidator is Initializable {
     /// @param messageHash The pre-validated message hash (derived from the inner message hash and an incremental
     ///                    nonce) corresponding to an `IncomingMessage` in the `Bridge` contract.
     event MessageRegistered(bytes32 indexed messageHash);
+
+    /// @notice Emitted when the partner validator threshold is updated.
+    ///
+    /// @param oldThreshold The previous partner validator threshold.
+    /// @param newThreshold The new partner validator threshold.
+    event PartnerThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
     //////////////////////////////////////////////////////////////
     ///                       Errors                           ///
@@ -103,18 +111,17 @@ contract BridgeValidator is Initializable {
 
     /// @notice Deploys the BridgeValidator contract with configuration for partner signatures and the `Bridge` address.
     ///
-    /// @dev Reverts with `ThresholdTooHigh()` if `partnerThreshold` exceeds
-    ///      `MAX_PARTNER_VALIDATOR_THRESHOLD`. Reverts with `ZeroAddress()` if `bridge` is the zero address.
+    /// @dev Reverts with `ZeroAddress()` if `bridge` is the zero address.
     ///
-    /// @param partnerThreshold  The number of partner (external) validator signatures required for message
-    ///                          pre-validation.
     /// @param bridgeAddress     The address of the `Bridge` contract used to check guardian roles.
     /// @param partnerValidators Address of the contract holding the partner validator set
-    constructor(uint256 partnerThreshold, address bridgeAddress, address partnerValidators) {
-        require(partnerThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
+    constructor(address bridgeAddress, address partnerValidators) {
         require(bridgeAddress != address(0), ZeroAddress());
         require(partnerValidators != address(0), ZeroAddress());
-        PARTNER_VALIDATOR_THRESHOLD = partnerThreshold;
+
+        partnerValidatorThreshold = type(uint256).max;
+        VerificationLib.getVerificationLibStorage().threshold = type(uint128).max;
+
         BRIDGE = bridgeAddress;
         PARTNER_VALIDATORS = partnerValidators;
         _disableInitializers();
@@ -126,8 +133,15 @@ contract BridgeValidator is Initializable {
     ///
     /// @param baseValidators The initial list of Base validators.
     /// @param baseThreshold  The minimum number of Base validator signatures required.
-    function initialize(address[] calldata baseValidators, uint128 baseThreshold) external initializer {
+    /// @param partnerThreshold The minimum number of partner validator signatures required.
+    function initialize(address[] calldata baseValidators, uint128 baseThreshold, uint256 partnerThreshold)
+        external
+        initializer
+    {
         VerificationLib.initialize(baseValidators, baseThreshold);
+
+        require(partnerThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
+        partnerValidatorThreshold = partnerThreshold;
     }
 
     /// @notice Pre-validates a batch of Solana --> Base messages.
@@ -138,7 +152,7 @@ contract BridgeValidator is Initializable {
     /// @param validatorSigs      A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
     ///                           `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
     ///                           Must include at least `getBaseThreshold()` Base validator signatures. The external
-    ///                           signature threshold is controlled by `PARTNER_VALIDATOR_THRESHOLD`.
+    ///                           signature threshold is controlled by `partnerValidatorThreshold`.
     function registerMessages(bytes32[] calldata innerMessageHashes, bytes calldata validatorSigs) external {
         uint256 len = innerMessageHashes.length;
         bytes32[] memory messageHashes = new bytes32[](len);
@@ -167,6 +181,18 @@ contract BridgeValidator is Initializable {
         VerificationLib.setThreshold(newThreshold);
     }
 
+    /// @notice Updates the partner signature threshold.
+    ///
+    /// @dev Only callable by a Bridge guardian.
+    ///
+    /// @param newThreshold The new partner validator threshold value.
+    function setPartnerThreshold(uint256 newThreshold) external isGuardian {
+        require(newThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
+        uint256 oldThreshold = partnerValidatorThreshold;
+        partnerValidatorThreshold = newThreshold;
+        emit PartnerThresholdUpdated(oldThreshold, newThreshold);
+    }
+
     /// @notice Adds a Base validator.
     ///
     /// @dev Only callable by a Bridge guardian.
@@ -185,6 +211,13 @@ contract BridgeValidator is Initializable {
         VerificationLib.removeValidator(validator);
     }
 
+    /// @notice Gets the current Base signature threshold.
+    ///
+    /// @return The current Base signature threshold.
+    function getBaseThreshold() external view returns (uint128) {
+        return VerificationLib.getBaseThreshold();
+    }
+
     //////////////////////////////////////////////////////////////
     ///                    Private Functions                   ///
     //////////////////////////////////////////////////////////////
@@ -197,10 +230,10 @@ contract BridgeValidator is Initializable {
         address[] memory recoveredSigners = _getSignersFromSigs(messageHashes, sigData);
         require(_countBaseSigners(recoveredSigners) >= VerificationLib.getBaseThreshold(), BaseThresholdNotMet());
 
-        if (PARTNER_VALIDATOR_THRESHOLD > 0) {
+        if (partnerValidatorThreshold > 0) {
             IPartner.Signer[] memory partnerValidators = IPartner(PARTNER_VALIDATORS).getSigners();
             require(
-                _countPartnerSigners(partnerValidators, recoveredSigners) >= PARTNER_VALIDATOR_THRESHOLD,
+                _countPartnerSigners(partnerValidators, recoveredSigners) >= partnerValidatorThreshold,
                 PartnerThresholdNotMet()
             );
         }
