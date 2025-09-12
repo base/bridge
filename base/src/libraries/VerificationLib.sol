@@ -56,7 +56,7 @@ library VerificationLib {
     ///                       Errors                           ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Thrown when threshold is 0.
+    /// @notice Thrown when threshold is invalid (0 or exceeds validator count).
     error InvalidThreshold();
 
     /// @notice Thrown when a validator address is 0.

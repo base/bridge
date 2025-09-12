@@ -9,7 +9,6 @@ use crate::solana_to_base::CallBuffer;
 pub struct AppendToCallBuffer<'info> {
     /// The signer authorized to modify this call buffer.
     /// Must match `call_buffer.owner`.
-    #[account(mut)]
     pub owner: Signer<'info>,
 
     /// The call buffer account to append data to.
