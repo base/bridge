@@ -9,6 +9,8 @@ import {IPartner} from "./interfaces/IPartner.sol";
 import {MessageLib} from "./libraries/MessageLib.sol";
 import {VerificationLib} from "./libraries/VerificationLib.sol";
 
+import {Bridge} from "./Bridge.sol";
+
 /// @title BridgeValidator
 ///
 /// @notice A validator contract to be used during the Stage 0 phase of Base Bridge. This will likely later be replaced
@@ -90,6 +92,9 @@ contract BridgeValidator is Initializable {
     /// @notice Thrown when attempting to register an empty batch of messages
     error NoMessages();
 
+    /// @notice Thrown when the Bridge is paused
+    error Paused();
+
     //////////////////////////////////////////////////////////////
     ///                       Modifiers                        ///
     //////////////////////////////////////////////////////////////
@@ -97,6 +102,12 @@ contract BridgeValidator is Initializable {
     /// @dev Restricts function to `Bridge` guardians (as defined by `GUARDIAN_ROLE`).
     modifier isGuardian() {
         require(OwnableRoles(BRIDGE).hasAnyRole(msg.sender, GUARDIAN_ROLE), CallerNotGuardian());
+        _;
+    }
+
+    /// @dev Restricts function to when the Bridge is not paused
+    modifier whenNotPaused() {
+        require(!Bridge(BRIDGE).paused(), Paused());
         _;
     }
 
@@ -142,7 +153,10 @@ contract BridgeValidator is Initializable {
     ///                           `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
     ///                           Must include at least `getBaseThreshold()` Base validator signatures. The external
     ///                           signature threshold is controlled by `PARTNER_VALIDATOR_THRESHOLD`.
-    function registerMessages(bytes32[] calldata innerMessageHashes, bytes calldata validatorSigs) external {
+    function registerMessages(bytes32[] calldata innerMessageHashes, bytes calldata validatorSigs)
+        external
+        whenNotPaused
+    {
         uint256 len = innerMessageHashes.length;
         if (len == 0) revert NoMessages();
 
