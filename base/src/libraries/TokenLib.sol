@@ -55,6 +55,9 @@ library TokenLib {
     /// @notice Thrown when the token pair is not registered.
     error WrappedSplRouteNotRegistered();
 
+    /// @notice Thrown when the transfer amount is too small after fees.
+    error TransferAmountTooSmallAfterFees();
+
     //////////////////////////////////////////////////////////////
     ///                       Events                           ///
     //////////////////////////////////////////////////////////////
@@ -168,6 +171,8 @@ library TokenLib {
 
                 // Convert back to remote amount and transfer the dust back to the sender.
                 uint256 receivedRemoteAmount = receivedLocalAmount / scalar;
+                require(receivedRemoteAmount > 0, TransferAmountTooSmallAfterFees());
+
                 localAmount = receivedRemoteAmount * scalar;
                 uint256 dust = receivedLocalAmount - localAmount;
                 if (dust > 0) {
