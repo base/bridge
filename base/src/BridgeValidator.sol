@@ -93,6 +93,9 @@ contract BridgeValidator is Initializable {
     /// @notice Thrown when the recovered signers are not sorted
     error UnsortedSigners();
 
+    /// @notice Thrown when attempting to register an empty batch of messages
+    error NoMessages();
+
     //////////////////////////////////////////////////////////////
     ///                       Modifiers                        ///
     //////////////////////////////////////////////////////////////
@@ -153,6 +156,8 @@ contract BridgeValidator is Initializable {
     ///                           signature threshold is controlled by `partnerValidatorThreshold`.
     function registerMessages(bytes32[] calldata innerMessageHashes, bytes calldata validatorSigs) external {
         uint256 len = innerMessageHashes.length;
+        if (len == 0) revert NoMessages();
+
         bytes32[] memory messageHashes = new bytes32[](len);
         uint256 currentNonce = nextNonce;
 

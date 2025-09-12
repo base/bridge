@@ -5,30 +5,14 @@ use crate::common::SetBridgeConfig;
 /// Transfer guardian authority to a new pubkey.
 /// Only the current guardian can call this function.
 ///
-/// Emits [`GuardianTransferred`].
-///
 /// Note: No additional validation is performed on `new_guardian` (it may be any pubkey).
 pub fn transfer_guardian_handler(
     ctx: Context<SetBridgeConfig>,
     new_guardian: Pubkey,
 ) -> Result<()> {
-    let old_guardian = ctx.accounts.bridge.guardian;
     ctx.accounts.bridge.guardian = new_guardian;
 
-    emit!(GuardianTransferred {
-        old_guardian,
-        new_guardian,
-    });
-
     Ok(())
-}
-
-/// Event emitted when guardian authority is transferred.
-/// Emitted by [`transfer_guardian_handler`].
-#[event]
-pub struct GuardianTransferred {
-    pub old_guardian: Pubkey,
-    pub new_guardian: Pubkey,
 }
 
 /// Error codes for guardian operations.

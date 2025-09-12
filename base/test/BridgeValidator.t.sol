@@ -66,6 +66,12 @@ contract BridgeValidatorTest is CommonTest {
     ///                 registerMessages Tests                 ///
     //////////////////////////////////////////////////////////////
 
+    function test_registerMessages_emptyArray_revertsNoMessages() public {
+        bytes32[] memory emptyArray = new bytes32[](0);
+        vm.expectRevert(BridgeValidator.NoMessages.selector);
+        bridgeValidator.registerMessages(emptyArray, "");
+    }
+
     function test_registerMessages_success() public {
         bytes32[] memory innerMessageHashes = new bytes32[](2);
         innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
@@ -528,6 +534,7 @@ contract BridgeValidatorTest is CommonTest {
     //////////////////////////////////////////////////////////////
 
     function testFuzz_registerMessages_withRandomHashes(bytes32[] calldata innerMessageHashes) public {
+        vm.assume(innerMessageHashes.length > 0);
         vm.assume(innerMessageHashes.length <= 1000); // Reasonable limit for gas
 
         bytes32[] memory expectedFinalHashes = _calculateFinalHashes(innerMessageHashes);
@@ -538,15 +545,6 @@ contract BridgeValidatorTest is CommonTest {
         for (uint256 i; i < innerMessageHashes.length; i++) {
             assertTrue(bridgeValidator.validMessages(expectedFinalHashes[i]));
         }
-    }
-
-    function testFuzz_registerMessages_withEmptyArray() public {
-        bytes32[] memory emptyArray = new bytes32[](0);
-
-        bridgeValidator.registerMessages(emptyArray, _getValidatorSigs(emptyArray));
-
-        // No messages should be registered
-        assertFalse(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
     }
 
     //////////////////////////////////////////////////////////////
