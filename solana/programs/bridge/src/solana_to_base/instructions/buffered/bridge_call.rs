@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    common::{bridge::Bridge, BRIDGE_SEED},
+    common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN},
     solana_to_base::{
         internal::bridge_call::bridge_call_internal, Call, CallBuffer, OutgoingMessage,
     },
@@ -51,7 +51,7 @@ pub struct BridgeCallBuffered<'info> {
     /// The outgoing message account that stores the cross-chain message (header + payload).
     /// - Created fresh for each call; the provided keypair determines its address
     /// - Funded by `payer`
-    /// - Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`
+    /// - Space: DISCRIMINATOR_LEN + serialized `OutgoingMessage`
     ///   Sizing uses `OutgoingMessage::space(Some(call_buffer.data.len()))`, which
     ///   intentionally allocates for the Transfer variant (worst case) to safely
     ///   cover the Call variant
@@ -59,7 +59,7 @@ pub struct BridgeCallBuffered<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space::<Call>(call_buffer.data.len()),
+        space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Call>(call_buffer.data.len()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
