@@ -1,7 +1,7 @@
 export const IDL = {
   "metadata": {
     "name": "bridge",
-    "version": "0.0.4",
+    "version": "0.1.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
@@ -3494,7 +3494,7 @@ export const IDL = {
     {
       "name": "PARTNER_PROGRAM_ID",
       "type": "pubkey",
-      "value": "offqSMQWgQud6WJz694LRzkeN5kMYpCHTpXQr3Rkcjm"
+      "value": "S1GN4jus9XzKVVnoHqfkjo1GN8bX46gjXZQwsdGBPHE"
     },
     {
       "name": "PARTNER_SIGNERS_ACCOUNT_SEED",

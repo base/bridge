@@ -197,7 +197,7 @@ contract BridgeTest is CommonTest {
         assertEq(mockTarget.value(), 42);
     }
 
-    function test_relayMessages_revertsOnAlreadySuccessfulMessage() public {
+    function test_relayMessages_returnsOnAlreadySuccessfulMessage() public {
         // First, create a message that will succeed with trusted relayer
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
@@ -218,7 +218,6 @@ contract BridgeTest is CommonTest {
         _registerMessage(messages[0]);
         bridge.relayMessages(messages);
 
-        vm.expectRevert(Bridge.MessageAlreadySuccessfullyRelayed.selector);
         bridge.relayMessages(messages);
     }
 
