@@ -10,7 +10,7 @@
 /// How it is used:
 /// - The `register_output_root` instruction recovers unique EVM signer
 ///   addresses from provided Secp256k1 signatures, then calls
-///   `PartnerConfig::count_approvals` to count how many of those addresses
+///   `Signers::count_approvals` to count how many of those addresses
 ///   appear in this allowlist.
 /// - The resulting count is compared against
 ///   `bridge.partner_oracle_config.required_threshold` to enforce that enough
@@ -24,7 +24,7 @@ use anchor_lang::prelude::*;
 
 #[account]
 #[derive(InitSpace)]
-pub struct PartnerConfig {
+pub struct Signers {
     // Static list of partner signers, max_len 20 to facilitate max of 4 concurrent validator rotations
     // at regular operating capacity of 16 validators, while capping heap usage to 800b
     #[max_len(20)]
@@ -46,7 +46,7 @@ pub struct PartnerSigner {
     pub new_evm_address: Option<[u8; 20]>,
 }
 
-impl PartnerConfig {
+impl Signers {
     /// Count how many of the provided EVM addresses are authorized partner signers.
     ///
     /// - `signers` should contain unique 20-byte addresses. The caller (e.g.
@@ -104,14 +104,14 @@ mod tests {
 
     #[test]
     fn returns_zero_when_no_configured_signers() {
-        let cfg = PartnerConfig { signers: vec![] };
+        let cfg = Signers { signers: vec![] };
         let provided = [addr(1), addr(2)];
         assert_eq!(cfg.count_approvals(&provided), 0);
     }
 
     #[test]
     fn returns_zero_when_no_provided_addresses() {
-        let cfg = PartnerConfig {
+        let cfg = Signers {
             signers: vec![signer(1, None)],
         };
         let provided: [[u8; 20]; 0] = [];
@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn matches_old_address_counts_one() {
-        let cfg = PartnerConfig {
+        let cfg = Signers {
             signers: vec![signer(1, None)],
         };
         let provided = [addr(1)];
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn matches_new_address_counts_one() {
-        let cfg = PartnerConfig {
+        let cfg = Signers {
             signers: vec![signer(1, Some(2))],
         };
         let provided = [addr(2)];
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn old_and_new_for_same_signer_counts_once() {
-        let cfg = PartnerConfig {
+        let cfg = Signers {
             signers: vec![signer(1, Some(2))],
         };
         let provided = [addr(1), addr(2)];
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn multiple_distinct_matches_count_correctly() {
-        let cfg = PartnerConfig {
+        let cfg = Signers {
             signers: vec![signer(1, None), signer(2, None), signer(3, Some(4))],
         };
         let provided = [addr(1), addr(4)];
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn non_matching_addresses_count_zero() {
-        let cfg = PartnerConfig {
+        let cfg = Signers {
             signers: vec![signer(1, None)],
         };
         let provided = [addr(9)];
@@ -165,7 +165,7 @@ mod tests {
 
     #[test]
     fn duplicate_provided_addresses_do_not_increase_count() {
-        let cfg = PartnerConfig {
+        let cfg = Signers {
             signers: vec![signer(1, None)],
         };
         let provided = [addr(1), addr(1)];
