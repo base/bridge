@@ -69,8 +69,6 @@ pub fn recover_eth_address(signature: &[u8; 65], message_hash: &[u8; 32]) -> Res
 
 #[error_code]
 pub enum SignatureError {
-    #[msg("Invalid signature length")]
-    InvalidSignatureLength,
     #[msg("Invalid recovery ID")]
     InvalidRecoveryId,
     #[msg("Signature verification failed")]
