@@ -53,7 +53,7 @@ pub fn recover_eth_address(signature: &[u8], message_hash: &[u8; 32]) -> Result<
 
     let recovery_id = signature[64];
     let recovery_id = recovery_id - 27;
-    if recovery_id >= 4 {
+    if recovery_id >= 2 {
         return err!(SignatureError::InvalidRecoveryId);
     }
 
