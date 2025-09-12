@@ -81,7 +81,7 @@ contract Twin {
     ///      - `CallType.Create2`: Deploy new contract using CREATE2 opcode with salt
     ///
     /// @param call The encoded call to execute, containing the call type, target, value, and data.
-    function execute(Call calldata call) external payable {
+    function execute(Call calldata call) external {
         require(msg.sender == BRIDGE || msg.sender == address(this), Unauthorized());
         CallLib.execute(call);
     }

@@ -3,6 +3,7 @@
   "BridgeValidator": "",
   "CrossChainERC20Factory": "",
   "Twin": "",
+  "RelayerOrchestrator": "",
   "RemoteSOL": "0x069be72ab836d4eacc02525b7350a78a395da2f1253a40ebafd6630000000000",
   "RemoteSPL": "0x6ccf56ff18093bc61462cd67c8aa86216fbad049e41d9bffa0856e5f34af5498",
   "WrappedSOL": "",
