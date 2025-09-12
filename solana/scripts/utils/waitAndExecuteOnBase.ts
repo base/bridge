@@ -9,13 +9,17 @@ import { toHex, keccak256, encodeAbiParameters, padHex, type Hex } from "viem";
 import { BRIDGE_ABI, BRIDGE_VALIDATOR_ABI } from "../abi";
 
 import { CONSTANTS } from "../constants";
-import { getTarget } from "./argv";
-import { fetchOutgoingMessage, type Call } from "../../clients/ts/generated";
+import { getTarget, getBooleanFlag } from "./argv";
+import {
+  fetchOutgoingMessage,
+  type Call,
+} from "../../clients/ts/generated/bridge";
 import {
   getPublicClient,
   writeContractTx,
   getDefaultChainFromEnv,
 } from "../onchain/utils/evmTransaction";
+import { sleep } from "bun";
 
 // See MessageType enum in MessageLib.sol
 const MessageType = {
@@ -23,6 +27,8 @@ const MessageType = {
   Transfer: 1,
   TransferAndCall: 2,
 } as const;
+
+const AUTO_EXECUTE = getBooleanFlag("auto-execute", true);
 
 export async function waitAndExecuteOnBase(outgoingMessagePubkey: SolAddress) {
   console.log("🔄 Waiting for oracle to prevalidate...");
@@ -83,6 +89,7 @@ export async function waitAndExecuteOnBase(outgoingMessagePubkey: SolAddress) {
   const evmMessage = {
     nonce,
     sender: senderBytes32,
+    gasLimit: BigInt(100_000), // TODO: estimate gasLimit
     ty,
     data,
   } as const;
@@ -100,19 +107,42 @@ export async function waitAndExecuteOnBase(outgoingMessagePubkey: SolAddress) {
     );
   }
 
-  // Execute the message on Base
-  console.log("Executing Bridge.relayMessages([...]) on Base...");
-  await writeContractTx(
-    {
-      address: bridgeAddress,
-      abi: BRIDGE_ABI,
-      functionName: "relayMessages",
-      args: [[evmMessage] as never],
-    },
-    { chain }
-  );
+  let isSuccessful = false;
 
-  console.log("✅ Message executed on Base.");
+  if (!AUTO_EXECUTE) {
+    // Execute the message on Base
+    console.log("Executing Bridge.relayMessages([...]) on Base...");
+    await writeContractTx(
+      {
+        address: bridgeAddress,
+        abi: BRIDGE_ABI,
+        functionName: "relayMessages",
+        args: [[evmMessage] as never],
+      },
+      { chain }
+    );
+    isSuccessful = true;
+  } else {
+    // Check if message has been executed
+    console.log("Waiting for message execution...");
+    let attempt = 0;
+    while (!isSuccessful && attempt++ < 30) {
+      isSuccessful = await publicClient.readContract({
+        address: bridgeAddress,
+        abi: BRIDGE_ABI,
+        functionName: "successes",
+        args: [sanity],
+      });
+
+      await sleep(1000);
+    }
+  }
+
+  if (isSuccessful) {
+    console.log("✅ Message executed on Base.");
+  } else {
+    console.log("Something went wrong");
+  }
 }
 
 function bytes32FromPubkey(pubkey: SolAddress): Hex {
