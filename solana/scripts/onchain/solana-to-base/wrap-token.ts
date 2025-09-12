@@ -46,7 +46,7 @@ async function main() {
     decimals: 6,
     name: "Wrapped ETH",
     symbol: "wETH",
-    remoteToken: toBytes(constants.erc20),
+    remoteToken: toBytes(constants.eth),
     scalerExponent: 9,
   };
 
