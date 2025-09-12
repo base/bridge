@@ -14,6 +14,7 @@ use anchor_spl::token_interface::{
 };
 use spl_type_length_value::variable_len_pack::VariableLenPack;
 
+use crate::common::DISCRIMINATOR_LEN;
 use crate::common::{bridge::Bridge, PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED};
 use crate::solana_to_base::{pay_for_gas, Call, CallType, OutgoingMessage};
 use crate::solana_to_base::{REMOTE_TOKEN_METADATA_KEY, SCALER_EXPONENT_METADATA_KEY};
@@ -72,7 +73,7 @@ pub struct WrapToken<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space::<Call>(REGISTER_REMOTE_TOKEN_DATA_LEN),
+        space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Call>(REGISTER_REMOTE_TOKEN_DATA_LEN),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 

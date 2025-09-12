@@ -11,6 +11,7 @@ pub fn set_gas_cost_scaler_handler(ctx: Context<SetBridgeConfig>, new_scaler: u6
 /// Set the gas cost scaler decimal precision
 pub fn set_gas_cost_scaler_dp_handler(ctx: Context<SetBridgeConfig>, new_dp: u64) -> Result<()> {
     ctx.accounts.bridge.gas_config.gas_cost_scaler_dp = new_dp;
+    ctx.accounts.bridge.gas_config.validate()?;
     Ok(())
 }
 

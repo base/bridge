@@ -5,7 +5,7 @@ import {
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 
-import { getInitializeInstruction } from "../../clients/ts/generated";
+import { getInitializeInstruction } from "../../clients/ts/generated/bridge";
 import { getIdlConstant } from "../utils/idl-constants";
 import { CONSTANTS } from "../constants";
 import { buildAndSendTransaction, getPayer } from "./utils/transaction";
@@ -50,7 +50,7 @@ async function main() {
         minimumBaseFee: 1,
       },
       gasConfig: {
-        gasPerCall: 50_000,
+        gasPerCall: 125_000,
         gasCostScaler: 1_000_000,
         gasCostScalerDp: 1_000_000,
         gasFeeReceiver: payer.address,
@@ -71,7 +71,7 @@ async function main() {
         ],
       },
       partnerOracleConfig: {
-        requiredThreshold: 0,
+        requiredThreshold: 3,
       },
     },
     { programAddress: constants.solanaBridge }
