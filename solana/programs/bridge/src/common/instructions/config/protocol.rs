@@ -7,21 +7,12 @@ pub fn set_block_interval_requirement_handler(
     ctx: Context<SetBridgeConfig>,
     new_interval: u64,
 ) -> Result<()> {
-    require!(
-        new_interval <= 1000,
-        SetBlockIntervalRequirementError::NewIntervalTooHigh
-    );
-
     ctx.accounts
         .bridge
         .protocol_config
         .block_interval_requirement = new_interval;
 
-    Ok(())
-}
+    ctx.accounts.bridge.protocol_config.validate()?;
 
-#[error_code]
-pub enum SetBlockIntervalRequirementError {
-    #[msg("New interval too high")]
-    NewIntervalTooHigh,
+    Ok(())
 }
