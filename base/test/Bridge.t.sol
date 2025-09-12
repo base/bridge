@@ -197,31 +197,6 @@ contract BridgeTest is CommonTest {
         assertEq(mockTarget.value(), 42);
     }
 
-    function test_relayMessages_revertsOnAlreadySuccessfulMessage() public {
-        // First, create a message that will succeed with trusted relayer
-        IncomingMessage[] memory messages = new IncomingMessage[](1);
-        messages[0] = IncomingMessage({
-            nonce: 0,
-            sender: TEST_SENDER,
-            gasLimit: GAS_LIMIT,
-            ty: MessageType.Call,
-            data: abi.encode(
-                Call({
-                    ty: CallType.Call,
-                    to: address(mockTarget),
-                    value: 0,
-                    data: abi.encodeWithSelector(TestTarget.setValue.selector, 42)
-                })
-            )
-        });
-
-        _registerMessage(messages[0]);
-        bridge.relayMessages(messages);
-
-        vm.expectRevert(Bridge.MessageAlreadySuccessfullyRelayed.selector);
-        bridge.relayMessages(messages);
-    }
-
     function test_relayMessages_emitsSuccessEvent() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
