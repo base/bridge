@@ -15,7 +15,7 @@ import {
   type WrapTokenInstructionDataArgs,
 } from "../../../clients/ts/generated/bridge";
 import { CONSTANTS } from "../../constants";
-import { getTarget } from "../../utils/argv";
+import { getBooleanFlag, getTarget } from "../../utils/argv";
 import { getIdlConstant } from "../../utils/idl-constants";
 import {
   buildAndSendTransaction,
@@ -23,11 +23,14 @@ import {
   getRpc,
 } from "../utils/transaction";
 import { waitAndExecuteOnBase } from "../../utils";
+import { getRelayIx } from "../utils";
+
+const AUTO_EXECUTE = getBooleanFlag("auto-execute", true);
 
 async function main() {
   const target = getTarget();
   const constants = CONSTANTS[target];
-  const payer = await getPayer(constants.deployerKeyPairFile);
+  const payer = await getPayer();
   const rpc = getRpc(target);
 
   console.log("=".repeat(40));
@@ -41,8 +44,8 @@ async function main() {
   // Instruction arguments
   const args: WrapTokenInstructionDataArgs = {
     decimals: 6,
-    name: "Wrapped ERC20",
-    symbol: "wERC20",
+    name: "Wrapped ETH",
+    symbol: "wETH",
     remoteToken: toBytes(constants.erc20),
     scalerExponent: 9,
   };
@@ -86,6 +89,8 @@ async function main() {
   );
   console.log(`🔗 Outgoing Message: ${outgoingMessageSigner.address}`);
 
+  const relayIx = await getRelayIx(outgoingMessageSigner.address, payer);
+
   console.log("🛠️  Building instruction...");
   const ix = getWrapTokenInstruction(
     {
@@ -105,7 +110,11 @@ async function main() {
   );
 
   console.log("🚀 Sending transaction...");
-  await buildAndSendTransaction(target, [ix], payer);
+  if (AUTO_EXECUTE) {
+    await buildAndSendTransaction(target, [relayIx, ix]);
+  } else {
+    await buildAndSendTransaction(target, [ix]);
+  }
   console.log("✅ Transaction sent!");
 
   await waitAndExecuteOnBase(outgoingMessageSigner.address);

@@ -62,6 +62,10 @@ dev-deploy: deploy create-wrapped-sol create-wrapped-spl
 deploy:
 	BRIDGE_ENVIRONMENT=$(ENV_NAME) forge script DeployScript --account testnet-admin --rpc-url $(BASE_RPC) --sender $(shell cast wallet address --account testnet-admin) --broadcast -vvvv
 
+.PHONY: upgrade
+upgrade:
+	BRIDGE_ENVIRONMENT=$(ENV_NAME) forge script UpgradeScript --account testnet-upgrade --rpc-url $(BASE_RPC) --broadcast -vvvv
+
 .PHONY: create-wrapped-sol
 create-wrapped-sol:
 	BRIDGE_ENVIRONMENT=$(ENV_NAME) TOKEN_NAME=WrappedSOL TOKEN_SYMBOL=wSOL REMOTE_TOKEN=$(REMOTE_SOL) forge script CreateTokenScript --account testnet-admin --rpc-url $(BASE_RPC) --broadcast -vvvv
