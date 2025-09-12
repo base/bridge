@@ -152,7 +152,7 @@ mod tests {
 
     use crate::{
         accounts,
-        base_to_solana::state::partner_config::{PartnerSigner, Signers},
+        base_to_solana::state::signers::{PartnerSigner, Signers},
         base_to_solana::{
             constants::{OUTPUT_ROOT_SEED, PARTNER_SIGNERS_ACCOUNT_SEED},
             internal::compute_output_root_message_hash,
