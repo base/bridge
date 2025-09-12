@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::common::{
     bridge::{Bridge, Eip1559},
-    Config, BRIDGE_SEED,
+    Config, BRIDGE_SEED, DISCRIMINATOR_LEN,
 };
 
 /// Accounts for the initialize instruction that sets up the bridge program's initial state.
@@ -18,13 +18,13 @@ pub struct Initialize<'info> {
     /// The bridge state account being initialized.
     /// - Uses PDA with BRIDGE_SEED for deterministic address
     /// - Payer funds the account creation
-    /// - Space allocated for bridge state (8-byte discriminator + Bridge::INIT_SPACE)
+    /// - Space allocated for bridge state (DISCRIMINATOR_LEN + Bridge::INIT_SPACE)
     #[account(
         init,
         payer = payer,
         seeds = [BRIDGE_SEED],
         bump,
-        space = 8 + Bridge::INIT_SPACE
+        space = DISCRIMINATOR_LEN + Bridge::INIT_SPACE
     )]
     pub bridge: Account<'info, Bridge>,
 

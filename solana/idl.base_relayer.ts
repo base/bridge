@@ -1,0 +1,546 @@
+export const IDL = {
+  "metadata": {
+    "name": "base_relayer",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "initialize",
+      "docs": [
+        "Initializes the Base relayer program configuration.",
+        "Creates the `Cfg` PDA with guardian authority and pricing parameters used to",
+        "charge for cross-chain execution (EIP-1559) and gas accounting. Must be",
+        "called once during deployment.",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing accounts for initialization: `payer` funds",
+        "account creation, `cfg` PDA is created with seeds, and `guardian`",
+        "is recorded as the admin authority.",
+        "* `cfg` - Initial configuration values: guardian pubkey, EIP-1559 state and",
+        "config, and gas-cost configuration."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "The account that pays for the transaction and bridge account creation.",
+            "Must be mutable to deduct lamports for account rent."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "cfg",
+          "docs": [
+            "The relayer config state account that tracks fee parameters.",
+            "- Uses PDA with CFG_SEED for deterministic address",
+            "- Mutable to update EIP1559 fee data"
+          ],
+          "writable": true
+        },
+        {
+          "name": "guardian",
+          "docs": [
+            "The guardian account that will have administrative authority over the bridge.",
+            "Must be a signer to prove ownership of the guardian key. The payer and guardian",
+            "may be distinct signers."
+          ],
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System program required for creating new accounts.",
+            "Used internally by Anchor for account initialization."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "new_guardian",
+          "type": "pubkey"
+        },
+        {
+          "name": "eip1559_config",
+          "type": {
+            "defined": {
+              "name": "Eip1559Config"
+            }
+          }
+        },
+        {
+          "name": "gas_config",
+          "type": {
+            "defined": {
+              "name": "GasConfig"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "pay_for_relay",
+      "docs": [
+        "Pays the gas cost for relaying a message to Base and records the request.",
+        "Transfers lamports from `payer` to `cfg.gas_config.gas_fee_receiver` using",
+        "the current EIP-1559 pricing and the provided `gas_limit`. Also initializes",
+        "a new `MessageToRelay` account containing the `outgoing_message` and",
+        "`gas_limit`. The payer is the sole authorization; the guardian is not",
+        "required for this operation.",
+        "",
+        "# Arguments",
+        "* `ctx`              - The context including `payer`, mutable `cfg` PDA",
+        "(for fee window updates), `gas_fee_receiver` (must",
+        "match configured receiver), and a new",
+        "`message_to_relay` account.",
+        "* `outgoing_message` - The Base-side message identifier to be executed.",
+        "* `gas_limit`        - Maximum gas units to budget for execution on Base.",
+        "",
+        "# Errors",
+        "Returns an error if the `gas_fee_receiver` does not match the configured",
+        "receiver or if the payer lacks sufficient lamports to cover the computed",
+        "fee."
+      ],
+      "discriminator": [
+        41,
+        191,
+        218,
+        201,
+        250,
+        164,
+        156,
+        55
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "The account that pays for transaction fees and account creation.",
+            "Must be mutable to deduct lamports for account rent and gas fees."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "cfg",
+          "docs": [
+            "The relayer config state account that tracks fee parameters.",
+            "- Uses PDA with CFG_SEED for deterministic address",
+            "- Mutable to update EIP1559 fee data"
+          ],
+          "writable": true
+        },
+        {
+          "name": "gas_fee_receiver",
+          "docs": [
+            "The account that receives payment for the gas costs of bridging SOL to Base."
+          ],
+          "writable": true
+        },
+        {
+          "name": "message_to_relay",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System program required for creating new accounts.",
+            "Used internally by Anchor for account initialization."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "outgoing_message",
+          "type": "pubkey"
+        },
+        {
+          "name": "gas_limit",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "set_eip1559_config",
+      "docs": [
+        "Updates the EIP1559 configuration.",
+        "Only the recorded `guardian` may call this instruction.",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the `cfg` PDA and the `guardian` signer.",
+        "Authorization is enforced via an Anchor `has_one` constraint.",
+        "* `cfg` - The new EIP1559 configuration to write in full."
+      ],
+      "discriminator": [
+        197,
+        222,
+        225,
+        215,
+        15,
+        3,
+        82,
+        102
+      ],
+      "accounts": [
+        {
+          "name": "cfg",
+          "docs": [
+            "The bridge account containing configuration"
+          ],
+          "writable": true
+        },
+        {
+          "name": "guardian",
+          "docs": [
+            "The guardian account authorized to update configuration"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "eip1559_config",
+          "type": {
+            "defined": {
+              "name": "Eip1559Config"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_gas_config",
+      "docs": [
+        "Updates the Gas configuration.",
+        "Only the recorded `guardian` may call this instruction.",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the `cfg` PDA and the `guardian` signer.",
+        "Authorization is enforced via an Anchor `has_one` constraint.",
+        "* `cfg` - The new Gas configuration to write in full."
+      ],
+      "discriminator": [
+        244,
+        68,
+        172,
+        138,
+        187,
+        145,
+        160,
+        192
+      ],
+      "accounts": [
+        {
+          "name": "cfg",
+          "docs": [
+            "The bridge account containing configuration"
+          ],
+          "writable": true
+        },
+        {
+          "name": "guardian",
+          "docs": [
+            "The guardian account authorized to update configuration"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "gas_config",
+          "type": {
+            "defined": {
+              "name": "GasConfig"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_guardian",
+      "docs": [
+        "Updates the configured guardian.",
+        "Only the current `guardian` may call this instruction.",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the `cfg` PDA and the `guardian` signer.",
+        "Authorization is enforced via an Anchor `has_one` constraint.",
+        "* `cfg` - The new guardian with permissions to update other configs."
+      ],
+      "discriminator": [
+        147,
+        243,
+        50,
+        121,
+        154,
+        164,
+        50,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "cfg",
+          "docs": [
+            "The bridge account containing configuration"
+          ],
+          "writable": true
+        },
+        {
+          "name": "guardian",
+          "docs": [
+            "The guardian account authorized to update configuration"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_guardian",
+          "type": "pubkey"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Cfg",
+      "discriminator": [
+        236,
+        69,
+        240,
+        199,
+        189,
+        123,
+        35,
+        99
+      ]
+    },
+    {
+      "name": "MessageToRelay",
+      "discriminator": [
+        194,
+        113,
+        145,
+        222,
+        76,
+        51,
+        252,
+        102
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 12000,
+      "name": "UnauthorizedConfigUpdate",
+      "msg": "Unauthorized to update configuration"
+    }
+  ],
+  "types": [
+    {
+      "name": "Cfg",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "nonce",
+            "docs": [
+              "Canonical nonce"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "Guardian pubkey authorized to update configuration"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "eip1559",
+            "docs": [
+              "EIP-1559 state and configuration for dynamic pricing."
+            ],
+            "type": {
+              "defined": {
+                "name": "Eip1559"
+              }
+            }
+          },
+          {
+            "name": "gas_config",
+            "docs": [
+              "Gas configuration"
+            ],
+            "type": {
+              "defined": {
+                "name": "GasConfig"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Eip1559",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": {
+              "defined": {
+                "name": "Eip1559Config"
+              }
+            }
+          },
+          {
+            "name": "current_base_fee",
+            "docs": [
+              "Current base fee in gwei (runtime state)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "current_window_gas_used",
+            "docs": [
+              "Gas used in the current time window (runtime state)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "window_start_time",
+            "docs": [
+              "Unix timestamp when the current window started (runtime state)"
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Eip1559Config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "target",
+            "docs": [
+              "Gas target per window (configurable)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "denominator",
+            "docs": [
+              "Adjustment denominator (controls rate of change) (configurable)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "window_duration_seconds",
+            "docs": [
+              "Window duration in seconds (configurable)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "minimum_base_fee",
+            "docs": [
+              "Minimum base fee floor (configurable)"
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GasConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "min_gas_limit_per_message",
+            "docs": [
+              "Minimum gas limit per cross-chain message"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_gas_limit_per_message",
+            "docs": [
+              "Maximum gas limit per cross-chain message"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "gas_cost_scaler",
+            "docs": [
+              "Scaling factor for gas cost calculations"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "gas_cost_scaler_dp",
+            "docs": [
+              "Decimal precision for gas cost calculations"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "gas_fee_receiver",
+            "docs": [
+              "Account that receives gas fees"
+            ],
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MessageToRelay",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "outgoing_message",
+            "type": "pubkey"
+          },
+          {
+            "name": "gas_limit",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "CFG_SEED",
+      "type": "bytes",
+      "value": "[99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "SCALE",
+      "type": "u128",
+      "value": "1000000"
+    }
+  ]
+} as const;

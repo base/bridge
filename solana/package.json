@@ -13,6 +13,7 @@
     "tx:spl:create-ata": "bun ./scripts/onchain/spl/create-ata.ts",
     "tx:spl:mint": "bun ./scripts/onchain/spl/mint.ts",
     "tx:initialize": "bun ./scripts/onchain/initialize.ts",
+    "tx:initialize:relayer": "bun ./scripts/onchain/initialize-base-relayer.ts",
     "tx:wrap-token": "bun ./scripts/onchain/solana-to-base/wrap-token.ts",
     "tx:bridge-call": "bun ./scripts/onchain/solana-to-base/bridge-call.ts",
     "tx:bridge-call-value": "bun ./scripts/onchain/solana-to-base/bridge-call-value.ts",

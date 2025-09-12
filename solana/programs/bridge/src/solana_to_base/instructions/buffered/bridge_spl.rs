@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
-    common::{bridge::Bridge, BRIDGE_SEED, TOKEN_VAULT_SEED},
+    common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN, TOKEN_VAULT_SEED},
     solana_to_base::{
         internal::bridge_spl::bridge_spl_internal, Call, CallBuffer, OutgoingMessage, Transfer,
     },
@@ -84,7 +84,7 @@ pub struct BridgeSplWithBufferedCall<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space::<Transfer>(call_buffer.data.len()),
+        space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Transfer>(call_buffer.data.len()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 

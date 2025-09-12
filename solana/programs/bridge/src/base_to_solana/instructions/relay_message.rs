@@ -13,10 +13,6 @@ use crate::common::{bridge::Bridge, BRIDGE_SEED};
 /// with additional instructions. The message execution is performed through CPI calls using a bridge authority.
 #[derive(Accounts)]
 pub struct RelayMessage<'info> {
-    /// A signer for the transaction. This instruction does not read or debit this
-    /// account directly; transaction fees are paid at the transaction level.
-    pub payer: Signer<'info>,
-
     /// The incoming message account containing the cross-chain message to be executed.
     /// - Contains either a pure call message or a transfer message with additional instructions
     /// - Must be mutable to mark the message as executed after processing

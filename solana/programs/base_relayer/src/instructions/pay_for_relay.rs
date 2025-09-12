@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    constants::CFG_SEED,
+    constants::{CFG_SEED, DISCRIMINATOR_LEN},
     internal::check_and_pay_for_gas,
     state::{Cfg, MessageToRelay},
 };
@@ -24,7 +24,7 @@ pub struct PayForRelay<'info> {
     #[account(mut, address = cfg.gas_config.gas_fee_receiver @ PayForRelayError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
-    #[account(init, payer = payer, space = 8 + MessageToRelay::INIT_SPACE)]
+    #[account(init, payer = payer, space = DISCRIMINATOR_LEN + MessageToRelay::INIT_SPACE)]
     pub message_to_relay: Account<'info, MessageToRelay>,
 
     /// System program required for creating new accounts.

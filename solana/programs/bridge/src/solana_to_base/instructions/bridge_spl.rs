@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
-    common::{bridge::Bridge, BRIDGE_SEED, TOKEN_VAULT_SEED},
+    common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN, TOKEN_VAULT_SEED},
     solana_to_base::{internal::bridge_spl::bridge_spl_internal, Call, OutgoingMessage, Transfer},
 };
 
@@ -72,7 +72,7 @@ pub struct BridgeSpl<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space::<Transfer>(call.as_ref().map(|c| c.data.len()).unwrap_or_default()),
+        space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Transfer>(call.as_ref().map(|c| c.data.len()).unwrap_or_default()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 
