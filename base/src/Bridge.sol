@@ -213,7 +213,15 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
             return;
         }
 
-        // Get (and deploy if needed) the Twin contract.
+        // For simple transfers, skip the twin logic.
+        // This avoids the need to deploy a Twin contract for users that only want to transfer tokens.
+        if (message.ty == MessageType.Transfer) {
+            Transfer memory transfer = abi.decode(message.data, (Transfer));
+            TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
+            return;
+        }
+
+        // For calls, get (and deploy if needed) the Twin contract.
         address twinAddress = twins[message.sender];
         if (twinAddress == address(0)) {
             twinAddress = LibClone.deployDeterministicERC1967BeaconProxy({
@@ -225,14 +233,11 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
 
         if (message.ty == MessageType.Call) {
             Call memory call = abi.decode(message.data, (Call));
-            Twin(payable(twins[message.sender])).execute(call);
-        } else if (message.ty == MessageType.Transfer) {
-            Transfer memory transfer = abi.decode(message.data, (Transfer));
-            TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
+            Twin(payable(twinAddress)).execute(call);
         } else if (message.ty == MessageType.TransferAndCall) {
             (Transfer memory transfer, Call memory call) = abi.decode(message.data, (Transfer, Call));
             TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
-            Twin(payable(twins[message.sender])).execute(call);
+            Twin(payable(twinAddress)).execute(call);
         }
     }
 

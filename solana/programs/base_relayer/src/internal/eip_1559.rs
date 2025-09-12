@@ -69,7 +69,8 @@ impl Eip1559 {
         // Update state for new window
         self.current_base_fee = current_base_fee.max(self.config.minimum_base_fee);
         self.current_window_gas_used = 0;
-        self.window_start_time = current_timestamp;
+        self.window_start_time +=
+            (expired_windows_count * self.config.window_duration_seconds) as i64;
 
         current_base_fee
     }

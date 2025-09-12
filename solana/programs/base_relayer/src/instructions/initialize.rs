@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    constants::CFG_SEED,
+    constants::{CFG_SEED, DISCRIMINATOR_LEN},
     internal::{Eip1559, Eip1559Config, GasConfig},
     Cfg,
 };
@@ -16,7 +16,7 @@ pub struct Initialize<'info> {
     /// The relayer config state account that tracks fee parameters.
     /// - Uses PDA with CFG_SEED for deterministic address
     /// - Mutable to update EIP1559 fee data
-    #[account(init, payer = payer, seeds = [CFG_SEED], bump, space = 8 + Cfg::INIT_SPACE)]
+    #[account(init, payer = payer, seeds = [CFG_SEED], bump, space = DISCRIMINATOR_LEN + Cfg::INIT_SPACE)]
     pub cfg: Account<'info, Cfg>,
 
     /// The guardian account that will have administrative authority over the bridge.
