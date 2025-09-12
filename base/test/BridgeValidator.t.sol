@@ -157,7 +157,8 @@ contract BridgeValidatorTest is CommonTest {
 
         // Set base threshold to 0 and partner threshold to 1
         _mock_baseThreshold(0);
-        _mock_partnerThreshold(1);
+        vm.prank(cfg.guardians[0]);
+        bridgeValidator.setPartnerThreshold(1);
 
         // Calculate message hash for nonce 0
         bytes32[] memory finalHashes = new bytes32[](1);
@@ -296,7 +297,8 @@ contract BridgeValidatorTest is CommonTest {
 
         // Initialize the base threshold to 0 and partner validator threshold to 1
         _mock_baseThreshold(0);
-        _mock_partnerThreshold(1);
+        vm.prank(cfg.guardians[0]);
+        bridgeValidator.setPartnerThreshold(1);
 
         bytes32[] memory innerMessageHashes = new bytes32[](1);
         innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
@@ -558,11 +560,5 @@ contract BridgeValidatorTest is CommonTest {
         value = (value >> 128) << 128 | bytes32(uint256(threshold));
 
         vm.store(address(bridgeValidator), BASE_THRESHOLD_SLOT, value);
-    }
-
-    function _mock_partnerThreshold(uint256 threshold) public {
-        bytes32 PARTNER_VALIDATOR_THRESHOLD_SLOT = bytes32(uint256(0));
-
-        vm.store(address(bridgeValidator), PARTNER_VALIDATOR_THRESHOLD_SLOT, bytes32(uint256(threshold)));
     }
 }

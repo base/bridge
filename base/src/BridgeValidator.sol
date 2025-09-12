@@ -9,8 +9,6 @@ import {IPartner} from "./interfaces/IPartner.sol";
 import {MessageLib} from "./libraries/MessageLib.sol";
 import {VerificationLib} from "./libraries/VerificationLib.sol";
 
-import {console} from "forge-std/console.sol";
-
 /// @title BridgeValidator
 ///
 /// @notice A validator contract to be used during the Stage 0 phase of Base Bridge. This will likely later be replaced
@@ -230,10 +228,11 @@ contract BridgeValidator is Initializable {
         address[] memory recoveredSigners = _getSignersFromSigs(messageHashes, sigData);
         require(_countBaseSigners(recoveredSigners) >= VerificationLib.getBaseThreshold(), BaseThresholdNotMet());
 
-        if (partnerValidatorThreshold > 0) {
+        uint256 partnerValidatorThreshold_ = partnerValidatorThreshold;
+        if (partnerValidatorThreshold_ > 0) {
             IPartner.Signer[] memory partnerValidators = IPartner(PARTNER_VALIDATORS).getSigners();
             require(
-                _countPartnerSigners(partnerValidators, recoveredSigners) >= partnerValidatorThreshold,
+                _countPartnerSigners(partnerValidators, recoveredSigners) >= partnerValidatorThreshold_,
                 PartnerThresholdNotMet()
             );
         }
