@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {LibBytes} from "solady/utils/LibBytes.sol";
 
-import {Ix, Pda, Pubkey, PubkeyOrPdaVariant, SVMLib} from "../../src/libraries/SVMLib.sol";
+import {Ix, Pubkey, SVMLib} from "../../src/libraries/SVMLib.sol";
 
 contract SVMLibTest is Test {
     //////////////////////////////////////////////////////////////
@@ -21,122 +21,6 @@ contract SVMLibTest is Test {
         uint256 input;
         uint64 expected;
         string description;
-    }
-
-    //////////////////////////////////////////////////////////////
-    ///              serializePubkeyAccount Tests              ///
-    //////////////////////////////////////////////////////////////
-
-    /// forge-config: default.fuzz.runs = 1000
-    function testFuzz_serializePubkeyAccount(Pubkey pubkey, bool isWritable, bool isSigner) public pure {
-        // Serialize the account
-        bytes memory serializedAccount = SVMLib.serializePubkeyAccount(pubkey, isWritable, isSigner);
-
-        uint256 offset = 0;
-
-        // Verify the variant is set to Pubkey
-        assertEq(
-            uint8(serializedAccount[offset]),
-            uint8(PubkeyOrPdaVariant.Pubkey),
-            "serializePubkeyAccount variant should be Pubkey"
-        );
-        offset += 1;
-
-        // Verify the variantData contains the encoded pubkey
-        bytes memory variantData = LibBytes.slice(serializedAccount, offset, offset + 32);
-        assertEq(
-            variantData, abi.encodePacked(pubkey), "serializePubkeyAccount variantData should contain encoded pubkey"
-        );
-        offset += 32;
-
-        // Verify the isWritable flag
-        assertEq(
-            uint8(serializedAccount[offset]),
-            isWritable ? uint8(1) : uint8(0),
-            "serializePubkeyAccount isWritable flag should match input"
-        );
-        offset += 1;
-
-        // Verify the isSigner flag
-        assertEq(
-            uint8(serializedAccount[offset]),
-            isSigner ? uint8(1) : uint8(0),
-            "serializePubkeyAccount isSigner flag should match input"
-        );
-        offset += 1;
-
-        // Verify we've consumed the entire serialized data
-        assertEq(offset, serializedAccount.length, "serializePubkeyAccount should consume entire serialized data");
-    }
-
-    //////////////////////////////////////////////////////////////
-    ///                serializePdaAccount Tests               ///
-    //////////////////////////////////////////////////////////////
-
-    /// forge-config: default.fuzz.runs = 1000
-    function testFuzz_serializePdaAccount(Pda memory pda, bool isWritable, bool isSigner) public pure {
-        // Serialize the account
-        bytes memory serializedAccount = SVMLib.serializePdaAccount(pda, isWritable, isSigner);
-
-        uint256 offset = 0;
-
-        // Verify the variant is set to PDA
-        assertEq(
-            uint8(serializedAccount[offset]), uint8(PubkeyOrPdaVariant.PDA), "serializePdaAccount variant should be PDA"
-        );
-        offset += 1;
-
-        // Verify the seeds count
-        uint32 serializedSeedsCounts = uint32(bytes4(LibBytes.slice(serializedAccount, offset, offset + 4)));
-        assertEq(
-            serializedSeedsCounts,
-            SVMLib.toU32LittleEndian(pda.seeds.length),
-            "serializePdaAccount seeds count should match input"
-        );
-        offset += 4;
-
-        // Verify the seeds
-        for (uint256 i = 0; i < pda.seeds.length; i++) {
-            bytes memory seed = pda.seeds[i];
-
-            // Verify the seed length
-            uint32 serializedSeedLength = uint32(bytes4(LibBytes.slice(serializedAccount, offset, offset + 4)));
-            assertEq(
-                serializedSeedLength,
-                SVMLib.toU32LittleEndian(seed.length),
-                "serializePdaAccount seed length should match input"
-            );
-            offset += 4;
-
-            // Verify the seed data
-            bytes memory serializedSeed = LibBytes.slice(serializedAccount, offset, offset + seed.length);
-            assertEq(serializedSeed, seed, "serializePdaAccount seed should match input");
-            offset += seed.length;
-        }
-
-        // Verify the programId
-        bytes32 serializedProgramId = bytes32(LibBytes.slice(serializedAccount, offset, offset + 32));
-        assertEq(serializedProgramId, Pubkey.unwrap(pda.programId), "serializePdaAccount programId should match input");
-        offset += 32;
-
-        // Verify the isWritable flag
-        assertEq(
-            uint8(serializedAccount[offset]),
-            isWritable ? uint8(1) : uint8(0),
-            "serializePdaAccount isWritable flag should match input"
-        );
-        offset += 1;
-
-        // Verify the isSigner flag
-        assertEq(
-            uint8(serializedAccount[offset]),
-            isSigner ? uint8(1) : uint8(0),
-            "serializePdaAccount isSigner flag should match input"
-        );
-        offset += 1;
-
-        // Verify we've consumed the entire serialized data
-        assertEq(offset, serializedAccount.length, "serializePdaAccount should consume entire serialized data");
     }
 
     //////////////////////////////////////////////////////////////
