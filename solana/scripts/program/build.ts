@@ -30,7 +30,18 @@ async function main() {
     false
   );
 
+  const relayerLibRsFile = await fileFromPath(
+    `${workingDirectory}/programs/base_relayer/src/lib.rs`
+  );
+  const relayerLibRsBackupFile = await fileFromPath(
+    `${workingDirectory}/programs/base_relayer/src/lib.rs.backup`,
+    false
+  );
+
   const bridgeAddress = await keyPairToAddress(constants.bridgeKeyPairFile);
+  const baseRelayerAddress = await keyPairToAddress(
+    constants.baseRelayerKeyPairFile
+  );
   const deployerAddress = await keyPairToAddress(constants.deployerKeyPairFile);
 
   console.log("=".repeat(40));
@@ -39,22 +50,27 @@ async function main() {
   console.log(`Environment: ${constants.environment}`);
   console.log(`Features: ${features}`);
   console.log(`Bridge: ${bridgeAddress}`);
+  console.log(`Base Relayer Program: ${baseRelayerAddress}`);
   console.log(`Deployer: ${deployerAddress}`);
   console.log("=".repeat(40));
   console.log("");
 
   console.log("📦 Backing up files...");
   await Bun.write(libRsBackupFile, libRsFile);
+  await Bun.write(relayerLibRsBackupFile, relayerLibRsFile);
 
   console.log("📝 Updating lib.rs...");
   await updateLibRs(libRsFile, bridgeAddress);
+  await updateLibRs(relayerLibRsFile, baseRelayerAddress);
 
   console.log("🔨 Building program...");
-  await $`cargo-build-sbf --features ${features}`;
+  await $`cargo-build-sbf`;
 
   console.log("🧹 Restoring lib.rs...");
   await Bun.write(libRsFile, await libRsBackupFile.text());
   await libRsBackupFile.delete();
+  await Bun.write(relayerLibRsFile, await relayerLibRsBackupFile.text());
+  await relayerLibRsBackupFile.delete();
 
   console.log("✅ Done!");
 }

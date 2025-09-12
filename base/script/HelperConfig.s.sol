@@ -63,13 +63,13 @@ contract HelperConfig is Script {
 
         return NetworkConfig({
             initialOwner: bridgeAdmin,
-            remoteBridge: Pubkey.wrap(0x855c6fd7faf45040430300dda103f45c6a5a708377c45db31a7a5f7b6c9c70fe), // 9yayaS8TwWHcysZT6H45Hw421FbB84G4caQt4SVEGenq
+            remoteBridge: Pubkey.wrap(0x67aa4986b9444725d94280c6d824cd7c0be6f90b6e750eaab6998eaff6a1e794), // 7yfbZ5bSMuEXYMETsQ1H5G6PZrPqnkZm55rNMTryjwNB
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             baseValidators: baseValidators,
             baseSignatureThreshold: 2,
             guardians: guardians,
-            partnerValidatorThreshold: 0,
-            partnerValidators: address(1)
+            partnerValidatorThreshold: 3,
+            partnerValidators: 0x4EdB7D4944a04B6230a5F496e3a1F6E74DA3C593
         });
     }
 

@@ -95,9 +95,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///                       Errors                           ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Thrown when a message has already been successfully relayed.
-    error MessageAlreadySuccessfullyRelayed();
-
     /// @notice Thrown when the bridge is paused.
     error Paused();
 
@@ -333,7 +330,9 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         bytes32 messageHash = getMessageHash(message);
 
         // Check that the message has not already been relayed.
-        require(!successes[messageHash], MessageAlreadySuccessfullyRelayed());
+        if (successes[messageHash]) {
+            return;
+        }
 
         require(BridgeValidator(BRIDGE_VALIDATOR).validMessages(messageHash), InvalidMessage());
 
