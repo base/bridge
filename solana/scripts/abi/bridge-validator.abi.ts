@@ -3,21 +3,65 @@ export const BRIDGE_VALIDATOR_ABI = [
     type: "constructor",
     inputs: [
       {
-        name: "trustedRelayer",
+        name: "partnerThreshold",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "bridgeAddress",
         type: "address",
         internalType: "address",
       },
       {
-        name: "partnerValidatorThreshold",
-        type: "uint256",
-        internalType: "uint256",
+        name: "partnerValidators",
+        type: "address",
+        internalType: "address",
       },
     ],
     stateMutability: "nonpayable",
   },
   {
     type: "function",
-    name: "BASE_ORACLE",
+    name: "BRIDGE",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "GUARDIAN_ROLE",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "MAX_PARTNER_VALIDATOR_THRESHOLD",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "PARTNER_VALIDATORS",
     inputs: [],
     outputs: [
       {
@@ -43,16 +87,34 @@ export const BRIDGE_VALIDATOR_ABI = [
   },
   {
     type: "function",
-    name: "SIGNATURE_LENGTH_THRESHOLD",
-    inputs: [],
-    outputs: [
+    name: "addValidator",
+    inputs: [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
+        name: "validator",
+        type: "address",
+        internalType: "address",
       },
     ],
-    stateMutability: "view",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "initialize",
+    inputs: [
+      {
+        name: "baseValidators",
+        type: "address[]",
+        internalType: "address[]",
+      },
+      {
+        name: "baseThreshold",
+        type: "uint128",
+        internalType: "uint128",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -87,6 +149,32 @@ export const BRIDGE_VALIDATOR_ABI = [
   },
   {
     type: "function",
+    name: "removeValidator",
+    inputs: [
+      {
+        name: "validator",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setThreshold",
+    inputs: [
+      {
+        name: "newThreshold",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "validMessages",
     inputs: [
       {
@@ -106,13 +194,13 @@ export const BRIDGE_VALIDATOR_ABI = [
   },
   {
     type: "event",
-    name: "ExecutingMessage",
+    name: "Initialized",
     inputs: [
       {
-        name: "msgHash",
-        type: "bytes32",
-        indexed: true,
-        internalType: "bytes32",
+        name: "version",
+        type: "uint64",
+        indexed: false,
+        internalType: "uint64",
       },
     ],
     anonymous: false,
@@ -122,7 +210,7 @@ export const BRIDGE_VALIDATOR_ABI = [
     name: "MessageRegistered",
     inputs: [
       {
-        name: "messageHashes",
+        name: "messageHash",
         type: "bytes32",
         indexed: true,
         internalType: "bytes32",
@@ -131,23 +219,117 @@ export const BRIDGE_VALIDATOR_ABI = [
     anonymous: false,
   },
   {
+    type: "event",
+    name: "ThresholdUpdated",
+    inputs: [
+      {
+        name: "newThreshold",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "ValidatorAdded",
+    inputs: [
+      {
+        name: "validator",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "ValidatorRemoved",
+    inputs: [
+      {
+        name: "validator",
+        type: "address",
+        indexed: false,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "error",
+    name: "BaseThresholdNotMet",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "CallerNotGuardian",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "DuplicateSigner",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidInitialization",
+    inputs: [],
+  },
+  {
     type: "error",
     name: "InvalidSignatureLength",
     inputs: [],
   },
   {
     type: "error",
-    name: "InvalidSigner",
+    name: "InvalidThreshold",
     inputs: [],
   },
   {
     type: "error",
-    name: "ThresholdNotMet",
+    name: "InvalidValidatorAddress",
     inputs: [],
   },
   {
     type: "error",
-    name: "Unauthenticated",
+    name: "NotInitializing",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "PartnerThresholdNotMet",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ThresholdTooHigh",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "UnsortedSigners",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ValidatorAlreadyAdded",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ValidatorCountLessThanThreshold",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ValidatorNotExisted",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ZeroAddress",
     inputs: [],
   },
 ] as const;

@@ -110,6 +110,11 @@ export const BRIDGE_ABI = [
             internalType: "Pubkey",
           },
           {
+            name: "gasLimit",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
             name: "ty",
             type: "uint8",
             internalType: "enum MessageType",
@@ -291,24 +296,6 @@ export const BRIDGE_ABI = [
         type: "bytes32[]",
         internalType: "bytes32[]",
       },
-      {
-        name: "totalLeafCount",
-        type: "uint64",
-        internalType: "uint64",
-      },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "getLastOutgoingNonce",
-    inputs: [],
-    outputs: [
-      {
-        name: "",
-        type: "uint64",
-        internalType: "uint64",
-      },
     ],
     stateMutability: "view",
   },
@@ -332,6 +319,11 @@ export const BRIDGE_ABI = [
             internalType: "Pubkey",
           },
           {
+            name: "gasLimit",
+            type: "uint64",
+            internalType: "uint64",
+          },
+          {
             name: "ty",
             type: "uint8",
             internalType: "enum MessageType",
@@ -352,6 +344,19 @@ export const BRIDGE_ABI = [
       },
     ],
     stateMutability: "pure",
+  },
+  {
+    type: "function",
+    name: "getNextNonce",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint64",
+        internalType: "uint64",
+      },
+    ],
+    stateMutability: "view",
   },
   {
     type: "function",
@@ -503,13 +508,6 @@ export const BRIDGE_ABI = [
   },
   {
     type: "function",
-    name: "pauseSwitch",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
     name: "paused",
     inputs: [],
     outputs: [
@@ -539,6 +537,11 @@ export const BRIDGE_ABI = [
             name: "sender",
             type: "bytes32",
             internalType: "Pubkey",
+          },
+          {
+            name: "gasLimit",
+            type: "uint64",
+            internalType: "uint64",
           },
           {
             name: "ty",
@@ -646,6 +649,19 @@ export const BRIDGE_ABI = [
   },
   {
     type: "function",
+    name: "setPaused",
+    inputs: [
+      {
+        name: "isPaused",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "successes",
     inputs: [
       {
@@ -699,6 +715,12 @@ export const BRIDGE_ABI = [
     type: "event",
     name: "FailedToRelayMessage",
     inputs: [
+      {
+        name: "submitter",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
       {
         name: "messageHash",
         type: "bytes32",
@@ -767,6 +789,12 @@ export const BRIDGE_ABI = [
     type: "event",
     name: "MessageSuccessfullyRelayed",
     inputs: [
+      {
+        name: "submitter",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
       {
         name: "messageHash",
         type: "bytes32",
@@ -1003,6 +1031,11 @@ export const BRIDGE_ABI = [
   {
     type: "error",
     name: "WrappedSplRouteNotRegistered",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ZeroAddress",
     inputs: [],
   },
 ] as const;

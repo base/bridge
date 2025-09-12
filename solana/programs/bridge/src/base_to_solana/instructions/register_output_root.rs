@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::base_to_solana::constants::{PARTNER_PROGRAM_ID, PARTNER_SIGNERS_ACCOUNT_SEED};
-use crate::base_to_solana::state::partner_config::PartnerConfig;
+use crate::base_to_solana::state::Signers;
 use crate::base_to_solana::{compute_output_root_message_hash, recover_unique_evm_addresses};
 use crate::{
     base_to_solana::{constants::OUTPUT_ROOT_SEED, state::OutputRoot},
@@ -96,7 +96,7 @@ pub fn register_output_root_handler(
         // Verify partner approvals using partner's signers (deserialize manually)
         let partner_oracle_config = &ctx.accounts.bridge.partner_oracle_config;
         let partner_config =
-            PartnerConfig::try_deserialize(&mut &ctx.accounts.partner_config.data.borrow()[..])?;
+            Signers::try_deserialize(&mut &ctx.accounts.partner_config.data.borrow()[..])?;
         let partner_approved_count = partner_config.count_approvals(&unique_signers);
         require!(
             partner_approved_count as u8 >= partner_oracle_config.required_threshold,
@@ -152,7 +152,7 @@ mod tests {
 
     use crate::{
         accounts,
-        base_to_solana::state::partner_config::{PartnerConfig, PartnerSigner},
+        base_to_solana::state::signers::{PartnerSigner, Signers},
         base_to_solana::{
             constants::{OUTPUT_ROOT_SEED, PARTNER_SIGNERS_ACCOUNT_SEED},
             internal::compute_output_root_message_hash,
@@ -177,7 +177,7 @@ mod tests {
     fn write_partner_config_account(svm: &mut LiteSVM, signers: &[[u8; 20]]) -> Pubkey {
         let pda = partner_config_pda();
         // Build PartnerConfig with provided EVM addresses; new_evm_address defaults to None
-        let cfg = PartnerConfig {
+        let cfg = Signers {
             signers: signers
                 .iter()
                 .map(|addr| PartnerSigner::from_evm_address(*addr))

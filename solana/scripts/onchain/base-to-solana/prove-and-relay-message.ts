@@ -7,7 +7,7 @@ import { decodeEventLog } from "viem/utils";
 import {
   fetchBridge,
   getProveMessageInstruction,
-} from "../../../clients/ts/generated";
+} from "../../../clients/ts/generated/bridge";
 import { CONSTANTS } from "../../constants";
 import { getTarget } from "../../utils/argv";
 import { getIdlConstant } from "../../utils/idl-constants";
@@ -20,7 +20,7 @@ import { BRIDGE_ABI } from "../../abi/bridge.abi";
 import { relayMessage } from "./relay-message";
 
 const TRANSACTION_HASH =
-  "0xa8428e7fc5cf92b1af17af6f0e2b470e6cc49bb78bdf6435564060dd8c4086af";
+  "0x08b0ba2e26d3e566e7811bf47ea94dc227da2dd9e8a3fe7679ed601e9ff3d412";
 
 async function generateProof(
   transactionHash: Hash,
@@ -82,7 +82,7 @@ async function generateProof(
   console.log(`  Sender: ${event.message.sender}`);
   console.log(`  Data: ${event.message.data}`);
 
-  const [rawProof] = await publicClient.readContract({
+  const rawProof = await publicClient.readContract({
     address: baseBridgeAddress as `0x${string}`,
     abi: BRIDGE_ABI,
     functionName: "generateProof",

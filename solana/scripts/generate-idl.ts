@@ -1,30 +1,40 @@
 import { $ } from "bun";
-import { getTarget } from "./utils/argv";
+
+async function buildIdlForProgram(programName: string) {
+  const workingDirectory = (await $`pwd`.text()).trim();
+  const programDir = `${workingDirectory}/programs/${programName}`;
+  const jsonOutPath = `${workingDirectory}/idl.${programName}.json`;
+  const tsOutPath = `${workingDirectory}/idl.${programName}.ts`;
+
+  console.log(`📋 Generating IDL for '${programName}'...`);
+  await $`bash -lc ${`cd ${programDir} && anchor idl build -o ${jsonOutPath}`}`;
+
+  console.log(`🧹 Removing address key from '${programName}' IDL...`);
+  const idlFile = Bun.file(jsonOutPath);
+  const idl = await idlFile.json();
+  delete (idl as any).address;
+
+  console.log(`⚙️ Converting '${programName}' IDL to TypeScript...`);
+  await Bun.write(
+    tsOutPath,
+    `export const IDL = ${JSON.stringify(idl, null, 2)} as const;`
+  );
+
+  console.log(`🧽 Cleaning up temporary JSON for '${programName}'...`);
+  await $`rm -f ${jsonOutPath}`;
+}
 
 async function main() {
-  const target = getTarget();
-  const features = target.split("-").join(",");
-
   const workingDirectory = (await $`pwd`.text()).trim();
 
   console.log("=".repeat(40));
   console.log(`Working Directory: ${workingDirectory}`);
-  console.log(`Features: ${features}`);
+  console.log("Programs: bridge, base_relayer");
   console.log("=".repeat(40));
   console.log("");
 
-  console.log("📋 Generating IDL...");
-  await $`anchor idl build -o ${workingDirectory}/idl.ts -- --features ${features}`;
-
-  console.log("🧹 Removing address key from IDL...");
-  const idlFile = Bun.file(`${workingDirectory}/idl.ts`);
-  const idl = await idlFile.json();
-  delete idl.address;
-
-  console.log("⚙️ Converting IDL to typescript...");
-  await idlFile.write(
-    `export const IDL = ${JSON.stringify(idl, null, 2)} as const;`
-  );
+  await buildIdlForProgram("bridge");
+  await buildIdlForProgram("base_relayer");
 
   console.log("✅ Done!");
 }
