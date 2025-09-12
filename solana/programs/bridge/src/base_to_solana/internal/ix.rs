@@ -17,22 +17,11 @@ pub struct Ix {
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct IxAccount {
     /// Public key of the account.
-    pub pubkey_or_pda: PubkeyOrPda,
+    pub pubkey: Pubkey,
     /// Whether the account is writable.
     pub is_writable: bool,
     /// Whether the account is a signer.
     pub is_signer: bool,
-}
-
-/// Either a concrete `Pubkey` or a PDA described by seeds and a program id.
-/// When converting to `AccountMeta`, PDAs are derived with `Pubkey::find_program_address`.
-#[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
-pub enum PubkeyOrPda {
-    Pubkey(Pubkey),
-    Pda {
-        seeds: Vec<Vec<u8>>,
-        program_id: Pubkey,
-    },
 }
 
 /// Converts an Ix to a Solana Instruction.
@@ -49,18 +38,9 @@ impl From<Ix> for Instruction {
 /// Converts an IxAccount to a Solana AccountMeta.
 impl From<IxAccount> for AccountMeta {
     fn from(account: IxAccount) -> AccountMeta {
-        let pubkey = match account.pubkey_or_pda {
-            PubkeyOrPda::Pubkey(pubkey) => pubkey,
-            PubkeyOrPda::Pda { seeds, program_id } => {
-                let seeds: Vec<&[u8]> = seeds.iter().map(|v| v.as_slice()).collect();
-                let (pubkey, _) = Pubkey::find_program_address(seeds.as_slice(), &program_id);
-                pubkey
-            }
-        };
-
         match account.is_writable {
-            false => AccountMeta::new_readonly(pubkey, account.is_signer),
-            true => AccountMeta::new(pubkey, account.is_signer),
+            false => AccountMeta::new_readonly(account.pubkey, account.is_signer),
+            true => AccountMeta::new(account.pubkey, account.is_signer),
         }
     }
 }
@@ -82,7 +62,7 @@ impl From<Instruction> for Ix {
 impl From<AccountMeta> for IxAccount {
     fn from(account: AccountMeta) -> IxAccount {
         IxAccount {
-            pubkey_or_pda: PubkeyOrPda::Pubkey(account.pubkey),
+            pubkey: account.pubkey,
             is_writable: account.is_writable,
             is_signer: account.is_signer,
         }

@@ -18,32 +18,6 @@ function neq(Pubkey a, Pubkey b) pure returns (bool) {
 
 using {neq as !=} for Pubkey global;
 
-/// @notice Program-derived address (PDA) specification.
-///
-/// @param seeds Array of seed bytes for PDA generation
-/// @param programId The program that owns this PDA
-struct Pda {
-    bytes[] seeds;
-    Pubkey programId;
-}
-
-/// @notice Enum for pubkey or PDA variants
-enum PubkeyOrPdaVariant {
-    Pubkey,
-    PDA
-}
-
-/// @notice Union type for either a direct pubkey or PDA
-///
-/// @param variant The type of key (Pubkey or PDA)
-/// @param variantData Serialized data for the variant
-/// - If `variant == Pubkey`, this is the 32-byte pubkey.
-/// - If `variant == PDA`, this is: [u32 LE seed_count] + [len-prefixed seed bytes...] + [32-byte programId].
-struct PubkeyOrPda {
-    PubkeyOrPdaVariant variant;
-    bytes variantData;
-}
-
 /// @notice Solana instruction structure
 ///
 /// @param programId The program to execute
@@ -61,55 +35,6 @@ struct Ix {
 /// little-endian, length-prefixed encoding compatible with the Solana program in this repo.
 library SVMLib {
     using LibBit for uint256;
-
-    //////////////////////////////////////////////////////////////
-    ///                       Internal Functions               ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice Serializes an account with a direct pubkey.
-    ///
-    /// @param pubkey The public key of the account
-    /// @param isWritable Whether the account should be writable
-    /// @param isSigner Whether the account should be a signer
-    ///
-    /// @return The serialized account
-    function serializePubkeyAccount(Pubkey pubkey, bool isWritable, bool isSigner)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        uint8 variant = uint8(PubkeyOrPdaVariant.Pubkey);
-        bytes memory variantData = abi.encodePacked(pubkey);
-        bytes memory result =
-            abi.encodePacked(variant, variantData, isWritable ? uint8(1) : uint8(0), isSigner ? uint8(1) : uint8(0));
-
-        return result;
-    }
-
-    /// @notice Serializes an account with a Program Derived Address (PDA).
-    ///
-    /// @param pda The PDA specification
-    /// @param isWritable Whether the account should be writable
-    /// @param isSigner Whether the account should be a signer
-    ///
-    /// @return The serialized account
-    ///
-    /// Format: [variant=1] + [u32 LE seed_count] + [len-prefixed seed bytes...] + [32-byte programId]
-    ///         + [isWritable u8] + [isSigner u8]
-    function serializePdaAccount(Pda memory pda, bool isWritable, bool isSigner) internal pure returns (bytes memory) {
-        uint8 variant = uint8(PubkeyOrPdaVariant.PDA);
-
-        bytes memory variantData = abi.encodePacked(toU32LittleEndian(pda.seeds.length));
-        for (uint256 i; i < pda.seeds.length; i++) {
-            variantData = abi.encodePacked(variantData, _serializeBytes(pda.seeds[i]));
-        }
-        variantData = abi.encodePacked(variantData, pda.programId);
-
-        bytes memory result =
-            abi.encodePacked(variant, variantData, isWritable ? uint8(1) : uint8(0), isSigner ? uint8(1) : uint8(0));
-
-        return result;
-    }
 
     /// @notice Serializes a Solana instruction to Borsh-compatible bytes.
     ///
