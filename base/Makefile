@@ -6,12 +6,12 @@ BASE_RPC=https://base-sepolia.cbhq.net
 # Update values in this section to specify token recipients / token amount
 ####################################################################################################
 # alpha or prod
-ENV_NAME=prod
+ENV_NAME=alpha
 
 SOLANA_SOL_RECEIVER = 0x9827993b7b317eb6c74279d49074a13b33a3495a30637c86a7513922014ba424
 USER_SPL_ATA = 0x6621d2d930ef7ada6260d3e0a5679a8fe81fde41262314f2efbf9c4c828550b1
 USER_REMOTE_ERC20_ATA = 0x4394d16902c022f8f87c7667429bc8b2860d033e316b9f9515534505fae314e9
-USER_REMOTE_ETH_ATA = 0x5c201187570d0d5cfdf2b447414c63d27fdebc2de3da8a7c9ea2dfeb8e3bfaba
+USER_REMOTE_ETH_ATA = 0x15e9307085f98b2e64eb3dd36b7fbafea201cc2a9fcb36c8c207e99bc7b97f30
 
 AMOUNT = 1000000000
 ####################################################################################################
@@ -42,6 +42,15 @@ forge-deps:
 	forge install --no-git github.com/foundry-rs/forge-std \
 		github.com/Vectorized/solady@92e647bb2b387e952480a5a37800e9b4d54f7a06
 
+.PHONY: bindings
+bindings:
+	go install github.com/ethereum/go-ethereum/cmd/abigen@v1.14.11
+	forge build
+	abigen --abi ./out/BridgeValidator.sol/BridgeValidator.abi.json --pkg bindings --type BridgeValidator --out bindings/bridge_validator.go
+	abigen --abi ./out/Bridge.sol/Bridge.abi.json --pkg bindings --type Bridge --out bindings/bridge.go
+	abigen --abi ./out/MessageLib.sol/MessageLib.abi.json --pkg bindings --type MessageLib --out bindings/message_lib.go
+	abigen --abi ./out/RelayerOrchestrator.sol/RelayerOrchestrator.abi.json --pkg bindings --type RelayerOrchestrator --out bindings/relayer_orchestrator.go
+
 .PHONY: coverage
 coverage:
 	@ forge coverage --no-match-coverage "(script|test)"
@@ -52,6 +61,10 @@ dev-deploy: deploy create-wrapped-sol create-wrapped-spl
 .PHONY: deploy
 deploy:
 	BRIDGE_ENVIRONMENT=$(ENV_NAME) forge script DeployScript --account testnet-admin --rpc-url $(BASE_RPC) --sender $(shell cast wallet address --account testnet-admin) --broadcast -vvvv
+
+.PHONY: upgrade
+upgrade:
+	BRIDGE_ENVIRONMENT=$(ENV_NAME) forge script UpgradeScript --account testnet-upgrade --rpc-url $(BASE_RPC) --broadcast -vvvv
 
 .PHONY: create-wrapped-sol
 create-wrapped-sol:

@@ -67,7 +67,7 @@ impl Eip1559 {
         }
 
         // Update state for new window
-        self.current_base_fee = current_base_fee;
+        self.current_base_fee = current_base_fee.max(self.config.minimum_base_fee);
         self.current_window_gas_used = 0;
         self.window_start_time = current_timestamp;
 
@@ -104,10 +104,7 @@ impl Eip1559 {
                 / self.config.target
                 / self.config.denominator;
 
-            // Ensure base fee doesn't go below the configurable minimum
-            self.current_base_fee
-                .checked_sub(base_fee_delta)
-                .unwrap_or(self.config.minimum_base_fee)
+            self.current_base_fee.saturating_sub(base_fee_delta)
         }
     }
 

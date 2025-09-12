@@ -28,7 +28,7 @@ use solana_transaction::Transaction;
 
 use crate::{
     accounts,
-    base_to_solana::partner_config::PartnerSigner,
+    base_to_solana::signers::PartnerSigner,
     common::{
         bridge::{BufferConfig, Eip1559Config, GasConfig, PartnerOracleConfig, ProtocolConfig},
         BaseOracleConfig, Config, PartialTokenMetadata, BRIDGE_SEED, MAX_SIGNER_COUNT,
