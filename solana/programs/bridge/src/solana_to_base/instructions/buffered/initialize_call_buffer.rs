@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    common::{bridge::Bridge, BRIDGE_SEED},
+    common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN},
     solana_to_base::{CallBuffer, CallType},
 };
 
@@ -30,7 +30,7 @@ pub struct InitializeCallBuffer<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + CallBuffer::space(max_data_len as usize),
+        space = DISCRIMINATOR_LEN + CallBuffer::space(max_data_len as usize),
         constraint = bridge.buffer_config.max_call_buffer_size >= max_data_len @ InitializeCallBufferError::MaxSizeExceeded,
     )]
     pub call_buffer: Account<'info, CallBuffer>,

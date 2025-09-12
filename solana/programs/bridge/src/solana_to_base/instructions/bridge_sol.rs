@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    common::{bridge::Bridge, BRIDGE_SEED, SOL_VAULT_SEED},
+    common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN, SOL_VAULT_SEED},
     solana_to_base::{internal::bridge_sol::bridge_sol_internal, Call, OutgoingMessage, Transfer},
 };
 
@@ -54,7 +54,7 @@ pub struct BridgeSol<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + OutgoingMessage::space::<Transfer>(call.map(|c| c.data.len()).unwrap_or_default()),
+        space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Transfer>(call.map(|c| c.data.len()).unwrap_or_default()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
 

@@ -31,7 +31,7 @@ pub struct CallBuffer {
 
 impl CallBuffer {
     /// Calculate the serialized space needed for a `CallBuffer` account, excluding
-    /// the 8-byte Anchor account discriminator. Callers that allocate an account
+    /// the DISCRIMINATOR_LEN-byte Anchor account discriminator. Callers that allocate an account
     /// must add 8 bytes to this value.
     ///
     /// This reserves capacity for `data` so it can be appended without reallocation.

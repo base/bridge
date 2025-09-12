@@ -5,7 +5,7 @@ use crate::base_to_solana::state::Signers;
 use crate::base_to_solana::{compute_output_root_message_hash, recover_unique_evm_addresses};
 use crate::{
     base_to_solana::{constants::OUTPUT_ROOT_SEED, state::OutputRoot},
-    common::{bridge::Bridge, BRIDGE_SEED},
+    common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN},
 };
 
 /// Accounts struct for the `register_output_root` instruction that stores Base MMR roots
@@ -23,12 +23,12 @@ pub struct RegisterOutputRoot<'info> {
     /// The output root account being created to store the Base MMR root and total leaf count.
     /// - Uses PDA with OUTPUT_ROOT_SEED and base_block_number for deterministic address
     /// - Payer funds the account creation (authorization is enforced via EVM signatures)
-    /// - Space allocated for output root state (8-byte discriminator + OutputRoot::INIT_SPACE)
+    /// - Space allocated for output root state (DISCRIMINATOR_LEN + OutputRoot::INIT_SPACE)
     /// - Each output root corresponds to a specific Base block number
     #[account(
         init,
         payer = payer,
-        space = 8 + OutputRoot::INIT_SPACE,
+        space = DISCRIMINATOR_LEN + OutputRoot::INIT_SPACE,
         seeds = [OUTPUT_ROOT_SEED, &base_block_number.to_le_bytes()],
         bump
     )]

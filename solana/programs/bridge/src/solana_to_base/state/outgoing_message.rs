@@ -131,7 +131,7 @@ impl OutgoingMessage {
         }
     }
 
-    /// Returns the serialized size of an `OutgoingMessage` payload, excluding the 8-byte Anchor
+    /// Returns the serialized size of an `OutgoingMessage` payload, excluding the DISCRIMINATOR_LEN-byte Anchor
     /// account discriminator.
     pub fn space<T: MessageSpace>(data_len: usize) -> usize {
         8 + // nonce
