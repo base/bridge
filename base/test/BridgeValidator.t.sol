@@ -366,6 +366,23 @@ contract BridgeValidatorTest is CommonTest {
     ///                 Guardian/VerificationLib Tests          ///
     //////////////////////////////////////////////////////////////
 
+    function test_initialize_revertsWhenAboveMaxBaseSignerCount() public {
+        // Unset the initializer slot.
+        vm.store(
+            address(bridgeValidator),
+            bytes32(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffbf601132),
+            bytes32(0)
+        );
+
+        address[] memory validators = new address[](VerificationLib.MAX_BASE_SIGNER_COUNT + 1);
+        for (uint256 i; i < VerificationLib.MAX_BASE_SIGNER_COUNT + 1; i++) {
+            validators[i] = vm.addr(i + 2);
+        }
+
+        vm.expectRevert(VerificationLib.BaseSignerCountTooHigh.selector);
+        bridgeValidator.initialize(validators, 3);
+    }
+
     function test_setThreshold_onlyGuardian_revertsForNonGuardian() public {
         vm.expectRevert(BridgeValidator.CallerNotGuardian.selector);
         bridgeValidator.setThreshold(1);
@@ -435,6 +452,17 @@ contract BridgeValidatorTest is CommonTest {
     function test_removeValidator_onlyGuardian_revertsForNonGuardian() public {
         vm.expectRevert(BridgeValidator.CallerNotGuardian.selector);
         bridgeValidator.removeValidator(vm.addr(1));
+    }
+
+    function test_addValidator_revertsWhenAboveMaxBaseSignerCount() public {
+        vm.startPrank(cfg.guardians[0]);
+
+        for (uint256 i; i < VerificationLib.MAX_BASE_SIGNER_COUNT - 1; i++) {
+            bridgeValidator.addValidator(vm.addr(i + 2));
+        }
+
+        vm.expectRevert(VerificationLib.BaseSignerCountTooHigh.selector);
+        bridgeValidator.addValidator(vm.addr(0x42));
     }
 
     function test_removeValidator_asGuardian_emitsEvent_andKeepsRegistering() public {

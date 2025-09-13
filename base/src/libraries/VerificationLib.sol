@@ -30,6 +30,9 @@ library VerificationLib {
     /// @notice The length of a signature in bytes.
     uint256 internal constant SIGNATURE_LENGTH_THRESHOLD = 65;
 
+    /// @notice The max allowed base signer count
+    uint256 internal constant MAX_BASE_SIGNER_COUNT = 16;
+
     /// @dev Slot for the `VerificationLibStorage` struct in storage.
     ///      Computed from:
     ///         keccak256(abi.encode(uint256(keccak256("coinbase.storage.VerificationLib")) - 1)) &
@@ -58,6 +61,9 @@ library VerificationLib {
 
     /// @notice Thrown when threshold is invalid (0 or exceeds validator count).
     error InvalidThreshold();
+
+    /// @notice Thrown when base signer count is too high.
+    error BaseSignerCountTooHigh();
 
     /// @notice Thrown when a validator address is 0.
     error InvalidValidatorAddress();
@@ -92,6 +98,7 @@ library VerificationLib {
         VerificationLibStorage storage $ = getVerificationLibStorage();
 
         require(threshold > 0 && threshold <= validators.length, InvalidThreshold());
+        require(validators.length <= MAX_BASE_SIGNER_COUNT, BaseSignerCountTooHigh());
 
         for (uint256 i; i < validators.length; i++) {
             require(validators[i] != address(0), InvalidValidatorAddress());
@@ -122,11 +129,14 @@ library VerificationLib {
         require(validator != address(0), InvalidValidatorAddress());
         require(!$.validators[validator], ValidatorAlreadyAdded());
 
-        $.validators[validator] = true;
-
+        uint128 newValidatorCount;
         unchecked {
-            $.validatorCount++;
+            newValidatorCount = $.validatorCount + 1;
         }
+
+        require(newValidatorCount <= MAX_BASE_SIGNER_COUNT, BaseSignerCountTooHigh());
+        $.validators[validator] = true;
+        $.validatorCount = newValidatorCount;
 
         emit ValidatorAdded(validator);
     }
