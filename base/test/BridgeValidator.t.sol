@@ -65,6 +65,20 @@ contract BridgeValidatorTest is CommonTest {
     ///                 registerMessages Tests                 ///
     //////////////////////////////////////////////////////////////
 
+    function test_registerMessages_revertsWhenBridgePaused() public {
+        // Pause the bridge via guardian
+        vm.prank(cfg.guardians[0]);
+        bridge.setPaused(true);
+
+        bytes32[] memory innerMessageHashes = new bytes32[](1);
+        innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
+
+        bytes memory sigs = _getValidatorSigs(innerMessageHashes);
+
+        vm.expectRevert(BridgeValidator.Paused.selector);
+        bridgeValidator.registerMessages(innerMessageHashes, sigs);
+    }
+
     function test_registerMessages_emptyArray_revertsNoMessages() public {
         bytes32[] memory emptyArray = new bytes32[](0);
         vm.expectRevert(BridgeValidator.NoMessages.selector);
