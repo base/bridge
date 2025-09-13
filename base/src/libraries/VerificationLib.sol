@@ -129,14 +129,14 @@ library VerificationLib {
         require(validator != address(0), InvalidValidatorAddress());
         require(!$.validators[validator], ValidatorAlreadyAdded());
 
-        uint128 newValidatorCount = $.validatorCount + 1;
-        require(newValidatorCount <= MAX_BASE_SIGNER_COUNT, BaseSignerCountTooHigh());
-
-        $.validators[validator] = true;
-
+        uint128 newValidatorCount;
         unchecked {
-            $.validatorCount = newValidatorCount;
+            newValidatorCount = $.validatorCount + 1;
         }
+
+        require(newValidatorCount <= MAX_BASE_SIGNER_COUNT, BaseSignerCountTooHigh());
+        $.validators[validator] = true;
+        $.validatorCount = newValidatorCount;
 
         emit ValidatorAdded(validator);
     }
