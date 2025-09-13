@@ -162,7 +162,7 @@ contract BridgeValidatorTest is CommonTest {
         address testOracle = vm.addr(77);
 
         // Set base threshold to 0 and partner threshold to 1
-        _mock_baseThreshold(0);
+        _mockBaseThreshold(0);
         vm.prank(cfg.guardians[0]);
         bridgeValidator.setPartnerThreshold(1);
 
@@ -302,7 +302,7 @@ contract BridgeValidatorTest is CommonTest {
         address testOracle = vm.addr(100);
 
         // Initialize the base threshold to 0 and partner validator threshold to 1
-        _mock_baseThreshold(0);
+        _mockBaseThreshold(0);
         vm.prank(cfg.guardians[0]);
         bridgeValidator.setPartnerThreshold(1);
 
@@ -551,12 +551,12 @@ contract BridgeValidatorTest is CommonTest {
     ///                     Helper Functions                   ///
     //////////////////////////////////////////////////////////////
 
-    function _mock_baseThreshold(uint128 threshold) public {
-        bytes32 BASE_THRESHOLD_SLOT = 0x245c109929d1c5575e8db91278c683d6e028507d88b9169278939e24f465af01;
+    function _mockBaseThreshold(uint128 threshold) public {
+        bytes32 baseThresholdSlot = 0x245c109929d1c5575e8db91278c683d6e028507d88b9169278939e24f465af01;
 
-        bytes32 value = vm.load(address(bridgeValidator), BASE_THRESHOLD_SLOT);
+        bytes32 value = vm.load(address(bridgeValidator), baseThresholdSlot);
         value = (value >> 128) << 128 | bytes32(uint256(threshold));
 
-        vm.store(address(bridgeValidator), BASE_THRESHOLD_SLOT, value);
+        vm.store(address(bridgeValidator), baseThresholdSlot, value);
     }
 }
