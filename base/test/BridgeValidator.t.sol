@@ -30,6 +30,7 @@ contract BridgeValidatorTest is CommonTest {
     event ThresholdUpdated(uint256 newThreshold);
     event ValidatorAdded(address validator);
     event ValidatorRemoved(address validator);
+    event PartnerThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
 
     function setUp() public {
         DeployScript deployer = new DeployScript();
@@ -41,24 +42,24 @@ contract BridgeValidatorTest is CommonTest {
     ///                   Constructor Tests                    ///
     //////////////////////////////////////////////////////////////
 
-    function test_constructor_setsPartnerValidatorThreshold() public view {
-        assertEq(bridgeValidator.PARTNER_VALIDATOR_THRESHOLD(), cfg.partnerValidatorThreshold);
-    }
-
-    function test_constructor_withZeroThreshold() public {
-        BridgeValidator testValidator = new BridgeValidator(0, address(bridge), cfg.partnerValidators);
-        assertEq(testValidator.PARTNER_VALIDATOR_THRESHOLD(), 0);
-    }
-
-    function test_constructor_revertsWhenThresholdAboveMax() public {
-        uint256 tooHigh = bridgeValidator.MAX_PARTNER_VALIDATOR_THRESHOLD() + 1;
-        vm.expectRevert(BridgeValidator.ThresholdTooHigh.selector);
-        new BridgeValidator(tooHigh, address(bridge), cfg.partnerValidators);
-    }
-
     function test_constructor_revertsWhenZeroBridge() public {
         vm.expectRevert(BridgeValidator.ZeroAddress.selector);
-        new BridgeValidator(0, address(0), cfg.partnerValidators);
+        new BridgeValidator(address(0), cfg.partnerValidators);
+    }
+
+    function test_constructor_revertsWhenZeroPartnerValidators() public {
+        vm.expectRevert(BridgeValidator.ZeroAddress.selector);
+        new BridgeValidator(address(bridge), address(0));
+    }
+
+    function test_constructor_setsBaseValidatorThreshold() public {
+        BridgeValidator testValidator = new BridgeValidator(address(bridge), cfg.partnerValidators);
+        assertEq(testValidator.getBaseThreshold(), type(uint128).max);
+    }
+
+    function test_constructor_setsPartnerValidatorThreshold() public {
+        BridgeValidator testValidator = new BridgeValidator(address(bridge), cfg.partnerValidators);
+        assertEq(testValidator.partnerValidatorThreshold(), type(uint256).max);
     }
 
     //////////////////////////////////////////////////////////////
@@ -172,9 +173,12 @@ contract BridgeValidatorTest is CommonTest {
         bytes32[] memory innerMessageHashes = new bytes32[](1);
         innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
 
-        // Create a validator with threshold 1 and call with only BASE_ORACLE signature
         address testOracle = vm.addr(77);
-        BridgeValidator testValidator = new BridgeValidator(1, address(bridge), cfg.partnerValidators);
+
+        // Set base threshold to 0 and partner threshold to 1
+        _mockBaseThreshold(0);
+        vm.prank(cfg.guardians[0]);
+        bridgeValidator.setPartnerThreshold(1);
 
         // Calculate message hash for nonce 0
         bytes32[] memory finalHashes = new bytes32[](1);
@@ -185,7 +189,7 @@ contract BridgeValidatorTest is CommonTest {
         bytes memory oracleSig = _createSignature(signedHash, 77);
         vm.expectRevert(BridgeValidator.PartnerThresholdNotMet.selector);
         vm.prank(testOracle);
-        testValidator.registerMessages(innerMessageHashes, oracleSig);
+        bridgeValidator.registerMessages(innerMessageHashes, oracleSig);
     }
 
     function test_registerMessages_revertsOnEmptySignature() public {
@@ -254,9 +258,8 @@ contract BridgeValidatorTest is CommonTest {
     }
 
     function test_registerMessages_revertsOnDuplicatePartnerEntitySigners() public {
-        address newImpl = address(new BridgeValidator(1, address(bridge), cfg.partnerValidators));
-        vm.prank(cfg.initialOwner);
-        ERC1967Factory(cfg.erc1967Factory).upgrade(address(bridgeValidator), newImpl);
+        vm.prank(cfg.guardians[0]);
+        bridgeValidator.setPartnerThreshold(1);
 
         // Setup a single partner with two keys that map to the same partner index
         MockPartnerValidators pv = MockPartnerValidators(cfg.partnerValidators);
@@ -311,7 +314,11 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_withPartnerValidatorThreshold() public {
         // Create a BridgeValidator with partner validator threshold > 0
         address testOracle = vm.addr(100);
-        BridgeValidator testValidator = new BridgeValidator(1, address(bridge), cfg.partnerValidators);
+
+        // Initialize the base threshold to 0 and partner validator threshold to 1
+        _mockBaseThreshold(0);
+        vm.prank(cfg.guardians[0]);
+        bridgeValidator.setPartnerThreshold(1);
 
         bytes32[] memory innerMessageHashes = new bytes32[](1);
         innerMessageHashes[0] = TEST_MESSAGE_HASH_1;
@@ -326,7 +333,7 @@ contract BridgeValidatorTest is CommonTest {
 
         vm.expectRevert(BridgeValidator.PartnerThresholdNotMet.selector);
         vm.prank(testOracle);
-        testValidator.registerMessages(innerMessageHashes, oracleSig);
+        bridgeValidator.registerMessages(innerMessageHashes, oracleSig);
     }
 
     function test_registerMessages_withBaseAndPartnerSignatures_success() public {
@@ -336,9 +343,8 @@ contract BridgeValidatorTest is CommonTest {
         pv.addSigner(IPartner.Signer({evmAddress: partnerAddr, newEvmAddress: address(0)}));
 
         // Upgrade existing bridgeValidator proxy to a new implementation requiring 1 partner signature
-        address newImpl = address(new BridgeValidator(1, address(bridge), cfg.partnerValidators));
-        vm.prank(cfg.initialOwner);
-        ERC1967Factory(cfg.erc1967Factory).upgrade(address(bridgeValidator), newImpl);
+        vm.prank(cfg.guardians[0]);
+        bridgeValidator.setPartnerThreshold(1);
 
         // Prepare a single message
         bytes32[] memory innerMessageHashes = new bytes32[](1);
@@ -360,6 +366,31 @@ contract BridgeValidatorTest is CommonTest {
 
         // Verify the message is registered
         assertTrue(bridgeValidator.validMessages(finalHashes[0]));
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                 setPartnerThreshold Tests              ///
+    //////////////////////////////////////////////////////////////
+
+    function test_setPartnerThreshold_onlyGuardian_revertsForNonGuardian() public {
+        vm.expectRevert(BridgeValidator.CallerNotGuardian.selector);
+        bridgeValidator.setPartnerThreshold(0);
+    }
+
+    function test_setPartnerThreshold_asGuardian_emitsEvent_andCanReapplySame() public {
+        uint256 current = bridgeValidator.partnerValidatorThreshold();
+        vm.expectEmit(false, false, false, true);
+        emit PartnerThresholdUpdated(current, current);
+        vm.prank(cfg.guardians[0]);
+        bridgeValidator.setPartnerThreshold(current);
+        assertEq(bridgeValidator.partnerValidatorThreshold(), current);
+    }
+
+    function test_setPartnerThreshold_revertsWhenAboveMax() public {
+        uint256 tooHigh = bridgeValidator.MAX_PARTNER_VALIDATOR_THRESHOLD() + 1;
+        vm.prank(cfg.guardians[0]);
+        vm.expectRevert(BridgeValidator.ThresholdTooHigh.selector);
+        bridgeValidator.setPartnerThreshold(tooHigh);
     }
 
     //////////////////////////////////////////////////////////////
@@ -475,7 +506,7 @@ contract BridgeValidatorTest is CommonTest {
 
     function test_initialize_revertsWhenCalledTwice() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        bridgeValidator.initialize(cfg.baseValidators, cfg.baseSignatureThreshold);
+        bridgeValidator.initialize(cfg.baseValidators, cfg.baseSignatureThreshold, cfg.partnerValidatorThreshold);
     }
 
     function test_nextNonce_incrementsByBatchLength() public {
@@ -530,9 +561,16 @@ contract BridgeValidatorTest is CommonTest {
         }
     }
 
-    function testFuzz_constructor_withRandomThreshold(uint256 threshold) public {
-        vm.assume(threshold <= bridgeValidator.MAX_PARTNER_VALIDATOR_THRESHOLD());
-        BridgeValidator testValidator = new BridgeValidator(threshold, address(bridge), cfg.partnerValidators);
-        assertEq(testValidator.PARTNER_VALIDATOR_THRESHOLD(), threshold);
+    //////////////////////////////////////////////////////////////
+    ///                     Helper Functions                   ///
+    //////////////////////////////////////////////////////////////
+
+    function _mockBaseThreshold(uint128 threshold) public {
+        bytes32 baseThresholdSlot = 0x245c109929d1c5575e8db91278c683d6e028507d88b9169278939e24f465af01;
+
+        bytes32 value = vm.load(address(bridgeValidator), baseThresholdSlot);
+        value = (value >> 128) << 128 | bytes32(uint256(threshold));
+
+        vm.store(address(bridgeValidator), baseThresholdSlot, value);
     }
 }
