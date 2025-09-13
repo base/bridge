@@ -305,6 +305,19 @@ contract TokenLibTest is CommonTest {
         bridge.bridgeToken{value: 1 ether}(transfer, emptyIxs);
     }
 
+    function test_initializeTransfer_revertsOnZeroAmount() public {
+        Transfer memory transfer = Transfer({
+            localToken: address(mockToken),
+            remoteToken: TEST_REMOTE_TOKEN,
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: 0
+        });
+
+        vm.expectRevert(TokenLib.ZeroAmount.selector);
+        Ix[] memory emptyIxs;
+        bridge.bridgeToken(transfer, emptyIxs);
+    }
+
     //////////////////////////////////////////////////////////////
     ///               Finalize Transfer Tests                  ///
     //////////////////////////////////////////////////////////////

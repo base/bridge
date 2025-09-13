@@ -55,6 +55,9 @@ library TokenLib {
     /// @notice Thrown when the token pair is not registered.
     error WrappedSplRouteNotRegistered();
 
+    /// @notice Thrown when the transfer amount is zero.
+    error ZeroAmount();
+
     //////////////////////////////////////////////////////////////
     ///                       Events                           ///
     //////////////////////////////////////////////////////////////
@@ -121,6 +124,8 @@ library TokenLib {
         internal
         returns (SolanaTokenType tokenType)
     {
+        require(transfer.remoteAmount > 0, ZeroAmount());
+
         TokenLibStorage storage $ = getTokenLibStorage();
         uint256 localAmount;
 
@@ -168,6 +173,8 @@ library TokenLib {
 
                 // Convert back to remote amount and transfer the dust back to the sender.
                 uint256 receivedRemoteAmount = receivedLocalAmount / scalar;
+                require(receivedRemoteAmount > 0, ZeroAmount());
+
                 localAmount = receivedRemoteAmount * scalar;
                 uint256 dust = receivedLocalAmount - localAmount;
                 if (dust > 0) {
