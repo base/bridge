@@ -28,10 +28,10 @@ import {
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
+  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/kit';
 import { BRIDGE_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -56,7 +56,7 @@ export type AppendToCallBufferInstruction<
   IInstructionWithAccounts<
     [
       TAccountOwner extends string
-        ? WritableSignerAccount<TAccountOwner> &
+        ? ReadonlySignerAccount<TAccountOwner> &
             IAccountSignerMeta<TAccountOwner>
         : TAccountOwner,
       TAccountCallBuffer extends string
@@ -141,7 +141,7 @@ export function getAppendToCallBufferInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    owner: { value: input.owner ?? null, isWritable: true },
+    owner: { value: input.owner ?? null, isWritable: false },
     callBuffer: { value: input.callBuffer ?? null, isWritable: true },
   };
   const accounts = originalAccounts as Record<
