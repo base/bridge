@@ -410,7 +410,7 @@ contract BridgeValidatorTest is CommonTest {
         }
 
         vm.expectRevert(VerificationLib.BaseSignerCountTooHigh.selector);
-        bridgeValidator.initialize(validators, 3);
+        bridgeValidator.initialize(validators, 3, 1);
     }
 
     function test_setThreshold_onlyGuardian_revertsForNonGuardian() public {
