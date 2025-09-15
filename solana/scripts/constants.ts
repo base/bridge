@@ -64,11 +64,11 @@ export const CONSTANTS = {
     wErc20: address("3dmSRTTwnMvmLKMagZ5QpZSXCoSJpudxncA6f6Q885fe"),
 
     // Base addresses
-    baseBridge: "0xC789bb1C273aB8Ab10ACe43090932b305f040aDC",
+    baseBridge: "0x5961B1579913632c91c8cdC771cF48251A4B54F0",
     eth: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
     erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
-    wSol: "0xf78255ba3001b463eB8b4fABbf617bc2553B1B59",
-    wSpl: "0x333e2D362809b6554B8c534a58805ec06315D206",
+    wSol: "0x70445da14e089424E5f7Ab6d3C22F5Fadeb619Ca",
+    wSpl: "0x4752285a93F5d0756bB2D6ed013b40ea8527a8DA",
     recipient: "0x8c1a617bdb47342f9c17ac8750e0b070c372c721",
     counter: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
   },
