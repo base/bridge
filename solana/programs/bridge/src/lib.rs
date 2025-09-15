@@ -439,4 +439,16 @@ pub mod bridge {
     pub fn set_pause_status(ctx: Context<SetBridgeConfig>, new_paused: bool) -> Result<()> {
         set_pause_status_handler(ctx, new_paused)
     }
+
+    /// Update the partner oracle configuration containing the required signature threshold
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the bridge account and guardian
+    /// * `new_config` - The new partner oracle config
+    pub fn set_partner_oracle_config(
+        ctx: Context<SetBridgeConfig>,
+        new_config: PartnerOracleConfig,
+    ) -> Result<()> {
+        set_partner_config_handler(ctx, new_config)
+    }
 }

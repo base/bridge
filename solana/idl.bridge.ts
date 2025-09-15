@@ -1936,6 +1936,52 @@ export const IDL = {
       ]
     },
     {
+      "name": "set_partner_oracle_config",
+      "docs": [
+        "Update the partner oracle configuration containing the required signature threshold",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the bridge account and guardian",
+        "* `new_config` - The new partner oracle config"
+      ],
+      "discriminator": [
+        34,
+        48,
+        231,
+        135,
+        42,
+        113,
+        217,
+        157
+      ],
+      "accounts": [
+        {
+          "name": "bridge",
+          "docs": [
+            "The bridge account containing configuration"
+          ],
+          "writable": true
+        },
+        {
+          "name": "guardian",
+          "docs": [
+            "The guardian account authorized to update configuration"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_config",
+          "type": {
+            "defined": {
+              "name": "PartnerOracleConfig"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "set_pause_status",
       "docs": [
         "Set the pause status for the bridge",
