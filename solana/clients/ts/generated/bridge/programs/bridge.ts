@@ -39,6 +39,7 @@ import {
   type ParsedSetMaxCallBufferSizeInstruction,
   type ParsedSetMinimumBaseFeeInstruction,
   type ParsedSetOracleSignersInstruction,
+  type ParsedSetPartnerOracleConfigInstruction,
   type ParsedSetPauseStatusInstruction,
   type ParsedSetWindowDurationInstruction,
   type ParsedTransferGuardianInstruction,
@@ -145,6 +146,7 @@ export enum BridgeInstruction {
   SetMaxCallBufferSize,
   SetMinimumBaseFee,
   SetOracleSigners,
+  SetPartnerOracleConfig,
   SetPauseStatus,
   SetWindowDuration,
   TransferGuardian,
@@ -434,6 +436,17 @@ export function identifyBridgeInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([34, 48, 231, 135, 42, 113, 217, 157])
+      ),
+      0
+    )
+  ) {
+    return BridgeInstruction.SetPartnerOracleConfig;
+  }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([118, 25, 145, 217, 114, 209, 236, 145])
       ),
       0
@@ -555,6 +568,9 @@ export type ParsedBridgeInstruction<TProgram extends string = 'undefined'> =
   | ({
       instructionType: BridgeInstruction.SetOracleSigners;
     } & ParsedSetOracleSignersInstruction<TProgram>)
+  | ({
+      instructionType: BridgeInstruction.SetPartnerOracleConfig;
+    } & ParsedSetPartnerOracleConfigInstruction<TProgram>)
   | ({
       instructionType: BridgeInstruction.SetPauseStatus;
     } & ParsedSetPauseStatusInstruction<TProgram>)

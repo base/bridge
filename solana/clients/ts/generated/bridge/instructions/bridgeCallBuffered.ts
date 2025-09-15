@@ -162,7 +162,7 @@ export type BridgeCallBufferedInput<
    * The outgoing message account that stores the cross-chain message (header + payload).
    * - Created fresh for each call; the provided keypair determines its address
    * - Funded by `payer`
-   * - Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`
+   * - Space: DISCRIMINATOR_LEN + serialized `OutgoingMessage`
    * Sizing uses `OutgoingMessage::space(Some(call_buffer.data.len()))`, which
    * intentionally allocates for the Transfer variant (worst case) to safely
    * cover the Call variant
@@ -304,7 +304,7 @@ export type ParsedBridgeCallBufferedInstruction<
      * The outgoing message account that stores the cross-chain message (header + payload).
      * - Created fresh for each call; the provided keypair determines its address
      * - Funded by `payer`
-     * - Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`
+     * - Space: DISCRIMINATOR_LEN + serialized `OutgoingMessage`
      * Sizing uses `OutgoingMessage::space(Some(call_buffer.data.len()))`, which
      * intentionally allocates for the Transfer variant (worst case) to safely
      * cover the Call variant

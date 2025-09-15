@@ -152,7 +152,7 @@ export type BridgeCallInput<
    * The outgoing message account that stores the cross-chain call data.
    * - Created fresh for each bridge call at a client-provided address (not a PDA)
    * - Payer funds the account creation
-   * - Space is `8 (anchor discriminator) + OutgoingMessage::space(...)` and is sized using
+   * - Space is DISCRIMINATOR_LEN + OutgoingMessage::space(...)` and is sized using
    * the worst-case message variant to ensure sufficient capacity even for large payloads
    * - Contains all information needed for execution on Base
    */
@@ -277,7 +277,7 @@ export type ParsedBridgeCallInstruction<
      * The outgoing message account that stores the cross-chain call data.
      * - Created fresh for each bridge call at a client-provided address (not a PDA)
      * - Payer funds the account creation
-     * - Space is `8 (anchor discriminator) + OutgoingMessage::space(...)` and is sized using
+     * - Space is DISCRIMINATOR_LEN + OutgoingMessage::space(...)` and is sized using
      * the worst-case message variant to ensure sufficient capacity even for large payloads
      * - Contains all information needed for execution on Base
      */

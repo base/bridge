@@ -33,7 +33,6 @@ export const IDL = {
             "The signer authorized to modify this call buffer.",
             "Must match `call_buffer.owner`."
           ],
-          "writable": true,
           "signer": true
         },
         {
@@ -116,7 +115,7 @@ export const IDL = {
             "The outgoing message account that stores the cross-chain call data.",
             "- Created fresh for each bridge call at a client-provided address (not a PDA)",
             "- Payer funds the account creation",
-            "- Space is `8 (anchor discriminator) + OutgoingMessage::space(...)` and is sized using",
+            "- Space is DISCRIMINATOR_LEN + OutgoingMessage::space(...)` and is sized using",
             "the worst-case message variant to ensure sufficient capacity even for large payloads",
             "- Contains all information needed for execution on Base"
           ],
@@ -220,7 +219,7 @@ export const IDL = {
             "The outgoing message account that stores the cross-chain message (header + payload).",
             "- Created fresh for each call; the provided keypair determines its address",
             "- Funded by `payer`",
-            "- Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`",
+            "- Space: DISCRIMINATOR_LEN + serialized `OutgoingMessage`",
             "Sizing uses `OutgoingMessage::space(Some(call_buffer.data.len()))`, which",
             "intentionally allocates for the Transfer variant (worst case) to safely",
             "cover the Call variant",
@@ -455,7 +454,7 @@ export const IDL = {
             "The outgoing message account that stores the cross-chain transfer details.",
             "- Created fresh for each bridge; address determined by the provided keypair",
             "- Funded by `payer`",
-            "- Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`"
+            "- Space: DISCRIMINATOR_LEN + serialized `OutgoingMessage`"
           ],
           "writable": true,
           "signer": true
@@ -1127,7 +1126,7 @@ export const IDL = {
             "The bridge state account being initialized.",
             "- Uses PDA with BRIDGE_SEED for deterministic address",
             "- Payer funds the account creation",
-            "- Space allocated for bridge state (8-byte discriminator + Bridge::INIT_SPACE)"
+            "- Space allocated for bridge state (DISCRIMINATOR_LEN + Bridge::INIT_SPACE)"
           ],
           "writable": true
         },
@@ -1399,7 +1398,7 @@ export const IDL = {
             "The output root account being created to store the Base MMR root and total leaf count.",
             "- Uses PDA with OUTPUT_ROOT_SEED and base_block_number for deterministic address",
             "- Payer funds the account creation (authorization is enforced via EVM signatures)",
-            "- Space allocated for output root state (8-byte discriminator + OutputRoot::INIT_SPACE)",
+            "- Space allocated for output root state (DISCRIMINATOR_LEN + OutputRoot::INIT_SPACE)",
             "- Each output root corresponds to a specific Base block number"
           ],
           "writable": true
@@ -1481,14 +1480,6 @@ export const IDL = {
         98
       ],
       "accounts": [
-        {
-          "name": "payer",
-          "docs": [
-            "A signer for the transaction. This instruction does not read or debit this",
-            "account directly; transaction fees are paid at the transaction level."
-          ],
-          "signer": true
-        },
         {
           "name": "message",
           "docs": [
@@ -1945,6 +1936,52 @@ export const IDL = {
       ]
     },
     {
+      "name": "set_partner_oracle_config",
+      "docs": [
+        "Update the partner oracle configuration containing the required signature threshold",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the bridge account and guardian",
+        "* `new_config` - The new partner oracle config"
+      ],
+      "discriminator": [
+        34,
+        48,
+        231,
+        135,
+        42,
+        113,
+        217,
+        157
+      ],
+      "accounts": [
+        {
+          "name": "bridge",
+          "docs": [
+            "The bridge account containing configuration"
+          ],
+          "writable": true
+        },
+        {
+          "name": "guardian",
+          "docs": [
+            "The guardian account authorized to update configuration"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_config",
+          "type": {
+            "defined": {
+              "name": "PartnerOracleConfig"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "set_pause_status",
       "docs": [
         "Set the pause status for the bridge",
@@ -2237,21 +2274,6 @@ export const IDL = {
         8,
         180,
         198
-      ]
-    }
-  ],
-  "events": [
-    {
-      "name": "GuardianTransferred",
-      "discriminator": [
-        196,
-        51,
-        251,
-        192,
-        12,
-        108,
-        41,
-        137
       ]
     }
   ],
@@ -2897,26 +2919,6 @@ export const IDL = {
       }
     },
     {
-      "name": "GuardianTransferred",
-      "docs": [
-        "Event emitted when guardian authority is transferred.",
-        "Emitted by [`transfer_guardian_handler`]."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "old_guardian",
-            "type": "pubkey"
-          },
-          {
-            "name": "new_guardian",
-            "type": "pubkey"
-          }
-        ]
-      }
-    },
-    {
       "name": "IncomingMessage",
       "docs": [
         "Represents a cross-chain message sent from Base to Solana",
@@ -3017,15 +3019,11 @@ export const IDL = {
         "kind": "struct",
         "fields": [
           {
-            "name": "pubkey_or_pda",
+            "name": "pubkey",
             "docs": [
               "Public key of the account."
             ],
-            "type": {
-              "defined": {
-                "name": "PubkeyOrPda"
-              }
-            }
+            "type": "pubkey"
           },
           {
             "name": "is_writable",
@@ -3215,39 +3213,6 @@ export const IDL = {
               "submitted output root must be a multiple of this number."
             ],
             "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "PubkeyOrPda",
-      "docs": [
-        "Either a concrete `Pubkey` or a PDA described by seeds and a program id.",
-        "When converting to `AccountMeta`, PDAs are derived with `Pubkey::find_program_address`."
-      ],
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Pubkey",
-            "fields": [
-              "pubkey"
-            ]
-          },
-          {
-            "name": "Pda",
-            "fields": [
-              {
-                "name": "seeds",
-                "type": {
-                  "vec": "bytes"
-                }
-              },
-              {
-                "name": "program_id",
-                "type": "pubkey"
-              }
-            ]
           }
         ]
       }
