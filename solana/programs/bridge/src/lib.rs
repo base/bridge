@@ -95,6 +95,67 @@ pub mod bridge {
         prove_message_handler(ctx, nonce, sender, data, proof, message_hash)
     }
 
+    /// Initializes a prove buffer account that can store large prove inputs.
+    /// This account can be used to build up serialized message data and MMR proof nodes
+    /// over multiple transactions before calling `prove_message_buffered`.
+    ///
+    /// # Arguments
+    /// * `ctx`           - The context containing accounts for initialization (payer, bridge, buffer)
+    /// * `max_data_len`  - Maximum total length of serialized `Message` data that will be stored
+    /// * `max_proof_len` - Maximum number of 32-byte MMR proof nodes that will be stored
+    pub fn initialize_prove_buffer(
+        ctx: Context<InitializeProveBuffer>,
+        max_data_len: u64,
+        max_proof_len: u64,
+    ) -> Result<()> {
+        initialize_prove_buffer_handler(ctx, max_data_len, max_proof_len)
+    }
+
+    /// Appends serialized `Message` bytes to an existing prove buffer.
+    /// Only the owner of the prove buffer can append data to it.
+    ///
+    /// # Arguments
+    /// * `ctx`   - The context containing the prove buffer account (owned by signer)
+    /// * `chunk` - Additional serialized `Message` bytes to append to the buffer
+    pub fn append_to_prove_buffer_data(
+        ctx: Context<AppendToProveBufferData>,
+        chunk: Vec<u8>,
+    ) -> Result<()> {
+        append_to_prove_buffer_data_handler(ctx, chunk)
+    }
+
+    /// Appends MMR proof nodes to an existing prove buffer.
+    /// Only the owner of the prove buffer can append proof nodes to it.
+    ///
+    /// # Arguments
+    /// * `ctx`         - The context containing the prove buffer account (owned by signer)
+    /// * `proof_chunk` - Additional MMR proof nodes to append to the buffer
+    pub fn append_to_prove_buffer_proof(
+        ctx: Context<AppendToProveBufferProof>,
+        proof_chunk: Vec<[u8; 32]>,
+    ) -> Result<()> {
+        append_to_prove_buffer_proof_handler(ctx, proof_chunk)
+    }
+
+    /// Proves that a cross-chain message exists using buffered data and proof.
+    /// This function reads the serialized message and MMR proof from a `ProveBuffer`,
+    /// verifies inclusion against a previously registered output root, and stores the
+    /// proven message for later relay execution. The prove buffer is closed on success.
+    ///
+    /// # Arguments
+    /// * `ctx`          - The context containing accounts for verification and message creation
+    /// * `nonce`        - Unique identifier for the cross-chain message
+    /// * `sender`       - The 20-byte Ethereum address that sent the message on Base
+    /// * `message_hash` - The 32-byte hash of the message for verification
+    pub fn prove_message_buffered(
+        ctx: Context<ProveMessageBuffered>,
+        nonce: u64,
+        sender: [u8; 20],
+        message_hash: [u8; 32],
+    ) -> Result<()> {
+        prove_message_buffered_handler(ctx, nonce, sender, message_hash)
+    }
+
     /// Executes a previously proven cross-chain message on Solana.
     /// This function takes a message that has been proven via `prove_message` and executes
     /// its payload using a bridge CPI authority derived from the message sender.
