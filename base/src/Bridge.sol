@@ -107,6 +107,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Thrown when a zero address is detected
     error ZeroAddress();
 
+    /// @notice Thrown when the borsch-encoded message to bridge is too large to fit in a Solana account
     error SerializedMessageTooBig();
 
     //////////////////////////////////////////////////////////////
