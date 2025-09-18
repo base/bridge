@@ -54,6 +54,99 @@ export const IDL = {
       ]
     },
     {
+      "name": "append_to_prove_buffer_data",
+      "docs": [
+        "Appends serialized `Message` bytes to an existing prove buffer.",
+        "Only the owner of the prove buffer can append data to it.",
+        "",
+        "# Arguments",
+        "* `ctx`   - The context containing the prove buffer account (owned by signer)",
+        "* `chunk` - Additional serialized `Message` bytes to append to the buffer"
+      ],
+      "discriminator": [
+        4,
+        153,
+        157,
+        132,
+        144,
+        253,
+        235,
+        44
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "docs": [
+            "Owner authorized to modify the buffer"
+          ],
+          "signer": true
+        },
+        {
+          "name": "prove_buffer",
+          "docs": [
+            "Prove buffer account to append data to"
+          ],
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "chunk",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "append_to_prove_buffer_proof",
+      "docs": [
+        "Appends MMR proof nodes to an existing prove buffer.",
+        "Only the owner of the prove buffer can append proof nodes to it.",
+        "",
+        "# Arguments",
+        "* `ctx`         - The context containing the prove buffer account (owned by signer)",
+        "* `proof_chunk` - Additional MMR proof nodes to append to the buffer"
+      ],
+      "discriminator": [
+        234,
+        13,
+        59,
+        98,
+        112,
+        207,
+        250,
+        184
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "docs": [
+            "Owner authorized to modify the buffer"
+          ],
+          "signer": true
+        },
+        {
+          "name": "prove_buffer",
+          "docs": [
+            "Prove buffer account to append proof nodes to"
+          ],
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "proof_chunk",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "bridge_call",
       "docs": [
         "Initiates a cross-chain function call from Solana to Base.",
@@ -1091,6 +1184,45 @@ export const IDL = {
       "args": []
     },
     {
+      "name": "close_prove_buffer",
+      "docs": [
+        "Closes a prove buffer account and returns the rent to the owner.",
+        "Only the owner of the prove buffer can close it. This is useful if the user",
+        "cannot complete proving and wants to recover the rent.",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing the prove buffer to close and rent receiver (owner)"
+      ],
+      "discriminator": [
+        79,
+        14,
+        144,
+        49,
+        3,
+        124,
+        210,
+        74
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "docs": [
+            "The account paying for the transaction fees and receiving the rent back.",
+            "It must be the owner of the prove buffer account."
+          ],
+          "signer": true
+        },
+        {
+          "name": "prove_buffer",
+          "docs": [
+            "The prove buffer account to close"
+          ],
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initialize",
       "docs": [
         "Initializes the bridge program with required state accounts.",
@@ -1249,6 +1381,66 @@ export const IDL = {
       ]
     },
     {
+      "name": "initialize_prove_buffer",
+      "docs": [
+        "Initializes a prove buffer account that can store large prove inputs.",
+        "This account can be used to build up serialized message data and MMR proof nodes",
+        "over multiple transactions before calling `prove_message_buffered`.",
+        "",
+        "# Arguments",
+        "* `ctx`           - The context containing accounts for initialization (payer, bridge, buffer)",
+        "* `max_data_len`  - Maximum total length of serialized `Message` data that will be stored",
+        "* `max_proof_len` - Maximum number of 32-byte MMR proof nodes that will be stored"
+      ],
+      "discriminator": [
+        20,
+        200,
+        91,
+        188,
+        138,
+        211,
+        253,
+        222
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer funds the buffer account creation"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bridge",
+          "docs": [
+            "Bridge for pause checks (future use); also a consistent pattern like call buffers"
+          ]
+        },
+        {
+          "name": "prove_buffer",
+          "docs": [
+            "Prove buffer to be created with capacity sized by the provided max lengths"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "max_data_len",
+          "type": "u64"
+        },
+        {
+          "name": "max_proof_len",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "prove_message",
       "docs": [
         "Proves that a cross-chain message exists in the Base Bridge contract using an MMR proof.",
@@ -1344,6 +1536,102 @@ export const IDL = {
                 32
               ]
             }
+          }
+        },
+        {
+          "name": "message_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "prove_message_buffered",
+      "docs": [
+        "Proves that a cross-chain message exists using buffered data and proof.",
+        "This function reads the serialized message and MMR proof from a `ProveBuffer`,",
+        "verifies inclusion against a previously registered output root, and stores the",
+        "proven message for later relay execution. The prove buffer is closed on success.",
+        "",
+        "# Arguments",
+        "* `ctx`          - The context containing accounts for verification and message creation",
+        "* `nonce`        - Unique identifier for the cross-chain message",
+        "* `sender`       - The 20-byte Ethereum address that sent the message on Base",
+        "* `message_hash` - The 32-byte hash of the message for verification"
+      ],
+      "discriminator": [
+        211,
+        48,
+        193,
+        183,
+        2,
+        51,
+        102,
+        159
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "Payer funds the IncomingMessage account"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "output_root",
+          "docs": [
+            "Output root to verify the proof against"
+          ]
+        },
+        {
+          "name": "message",
+          "docs": [
+            "The incoming message account created if proof verifies"
+          ],
+          "writable": true
+        },
+        {
+          "name": "bridge",
+          "docs": [
+            "Bridge for pause check"
+          ]
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "Owner receives rent when buffer is closed"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "prove_buffer",
+          "docs": [
+            "Prove buffer containing data and proof; closed on success"
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "nonce",
+          "type": "u64"
+        },
+        {
+          "name": "sender",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
           }
         },
         {
@@ -2274,6 +2562,19 @@ export const IDL = {
         8,
         180,
         198
+      ]
+    },
+    {
+      "name": "ProveBuffer",
+      "discriminator": [
+        78,
+        160,
+        227,
+        163,
+        97,
+        140,
+        40,
+        149
       ]
     }
   ],
@@ -3213,6 +3514,46 @@ export const IDL = {
               "submitted output root must be a multiple of this number."
             ],
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProveBuffer",
+      "docs": [
+        "A buffer account to stage large Base → Solana prove inputs over multiple transactions.",
+        "Stores the serialized `Message` bytes (`data`) and the MMR `proof` nodes."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "docs": [
+              "The owner who can modify and eventually consume this buffer"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "data",
+            "docs": [
+              "Serialized `Message` data (Anchor-serialized)"
+            ],
+            "type": "bytes"
+          },
+          {
+            "name": "proof",
+            "docs": [
+              "MMR proof nodes used to validate inclusion against an OutputRoot"
+            ],
+            "type": {
+              "vec": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
           }
         ]
       }

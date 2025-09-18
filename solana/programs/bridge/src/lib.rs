@@ -137,6 +137,16 @@ pub mod bridge {
         append_to_prove_buffer_proof_handler(ctx, proof_chunk)
     }
 
+    /// Closes a prove buffer account and returns the rent to the owner.
+    /// Only the owner of the prove buffer can close it. This is useful if the user
+    /// cannot complete proving and wants to recover the rent.
+    ///
+    /// # Arguments
+    /// * `ctx` - The context containing the prove buffer to close and rent receiver (owner)
+    pub fn close_prove_buffer(ctx: Context<CloseProveBuffer>) -> Result<()> {
+        close_prove_buffer_handler(ctx)
+    }
+
     /// Proves that a cross-chain message exists using buffered data and proof.
     /// This function reads the serialized message and MMR proof from a `ProveBuffer`,
     /// verifies inclusion against a previously registered output root, and stores the
