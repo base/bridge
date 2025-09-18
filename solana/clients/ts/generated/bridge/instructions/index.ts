@@ -7,8 +7,6 @@
  */
 
 export * from './appendToCallBuffer';
-export * from './appendToProveBufferData';
-export * from './appendToProveBufferProof';
 export * from './bridgeCall';
 export * from './bridgeCallBuffered';
 export * from './bridgeSol';
@@ -18,12 +16,9 @@ export * from './bridgeSplWithBufferedCall';
 export * from './bridgeWrappedToken';
 export * from './bridgeWrappedTokenWithBufferedCall';
 export * from './closeCallBuffer';
-export * from './closeProveBuffer';
 export * from './initialize';
 export * from './initializeCallBuffer';
-export * from './initializeProveBuffer';
 export * from './proveMessage';
-export * from './proveMessageBuffered';
 export * from './registerOutputRoot';
 export * from './relayMessage';
 export * from './setAdjustmentDenominator';

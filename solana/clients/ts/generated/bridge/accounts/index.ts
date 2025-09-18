@@ -11,4 +11,3 @@ export * from './callBuffer';
 export * from './incomingMessage';
 export * from './outgoingMessage';
 export * from './outputRoot';
-export * from './proveBuffer';
