@@ -12,7 +12,7 @@ import {Call} from "./libraries/CallLib.sol";
 import {IncomingMessage, MessageLib, MessageType} from "./libraries/MessageLib.sol";
 import {MessageStorageLib} from "./libraries/MessageStorageLib.sol";
 import {SVMBridgeLib} from "./libraries/SVMBridgeLib.sol";
-import {Ix, Pubkey} from "./libraries/SVMLib.sol";
+import {Ix, Pubkey, SVMLib} from "./libraries/SVMLib.sol";
 import {SolanaTokenType, TokenLib, Transfer} from "./libraries/TokenLib.sol";
 
 /// @title Bridge
@@ -107,12 +107,19 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Thrown when a zero address is detected
     error ZeroAddress();
 
+    error SerializedMessageTooBig();
+
     //////////////////////////////////////////////////////////////
     ///                       Modifiers                        ///
     //////////////////////////////////////////////////////////////
 
     modifier whenNotPaused() {
         require(!paused, Paused());
+        _;
+    }
+
+    modifier isValidIxs(Ix[] calldata ixs) {
+        SVMLib.validateIxs(ixs);
         _;
     }
 
@@ -159,24 +166,31 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Bridges a call to the Solana bridge.
     ///
     /// @param ixs The instructions to execute on Solana.
-    function bridgeCall(Ix[] calldata ixs) external nonReentrant whenNotPaused {
-        MessageStorageLib.sendMessage({sender: msg.sender, data: SVMBridgeLib.serializeCall(ixs)});
+    function bridgeCall(Ix[] calldata ixs) external nonReentrant whenNotPaused isValidIxs(ixs) {
+        bytes memory data = SVMBridgeLib.serializeCall(ixs);
+        require(data.length <= SVMLib.MAX_SOLANA_DATA_LENGTH, SerializedMessageTooBig());
+        MessageStorageLib.sendMessage({sender: msg.sender, data: data});
     }
 
     /// @notice Bridges a transfer with an optional list of instructions to the Solana bridge.
     ///
     /// @param transfer The token transfer to execute.
     /// @param ixs      The optional Solana instructions.
-    function bridgeToken(Transfer memory transfer, Ix[] calldata ixs) external payable nonReentrant whenNotPaused {
+    function bridgeToken(Transfer memory transfer, Ix[] calldata ixs)
+        external
+        payable
+        nonReentrant
+        whenNotPaused
+        isValidIxs(ixs)
+    {
         // IMPORTANT: The `TokenLib.initializeTransfer` function might modify the `transfer.remoteAmount` field to
         //            account for potential transfer fees.
         SolanaTokenType transferType =
             TokenLib.initializeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
 
-        MessageStorageLib.sendMessage({
-            sender: msg.sender,
-            data: SVMBridgeLib.serializeTransfer({transfer: transfer, tokenType: transferType, ixs: ixs})
-        });
+        bytes memory data = SVMBridgeLib.serializeTransfer({transfer: transfer, tokenType: transferType, ixs: ixs});
+        require(data.length <= SVMLib.MAX_SOLANA_DATA_LENGTH, SerializedMessageTooBig());
+        MessageStorageLib.sendMessage({sender: msg.sender, data: data});
     }
 
     /// @notice Relays messages sent from Solana to Base.

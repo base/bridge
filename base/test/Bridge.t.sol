@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {Initializable} from "solady/utils/Initializable.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 
 import {DeployScript} from "../script/Deploy.s.sol";
@@ -10,7 +11,7 @@ import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {Call, CallType} from "../src/libraries/CallLib.sol";
 import {IncomingMessage, MessageType} from "../src/libraries/MessageLib.sol";
 import {SVMBridgeLib} from "../src/libraries/SVMBridgeLib.sol";
-import {Ix, Pubkey} from "../src/libraries/SVMLib.sol";
+import {Ix, Pubkey, SVMLib} from "../src/libraries/SVMLib.sol";
 import {TokenLib, Transfer} from "../src/libraries/TokenLib.sol";
 
 import {CommonTest} from "./CommonTest.t.sol";
@@ -31,6 +32,8 @@ contract BridgeTest is CommonTest {
 
     // Events to test
     event MessageSuccessfullyRelayed(address indexed submitter, bytes32 indexed messageHash);
+    event FailedToRelayMessage(address indexed submitter, bytes32 indexed messageHash);
+    event PauseSwitched(bool paused);
 
     function setUp() public {
         DeployScript deployer = new DeployScript();
@@ -63,6 +66,185 @@ contract BridgeTest is CommonTest {
         bridge.bridgeCall(ixs);
 
         assertEq(bridge.getNextNonce(), initialNonce + 1);
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                Instruction Validation Tests            ///
+    //////////////////////////////////////////////////////////////
+
+    function test_bridgeCall_revertsWhenTooManyInstructions() public {
+        Ix[] memory ixs = new Ix[](65); // MAX_INSTRUCTIONS = 64
+        for (uint256 i; i < ixs.length; i++) {
+            ixs[i] = Ix({programId: TEST_SENDER, serializedAccounts: new bytes[](0), data: hex""});
+        }
+
+        vm.expectRevert(SVMLib.TooManyInstructions.selector);
+        bridge.bridgeCall(ixs);
+    }
+
+    function test_bridgeCall_revertsOnInvalidSerializedAccountLength() public {
+        bytes[] memory accts = new bytes[](1);
+        accts[0] = new bytes(33); // Invalid, must be 34
+        Ix[] memory ixs = new Ix[](1);
+        ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: accts, data: hex""});
+
+        vm.expectRevert(SVMLib.InvalidSerializedAccountLength.selector);
+        bridge.bridgeCall(ixs);
+    }
+
+    function test_bridgeCall_revertsOnTooManyAccounts() public {
+        bytes[] memory accts = new bytes[](59); // MAX_ACCOUNTS = 58
+        for (uint256 i; i < accts.length; i++) {
+            bytes memory acct = new bytes(34);
+            // First 32 bytes = unique pubkey
+            bytes32 pk = bytes32(uint256(i + 1));
+            assembly {
+                mstore(add(acct, 32), pk)
+            }
+            // Last byte (is_signer bit) = 0
+            acct[33] = bytes1(uint8(0));
+            accts[i] = acct;
+        }
+        Ix[] memory ixs = new Ix[](1);
+        ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: accts, data: hex""});
+
+        vm.expectRevert(SVMLib.TooManyAccounts.selector);
+        bridge.bridgeCall(ixs);
+    }
+
+    function test_bridgeCall_revertsOnTooManySignatures() public {
+        bytes[] memory accts = new bytes[](13); // MAX_SIGNATURES = 12
+        for (uint256 i; i < accts.length; i++) {
+            bytes memory acct = new bytes(34);
+            bytes32 pk = bytes32(uint256(0x1000 + i));
+            assembly {
+                mstore(add(acct, 32), pk)
+            }
+            // Mark as signer
+            acct[33] = bytes1(uint8(1));
+            accts[i] = acct;
+        }
+        Ix[] memory ixs = new Ix[](1);
+        ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: accts, data: hex""});
+
+        vm.expectRevert(SVMLib.TooManySignatures.selector);
+        bridge.bridgeCall(ixs);
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                Message Size Limit Tests                ///
+    //////////////////////////////////////////////////////////////
+
+    function test_bridgeCall_revertsWhenSerializedMessageTooBig() public {
+        Ix[] memory ixs = new Ix[](1);
+        bytes memory big = new bytes(9956); // 45 overhead + 9956 = 10001 > 10000
+        ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: new bytes[](0), data: big});
+
+        vm.expectRevert(Bridge.SerializedMessageTooBig.selector);
+        bridge.bridgeCall(ixs);
+    }
+
+    function test_bridgeToken_revertsWhenSerializedMessageTooBig() public {
+        // Register ETH-SOL pair with 9 decimal difference
+        _registerTokenPair(TokenLib.ETH_ADDRESS, TokenLib.NATIVE_SOL_PUBKEY, 9, 0);
+
+        Transfer memory transfer = Transfer({
+            localToken: TokenLib.ETH_ADDRESS,
+            remoteToken: TokenLib.NATIVE_SOL_PUBKEY,
+            to: bytes32(uint256(uint160(user))),
+            remoteAmount: 1e9 // requires msg.value = 1e18
+        });
+
+        Ix[] memory ixs = new Ix[](1);
+        bytes memory big = new bytes(9956);
+        ixs[0] = Ix({programId: TEST_SENDER, serializedAccounts: new bytes[](0), data: big});
+
+        vm.expectRevert();
+        vm.prank(user);
+        bridge.bridgeToken{value: 1e18}(transfer, ixs);
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                Relay Failure Handling Tests            ///
+    //////////////////////////////////////////////////////////////
+
+    function test_relayMessages_emitsFailureEventAndMarksFailure() public {
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
+            nonce: 0,
+            sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
+            ty: MessageType.Call,
+            data: abi.encode(
+                Call({
+                    ty: CallType.Call,
+                    to: address(mockTarget),
+                    value: 0,
+                    data: abi.encodeWithSelector(TestTarget.alwaysReverts.selector)
+                })
+            )
+        });
+
+        bytes32 expectedHash = bridge.getMessageHash(messages[0]);
+
+        _registerMessage(messages[0]);
+
+        vm.expectEmit(true, false, false, false);
+        emit FailedToRelayMessage(address(this), expectedHash);
+
+        bridge.relayMessages(messages);
+
+        assertTrue(bridge.failures(expectedHash));
+        assertFalse(bridge.successes(expectedHash));
+    }
+
+    function test_relayMessage_transferDoesNotCreateTwin() public {
+        // Use the crossChainToken already deployed in setUp
+        Transfer memory transfer = Transfer({
+            localToken: address(crossChainToken),
+            remoteToken: TEST_REMOTE_TOKEN,
+            to: bytes32(bytes20(user)),
+            remoteAmount: 1
+        });
+
+        IncomingMessage[] memory messages = new IncomingMessage[](1);
+        messages[0] = IncomingMessage({
+            nonce: 0,
+            sender: TEST_SENDER,
+            gasLimit: GAS_LIMIT,
+            ty: MessageType.Transfer,
+            data: abi.encode(transfer)
+        });
+
+        _registerMessage(messages[0]);
+        bridge.relayMessages(messages);
+
+        assertEq(bridge.twins(TEST_SENDER), address(0));
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                    Events and Init Tests               ///
+    //////////////////////////////////////////////////////////////
+
+    function test_setPaused_emitsEvent() public {
+        vm.prank(cfg.guardians[0]);
+        vm.expectEmit(false, false, false, true);
+        emit PauseSwitched(true);
+        bridge.setPaused(true);
+    }
+
+    function test_initialize_isDisabled() public {
+        Bridge fresh = new Bridge({
+            remoteBridge: TEST_SENDER,
+            twinBeacon: address(0xBEEF),
+            crossChainErc20Factory: address(0xCAFE),
+            bridgeValidator: address(0xF00D)
+        });
+
+        address[] memory guardians = new address[](0);
+
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        fresh.initialize(address(this), guardians);
     }
 
     function test_bridgeCall_withEmptyInstructions() public {
