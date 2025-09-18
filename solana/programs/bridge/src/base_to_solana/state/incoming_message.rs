@@ -16,6 +16,11 @@ use crate::base_to_solana::{
 #[account]
 #[derive(Debug)]
 pub struct IncomingMessage {
+    /// The Keccak-256 hash of the message computed as keccak256(nonce || sender || data).
+    /// Used to derive the incoming message PDA address and to verify inclusion via the MMR.
+    /// Uniquely identifies the message and enables idempotent execution.
+    pub message_hash: [u8; 32],
+
     /// The 20-byte EVM address of the sender on Base who initiated this bridge operation.
     /// Used to derive the bridge CPI authority PDA that signs downstream CPIs during relay.
     /// This field does not restrict who can call the relay instruction.
@@ -34,11 +39,12 @@ impl IncomingMessage {
     /// Returns the byte size for account allocation excluding the DISCRIMINATOR_LEN-byte Anchor discriminator.
     ///
     /// Layout:
+    /// - `message_hash`: 32 bytes
     /// - `sender`: 20 bytes
     /// - `message`: 4-byte length prefix + `data_len` bytes (Anchor-serialized `Message`)
     /// - `executed`: 1 byte
     pub fn space(data_len: usize) -> usize {
-        20 + (4 + data_len) + 1
+        32 + 20 + (4 + data_len) + 1
     }
 }
 

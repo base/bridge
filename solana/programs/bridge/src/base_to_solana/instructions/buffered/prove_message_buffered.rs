@@ -80,6 +80,7 @@ pub fn prove_message_buffered_handler(
     // Deserialize and save
     let message_enum = Message::try_from_slice(data)?;
     *ctx.accounts.message = IncomingMessage {
+        message_hash,
         executed: false,
         sender,
         message: message_enum,

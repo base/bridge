@@ -79,6 +79,7 @@ pub fn prove_message_handler(
     )?;
 
     *ctx.accounts.message = IncomingMessage {
+        message_hash,
         executed: false,
         sender,
         message: Message::try_from_slice(&data)?,
