@@ -59,8 +59,10 @@ library SVMLib {
     /// @dev Layout: 32-byte pubkey || 1-byte is_writable || 1-byte is_signer.
     uint8 internal constant SERIALIZED_ACCOUNT_LENGTH = 34;
 
-    /// @notice Maximum serialized message payload length forwarded to Solana.
-    uint16 internal constant MAX_SOLANA_DATA_LENGTH = 10_000;
+    /// @notice Maximum serialized message payload length forwarded to Solana. This is a conservative amount to leave
+    ///         room for MMR proofs while also ensuring the Solana execution environment can handle loading the full
+    ///         account.
+    uint16 internal constant MAX_SOLANA_DATA_LENGTH = 6_000;
 
     //////////////////////////////////////////////////////////////
     ///                       Errors                           ///
