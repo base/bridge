@@ -15,8 +15,6 @@ import {
 } from '@solana/kit';
 import {
   type ParsedAppendToCallBufferInstruction,
-  type ParsedAppendToProveBufferDataInstruction,
-  type ParsedAppendToProveBufferProofInstruction,
   type ParsedBridgeCallBufferedInstruction,
   type ParsedBridgeCallInstruction,
   type ParsedBridgeSolInstruction,
@@ -26,11 +24,8 @@ import {
   type ParsedBridgeWrappedTokenInstruction,
   type ParsedBridgeWrappedTokenWithBufferedCallInstruction,
   type ParsedCloseCallBufferInstruction,
-  type ParsedCloseProveBufferInstruction,
   type ParsedInitializeCallBufferInstruction,
   type ParsedInitializeInstruction,
-  type ParsedInitializeProveBufferInstruction,
-  type ParsedProveMessageBufferedInstruction,
   type ParsedProveMessageInstruction,
   type ParsedRegisterOutputRootInstruction,
   type ParsedRelayMessageInstruction,
@@ -59,7 +54,6 @@ export enum BridgeAccount {
   IncomingMessage,
   OutgoingMessage,
   OutputRoot,
-  ProveBuffer,
 }
 
 export function identifyBridgeAccount(
@@ -121,17 +115,6 @@ export function identifyBridgeAccount(
   ) {
     return BridgeAccount.OutputRoot;
   }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([78, 160, 227, 163, 97, 140, 40, 149])
-      ),
-      0
-    )
-  ) {
-    return BridgeAccount.ProveBuffer;
-  }
   throw new Error(
     'The provided account could not be identified as a bridge account.'
   );
@@ -139,8 +122,6 @@ export function identifyBridgeAccount(
 
 export enum BridgeInstruction {
   AppendToCallBuffer,
-  AppendToProveBufferData,
-  AppendToProveBufferProof,
   BridgeCall,
   BridgeCallBuffered,
   BridgeSol,
@@ -150,12 +131,9 @@ export enum BridgeInstruction {
   BridgeWrappedToken,
   BridgeWrappedTokenWithBufferedCall,
   CloseCallBuffer,
-  CloseProveBuffer,
   Initialize,
   InitializeCallBuffer,
-  InitializeProveBuffer,
   ProveMessage,
-  ProveMessageBuffered,
   RegisterOutputRoot,
   RelayMessage,
   SetAdjustmentDenominator,
@@ -189,28 +167,6 @@ export function identifyBridgeInstruction(
     )
   ) {
     return BridgeInstruction.AppendToCallBuffer;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([4, 153, 157, 132, 144, 253, 235, 44])
-      ),
-      0
-    )
-  ) {
-    return BridgeInstruction.AppendToProveBufferData;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([234, 13, 59, 98, 112, 207, 250, 184])
-      ),
-      0
-    )
-  ) {
-    return BridgeInstruction.AppendToProveBufferProof;
   }
   if (
     containsBytes(
@@ -315,17 +271,6 @@ export function identifyBridgeInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([79, 14, 144, 49, 3, 124, 210, 74])
-      ),
-      0
-    )
-  ) {
-    return BridgeInstruction.CloseProveBuffer;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([175, 175, 109, 31, 13, 152, 155, 237])
       ),
       0
@@ -348,34 +293,12 @@ export function identifyBridgeInstruction(
     containsBytes(
       data,
       fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([20, 200, 91, 188, 138, 211, 253, 222])
-      ),
-      0
-    )
-  ) {
-    return BridgeInstruction.InitializeProveBuffer;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
         new Uint8Array([172, 66, 78, 136, 158, 187, 47, 115])
       ),
       0
     )
   ) {
     return BridgeInstruction.ProveMessage;
-  }
-  if (
-    containsBytes(
-      data,
-      fixEncoderSize(getBytesEncoder(), 8).encode(
-        new Uint8Array([211, 48, 193, 183, 2, 51, 102, 159])
-      ),
-      0
-    )
-  ) {
-    return BridgeInstruction.ProveMessageBuffered;
   }
   if (
     containsBytes(
@@ -574,12 +497,6 @@ export type ParsedBridgeInstruction<TProgram extends string = 'undefined'> =
       instructionType: BridgeInstruction.AppendToCallBuffer;
     } & ParsedAppendToCallBufferInstruction<TProgram>)
   | ({
-      instructionType: BridgeInstruction.AppendToProveBufferData;
-    } & ParsedAppendToProveBufferDataInstruction<TProgram>)
-  | ({
-      instructionType: BridgeInstruction.AppendToProveBufferProof;
-    } & ParsedAppendToProveBufferProofInstruction<TProgram>)
-  | ({
       instructionType: BridgeInstruction.BridgeCall;
     } & ParsedBridgeCallInstruction<TProgram>)
   | ({
@@ -607,23 +524,14 @@ export type ParsedBridgeInstruction<TProgram extends string = 'undefined'> =
       instructionType: BridgeInstruction.CloseCallBuffer;
     } & ParsedCloseCallBufferInstruction<TProgram>)
   | ({
-      instructionType: BridgeInstruction.CloseProveBuffer;
-    } & ParsedCloseProveBufferInstruction<TProgram>)
-  | ({
       instructionType: BridgeInstruction.Initialize;
     } & ParsedInitializeInstruction<TProgram>)
   | ({
       instructionType: BridgeInstruction.InitializeCallBuffer;
     } & ParsedInitializeCallBufferInstruction<TProgram>)
   | ({
-      instructionType: BridgeInstruction.InitializeProveBuffer;
-    } & ParsedInitializeProveBufferInstruction<TProgram>)
-  | ({
       instructionType: BridgeInstruction.ProveMessage;
     } & ParsedProveMessageInstruction<TProgram>)
-  | ({
-      instructionType: BridgeInstruction.ProveMessageBuffered;
-    } & ParsedProveMessageBufferedInstruction<TProgram>)
   | ({
       instructionType: BridgeInstruction.RegisterOutputRoot;
     } & ParsedRegisterOutputRootInstruction<TProgram>)
