@@ -52,6 +52,8 @@ pub fn relay_message_handler<'a, 'info>(
         };
     }
 
+    ctx.accounts.message.executed = true;
+
     // Derive the bridge CPI authority PDA tied to the message sender; used to sign all downstream CPIs.
     let (_, bump) = Pubkey::find_program_address(
         &[
@@ -76,8 +78,6 @@ pub fn relay_message_handler<'a, 'info>(
             &[bridge_cpi_authority_seeds],
         )?;
     }
-
-    ctx.accounts.message.executed = true;
 
     Ok(())
 }
