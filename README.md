@@ -11,7 +11,7 @@ A bridge between Base and blockchains outside the Ethereum ecosystem. Currently 
 <!-- Badge row 1 - status -->
 
 [![GitHub contributors](https://img.shields.io/github/contributors/base/bridge)](https://github.com/base/bridge/graphs/contributors)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/w/base/bridge)](https://github.com/base/bridge/graphs/contributors)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/w/base/bridge)](https://github.com/base/bridge/graphs/commit-activity)
 [![GitHub Stars](https://img.shields.io/github/stars/base/bridge.svg)](https://github.com/base/bridge/stargazers)
 ![GitHub repo size](https://img.shields.io/github/repo-size/base/bridge)
 [![GitHub](https://img.shields.io/github/license/base/bridge?color=blue)](https://github.com/base/bridge/blob/main/LICENSE)
