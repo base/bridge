@@ -21,7 +21,7 @@ import { decodeEventLog } from "viem/utils";
 import {
   fetchBridge,
   getProveMessageInstruction,
-} from "../../../../../../../clients/ts/src";
+} from "../../../../../../../clients/ts/src/bridge";
 
 import { logger } from "@internal/logger";
 import {

@@ -19,7 +19,7 @@ import {
   type BridgeBaseToSolanaStateIncomingMessageMessage,
   type BridgeBaseToSolanaStateIncomingMessageTransfer,
   type Ix,
-} from "../../../../../../../clients/ts/src";
+} from "../../../../../../../clients/ts/src/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -137,7 +137,6 @@ export async function handleRelayMessage(
 
     const relayMessageIx = getRelayMessageInstruction(
       {
-        payer,
         message: messagePda,
         bridge: bridgeAccountAddress,
       },
@@ -181,18 +180,8 @@ async function getIxAccounts(ixs: Ix[]) {
   for (const ix of ixs) {
     const ixAccounts = await Promise.all(
       ix.accounts.map(async (acc) => {
-        let address: SolanaAddress;
-        if (acc.pubkeyOrPda.__kind === "Pubkey") {
-          address = acc.pubkeyOrPda.fields[0];
-        } else {
-          [address] = await getProgramDerivedAddress({
-            programAddress: acc.pubkeyOrPda.programId,
-            seeds: acc.pubkeyOrPda.seeds,
-          });
-        }
-
         return {
-          address,
+          address: acc.pubkey,
           role: acc.isWritable
             ? acc.isSigner
               ? AccountRole.WRITABLE_SIGNER
