@@ -14,6 +14,8 @@ import {
   fetchCfg,
 } from "../../../../clients/ts/src/base-relayer";
 
+import { logger } from "@internal/logger";
+
 import { CONSTANTS } from "./constants";
 import { getRelayerIdlConstant } from "./base-relayer-idl.constants";
 
@@ -37,9 +39,9 @@ export async function buildPayForRelayInstruction(
   const cfg = await fetchCfg(solRpc, cfgAddress);
 
   const mtrKeypair = await generateKeyPair();
-  const mtrSigner = await createSignerFromKeyPair(mtrKeypair);
+  const mtrKeypairSigner = await createSignerFromKeyPair(mtrKeypair);
 
-  console.log(`Message To Relay: ${mtrSigner.address}`);
+  logger.info(`Message To Relay: ${mtrKeypairSigner.address}`);
 
   return getPayForRelayInstruction(
     {
@@ -47,12 +49,12 @@ export async function buildPayForRelayInstruction(
       payer,
       cfg: cfgAddress,
       gasFeeReceiver: cfg.data.gasConfig.gasFeeReceiver,
-      messageToRelay: mtrSigner,
+      messageToRelay: mtrKeypairSigner,
       systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
       // Arguments
       outgoingMessage: outgoingMessage,
-      gasLimit: BigInt(200_000),
+      gasLimit: 200_000n,
     },
     { programAddress: solConfig.baseRelayer }
   );

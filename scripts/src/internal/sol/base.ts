@@ -128,7 +128,9 @@ export async function monitorMessageExecution(
   logger.info(`Computed inner hash: ${innerHash}`);
   logger.info(`Computed outer hash: ${outerHash}`);
 
-  for (let attempt = 0; attempt < 30; attempt++) {
+  while (true) {
+    logger.debug(`Checking for message ${outerHash} execution...`);
+
     const isSuccessful = await publicClient.readContract({
       address: bridgeAddress,
       abi: BRIDGE_ABI,
