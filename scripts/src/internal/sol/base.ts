@@ -129,7 +129,7 @@ export async function monitorMessageExecution(
   logger.info(`Computed outer hash: ${outerHash}`);
 
   while (true) {
-    logger.debug(`Checking for message ${outerHash} execution...`);
+    logger.debug(`Waiting for automatic relay of message ${outerHash}...`);
 
     const isSuccessful = await publicClient.readContract({
       address: bridgeAddress,
@@ -139,7 +139,7 @@ export async function monitorMessageExecution(
     });
 
     if (isSuccessful) {
-      logger.success("Message executed successfully.");
+      logger.success("Message relayed successfully.");
       return;
     }
 
