@@ -79,18 +79,15 @@ contract DeployScript is DevOps {
     }
 
     function _deployBridgeValidator(HelperConfig.NetworkConfig memory cfg, address bridge) private returns (address) {
-        address bridgeValidatorImpl = address(
-            new BridgeValidator({
-                partnerThreshold: cfg.partnerValidatorThreshold,
-                bridgeAddress: bridge,
-                partnerValidators: cfg.partnerValidators
-            })
-        );
+        address bridgeValidatorImpl =
+            address(new BridgeValidator({bridgeAddress: bridge, partnerValidators: cfg.partnerValidators}));
 
         return ERC1967Factory(cfg.erc1967Factory).deployAndCall({
             implementation: bridgeValidatorImpl,
             admin: cfg.initialOwner,
-            data: abi.encodeCall(BridgeValidator.initialize, (cfg.baseValidators, cfg.baseSignatureThreshold))
+            data: abi.encodeCall(
+                BridgeValidator.initialize, (cfg.baseValidators, cfg.baseSignatureThreshold, cfg.partnerValidatorThreshold)
+            )
         });
     }
 

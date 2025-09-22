@@ -213,7 +213,7 @@ async function generateProof(
   logger.info(`  Sender: ${event.message.sender}`);
   logger.info(`  Data: ${event.message.data}`);
 
-  const [rawProof] = await publicClient.readContract({
+  const rawProof = await publicClient.readContract({
     address: baseBridgeAddress,
     abi: BRIDGE_ABI,
     functionName: "generateProof",

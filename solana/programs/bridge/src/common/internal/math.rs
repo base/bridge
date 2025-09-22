@@ -35,7 +35,7 @@ mod tests {
 
     /// Helper function to check if two values are approximately equal within tolerance
     fn approx_eq(a: u128, b: u128, tolerance_percent: f64) -> bool {
-        let diff = if a > b { a - b } else { b - a };
+        let diff = a.abs_diff(b);
         let max_val = if a > b { a } else { b };
         if max_val == 0 {
             return diff == 0;

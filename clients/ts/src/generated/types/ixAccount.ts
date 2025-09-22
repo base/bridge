@@ -8,20 +8,17 @@
 
 import {
   combineCodec,
+  getAddressDecoder,
+  getAddressEncoder,
   getBooleanDecoder,
   getBooleanEncoder,
   getStructDecoder,
   getStructEncoder,
+  type Address,
   type Codec,
   type Decoder,
   type Encoder,
 } from '@solana/kit';
-import {
-  getPubkeyOrPdaDecoder,
-  getPubkeyOrPdaEncoder,
-  type PubkeyOrPda,
-  type PubkeyOrPdaArgs,
-} from '.';
 
 /**
  * Account used in an instruction.
@@ -30,25 +27,18 @@ import {
 
 export type IxAccount = {
   /** Public key of the account. */
-  pubkeyOrPda: PubkeyOrPda;
+  pubkey: Address;
   /** Whether the account is writable. */
   isWritable: boolean;
   /** Whether the account is a signer. */
   isSigner: boolean;
 };
 
-export type IxAccountArgs = {
-  /** Public key of the account. */
-  pubkeyOrPda: PubkeyOrPdaArgs;
-  /** Whether the account is writable. */
-  isWritable: boolean;
-  /** Whether the account is a signer. */
-  isSigner: boolean;
-};
+export type IxAccountArgs = IxAccount;
 
 export function getIxAccountEncoder(): Encoder<IxAccountArgs> {
   return getStructEncoder([
-    ['pubkeyOrPda', getPubkeyOrPdaEncoder()],
+    ['pubkey', getAddressEncoder()],
     ['isWritable', getBooleanEncoder()],
     ['isSigner', getBooleanEncoder()],
   ]);
@@ -56,7 +46,7 @@ export function getIxAccountEncoder(): Encoder<IxAccountArgs> {
 
 export function getIxAccountDecoder(): Decoder<IxAccount> {
   return getStructDecoder([
-    ['pubkeyOrPda', getPubkeyOrPdaDecoder()],
+    ['pubkey', getAddressDecoder()],
     ['isWritable', getBooleanDecoder()],
     ['isSigner', getBooleanDecoder()],
   ]);

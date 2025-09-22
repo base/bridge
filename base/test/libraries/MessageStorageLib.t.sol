@@ -512,10 +512,9 @@ contract MessageStorageLibTest is Test {
         MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("single")});
 
         // Act
-        (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(0);
+        bytes32[] memory proof = MessageStorageLib.generateProof(0);
 
         // Assert
-        assertEq(totalLeafCount, 1, "Total leaf count should be 1");
         assertEq(proof.length, 0, "Proof for single leaf should be empty");
     }
 
@@ -525,10 +524,9 @@ contract MessageStorageLibTest is Test {
         MessageStorageLib.sendMessage({sender: address(this), data: _createTestData("second")});
 
         // Act
-        (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(0);
+        bytes32[] memory proof = MessageStorageLib.generateProof(0);
 
         // Assert
-        assertEq(totalLeafCount, 2, "Total leaf count should be 2");
         assertEq(proof.length, 1, "Proof should contain 1 element (sibling)");
         assertNotEq(proof[0], bytes32(0), "Proof element should not be zero");
     }
@@ -544,9 +542,8 @@ contract MessageStorageLibTest is Test {
 
         // Act & Assert - test different leaves
         for (uint256 leafIndex = 0; leafIndex < 4; leafIndex++) {
-            (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(uint64(leafIndex));
+            bytes32[] memory proof = MessageStorageLib.generateProof(uint64(leafIndex));
 
-            assertEq(totalLeafCount, 4, "Total leaf count should be 4");
             assertGt(proof.length, 0, "Proof should not be empty");
 
             // Verify all proof elements are non-zero
@@ -572,8 +569,7 @@ contract MessageStorageLibTest is Test {
         }
 
         // Generate proof for first leaf - should include other peaks
-        (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(0);
-        assertEq(totalLeafCount, 5);
+        bytes32[] memory proof = MessageStorageLib.generateProof(0);
         assertTrue(proof.length > 1, "Proof should include other peaks");
     }
 
@@ -591,8 +587,7 @@ contract MessageStorageLibTest is Test {
 
         // Generate proof for each leaf to exercise different mountain positions
         for (uint64 leafIdx = 0; leafIdx < 4; leafIdx++) {
-            (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(leafIdx);
-            assertEq(totalLeafCount, 4);
+            bytes32[] memory proof = MessageStorageLib.generateProof(leafIdx);
             assertGt(proof.length, 0, "Each leaf should have a valid proof");
         }
     }
@@ -609,9 +604,9 @@ contract MessageStorageLibTest is Test {
         }
 
         // Generate proofs for leaves in different mountains
-        (bytes32[] memory proof1,) = MessageStorageLib.generateProof(0);
-        (bytes32[] memory proof2,) = MessageStorageLib.generateProof(3);
-        (bytes32[] memory proof3,) = MessageStorageLib.generateProof(6);
+        bytes32[] memory proof1 = MessageStorageLib.generateProof(0);
+        bytes32[] memory proof2 = MessageStorageLib.generateProof(3);
+        bytes32[] memory proof3 = MessageStorageLib.generateProof(6);
 
         assertTrue(proof1.length > 0);
         assertTrue(proof2.length > 0);
@@ -628,8 +623,7 @@ contract MessageStorageLibTest is Test {
         }
 
         // Generate proof for a leaf that will require collecting other peaks
-        (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(1);
-        assertEq(totalLeafCount, 6);
+        bytes32[] memory proof = MessageStorageLib.generateProof(1);
 
         // The proof should contain peaks from other mountains
         assertTrue(proof.length >= 2, "Proof should include other mountain peaks");
@@ -671,8 +665,7 @@ contract MessageStorageLibTest is Test {
         }
 
         // Generate proof to exercise peak index calculation
-        (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(0);
-        assertEq(totalLeafCount, 3);
+        bytes32[] memory proof = MessageStorageLib.generateProof(0);
         assertTrue(proof.length > 0, "Should have valid proof with calculated peak indices");
     }
 
@@ -696,8 +689,7 @@ contract MessageStorageLibTest is Test {
         testLeaves[4] = 10; // Another random position
 
         for (uint256 i = 0; i < testLeaves.length; i++) {
-            (bytes32[] memory proof, uint64 totalLeafCount) = MessageStorageLib.generateProof(testLeaves[i]);
-            assertEq(totalLeafCount, 15);
+            bytes32[] memory proof = MessageStorageLib.generateProof(testLeaves[i]);
             assertTrue(proof.length > 0, string(abi.encodePacked("Proof should exist for leaf ", testLeaves[i])));
         }
     }

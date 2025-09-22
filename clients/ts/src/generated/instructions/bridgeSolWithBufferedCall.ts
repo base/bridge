@@ -193,7 +193,7 @@ export type BridgeSolWithBufferedCallInput<
    * The outgoing message account that stores the cross-chain transfer details.
    * - Created fresh for each bridge; address determined by the provided keypair
    * - Funded by `payer`
-   * - Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`
+   * - Space: DISCRIMINATOR_LEN + serialized `OutgoingMessage`
    */
   outgoingMessage: TransactionSigner<TAccountOutgoingMessage>;
   /** System program required for account creation and the SOL transfer CPI. */
@@ -350,7 +350,7 @@ export type ParsedBridgeSolWithBufferedCallInstruction<
      * The outgoing message account that stores the cross-chain transfer details.
      * - Created fresh for each bridge; address determined by the provided keypair
      * - Funded by `payer`
-     * - Space: 8-byte Anchor discriminator + serialized `OutgoingMessage`
+     * - Space: DISCRIMINATOR_LEN + serialized `OutgoingMessage`
      */
 
     outgoingMessage: TAccountMetas[7];

@@ -31,7 +31,7 @@ pub struct IncomingMessage {
 }
 
 impl IncomingMessage {
-    /// Returns the byte size for account allocation excluding the 8-byte Anchor discriminator.
+    /// Returns the byte size for account allocation excluding the DISCRIMINATOR_LEN-byte Anchor discriminator.
     ///
     /// Layout:
     /// - `sender`: 20 bytes

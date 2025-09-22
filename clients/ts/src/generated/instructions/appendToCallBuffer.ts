@@ -25,13 +25,21 @@ import {
   type Codec,
   type Decoder,
   type Encoder,
+<<<<<<<< HEAD:clients/ts/src/generated/instructions/appendToCallBuffer.ts
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
+========
+  type IAccountMeta,
+  type IAccountSignerMeta,
+  type IInstruction,
+  type IInstructionWithAccounts,
+  type IInstructionWithData,
+  type ReadonlySignerAccount,
+>>>>>>>> main:solana/clients/ts/generated/bridge/instructions/appendToCallBuffer.ts
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
-  type WritableSignerAccount,
 } from '@solana/kit';
 import { BRIDGE_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -56,8 +64,13 @@ export type AppendToCallBufferInstruction<
   InstructionWithAccounts<
     [
       TAccountOwner extends string
+<<<<<<<< HEAD:clients/ts/src/generated/instructions/appendToCallBuffer.ts
         ? WritableSignerAccount<TAccountOwner> &
             AccountSignerMeta<TAccountOwner>
+========
+        ? ReadonlySignerAccount<TAccountOwner> &
+            IAccountSignerMeta<TAccountOwner>
+>>>>>>>> main:solana/clients/ts/generated/bridge/instructions/appendToCallBuffer.ts
         : TAccountOwner,
       TAccountCallBuffer extends string
         ? WritableAccount<TAccountCallBuffer>
@@ -141,7 +154,7 @@ export function getAppendToCallBufferInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    owner: { value: input.owner ?? null, isWritable: true },
+    owner: { value: input.owner ?? null, isWritable: false },
     callBuffer: { value: input.callBuffer ?? null, isWritable: true },
   };
   const accounts = originalAccounts as Record<

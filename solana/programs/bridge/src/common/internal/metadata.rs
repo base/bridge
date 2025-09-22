@@ -122,8 +122,8 @@ impl TryFrom<TokenMetadata> for PartialTokenMetadata {
 impl TryFrom<&AccountInfo<'_>> for PartialTokenMetadata {
     type Error = Error;
 
-    fn try_from(value: &AccountInfo<'_>) -> Result<Self> {
-        let (token_metadata, decimals) = mint_info_to_token_metadata(value)?;
+    fn try_from(mint: &AccountInfo<'_>) -> Result<Self> {
+        let (token_metadata, decimals) = mint_info_to_token_metadata(mint)?;
         let partial = Self::try_from(token_metadata)?;
 
         // Ensure the provided mint is a PDA derived by this program for wrapped tokens.
@@ -136,7 +136,7 @@ impl TryFrom<&AccountInfo<'_>> for PartialTokenMetadata {
         ];
         let (expected_mint, _bump) = Pubkey::find_program_address(seeds, &ID);
         require_keys_eq!(
-            value.key(),
+            mint.key(),
             expected_mint,
             TokenMetadataError::MintIsNotWrappedTokenPda
         );

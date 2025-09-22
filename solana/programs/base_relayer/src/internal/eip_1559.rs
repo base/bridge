@@ -67,9 +67,10 @@ impl Eip1559 {
         }
 
         // Update state for new window
-        self.current_base_fee = current_base_fee;
+        self.current_base_fee = current_base_fee.max(self.config.minimum_base_fee);
         self.current_window_gas_used = 0;
-        self.window_start_time = current_timestamp;
+        self.window_start_time +=
+            (expired_windows_count * self.config.window_duration_seconds) as i64;
 
         current_base_fee
     }
@@ -104,10 +105,7 @@ impl Eip1559 {
                 / self.config.target
                 / self.config.denominator;
 
-            // Ensure base fee doesn't go below the configurable minimum
-            self.current_base_fee
-                .checked_sub(base_fee_delta)
-                .unwrap_or(self.config.minimum_base_fee)
+            self.current_base_fee.saturating_sub(base_fee_delta)
         }
     }
 
@@ -123,7 +121,12 @@ mod tests {
     use super::*;
 
     fn new_eip() -> Eip1559 {
-        Eip1559::test_new()
+        Eip1559 {
+            config: Eip1559Config::test_new(),
+            current_base_fee: 100,
+            current_window_gas_used: 0,
+            window_start_time: 0,
+        }
     }
 
     #[test]
@@ -212,9 +215,10 @@ mod tests {
     fn refresh_base_fee_no_expiry_keeps_start_time() {
         let eip = new_eip();
         let mut eip = Eip1559 { ..eip };
+        let start_time = eip.window_start_time;
         let _ = eip.refresh_base_fee(eip.window_start_time);
 
-        assert_eq!(eip.window_start_time, Eip1559::test_new().window_start_time);
+        assert_eq!(eip.window_start_time, start_time);
     }
 
     #[test]

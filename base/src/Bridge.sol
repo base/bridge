@@ -12,7 +12,7 @@ import {Call} from "./libraries/CallLib.sol";
 import {IncomingMessage, MessageLib, MessageType} from "./libraries/MessageLib.sol";
 import {MessageStorageLib} from "./libraries/MessageStorageLib.sol";
 import {SVMBridgeLib} from "./libraries/SVMBridgeLib.sol";
-import {Ix, Pubkey} from "./libraries/SVMLib.sol";
+import {Ix, Pubkey, SVMLib} from "./libraries/SVMLib.sol";
 import {SolanaTokenType, TokenLib, Transfer} from "./libraries/TokenLib.sol";
 
 /// @title Bridge
@@ -95,9 +95,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     ///                       Errors                           ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Thrown when a message has already been successfully relayed.
-    error MessageAlreadySuccessfullyRelayed();
-
     /// @notice Thrown when the bridge is paused.
     error Paused();
 
@@ -110,12 +107,20 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Thrown when a zero address is detected
     error ZeroAddress();
 
+    /// @notice Thrown when the borsch-encoded message to bridge is too large to fit in a Solana account
+    error SerializedMessageTooBig();
+
     //////////////////////////////////////////////////////////////
     ///                       Modifiers                        ///
     //////////////////////////////////////////////////////////////
 
     modifier whenNotPaused() {
         require(!paused, Paused());
+        _;
+    }
+
+    modifier isValidIxs(Ix[] calldata ixs) {
+        SVMLib.validateIxs(ixs);
         _;
     }
 
@@ -162,24 +167,31 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Bridges a call to the Solana bridge.
     ///
     /// @param ixs The instructions to execute on Solana.
-    function bridgeCall(Ix[] calldata ixs) external nonReentrant whenNotPaused {
-        MessageStorageLib.sendMessage({sender: msg.sender, data: SVMBridgeLib.serializeCall(ixs)});
+    function bridgeCall(Ix[] calldata ixs) external nonReentrant whenNotPaused isValidIxs(ixs) {
+        bytes memory data = SVMBridgeLib.serializeCall(ixs);
+        require(data.length <= SVMLib.MAX_SOLANA_DATA_LENGTH, SerializedMessageTooBig());
+        MessageStorageLib.sendMessage({sender: msg.sender, data: data});
     }
 
     /// @notice Bridges a transfer with an optional list of instructions to the Solana bridge.
     ///
     /// @param transfer The token transfer to execute.
     /// @param ixs      The optional Solana instructions.
-    function bridgeToken(Transfer memory transfer, Ix[] calldata ixs) external payable nonReentrant whenNotPaused {
+    function bridgeToken(Transfer memory transfer, Ix[] calldata ixs)
+        external
+        payable
+        nonReentrant
+        whenNotPaused
+        isValidIxs(ixs)
+    {
         // IMPORTANT: The `TokenLib.initializeTransfer` function might modify the `transfer.remoteAmount` field to
         //            account for potential transfer fees.
         SolanaTokenType transferType =
             TokenLib.initializeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
 
-        MessageStorageLib.sendMessage({
-            sender: msg.sender,
-            data: SVMBridgeLib.serializeTransfer({transfer: transfer, tokenType: transferType, ixs: ixs})
-        });
+        bytes memory data = SVMBridgeLib.serializeTransfer({transfer: transfer, tokenType: transferType, ixs: ixs});
+        require(data.length <= SVMLib.MAX_SOLANA_DATA_LENGTH, SerializedMessageTooBig());
+        MessageStorageLib.sendMessage({sender: msg.sender, data: data});
     }
 
     /// @notice Relays messages sent from Solana to Base.
@@ -216,7 +228,15 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
             return;
         }
 
-        // Get (and deploy if needed) the Twin contract.
+        // For simple transfers, skip the twin logic.
+        // This avoids the need to deploy a Twin contract for users that only want to transfer tokens.
+        if (message.ty == MessageType.Transfer) {
+            Transfer memory transfer = abi.decode(message.data, (Transfer));
+            TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
+            return;
+        }
+
+        // For calls, get (and deploy if needed) the Twin contract.
         address twinAddress = twins[message.sender];
         if (twinAddress == address(0)) {
             twinAddress = LibClone.deployDeterministicERC1967BeaconProxy({
@@ -228,14 +248,11 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
 
         if (message.ty == MessageType.Call) {
             Call memory call = abi.decode(message.data, (Call));
-            Twin(payable(twins[message.sender])).execute(call);
-        } else if (message.ty == MessageType.Transfer) {
-            Transfer memory transfer = abi.decode(message.data, (Transfer));
-            TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
+            Twin(payable(twinAddress)).execute(call);
         } else if (message.ty == MessageType.TransferAndCall) {
             (Transfer memory transfer, Call memory call) = abi.decode(message.data, (Transfer, Call));
             TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
-            Twin(payable(twins[message.sender])).execute(call);
+            Twin(payable(twinAddress)).execute(call);
         }
     }
 
@@ -270,8 +287,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @param leafIndex The 0-indexed position of the leaf to prove.
     ///
     /// @return proof          Array of sibling hashes for the proof.
-    /// @return totalLeafCount The total number of leaves when proof was generated.
-    function generateProof(uint64 leafIndex) external view returns (bytes32[] memory proof, uint64 totalLeafCount) {
+    function generateProof(uint64 leafIndex) external view returns (bytes32[] memory proof) {
         return MessageStorageLib.generateProof(leafIndex);
     }
 
@@ -334,7 +350,9 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         bytes32 messageHash = getMessageHash(message);
 
         // Check that the message has not already been relayed.
-        require(!successes[messageHash], MessageAlreadySuccessfullyRelayed());
+        if (successes[messageHash]) {
+            return;
+        }
 
         require(BridgeValidator(BRIDGE_VALIDATOR).validMessages(messageHash), InvalidMessage());
 

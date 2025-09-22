@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    constants::CFG_SEED,
+    constants::{CFG_SEED, DISCRIMINATOR_LEN},
     internal::check_and_pay_for_gas,
     state::{Cfg, MessageToRelay},
 };
@@ -24,7 +24,7 @@ pub struct PayForRelay<'info> {
     #[account(mut, address = cfg.gas_config.gas_fee_receiver @ PayForRelayError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
-    #[account(init, payer = payer, space = 8 + MessageToRelay::INIT_SPACE)]
+    #[account(init, payer = payer, space = DISCRIMINATOR_LEN + MessageToRelay::INIT_SPACE)]
     pub message_to_relay: Account<'info, MessageToRelay>,
 
     /// System program required for creating new accounts.
@@ -44,8 +44,14 @@ pub fn pay_for_relay_handler(
         &mut ctx.accounts.cfg,
         gas_limit,
     )?;
-    ctx.accounts.message_to_relay.outgoing_message = outgoing_message;
-    ctx.accounts.message_to_relay.gas_limit = gas_limit;
+
+    *ctx.accounts.message_to_relay = MessageToRelay {
+        nonce: ctx.accounts.cfg.nonce,
+        outgoing_message,
+        gas_limit,
+    };
+    ctx.accounts.cfg.nonce += 1;
+
     Ok(())
 }
 
@@ -120,9 +126,6 @@ mod tests {
 
         // With base_fee = 1 in tests, gas_cost == gas_limit
         let final_receiver_balance = svm.get_account(&TEST_GAS_FEE_RECEIVER).unwrap().lamports;
-        assert_eq!(
-            final_receiver_balance - initial_receiver_balance,
-            gas_limit * 100
-        );
+        assert_eq!(final_receiver_balance - initial_receiver_balance, gas_limit);
     }
 }

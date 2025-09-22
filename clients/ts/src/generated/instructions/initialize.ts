@@ -182,7 +182,7 @@ export type InitializeInput<
    * The bridge state account being initialized.
    * - Uses PDA with BRIDGE_SEED for deterministic address
    * - Payer funds the account creation
-   * - Space allocated for bridge state (8-byte discriminator + Bridge::INIT_SPACE)
+   * - Space allocated for bridge state (DISCRIMINATOR_LEN + Bridge::INIT_SPACE)
    */
   bridge: Address<TAccountBridge>;
   /**
@@ -288,7 +288,7 @@ export type ParsedInitializeInstruction<
      * The bridge state account being initialized.
      * - Uses PDA with BRIDGE_SEED for deterministic address
      * - Payer funds the account creation
-     * - Space allocated for bridge state (8-byte discriminator + Bridge::INIT_SPACE)
+     * - Space allocated for bridge state (DISCRIMINATOR_LEN + Bridge::INIT_SPACE)
      */
 
     bridge: TAccountMetas[1];

@@ -22,8 +22,11 @@ pub struct Config {
 
 impl Config {
     pub fn validate(&self) -> Result<()> {
-        self.base_oracle_config.validate()?;
+        self.eip1559_config.validate()?;
+        self.gas_config.validate()?;
+        self.protocol_config.validate()?;
         self.partner_oracle_config.validate()?;
+        self.base_oracle_config.validate()?;
         Ok(())
     }
 }

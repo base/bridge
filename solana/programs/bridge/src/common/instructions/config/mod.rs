@@ -20,6 +20,9 @@ pub use pause::*;
 pub mod base_oracle_signers;
 pub use base_oracle_signers::*;
 
+pub mod partner_config;
+pub use partner_config::*;
+
 /// Accounts struct for bridge configuration setter instructions
 /// Only the guardian can update these parameters
 #[derive(Accounts)]

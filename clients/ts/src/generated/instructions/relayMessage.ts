@@ -18,16 +18,24 @@ import {
   type AccountMeta,
   type AccountSignerMeta,
   type Address,
+<<<<<<<< HEAD:clients/ts/src/generated/instructions/relayMessage.ts
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
+========
+  type Codec,
+  type Decoder,
+  type Encoder,
+  type IAccountMeta,
+  type IInstruction,
+  type IInstructionWithAccounts,
+  type IInstructionWithData,
+>>>>>>>> main:solana/clients/ts/generated/bridge/instructions/relayMessage.ts
   type ReadonlyAccount,
-  type ReadonlySignerAccount,
   type ReadonlyUint8Array,
-  type TransactionSigner,
   type WritableAccount,
 } from '@solana/kit';
 import { BRIDGE_PROGRAM_ADDRESS } from '../programs';
@@ -45,6 +53,7 @@ export function getRelayMessageDiscriminatorBytes() {
 
 export type RelayMessageInstruction<
   TProgram extends string = typeof BRIDGE_PROGRAM_ADDRESS,
+<<<<<<<< HEAD:clients/ts/src/generated/instructions/relayMessage.ts
   TAccountPayer extends string | AccountMeta<string> = string,
   TAccountMessage extends string | AccountMeta<string> = string,
   TAccountBridge extends string | AccountMeta<string> = string,
@@ -57,6 +66,15 @@ export type RelayMessageInstruction<
         ? ReadonlySignerAccount<TAccountPayer> &
             AccountSignerMeta<TAccountPayer>
         : TAccountPayer,
+========
+  TAccountMessage extends string | IAccountMeta<string> = string,
+  TAccountBridge extends string | IAccountMeta<string> = string,
+  TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
+> = IInstruction<TProgram> &
+  IInstructionWithData<Uint8Array> &
+  IInstructionWithAccounts<
+    [
+>>>>>>>> main:solana/clients/ts/generated/bridge/instructions/relayMessage.ts
       TAccountMessage extends string
         ? WritableAccount<TAccountMessage>
         : TAccountMessage,
@@ -95,15 +113,9 @@ export function getRelayMessageInstructionDataCodec(): FixedSizeCodec<
 }
 
 export type RelayMessageInput<
-  TAccountPayer extends string = string,
   TAccountMessage extends string = string,
   TAccountBridge extends string = string,
 > = {
-  /**
-   * A signer for the transaction. This instruction does not read or debit this
-   * account directly; transaction fees are paid at the transaction level.
-   */
-  payer: TransactionSigner<TAccountPayer>;
   /**
    * The incoming message account containing the cross-chain message to be executed.
    * - Contains either a pure call message or a transfer message with additional instructions
@@ -119,25 +131,18 @@ export type RelayMessageInput<
 };
 
 export function getRelayMessageInstruction<
-  TAccountPayer extends string,
   TAccountMessage extends string,
   TAccountBridge extends string,
   TProgramAddress extends Address = typeof BRIDGE_PROGRAM_ADDRESS,
 >(
-  input: RelayMessageInput<TAccountPayer, TAccountMessage, TAccountBridge>,
+  input: RelayMessageInput<TAccountMessage, TAccountBridge>,
   config?: { programAddress?: TProgramAddress }
-): RelayMessageInstruction<
-  TProgramAddress,
-  TAccountPayer,
-  TAccountMessage,
-  TAccountBridge
-> {
+): RelayMessageInstruction<TProgramAddress, TAccountMessage, TAccountBridge> {
   // Program address.
   const programAddress = config?.programAddress ?? BRIDGE_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
-    payer: { value: input.payer ?? null, isWritable: false },
     message: { value: input.message ?? null, isWritable: true },
     bridge: { value: input.bridge ?? null, isWritable: false },
   };
@@ -149,7 +154,6 @@ export function getRelayMessageInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.payer),
       getAccountMeta(accounts.message),
       getAccountMeta(accounts.bridge),
     ],
@@ -157,7 +161,6 @@ export function getRelayMessageInstruction<
     data: getRelayMessageInstructionDataEncoder().encode({}),
   } as RelayMessageInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountMessage,
     TAccountBridge
   >;
@@ -172,25 +175,19 @@ export type ParsedRelayMessageInstruction<
   programAddress: Address<TProgram>;
   accounts: {
     /**
-     * A signer for the transaction. This instruction does not read or debit this
-     * account directly; transaction fees are paid at the transaction level.
-     */
-
-    payer: TAccountMetas[0];
-    /**
      * The incoming message account containing the cross-chain message to be executed.
      * - Contains either a pure call message or a transfer message with additional instructions
      * - Must be mutable to mark the message as executed after processing
      * - Prevents replay attacks by tracking execution status
      */
 
-    message: TAccountMetas[1];
+    message: TAccountMetas[0];
     /**
      * The main bridge state account used to check pause status
      * - Uses PDA with BRIDGE_SEED for deterministic address
      */
 
-    bridge: TAccountMetas[2];
+    bridge: TAccountMetas[1];
   };
   data: RelayMessageInstructionData;
 };
@@ -203,7 +200,7 @@ export function parseRelayMessageInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedRelayMessageInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 3) {
+  if (instruction.accounts.length < 2) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -216,7 +213,6 @@ export function parseRelayMessageInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      payer: getNextAccount(),
       message: getNextAccount(),
       bridge: getNextAccount(),
     },

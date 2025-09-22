@@ -1,12 +1,15 @@
 use anchor_lang::{prelude::*, solana_program::keccak};
 
-use crate::base_to_solana::{
-    constants::INCOMING_MESSAGE_SEED,
-    internal::mmr::{self},
-    state::{IncomingMessage, OutputRoot},
-    Message,
-};
 use crate::common::{bridge::Bridge, BRIDGE_SEED};
+use crate::{
+    base_to_solana::{
+        constants::INCOMING_MESSAGE_SEED,
+        internal::mmr::{self},
+        state::{IncomingMessage, OutputRoot},
+        Message,
+    },
+    common::DISCRIMINATOR_LEN,
+};
 
 /// Accounts struct for the prove_message instruction that verifies a message exists on Base.
 /// This instruction creates a proven message account after validating the message against an MMR proof
@@ -32,7 +35,7 @@ pub struct ProveMessage<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + IncomingMessage::space(data.len()),
+        space = DISCRIMINATOR_LEN + IncomingMessage::space(data.len()),
         seeds = [INCOMING_MESSAGE_SEED, &message_hash],
         bump
     )]

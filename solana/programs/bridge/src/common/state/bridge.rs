@@ -57,6 +57,17 @@ pub struct Eip1559Config {
     pub minimum_base_fee: u64,
 }
 
+impl Eip1559Config {
+    pub fn validate(&self) -> Result<()> {
+        require!(self.denominator > 0, BridgeError::InvalidDenominator);
+        require!(
+            self.window_duration_seconds > 0,
+            BridgeError::InvalidWindowDurationSeconds
+        );
+        Ok(())
+    }
+}
+
 impl Eip1559 {
     /// Refresh the base fee if window has expired, reset window tracking
     /// Handles multiple expired windows by processing each empty window
@@ -99,9 +110,10 @@ impl Eip1559 {
         }
 
         // Update state for new window
-        self.current_base_fee = current_base_fee;
+        self.current_base_fee = current_base_fee.max(self.config.minimum_base_fee);
         self.current_window_gas_used = 0;
-        self.window_start_time = current_timestamp;
+        self.window_start_time +=
+            (expired_windows_count * self.config.window_duration_seconds) as i64;
 
         current_base_fee
     }
@@ -136,11 +148,7 @@ impl Eip1559 {
                 / self.config.target
                 / self.config.denominator;
 
-            // Note: This implementation only clamps to `minimum_base_fee` on underflow.
-            // If the subtraction does not underflow, the result may be below `minimum_base_fee`.
-            self.current_base_fee
-                .checked_sub(base_fee_delta)
-                .unwrap_or(self.config.minimum_base_fee)
+            self.current_base_fee.saturating_sub(base_fee_delta)
         }
     }
 
@@ -163,11 +171,36 @@ pub struct GasConfig {
     pub gas_per_call: u64,
 }
 
+impl GasConfig {
+    pub fn validate(&self) -> Result<()> {
+        require!(
+            self.gas_cost_scaler_dp > 0,
+            BridgeError::InvalidGasCostScalerDp
+        );
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct ProtocolConfig {
     /// Block interval requirement for output root registration. Every Base block associated with a
     /// submitted output root must be a multiple of this number.
     pub block_interval_requirement: u64,
+}
+
+impl ProtocolConfig {
+    pub fn validate(&self) -> Result<()> {
+        require!(
+            self.block_interval_requirement > 0,
+            BridgeError::InvalidBlockIntervalRequirement
+        );
+
+        require!(
+            self.block_interval_requirement <= 1000,
+            BridgeError::InvalidBlockIntervalRequirement
+        );
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
@@ -251,6 +284,14 @@ pub enum BridgeError {
     DuplicateSigner,
     #[msg("Invalid partner threshold")]
     InvalidPartnerThreshold,
+    #[msg("Invalid denominator")]
+    InvalidDenominator,
+    #[msg("Invalid window duration seconds")]
+    InvalidWindowDurationSeconds,
+    #[msg("Invalid gas cost scaler dp")]
+    InvalidGasCostScalerDp,
+    #[msg("Invalid block interval requirement")]
+    InvalidBlockIntervalRequirement,
 }
 
 #[cfg(test)]

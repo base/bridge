@@ -1,26 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ix, Pubkey, SVMLib} from "./SVMLib.sol";
+import {Ix, SVMLib} from "./SVMLib.sol";
 import {SolanaTokenType, Transfer} from "./TokenLib.sol";
 
 library SVMBridgeLib {
-    //////////////////////////////////////////////////////////////
-    ///                       Constants                        ///
-    //////////////////////////////////////////////////////////////
-
-    /// @notice The TokenProgram ID on Solana (TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA).
-    Pubkey private constant _TOKEN_PROGRAM_ID =
-        Pubkey.wrap(0x06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9);
-
-    /// @notice The TokenProgram 2022 ID on Solana (TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb).
-    Pubkey private constant _TOKEN_PROGRAM_2022_ID =
-        Pubkey.wrap(0x06ddf6e1ee758fde18425dbce46ccddab61afc4d83b90d27febdf928d8a18bfc);
-
-    /// @notice The SystemProgram ID on Solana.
-    Pubkey private constant _SYSTEM_PROGRAM_ID =
-        Pubkey.wrap(0x0000000000000000000000000000000000000000000000000000000000000000);
-
     //////////////////////////////////////////////////////////////
     ///                     Internal Functions                 ///
     //////////////////////////////////////////////////////////////

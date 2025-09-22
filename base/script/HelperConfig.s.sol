@@ -63,13 +63,13 @@ contract HelperConfig is Script {
 
         return NetworkConfig({
             initialOwner: bridgeAdmin,
-            remoteBridge: Pubkey.wrap(0x855c6fd7faf45040430300dda103f45c6a5a708377c45db31a7a5f7b6c9c70fe), // 9yayaS8TwWHcysZT6H45Hw421FbB84G4caQt4SVEGenq
+            remoteBridge: Pubkey.wrap(0x3bb48240f8ce2b1b7a5392013b00c3e2cac25a7ff5642353d88bf8212cf43ecf), // 524hRwZBKP3wN4r34jcqv7yRv3RJ53DagdbUtHkbCFWE
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             baseValidators: baseValidators,
             baseSignatureThreshold: 2,
             guardians: guardians,
-            partnerValidatorThreshold: 0,
-            partnerValidators: address(1)
+            partnerValidatorThreshold: 3,
+            partnerValidators: 0x4EdB7D4944a04B6230a5F496e3a1F6E74DA3C593
         });
     }
 
@@ -87,7 +87,7 @@ contract HelperConfig is Script {
 
         return NetworkConfig({
             initialOwner: bridgeAdmin,
-            remoteBridge: Pubkey.wrap(0x5b4145339163fcb5a9f28281da3a913909baff580b9f5cdac115133b28e45062), // 79DpuKKNPSk9BDnQVVAExvh55waf1zvFszVsotx9wfqT
+            remoteBridge: Pubkey.wrap(0x68b29bb2aca46156b4dd9e1f1aa704ba4477f2bad04297098659b15ce3e9ca04), // 83hN2esneZUbKgLfUvo7uzas4g7kyiodeNKAqZgx5MbH
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             baseValidators: baseValidators,
             baseSignatureThreshold: 2,

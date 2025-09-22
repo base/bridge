@@ -31,6 +31,7 @@ export * from './setGasTarget';
 export * from './setMaxCallBufferSize';
 export * from './setMinimumBaseFee';
 export * from './setOracleSigners';
+export * from './setPartnerOracleConfig';
 export * from './setPauseStatus';
 export * from './setWindowDuration';
 export * from './transferGuardian';

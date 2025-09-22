@@ -142,7 +142,7 @@ export type RegisterOutputRootInput<
    * The output root account being created to store the Base MMR root and total leaf count.
    * - Uses PDA with OUTPUT_ROOT_SEED and base_block_number for deterministic address
    * - Payer funds the account creation (authorization is enforced via EVM signatures)
-   * - Space allocated for output root state (8-byte discriminator + OutputRoot::INIT_SPACE)
+   * - Space allocated for output root state (DISCRIMINATOR_LEN + OutputRoot::INIT_SPACE)
    * - Each output root corresponds to a specific Base block number
    */
   root: Address<TAccountRoot>;
@@ -255,7 +255,7 @@ export type ParsedRegisterOutputRootInstruction<
      * The output root account being created to store the Base MMR root and total leaf count.
      * - Uses PDA with OUTPUT_ROOT_SEED and base_block_number for deterministic address
      * - Payer funds the account creation (authorization is enforced via EVM signatures)
-     * - Space allocated for output root state (8-byte discriminator + OutputRoot::INIT_SPACE)
+     * - Space allocated for output root state (DISCRIMINATOR_LEN + OutputRoot::INIT_SPACE)
      * - Each output root corresponds to a specific Base block number
      */
 
