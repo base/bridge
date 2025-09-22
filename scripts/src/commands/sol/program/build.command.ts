@@ -8,6 +8,7 @@ import { argsSchema, handleBuild } from "./build.handler";
 type CommanderOptions = {
   cluster?: string;
   release?: string;
+  program?: string;
   programKp?: string;
 };
 
@@ -43,6 +44,22 @@ async function collectInteractiveOptions(
       process.exit(1);
     }
     opts.release = release;
+  }
+
+  if (!opts.program) {
+    const program = await select({
+      message: "Select program to build:",
+      options: [
+        { value: "bridge", label: "Bridge" },
+        { value: "base-relayer", label: "Base Relayer" },
+      ],
+      initialValue: "bridge",
+    });
+    if (isCancel(program)) {
+      cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    opts.program = program;
   }
 
   if (!opts.programKp) {
@@ -85,9 +102,10 @@ async function collectInteractiveOptions(
 }
 
 export const buildCommand = new Command("build")
-  .description("Build the Bridge Solana program")
+  .description("Build a Solana program (bridge | base-relayer)")
   .option("--cluster <cluster>", "Target cluster (devnet)")
   .option("--release <release>", "Release type (alpha | prod)")
+  .option("--program <program>", "Program to build (bridge | base-relayer)")
   .option(
     "--program-kp <path>",
     "Program keypair: 'protocol' or custom program keypair path"

@@ -6,6 +6,7 @@ import {
   getU8Codec,
   createSolanaRpc,
   devnet,
+  type Instruction,
 } from "@solana/kit";
 import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
@@ -15,7 +16,7 @@ import {
   fetchBridge,
   getWrapTokenInstruction,
   type WrapTokenInstructionDataArgs,
-} from "../../../../../../../clients/ts/src";
+} from "../../../../../../../clients/ts/src/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -25,7 +26,9 @@ import {
   getIdlConstant,
   CONSTANTS,
   relayMessageToBase,
+  monitorMessageExecution,
 } from "@internal/sol";
+import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
 
 export const argsSchema = z.object({
   cluster: z
@@ -67,6 +70,7 @@ export const argsSchema = z.object({
   payerKp: z
     .union([z.literal("config"), z.string().brand<"payerKp">()])
     .default("config"),
+  payForRelay: z.boolean().default(true),
 });
 
 type WrapTokenArgs = z.infer<typeof argsSchema>;
@@ -140,37 +144,56 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
     logger.info(`Outgoing message: ${outgoingMessageKeypairSigner.address}`);
 
     // Build wrap token instruction
-    const ix = getWrapTokenInstruction(
-      {
-        // Accounts
-        payer,
-        gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
-        mint: mintAddress,
-        bridge: bridgeAddress,
-        outgoingMessage: outgoingMessageKeypairSigner,
-        tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
-        systemProgram: SYSTEM_PROGRAM_ADDRESS,
+    const ixs: Instruction[] = [
+      getWrapTokenInstruction(
+        {
+          // Accounts
+          payer,
+          gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
+          mint: mintAddress,
+          bridge: bridgeAddress,
+          outgoingMessage: outgoingMessageKeypairSigner,
+          tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
+          systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
-        // Arguments
-        ...instructionArgs,
-      },
-      { programAddress: config.solanaBridge }
-    );
+          // Arguments
+          ...instructionArgs,
+        },
+        { programAddress: config.solanaBridge }
+      ),
+    ];
 
-    // Send transaction
+    if (args.payForRelay) {
+      ixs.push(
+        await buildPayForRelayInstruction(
+          args.cluster,
+          args.release,
+          outgoingMessageKeypairSigner.address,
+          payer
+        )
+      );
+    }
+
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, [ix], payer);
+    const signature = await buildAndSendTransaction(rpcUrl, ixs, payer);
     logger.success("Token wrap completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
 
-    // Relay message to Base
-    await relayMessageToBase(
-      args.cluster,
-      args.release,
-      outgoingMessageKeypairSigner.address
-    );
+    if (args.payForRelay) {
+      await monitorMessageExecution(
+        args.cluster,
+        args.release,
+        outgoingMessageKeypairSigner.address
+      );
+    } else {
+      await relayMessageToBase(
+        args.cluster,
+        args.release,
+        outgoingMessageKeypairSigner.address
+      );
+    }
   } catch (error) {
     logger.error("Token wrap failed:", error);
     throw error;

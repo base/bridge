@@ -12,6 +12,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.js"
+    },
+    "./bridge": {
+      "types": "./dist/bridge/index.d.ts",
+      "import": "./dist/bridge/index.js",
+      "require": "./dist/bridge/index.js"
+    },
+    "./base-relayer": {
+      "types": "./dist/base-relayer/index.d.ts",
+      "import": "./dist/base-relayer/index.js",
+      "require": "./dist/base-relayer/index.js"
     }
   },
   "files": [
@@ -47,7 +57,7 @@
   "homepage": "https://github.com/base/bridge#readme",
   "devDependencies": {
     "@types/bun": "latest",
-    "typescript": "^5"
+    "typescript": "^5.9.2"
   },
   "peerDependencies": {
     "@solana/kit": "^2.3.0"

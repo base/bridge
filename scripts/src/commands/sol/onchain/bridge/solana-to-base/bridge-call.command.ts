@@ -12,6 +12,7 @@ type CommanderOptions = {
   to?: string;
   value?: string;
   data?: string;
+  payForRelay?: boolean;
 };
 
 async function collectInteractiveOptions(
@@ -183,6 +184,18 @@ async function collectInteractiveOptions(
     }
   }
 
+  if (opts.payForRelay === undefined) {
+    const payForRelay = await confirm({
+      message: "Pay for relaying the message to Base?",
+      initialValue: true,
+    });
+    if (isCancel(payForRelay)) {
+      cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    opts.payForRelay = payForRelay;
+  }
+
   return opts;
 }
 
@@ -200,6 +213,7 @@ export const bridgeCallCommand = new Command("bridge-call")
     "--data <hex>",
     "Call data: 'increment', 'incrementPayable', or custom hex"
   )
+  .option("--pay-for-relay", "Pay for relaying the message to Base")
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
     const parsed = argsSchema.safeParse(opts);

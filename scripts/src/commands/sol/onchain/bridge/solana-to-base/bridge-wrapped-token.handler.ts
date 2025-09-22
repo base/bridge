@@ -8,6 +8,7 @@ import {
   createSolanaRpc,
   type Account,
   type Address,
+  type Instruction,
 } from "@solana/kit";
 import {
   findAssociatedTokenPda,
@@ -22,7 +23,7 @@ import { toBytes } from "viem";
 import {
   fetchBridge,
   getBridgeWrappedTokenInstruction,
-} from "../../../../../../../clients/ts/src";
+} from "../../../../../../../clients/ts/src/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -33,7 +34,9 @@ import {
   CONSTANTS,
   type Rpc,
   relayMessageToBase,
+  monitorMessageExecution,
 } from "@internal/sol";
+import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
 
 export const argsSchema = z.object({
   cluster: z
@@ -71,6 +74,7 @@ export const argsSchema = z.object({
   payerKp: z
     .union([z.literal("config"), z.string().brand<"payerKp">()])
     .default("config"),
+  payForRelay: z.boolean().default(true),
 });
 
 type BridgeWrappedTokenArgs = z.infer<typeof argsSchema>;
@@ -143,37 +147,57 @@ export async function handleBridgeWrappedToken(
     const tokenProgram = maybeMint.programAddress;
     logger.info(`Token Program: ${tokenProgram}`);
 
-    const ix = getBridgeWrappedTokenInstruction(
-      {
-        payer,
-        from: payer,
-        gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
-        mint: mintAddress,
-        fromTokenAccount: fromTokenAccountAddress,
-        bridge: bridgeAccountAddress,
-        outgoingMessage: outgoingMessageKeypairSigner,
-        tokenProgram,
-        systemProgram: SYSTEM_PROGRAM_ADDRESS,
-        to: toBytes(args.to),
-        amount: scaledAmount,
-        call: null,
-      },
-      { programAddress: config.solanaBridge }
-    );
+    const ixs: Instruction[] = [
+      getBridgeWrappedTokenInstruction(
+        {
+          payer,
+          from: payer,
+          gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
+          mint: mintAddress,
+          fromTokenAccount: fromTokenAccountAddress,
+          bridge: bridgeAccountAddress,
+          outgoingMessage: outgoingMessageKeypairSigner,
+          tokenProgram,
+          systemProgram: SYSTEM_PROGRAM_ADDRESS,
+          to: toBytes(args.to),
+          amount: scaledAmount,
+          call: null,
+        },
+        { programAddress: config.solanaBridge }
+      ),
+    ];
+
+    if (args.payForRelay) {
+      ixs.push(
+        await buildPayForRelayInstruction(
+          args.cluster,
+          args.release,
+          outgoingMessageKeypairSigner.address,
+          payer
+        )
+      );
+    }
 
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, [ix], payer);
+    const signature = await buildAndSendTransaction(rpcUrl, ixs, payer);
     logger.success("Bridge Wrapped Token operation completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
 
-    // Relay message to Base
-    await relayMessageToBase(
-      args.cluster,
-      args.release,
-      outgoingMessageKeypairSigner.address
-    );
+    if (args.payForRelay) {
+      await monitorMessageExecution(
+        args.cluster,
+        args.release,
+        outgoingMessageKeypairSigner.address
+      );
+    } else {
+      await relayMessageToBase(
+        args.cluster,
+        args.release,
+        outgoingMessageKeypairSigner.address
+      );
+    }
   } catch (error) {
     logger.error("Bridge Wrapped Token operation failed:", error);
     throw error;

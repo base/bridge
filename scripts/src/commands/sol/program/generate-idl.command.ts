@@ -8,6 +8,7 @@ import { handleGenerateClient } from "./generate-client.handler";
 type CommanderOptions = {
   cluster?: string;
   release?: string;
+  program?: string;
   skipClient?: boolean;
 };
 
@@ -45,6 +46,22 @@ async function collectInteractiveOptions(
     opts.release = release;
   }
 
+  if (!opts.program) {
+    const program = await select({
+      message: "Select program to generate IDL for:",
+      options: [
+        { value: "bridge", label: "Bridge" },
+        { value: "base-relayer", label: "Base Relayer" },
+      ],
+      initialValue: "bridge",
+    });
+    if (isCancel(program)) {
+      cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    opts.program = program;
+  }
+
   if (!opts.skipClient) {
     const generateClient = await confirm({
       message: "Generate TypeScript client after IDL?",
@@ -61,9 +78,10 @@ async function collectInteractiveOptions(
 }
 
 export const generateIdlCommand = new Command("generate-idl")
-  .description("Generate IDL for the Bridge Solana program")
+  .description("Generate IDL for a Solana program (bridge | base-relayer)")
   .option("--cluster <cluster>", "Target cluster (devnet)")
   .option("--release <release>", "Release type (alpha | prod)")
+  .option("--program <program>", "Program (bridge | base-relayer)")
   .option("--skip-client", "Skip TypeScript client generation")
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
@@ -80,6 +98,6 @@ export const generateIdlCommand = new Command("generate-idl")
 
     if (!opts.skipClient) {
       logger.info("Generating TypeScript client...");
-      await handleGenerateClient();
+      await handleGenerateClient(parsed.data);
     }
   });

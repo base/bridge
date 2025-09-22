@@ -15,9 +15,9 @@ import {
   getStructDecoder,
   getStructEncoder,
   type Address,
-  type Codec,
-  type Decoder,
-  type Encoder,
+  type FixedSizeCodec,
+  type FixedSizeDecoder,
+  type FixedSizeEncoder,
 } from '@solana/kit';
 
 /**
@@ -36,7 +36,7 @@ export type IxAccount = {
 
 export type IxAccountArgs = IxAccount;
 
-export function getIxAccountEncoder(): Encoder<IxAccountArgs> {
+export function getIxAccountEncoder(): FixedSizeEncoder<IxAccountArgs> {
   return getStructEncoder([
     ['pubkey', getAddressEncoder()],
     ['isWritable', getBooleanEncoder()],
@@ -44,7 +44,7 @@ export function getIxAccountEncoder(): Encoder<IxAccountArgs> {
   ]);
 }
 
-export function getIxAccountDecoder(): Decoder<IxAccount> {
+export function getIxAccountDecoder(): FixedSizeDecoder<IxAccount> {
   return getStructDecoder([
     ['pubkey', getAddressDecoder()],
     ['isWritable', getBooleanDecoder()],
@@ -52,6 +52,6 @@ export function getIxAccountDecoder(): Decoder<IxAccount> {
   ]);
 }
 
-export function getIxAccountCodec(): Codec<IxAccountArgs, IxAccount> {
+export function getIxAccountCodec(): FixedSizeCodec<IxAccountArgs, IxAccount> {
   return combineCodec(getIxAccountEncoder(), getIxAccountDecoder());
 }

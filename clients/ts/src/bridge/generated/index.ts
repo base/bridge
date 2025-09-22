@@ -6,8 +6,8 @@
  * @see https://github.com/codama-idl/codama
  */
 
-export * from './bridge';
-export * from './callBuffer';
-export * from './incomingMessage';
-export * from './outgoingMessage';
-export * from './outputRoot';
+export * from './accounts';
+export * from './errors';
+export * from './instructions';
+export * from './programs';
+export * from './types';

@@ -25,18 +25,10 @@ import {
   type Codec,
   type Decoder,
   type Encoder,
-<<<<<<<< HEAD:clients/ts/src/generated/instructions/appendToCallBuffer.ts
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
-========
-  type IAccountMeta,
-  type IAccountSignerMeta,
-  type IInstruction,
-  type IInstructionWithAccounts,
-  type IInstructionWithData,
   type ReadonlySignerAccount,
->>>>>>>> main:solana/clients/ts/generated/bridge/instructions/appendToCallBuffer.ts
   type ReadonlyUint8Array,
   type TransactionSigner,
   type WritableAccount,
@@ -64,13 +56,8 @@ export type AppendToCallBufferInstruction<
   InstructionWithAccounts<
     [
       TAccountOwner extends string
-<<<<<<<< HEAD:clients/ts/src/generated/instructions/appendToCallBuffer.ts
-        ? WritableSignerAccount<TAccountOwner> &
-            AccountSignerMeta<TAccountOwner>
-========
         ? ReadonlySignerAccount<TAccountOwner> &
-            IAccountSignerMeta<TAccountOwner>
->>>>>>>> main:solana/clients/ts/generated/bridge/instructions/appendToCallBuffer.ts
+            AccountSignerMeta<TAccountOwner>
         : TAccountOwner,
       TAccountCallBuffer extends string
         ? WritableAccount<TAccountCallBuffer>

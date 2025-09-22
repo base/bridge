@@ -18,12 +18,18 @@ export const argsSchema = z.object({
       message: "Release must be either 'alpha' or 'prod'",
     })
     .default("prod"),
+  program: z
+    .enum(["bridge", "base-relayer"], {
+      message: "Program must be either 'bridge' or 'base-relayer'",
+    })
+    .default("bridge"),
   programKp: z
     .union([z.literal("protocol"), z.string().brand<"programKp">()])
     .default("protocol"),
 });
 
 type BuildArgs = z.infer<typeof argsSchema>;
+type ProgramName = z.infer<typeof argsSchema.shape.program>;
 type ProgramKp = z.infer<typeof argsSchema.shape.programKp>;
 
 export async function handleBuild(args: BuildArgs): Promise<void> {
@@ -37,19 +43,26 @@ export async function handleBuild(args: BuildArgs): Promise<void> {
     const projectRoot = await findGitRoot();
     logger.info(`Project root: ${projectRoot}`);
 
-    // Derive features from cluster and release
-    const features = `${args.cluster},${args.release}`;
-    logger.info(`Using features: ${features}`);
+    // Derive features from cluster and release (only for bridge)
+    const features =
+      args.program === "bridge" ? `${args.cluster},${args.release}` : undefined;
+    if (features) {
+      logger.info(`Using features: ${features}`);
+    }
 
     // Find lib.rs
-    const libRsPath = await findLibRs(projectRoot);
+    const libRsPath = await findLibRs(projectRoot, args.program);
     logger.info(`Found lib.rs at: ${libRsPath}`);
 
     // Get program ID from keypair
+    const programKeyPairRel =
+      args.program === "bridge"
+        ? config.bridgeKeyPair
+        : config.baseRelayerKeyPair;
     const programId = await resolveProgramId(
       projectRoot,
       args.programKp,
-      config.bridgeKeyPair
+      programKeyPairRel
     );
     logger.info(`Program ID: ${programId}`);
 
@@ -93,7 +106,14 @@ export async function handleBuild(args: BuildArgs): Promise<void> {
       // Build program with cargo-build-sbf
       logger.info("Running cargo-build-sbf...");
       const solanaDir = join(projectRoot, "solana");
-      await $`cargo-build-sbf --features ${features}`.cwd(solanaDir);
+      const packageName = args.program === "bridge" ? "bridge" : "base_relayer";
+      if (features) {
+        await $`cargo-build-sbf --features ${features} -- -p ${packageName}`.cwd(
+          solanaDir
+        );
+      } else {
+        await $`cargo-build-sbf -- -p ${packageName}`.cwd(solanaDir);
+      }
 
       logger.success("Program build completed!");
     } finally {
@@ -115,8 +135,15 @@ export async function handleBuild(args: BuildArgs): Promise<void> {
   }
 }
 
-async function findLibRs(projectRoot: string): Promise<string> {
-  const libRsPath = join(projectRoot, "solana/programs/bridge/src/lib.rs");
+async function findLibRs(
+  projectRoot: string,
+  program: ProgramName
+): Promise<string> {
+  const programDir = program === "bridge" ? "bridge" : "base_relayer";
+  const libRsPath = join(
+    projectRoot,
+    `solana/programs/${programDir}/src/lib.rs`
+  );
   if (!existsSync(libRsPath)) {
     throw new Error(`lib.rs not found at: ${libRsPath}`);
   }

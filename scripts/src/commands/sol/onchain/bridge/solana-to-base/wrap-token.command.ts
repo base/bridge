@@ -14,6 +14,7 @@ type CommanderOptions = {
   remoteToken?: string;
   scalerExponent?: string;
   payerKp?: string;
+  payForRelay?: boolean;
 };
 
 async function collectInteractiveOptions(
@@ -195,6 +196,18 @@ async function collectInteractiveOptions(
     }
   }
 
+  if (opts.payForRelay === undefined) {
+    const payForRelay = await confirm({
+      message: "Pay for relaying the message to Base?",
+      initialValue: true,
+    });
+    if (isCancel(payForRelay)) {
+      cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    opts.payForRelay = payForRelay;
+  }
+
   return opts;
 }
 
@@ -214,6 +227,7 @@ export const wrapTokenCommand = new Command("wrap-token")
     "--payer-kp <path>",
     "Payer keypair: 'config' or custom payer keypair path"
   )
+  .option("--pay-for-relay", "Pay for relaying the message to Base")
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
     const parsed = argsSchema.safeParse(opts);

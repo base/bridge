@@ -16,24 +16,13 @@ import {
   getStructEncoder,
   transformEncoder,
   type AccountMeta,
-  type AccountSignerMeta,
   type Address,
-<<<<<<<< HEAD:clients/ts/src/generated/instructions/relayMessage.ts
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
-========
-  type Codec,
-  type Decoder,
-  type Encoder,
-  type IAccountMeta,
-  type IInstruction,
-  type IInstructionWithAccounts,
-  type IInstructionWithData,
->>>>>>>> main:solana/clients/ts/generated/bridge/instructions/relayMessage.ts
   type ReadonlyAccount,
   type ReadonlyUint8Array,
   type WritableAccount,
@@ -53,8 +42,6 @@ export function getRelayMessageDiscriminatorBytes() {
 
 export type RelayMessageInstruction<
   TProgram extends string = typeof BRIDGE_PROGRAM_ADDRESS,
-<<<<<<<< HEAD:clients/ts/src/generated/instructions/relayMessage.ts
-  TAccountPayer extends string | AccountMeta<string> = string,
   TAccountMessage extends string | AccountMeta<string> = string,
   TAccountBridge extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
@@ -62,19 +49,6 @@ export type RelayMessageInstruction<
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
-      TAccountPayer extends string
-        ? ReadonlySignerAccount<TAccountPayer> &
-            AccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
-========
-  TAccountMessage extends string | IAccountMeta<string> = string,
-  TAccountBridge extends string | IAccountMeta<string> = string,
-  TRemainingAccounts extends readonly IAccountMeta<string>[] = [],
-> = IInstruction<TProgram> &
-  IInstructionWithData<Uint8Array> &
-  IInstructionWithAccounts<
-    [
->>>>>>>> main:solana/clients/ts/generated/bridge/instructions/relayMessage.ts
       TAccountMessage extends string
         ? WritableAccount<TAccountMessage>
         : TAccountMessage,

@@ -9,6 +9,7 @@ import {
   createSolanaRpc,
   type Account,
   type Address,
+  type Instruction,
 } from "@solana/kit";
 import {
   TOKEN_PROGRAM_ADDRESS,
@@ -24,7 +25,7 @@ import { toBytes } from "viem";
 import {
   fetchBridge,
   getBridgeSplInstruction,
-} from "../../../../../../../clients/ts/src";
+} from "../../../../../../../clients/ts/src/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -35,7 +36,9 @@ import {
   CONSTANTS,
   type Rpc,
   relayMessageToBase,
+  monitorMessageExecution,
 } from "@internal/sol";
+import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
 
 export const argsSchema = z.object({
   cluster: z
@@ -76,6 +79,7 @@ export const argsSchema = z.object({
   payerKp: z
     .union([z.literal("config"), z.string().brand<"payerKp">()])
     .default("config"),
+  payForRelay: z.boolean().default(true),
 });
 
 type BridgeSplArgs = z.infer<typeof argsSchema>;
@@ -156,39 +160,59 @@ export async function handleBridgeSpl(args: BridgeSplArgs): Promise<void> {
     );
     logger.info(`From Token Account: ${fromTokenAccountAddress}`);
 
-    const ix = getBridgeSplInstruction(
-      {
-        payer,
-        from: payer,
-        gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
-        mint: mintAddress,
-        fromTokenAccount: fromTokenAccountAddress,
-        tokenVault: tokenVaultAddress,
-        bridge: bridgeAccountAddress,
-        outgoingMessage: outgoingMessageKeypairSigner,
-        tokenProgram: TOKEN_PROGRAM_ADDRESS,
-        systemProgram: SYSTEM_PROGRAM_ADDRESS,
-        to: toBytes(args.to),
-        remoteToken: remoteTokenBytes,
-        amount: scaledAmount,
-        call: null,
-      },
-      { programAddress: config.solanaBridge }
-    );
+    const ixs: Instruction[] = [
+      getBridgeSplInstruction(
+        {
+          payer,
+          from: payer,
+          gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
+          mint: mintAddress,
+          fromTokenAccount: fromTokenAccountAddress,
+          tokenVault: tokenVaultAddress,
+          bridge: bridgeAccountAddress,
+          outgoingMessage: outgoingMessageKeypairSigner,
+          tokenProgram: TOKEN_PROGRAM_ADDRESS,
+          systemProgram: SYSTEM_PROGRAM_ADDRESS,
+          to: toBytes(args.to),
+          remoteToken: remoteTokenBytes,
+          amount: scaledAmount,
+          call: null,
+        },
+        { programAddress: config.solanaBridge }
+      ),
+    ];
+
+    if (args.payForRelay) {
+      ixs.push(
+        await buildPayForRelayInstruction(
+          args.cluster,
+          args.release,
+          outgoingMessageKeypairSigner.address,
+          payer
+        )
+      );
+    }
 
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, [ix], payer);
+    const signature = await buildAndSendTransaction(rpcUrl, ixs, payer);
     logger.success("Bridge SPL operation completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
 
-    // Relay message to Base
-    await relayMessageToBase(
-      args.cluster,
-      args.release,
-      outgoingMessageKeypairSigner.address
-    );
+    if (args.payForRelay) {
+      await monitorMessageExecution(
+        args.cluster,
+        args.release,
+        outgoingMessageKeypairSigner.address
+      );
+    } else {
+      await relayMessageToBase(
+        args.cluster,
+        args.release,
+        outgoingMessageKeypairSigner.address
+      );
+    }
   } catch (error) {
     logger.error("Bridge SPL operation failed:", error);
     throw error;

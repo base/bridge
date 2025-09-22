@@ -19,6 +19,7 @@ export const argsSchema = z.object({
       message: "Release must be either 'alpha' or 'prod'",
     })
     .default("prod"),
+
   deployerKp: z
     .union([
       z.literal("protocol"),
@@ -26,12 +27,18 @@ export const argsSchema = z.object({
       z.string().brand<"deployerKp">(),
     ])
     .default("protocol"),
+  program: z
+    .enum(["bridge", "base-relayer"], {
+      message: "Program must be either 'bridge' or 'base-relayer'",
+    })
+    .default("bridge"),
   programKp: z
     .union([z.literal("protocol"), z.string().brand<"programKp">()])
     .default("protocol"),
 });
 
 type DeployArgs = z.infer<typeof argsSchema>;
+type ProgramName = z.infer<typeof argsSchema.shape.program>;
 type DeployerKp = z.infer<typeof argsSchema.shape.deployerKp>;
 type ProgramKp = z.infer<typeof argsSchema.shape.programKp>;
 
@@ -58,13 +65,18 @@ export async function handleDeploy(args: DeployArgs): Promise<void> {
     const programKeypairPath = await resolveProgramKeypair(
       projectRoot,
       args.programKp,
-      config.bridgeKeyPair
+      args.program === "bridge"
+        ? config.bridgeKeyPair
+        : config.baseRelayerKeyPair
     );
     const { address: programAddress } =
       await getKeypairSignerFromPath(programKeypairPath);
     logger.info(`Program ID: ${programAddress}`);
 
-    const programBinaryPath = await getProgramBinaryPath(projectRoot);
+    const programBinaryPath = await getProgramBinaryPath(
+      projectRoot,
+      args.program
+    );
     logger.info(`Program binary: ${programBinaryPath}`);
 
     // Deploy program
@@ -125,8 +137,15 @@ async function resolveProgramKeypair(
   return keypairPath;
 }
 
-async function getProgramBinaryPath(projectRoot: string): Promise<string> {
-  const programBinaryPath = join(projectRoot, "solana/target/deploy/bridge.so");
+async function getProgramBinaryPath(
+  projectRoot: string,
+  program: ProgramName
+): Promise<string> {
+  const binaryName = program === "bridge" ? "bridge.so" : "base_relayer.so";
+  const programBinaryPath = join(
+    projectRoot,
+    `solana/target/deploy/${binaryName}`
+  );
   if (!existsSync(programBinaryPath)) {
     throw new Error(`Program binary not found at: ${programBinaryPath}`);
   }

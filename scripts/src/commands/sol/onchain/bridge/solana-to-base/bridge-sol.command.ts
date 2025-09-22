@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { select, text, isCancel, cancel } from "@clack/prompts";
+import { select, text, isCancel, cancel, confirm } from "@clack/prompts";
 import { existsSync } from "fs";
 
 import { logger } from "@internal/logger";
@@ -11,6 +11,7 @@ type CommanderOptions = {
   to?: string;
   amount?: string;
   payerKp?: string;
+  payForRelay?: boolean;
 };
 
 async function collectInteractiveOptions(
@@ -109,6 +110,18 @@ async function collectInteractiveOptions(
     opts.payerKp = payerKp.trim().replace(/^["']|["']$/g, "");
   }
 
+  if (opts.payForRelay === undefined) {
+    const payForRelay = await confirm({
+      message: "Pay for relaying the message to Base?",
+      initialValue: true,
+    });
+    if (isCancel(payForRelay)) {
+      cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    opts.payForRelay = payForRelay;
+  }
+
   return opts;
 }
 
@@ -122,6 +135,7 @@ export const bridgeSolCommand = new Command("bridge-sol")
     "--payer-kp <path>",
     "Payer keypair: 'config' or custom payer keypair path"
   )
+  .option("--pay-for-relay", "Pay for relaying the message to Base")
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
     const parsed = argsSchema.safeParse(opts);

@@ -16,6 +16,11 @@ export const argsSchema = z.object({
       message: "Release must be either 'alpha' or 'prod'",
     })
     .default("prod"),
+  program: z
+    .enum(["bridge", "base-relayer"], {
+      message: "Program must be either 'bridge' or 'base-relayer'",
+    })
+    .default("bridge"),
 });
 
 type GenerateIdlArgs = z.infer<typeof argsSchema>;
@@ -27,18 +32,29 @@ export async function handleGenerateIdl(args: GenerateIdlArgs): Promise<void> {
     const projectRoot = await findGitRoot();
     logger.info(`Project root: ${projectRoot}`);
 
-    const features = `${args.cluster},${args.release}`;
-    logger.info(`Using features: ${features}`);
+    const features =
+      args.program === "bridge" ? `${args.cluster},${args.release}` : undefined;
+    if (features) {
+      logger.info(`Using features: ${features}`);
+    }
 
-    const solanaDir = join(projectRoot, "solana");
+    const programDir = args.program === "bridge" ? "bridge" : "base_relayer";
+    const solanaDir = join(projectRoot, `solana/programs/${programDir}`);
     const scriptsDir = join(projectRoot, "scripts");
-    const solanaIdlPath = join(solanaDir, "programs/bridge/idl.json");
-    const scriptsIdlPath = join(scriptsDir, "src/internal/sol/idl.ts");
+    const solanaIdlPath = join(solanaDir, "idl.json");
+    const scriptsIdlPath = join(
+      scriptsDir,
+      `src/internal/sol/${args.program === "bridge" ? "bridge" : "base-relayer"}.idl.ts`
+    );
 
     logger.info("Generating IDL...");
-    await $`anchor idl build -o ${solanaIdlPath} -- --features ${features}`.cwd(
-      solanaDir
-    );
+    if (features) {
+      await $`anchor idl build -o ${solanaIdlPath} -- --features ${features}`.cwd(
+        solanaDir
+      );
+    } else {
+      await $`anchor idl build -o ${solanaIdlPath}`.cwd(solanaDir);
+    }
 
     logger.info("Removing address key from IDL...");
     const idlFile = Bun.file(solanaIdlPath);

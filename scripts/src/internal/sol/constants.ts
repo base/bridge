@@ -9,6 +9,7 @@ export const CONSTANTS = {
       // Keypairs
       deployerKeyPair: "keypairs/deployer.devnet.alpha.json",
       bridgeKeyPair: "keypairs/bridge.devnet.alpha.json",
+      baseRelayerKeyPair: "keypairs/base-relayer.devnet.alpha.json",
 
       // Signers
       solanaEvmLocalKey: "0x20BFBCCC8aBaD55c8aA383a75838348A646eDbA0",
@@ -16,6 +17,7 @@ export const CONSTANTS = {
 
       // Solana addresses
       solanaBridge: address("9yayaS8TwWHcysZT6H45Hw421FbB84G4caQt4SVEGenq"),
+      baseRelayer: address("2UuNqre3Sif4ueMfCRZqwQG7LrH4H4xJsxDf7QmGCeya"),
       spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
       wEth: address("6qbhLNZjXno9dN62thraKZNRCYoYgKvd15NqtwreqfQb"),
       wErc20: address("47f9psvcESd2ekAQYJQ2HL7An44VQ76jZnfgoXrmsL6H"),
@@ -35,6 +37,7 @@ export const CONSTANTS = {
       // Keypairs
       deployerKeyPair: "keypairs/deployer.devnet.prod.json",
       bridgeKeyPair: "keypairs/bridge.devnet.prod.json",
+      baseRelayerKeyPair: "keypairs/base-relayer.devnet.prod.json",
 
       // Signers
       solanaEvmLocalKey: "0xb03FAB6DEd1867a927Cd3E7026Aa0fe95dDb9715",
@@ -42,6 +45,7 @@ export const CONSTANTS = {
 
       // Solana addresses
       solanaBridge: address("79DpuKKNPSk9BDnQVVAExvh55waf1zvFszVsotx9wfqT"),
+      baseRelayer: address("J29jxzRsQmkpxkJptuaxYXgyNqjFZErxXtDWQ4ma3k51"),
       spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
       wEth: address("Bt5ZZd4gvAR5xHsizfhA2fo93DgyYg8J7g5y12sA8zzC"),
       wErc20: address("3dmSRTTwnMvmLKMagZ5QpZSXCoSJpudxncA6f6Q885fe"),

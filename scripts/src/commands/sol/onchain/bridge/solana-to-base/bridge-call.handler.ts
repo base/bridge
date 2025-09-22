@@ -5,6 +5,7 @@ import {
   getProgramDerivedAddress,
   createSolanaRpc,
   devnet,
+  type Instruction,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import { toBytes } from "viem";
@@ -13,7 +14,7 @@ import {
   CallType,
   fetchBridge,
   getBridgeCallInstruction,
-} from "../../../../../../../clients/ts/src";
+} from "../../../../../../../clients/ts/src/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -23,7 +24,9 @@ import {
   getIdlConstant,
   CONSTANTS,
   relayMessageToBase,
+  monitorMessageExecution,
 } from "@internal/sol";
+import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
 
 export const argsSchema = z.object({
   cluster: z
@@ -57,6 +60,7 @@ export const argsSchema = z.object({
       z.string().startsWith("0x", "Data must start with 0x").brand<"data">(),
     ])
     .default("increment"),
+  payForRelay: z.boolean().default(true),
 });
 
 type BridgeCallArgs = z.infer<typeof argsSchema>;
@@ -106,41 +110,61 @@ export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
     logger.info(`Outgoing message: ${outgoingMessageKeypairSigner.address}`);
 
     // Build bridge call instruction
-    const ix = getBridgeCallInstruction(
-      {
-        // Accounts
-        payer,
-        from: payer,
-        gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
-        bridge: bridgeAddress,
-        outgoingMessage: outgoingMessageKeypairSigner,
-        systemProgram: SYSTEM_PROGRAM_ADDRESS,
+    const ixs: Instruction[] = [
+      getBridgeCallInstruction(
+        {
+          // Accounts
+          payer,
+          from: payer,
+          gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
+          bridge: bridgeAddress,
+          outgoingMessage: outgoingMessageKeypairSigner,
+          systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
-        // Arguments
-        call: {
-          ty: CallType.Call,
-          to: toBytes(targetAddress),
-          value: BigInt(Math.floor(args.value * 1e18)), // Convert ETH to wei
-          data: Buffer.from(callData.slice(2), "hex"), // Remove 0x prefix
+          // Arguments
+          call: {
+            ty: CallType.Call,
+            to: toBytes(targetAddress),
+            value: BigInt(Math.floor(args.value * 1e18)), // Convert ETH to wei
+            data: Buffer.from(callData.slice(2), "hex"), // Remove 0x prefix
+          },
         },
-      },
-      { programAddress: config.solanaBridge }
-    );
+        { programAddress: config.solanaBridge }
+      ),
+    ];
 
     // Send transaction
+    if (args.payForRelay) {
+      ixs.push(
+        await buildPayForRelayInstruction(
+          args.cluster,
+          args.release,
+          outgoingMessageKeypairSigner.address,
+          payer
+        )
+      );
+    }
+
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, [ix], payer);
+    const signature = await buildAndSendTransaction(rpcUrl, ixs, payer);
     logger.success("Bridge call completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
 
-    // Relay message to Base
-    await relayMessageToBase(
-      args.cluster,
-      args.release,
-      outgoingMessageKeypairSigner.address
-    );
+    if (args.payForRelay) {
+      await monitorMessageExecution(
+        args.cluster,
+        args.release,
+        outgoingMessageKeypairSigner.address
+      );
+    } else {
+      await relayMessageToBase(
+        args.cluster,
+        args.release,
+        outgoingMessageKeypairSigner.address
+      );
+    }
   } catch (error) {
     logger.error("Bridge call failed:", error);
     throw error;

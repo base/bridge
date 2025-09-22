@@ -9,6 +9,7 @@ type CommanderOptions = {
   cluster?: string;
   release?: string;
   deployerKp?: string;
+  program?: string;
   programKp?: string;
 };
 
@@ -90,6 +91,22 @@ async function collectInteractiveOptions(
     }
   }
 
+  if (!opts.program) {
+    const program = await select({
+      message: "Select program to deploy:",
+      options: [
+        { value: "bridge", label: "Bridge" },
+        { value: "base-relayer", label: "Base Relayer" },
+      ],
+      initialValue: "bridge",
+    });
+    if (isCancel(program)) {
+      cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    opts.program = program;
+  }
+
   if (!opts.programKp) {
     const useProtocolProgram = await confirm({
       message: "Use protocol program keypair?",
@@ -130,13 +147,14 @@ async function collectInteractiveOptions(
 }
 
 export const deployCommand = new Command("deploy")
-  .description("Deploy the Bridge Solana program")
+  .description("Deploy a Solana program (bridge | base-relayer)")
   .option("--cluster <cluster>", "Target cluster (devnet)")
   .option("--release <release>", "Release type (alpha | prod)")
   .option(
     "--deployer-kp <path>",
     "Deployer keypair: 'protocol', 'config', or custom deployer keypair path"
   )
+  .option("--program <program>", "Program to deploy (bridge | base-relayer)")
   .option(
     "--program-kp <path>",
     "Program keypair: 'protocol' or custom program keypair path"

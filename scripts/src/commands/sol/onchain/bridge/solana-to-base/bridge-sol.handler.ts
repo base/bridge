@@ -4,11 +4,16 @@ import {
   generateKeyPair,
   getProgramDerivedAddress,
   devnet,
+  type Instruction,
+  createSolanaRpc,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import { toBytes } from "viem";
 
-import { getBridgeSolInstruction } from "../../../../../../../clients/ts/src";
+import {
+  fetchBridge,
+  getBridgeSolInstruction,
+} from "../../../../../../../clients/ts/src/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -18,7 +23,9 @@ import {
   getIdlConstant,
   CONSTANTS,
   relayMessageToBase,
+  monitorMessageExecution,
 } from "@internal/sol";
+import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
 
 export const argsSchema = z.object({
   cluster: z
@@ -46,6 +53,7 @@ export const argsSchema = z.object({
   payerKp: z
     .union([z.literal("config"), z.string().brand<"payerKp">()])
     .default("config"),
+  payForRelay: z.boolean().default(true),
 });
 
 type BridgeSolArgs = z.infer<typeof argsSchema>;
@@ -57,6 +65,7 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
 
     const config = CONSTANTS[args.cluster][args.release];
     const rpcUrl = devnet(`https://${config.rpcUrl}`);
+    const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
     const payer = await resolvePayerKeypair(args.payerKp);
@@ -67,6 +76,8 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
       seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
     });
     logger.info(`Bridge account: ${bridgeAccountAddress}`);
+
+    const bridge = await fetchBridge(rpc, bridgeAccountAddress);
 
     const remoteToken = toBytes(config.wSol);
     const [solVaultAddress] = await getProgramDerivedAddress({
@@ -89,36 +100,56 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
     );
     logger.info(`Outgoing message: ${outgoingMessageKeypairSigner.address}`);
 
-    const ix = getBridgeSolInstruction(
-      {
-        payer,
-        from: payer,
-        gasFeeReceiver: payer.address,
-        solVault: solVaultAddress,
-        bridge: bridgeAccountAddress,
-        outgoingMessage: outgoingMessageKeypairSigner,
-        systemProgram: SYSTEM_PROGRAM_ADDRESS,
-        to: toBytes(args.to),
-        remoteToken,
-        amount: BigInt(args.amount * 1e9),
-        call: null,
-      },
-      { programAddress: config.solanaBridge }
-    );
+    const ixs: Instruction[] = [
+      getBridgeSolInstruction(
+        {
+          payer,
+          from: payer,
+          gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
+          solVault: solVaultAddress,
+          bridge: bridgeAccountAddress,
+          outgoingMessage: outgoingMessageKeypairSigner,
+          systemProgram: SYSTEM_PROGRAM_ADDRESS,
+          to: toBytes(args.to),
+          remoteToken,
+          amount: scaledAmount,
+          call: null,
+        },
+        { programAddress: config.solanaBridge }
+      ),
+    ];
+
+    if (args.payForRelay) {
+      ixs.push(
+        await buildPayForRelayInstruction(
+          args.cluster,
+          args.release,
+          outgoingMessageKeypairSigner.address,
+          payer
+        )
+      );
+    }
 
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, [ix], payer);
+    const signature = await buildAndSendTransaction(rpcUrl, ixs, payer);
     logger.success("Bridge SOL operation completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
 
-    // Relay message to Base
-    await relayMessageToBase(
-      args.cluster,
-      args.release,
-      outgoingMessageKeypairSigner.address
-    );
+    if (args.payForRelay) {
+      await monitorMessageExecution(
+        args.cluster,
+        args.release,
+        outgoingMessageKeypairSigner.address
+      );
+    } else {
+      await relayMessageToBase(
+        args.cluster,
+        args.release,
+        outgoingMessageKeypairSigner.address
+      );
+    }
   } catch (error) {
     logger.error("Bridge SOL operation failed:", error);
     throw error;
