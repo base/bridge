@@ -33,9 +33,9 @@ import {
   type TransactionSigner,
   type WritableAccount,
   type WritableSignerAccount,
-} from "@solana/kit";
-import { BASE_RELAYER_PROGRAM_ADDRESS } from "../programs";
-import { getAccountMetaFactory, type ResolvedAccount } from "../shared";
+} from '@solana/kit';
+import { BASE_RELAYER_PROGRAM_ADDRESS } from '../programs';
+import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
 export const PAY_FOR_RELAY_DISCRIMINATOR = new Uint8Array([
   41, 191, 218, 201, 250, 164, 156, 55,
@@ -55,8 +55,8 @@ export type PayForRelayInstruction<
   TAccountMessageToRelay extends string | AccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
-    | AccountMeta<string> = "11111111111111111111111111111111",
-  TRemainingAccounts extends readonly AccountMeta<string>[] = []
+    | AccountMeta<string> = '11111111111111111111111111111111',
+  TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
@@ -76,7 +76,7 @@ export type PayForRelayInstruction<
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
-      ...TRemainingAccounts
+      ...TRemainingAccounts,
     ]
   >;
 
@@ -94,9 +94,9 @@ export type PayForRelayInstructionDataArgs = {
 export function getPayForRelayInstructionDataEncoder(): FixedSizeEncoder<PayForRelayInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
-      ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
-      ["outgoingMessage", getAddressEncoder()],
-      ["gasLimit", getU64Encoder()],
+      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['outgoingMessage', getAddressEncoder()],
+      ['gasLimit', getU64Encoder()],
     ]),
     (value) => ({ ...value, discriminator: PAY_FOR_RELAY_DISCRIMINATOR })
   );
@@ -104,9 +104,9 @@ export function getPayForRelayInstructionDataEncoder(): FixedSizeEncoder<PayForR
 
 export function getPayForRelayInstructionDataDecoder(): FixedSizeDecoder<PayForRelayInstructionData> {
   return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
-    ["outgoingMessage", getAddressDecoder()],
-    ["gasLimit", getU64Decoder()],
+    ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['outgoingMessage', getAddressDecoder()],
+    ['gasLimit', getU64Decoder()],
   ]);
 }
 
@@ -125,7 +125,7 @@ export type PayForRelayInput<
   TAccountCfg extends string = string,
   TAccountGasFeeReceiver extends string = string,
   TAccountMessageToRelay extends string = string,
-  TAccountSystemProgram extends string = string
+  TAccountSystemProgram extends string = string,
 > = {
   /**
    * The account that pays for transaction fees and account creation.
@@ -146,8 +146,8 @@ export type PayForRelayInput<
    * Used internally by Anchor for account initialization.
    */
   systemProgram?: Address<TAccountSystemProgram>;
-  outgoingMessage: PayForRelayInstructionDataArgs["outgoingMessage"];
-  gasLimit: PayForRelayInstructionDataArgs["gasLimit"];
+  outgoingMessage: PayForRelayInstructionDataArgs['outgoingMessage'];
+  gasLimit: PayForRelayInstructionDataArgs['gasLimit'];
 };
 
 export function getPayForRelayInstruction<
@@ -156,7 +156,7 @@ export function getPayForRelayInstruction<
   TAccountGasFeeReceiver extends string,
   TAccountMessageToRelay extends string,
   TAccountSystemProgram extends string,
-  TProgramAddress extends Address = typeof BASE_RELAYER_PROGRAM_ADDRESS
+  TProgramAddress extends Address = typeof BASE_RELAYER_PROGRAM_ADDRESS,
 >(
   input: PayForRelayInput<
     TAccountPayer,
@@ -196,10 +196,10 @@ export function getPayForRelayInstruction<
   // Resolve default values.
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
-      "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
+      '11111111111111111111111111111111' as Address<'11111111111111111111111111111111'>;
   }
 
-  const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
+  const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
       getAccountMeta(accounts.payer),
@@ -226,7 +226,7 @@ export function getPayForRelayInstruction<
 
 export type ParsedPayForRelayInstruction<
   TProgram extends string = typeof BASE_RELAYER_PROGRAM_ADDRESS,
-  TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[]
+  TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
   programAddress: Address<TProgram>;
   accounts: {
@@ -258,7 +258,7 @@ export type ParsedPayForRelayInstruction<
 
 export function parsePayForRelayInstruction<
   TProgram extends string,
-  TAccountMetas extends readonly AccountMeta[]
+  TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
@@ -266,7 +266,7 @@ export function parsePayForRelayInstruction<
 ): ParsedPayForRelayInstruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 5) {
     // TODO: Coded error.
-    throw new Error("Not enough accounts");
+    throw new Error('Not enough accounts');
   }
   let accountIndex = 0;
   const getNextAccount = () => {
