@@ -353,6 +353,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 1,
             sender: TEST_TRANSFER_SENDER,
             gasLimit: GAS_LIMIT,
@@ -389,6 +390,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 1,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             gasLimit: GAS_LIMIT,
@@ -428,6 +430,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             gasLimit: GAS_LIMIT,
@@ -459,6 +462,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             gasLimit: GAS_LIMIT,
@@ -487,6 +491,7 @@ contract TokenLibTest is CommonTest {
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER,
             gasLimit: GAS_LIMIT,
@@ -513,6 +518,7 @@ contract TokenLibTest is CommonTest {
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER,
             gasLimit: GAS_LIMIT,
@@ -539,6 +545,7 @@ contract TokenLibTest is CommonTest {
         // Prepare the message manually to avoid the nextIncomingNonce() call
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER,
             gasLimit: GAS_LIMIT,
@@ -634,6 +641,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 1,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             gasLimit: GAS_LIMIT,
@@ -666,6 +674,7 @@ contract TokenLibTest is CommonTest {
         // Use a different sender (NOT the remote bridge, that's only for token registration)
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_TRANSFER_SENDER, // Different sender for transfers
             gasLimit: GAS_LIMIT,
@@ -714,6 +723,7 @@ contract TokenLibTest is CommonTest {
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: uint64(nonce),
             sender: cfg.remoteBridge,
             gasLimit: GAS_LIMIT,

@@ -7,6 +7,7 @@ import {Initializable} from "solady/utils/Initializable.sol";
 
 import {IPartner} from "./interfaces/IPartner.sol";
 import {MessageLib} from "./libraries/MessageLib.sol";
+import {Pubkey} from "./libraries/SVMLib.sol";
 import {VerificationLib} from "./libraries/VerificationLib.sol";
 
 import {Bridge} from "./Bridge.sol";
@@ -17,6 +18,14 @@ import {Bridge} from "./Bridge.sol";
 ///         by `CrossL2Inbox` from the OP Stack.
 contract BridgeValidator is Initializable {
     using ECDSA for bytes32;
+
+    /// @notice Container for data used to derive a unique `messageHash` for registration.
+    struct SignedMessage {
+        /// @notice Hash of the inner message payload (excluding nonce and gas limits).
+        bytes32 innerMessageHash;
+        /// @notice SVM/Solana pubkey associated with the outgoing message for this registration.
+        Pubkey outgoingMessagePubkey;
+    }
 
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
@@ -57,9 +66,10 @@ contract BridgeValidator is Initializable {
 
     /// @notice Emitted when a single message is registered (pre-validated).
     ///
-    /// @param messageHash The pre-validated message hash (derived from the inner message hash and an incremental
-    ///                    nonce) corresponding to an `IncomingMessage` in the `Bridge` contract.
-    event MessageRegistered(bytes32 indexed messageHash);
+    /// @param messageHash           The pre-validated message hash (derived from the inner message hash and an 
+    ///                              incremental nonce) corresponding to an `IncomingMessage` in the `Bridge` contract.
+    /// @param outgoingMessagePubkey The SVM/Solana pubkey associated with the outgoing message for this registration.
+    event MessageRegistered(bytes32 indexed messageHash, Pubkey indexed outgoingMessagePubkey);
 
     /// @notice Emitted when the partner validator threshold is updated.
     ///
@@ -156,34 +166,37 @@ contract BridgeValidator is Initializable {
         partnerValidatorThreshold = partnerThreshold;
     }
 
-    /// @notice Pre-validates a batch of Solana --> Base messages.
+    /// @notice Pre-validates a batch of Solana → Base messages.
     ///
-    /// @param innerMessageHashes An array of inner message hashes to pre-validate (hash over message data excluding the
-    ///                           nonce and gasLimit). Each is combined with a monotonically increasing nonce to form
-    ///                           `messageHashes`.
-    /// @param validatorSigs      A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
-    ///                           `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
-    ///                           Must include at least `getBaseThreshold()` Base validator signatures. The external
-    ///                           signature threshold is controlled by `PARTNER_VALIDATOR_THRESHOLD`.
-    function registerMessages(bytes32[] calldata innerMessageHashes, bytes calldata validatorSigs)
+    /// @param signedMessages An array of `SignedMessage` structs. For each entry, the `messageHash` is computed as
+    ///                       `MessageLib.getMessageHash(nonce, outgoingMessagePubkey, innerMessageHash)` where `nonce`
+    ///                       increments monotonically from `nextNonce`.
+    /// @param validatorSigs  A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
+    ///                       `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
+    ///                       Must include at least `getBaseThreshold()` Base validator signatures. If
+    ///                       `partnerValidatorThreshold > 0`, must also include at least `partnerValidatorThreshold`
+    ///                       partner validator signatures.
+    function registerMessages(SignedMessage[] calldata signedMessages, bytes calldata validatorSigs)
         external
         whenNotPaused
     {
-        uint256 len = innerMessageHashes.length;
+        uint256 len = signedMessages.length;
         if (len == 0) revert NoMessages();
 
         bytes32[] memory messageHashes = new bytes32[](len);
         uint256 currentNonce = nextNonce;
 
         for (uint256 i; i < len; i++) {
-            messageHashes[i] = MessageLib.getMessageHash(currentNonce++, innerMessageHashes[i]);
+            messageHashes[i] = MessageLib.getMessageHash(
+                currentNonce++, signedMessages[i].outgoingMessagePubkey, signedMessages[i].innerMessageHash
+            );
         }
 
         _validateSigs({messageHashes: messageHashes, sigData: validatorSigs});
 
         for (uint256 i; i < len; i++) {
             validMessages[messageHashes[i]] = true;
-            emit MessageRegistered(messageHashes[i]);
+            emit MessageRegistered(messageHashes[i], signedMessages[i].outgoingMessagePubkey);
         }
 
         nextNonce = currentNonce;
