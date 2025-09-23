@@ -37,7 +37,7 @@ import {
   type MaybeAccount,
   type MaybeEncodedAccount,
   type ReadonlyUint8Array,
-} from "@solana/kit";
+} from '@solana/kit';
 import {
   getBaseOracleConfigDecoder,
   getBaseOracleConfigEncoder,
@@ -63,7 +63,7 @@ import {
   type PartnerOracleConfigArgs,
   type ProtocolConfig,
   type ProtocolConfigArgs,
-} from "../types";
+} from '../types';
 
 export const BRIDGE_DISCRIMINATOR = new Uint8Array([
   231, 232, 31, 98, 110, 3, 23, 59,
@@ -123,17 +123,17 @@ export type BridgeArgs = {
 export function getBridgeEncoder(): FixedSizeEncoder<BridgeArgs> {
   return transformEncoder(
     getStructEncoder([
-      ["discriminator", fixEncoderSize(getBytesEncoder(), 8)],
-      ["baseBlockNumber", getU64Encoder()],
-      ["nonce", getU64Encoder()],
-      ["guardian", getAddressEncoder()],
-      ["paused", getBooleanEncoder()],
-      ["eip1559", getEip1559Encoder()],
-      ["gasConfig", getGasConfigEncoder()],
-      ["protocolConfig", getProtocolConfigEncoder()],
-      ["bufferConfig", getBufferConfigEncoder()],
-      ["partnerOracleConfig", getPartnerOracleConfigEncoder()],
-      ["baseOracleConfig", getBaseOracleConfigEncoder()],
+      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['baseBlockNumber', getU64Encoder()],
+      ['nonce', getU64Encoder()],
+      ['guardian', getAddressEncoder()],
+      ['paused', getBooleanEncoder()],
+      ['eip1559', getEip1559Encoder()],
+      ['gasConfig', getGasConfigEncoder()],
+      ['protocolConfig', getProtocolConfigEncoder()],
+      ['bufferConfig', getBufferConfigEncoder()],
+      ['partnerOracleConfig', getPartnerOracleConfigEncoder()],
+      ['baseOracleConfig', getBaseOracleConfigEncoder()],
     ]),
     (value) => ({ ...value, discriminator: BRIDGE_DISCRIMINATOR })
   );
@@ -141,17 +141,17 @@ export function getBridgeEncoder(): FixedSizeEncoder<BridgeArgs> {
 
 export function getBridgeDecoder(): FixedSizeDecoder<Bridge> {
   return getStructDecoder([
-    ["discriminator", fixDecoderSize(getBytesDecoder(), 8)],
-    ["baseBlockNumber", getU64Decoder()],
-    ["nonce", getU64Decoder()],
-    ["guardian", getAddressDecoder()],
-    ["paused", getBooleanDecoder()],
-    ["eip1559", getEip1559Decoder()],
-    ["gasConfig", getGasConfigDecoder()],
-    ["protocolConfig", getProtocolConfigDecoder()],
-    ["bufferConfig", getBufferConfigDecoder()],
-    ["partnerOracleConfig", getPartnerOracleConfigDecoder()],
-    ["baseOracleConfig", getBaseOracleConfigDecoder()],
+    ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['baseBlockNumber', getU64Decoder()],
+    ['nonce', getU64Decoder()],
+    ['guardian', getAddressDecoder()],
+    ['paused', getBooleanDecoder()],
+    ['eip1559', getEip1559Decoder()],
+    ['gasConfig', getGasConfigDecoder()],
+    ['protocolConfig', getProtocolConfigDecoder()],
+    ['bufferConfig', getBufferConfigDecoder()],
+    ['partnerOracleConfig', getPartnerOracleConfigDecoder()],
+    ['baseOracleConfig', getBaseOracleConfigDecoder()],
   ]);
 }
 

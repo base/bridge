@@ -16,7 +16,7 @@ use spl_type_length_value::variable_len_pack::VariableLenPack;
 
 use crate::common::DISCRIMINATOR_LEN;
 use crate::common::{bridge::Bridge, PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED};
-use crate::solana_to_base::{pay_for_gas, Call, CallType, OutgoingMessage};
+use crate::solana_to_base::{pay_for_gas, Call, CallType, OutgoingMessage, OUTGOING_MESSAGE_SEED};
 use crate::solana_to_base::{REMOTE_TOKEN_METADATA_KEY, SCALER_EXPONENT_METADATA_KEY};
 use crate::ID;
 
@@ -29,7 +29,7 @@ const REGISTER_REMOTE_TOKEN_DATA_LEN: usize = {
 /// with Token-2022 extensions and registers it with Base for cross-chain
 /// token transfers. The wrapped token maintains metadata linking it to its Base counterpart.
 #[derive(Accounts)]
-#[instruction(decimals: u8, metadata: PartialTokenMetadata)]
+#[instruction(outgoing_message_salt: [u8; 32], decimals: u8, metadata: PartialTokenMetadata)]
 pub struct WrapToken<'info> {
     /// The account that pays for the transaction and all account creation costs.
     /// Must be mutable to deduct lamports for mint creation, metadata storage, and gas fees.
@@ -73,6 +73,8 @@ pub struct WrapToken<'info> {
     #[account(
         init,
         payer = payer,
+        seeds = [OUTGOING_MESSAGE_SEED.as_bytes(), outgoing_message_salt.as_ref()],
+        bump,
         space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Call>(REGISTER_REMOTE_TOKEN_DATA_LEN),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
@@ -88,6 +90,7 @@ pub struct WrapToken<'info> {
 
 pub fn wrap_token_handler(
     ctx: Context<WrapToken>,
+    _outgoing_message_salt: [u8; 32],
     decimals: u8,
     partial_token_metadata: PartialTokenMetadata,
 ) -> Result<()> {

@@ -157,8 +157,9 @@ export const IDL = {
         "the bridge's cross-chain messaging system.",
         "",
         "# Arguments",
-        "* `ctx`  - The context containing accounts for the bridge operation",
-        "* `call` - The contract call details including call type, target address, value, and calldata"
+        "* `ctx`                   - The context containing accounts for the bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `call`                  - The contract call details including call type, target address, value, and calldata"
       ],
       "discriminator": [
         90,
@@ -215,8 +216,7 @@ export const IDL = {
             "the worst-case message variant to ensure sufficient capacity even for large payloads",
             "- Contains all information needed for execution on Base"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "system_program",
@@ -227,6 +227,15 @@ export const IDL = {
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "call",
           "type": {
@@ -245,7 +254,8 @@ export const IDL = {
         "for execution on Base.",
         "",
         "# Arguments",
-        "* `ctx` - The context containing accounts for the bridge operation"
+        "* `ctx`                   - The context containing accounts for the bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account"
       ],
       "discriminator": [
         138,
@@ -321,8 +331,7 @@ export const IDL = {
             "cover the Call variant",
             "- Includes `nonce` and `sender` metadata used on Base"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "system_program",
@@ -332,7 +341,17 @@ export const IDL = {
           ]
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "bridge_sol",
@@ -342,11 +361,12 @@ export const IDL = {
         "tokens on Base for the specified recipient.",
         "",
         "# Arguments",
-        "* `ctx`          - The context containing accounts for the SOL bridge operation",
-        "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `remote_token` - The 20-byte address of the token contract on Base",
-        "* `amount`       - Amount of SOL to bridge (in lamports)",
-        "* `call`         - Optional additional contract call to execute with the token transfer"
+        "* `ctx`                   - The context containing accounts for the SOL bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `remote_token`          - The 20-byte address of the token contract on Base",
+        "* `amount`                - Amount of SOL to bridge (in lamports)",
+        "* `call`                  - Optional additional contract call to execute with the token transfer"
       ],
       "discriminator": [
         190,
@@ -412,8 +432,7 @@ export const IDL = {
             "- Payer funds the account creation",
             "- Space allocated dynamically based on optional call data size"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "system_program",
@@ -424,6 +443,15 @@ export const IDL = {
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -466,10 +494,11 @@ export const IDL = {
         "tokens on Base, then executes a call using data from a call buffer.",
         "",
         "# Arguments",
-        "* `ctx`          - The context containing accounts for the SOL bridge operation",
-        "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `remote_token` - The 20-byte address of the token contract on Base",
-        "* `amount`       - Amount of SOL to bridge (in lamports)"
+        "* `ctx`                   - The context containing accounts for the SOL bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `remote_token`          - The 20-byte address of the token contract on Base",
+        "* `amount`                - Amount of SOL to bridge (in lamports)"
       ],
       "discriminator": [
         52,
@@ -552,8 +581,7 @@ export const IDL = {
             "- Funded by `payer`",
             "- Space: DISCRIMINATOR_LEN + serialized `OutgoingMessage`"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "system_program",
@@ -563,6 +591,15 @@ export const IDL = {
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -595,11 +632,12 @@ export const IDL = {
         "equivalent ERC20 tokens on Base for the specified recipient.",
         "",
         "# Arguments",
-        "* `ctx`          - The context containing accounts for the SPL token bridge operation",
-        "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `remote_token` - The 20-byte address of the ERC20 token contract on Base",
-        "* `amount`       - Amount of SPL tokens to bridge (in the token's smallest units)",
-        "* `call`         - Optional additional contract call to execute with the token transfer"
+        "* `ctx`                   - The context containing accounts for the SPL token bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `remote_token`          - The 20-byte address of the ERC20 token contract on Base",
+        "* `amount`                - Amount of SPL tokens to bridge (in the token's smallest units)",
+        "* `call`                  - Optional additional contract call to execute with the token transfer"
       ],
       "discriminator": [
         87,
@@ -685,8 +723,7 @@ export const IDL = {
             "- Used by relayers to execute the bridge operation on Base",
             "- The recorded transfer amount equals the net increase in `token_vault` balance"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "token_program",
@@ -704,6 +741,15 @@ export const IDL = {
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -746,10 +792,11 @@ export const IDL = {
         "tokens on Base, then executes a call using data from a call buffer.",
         "",
         "# Arguments",
-        "* `ctx`          - The context containing accounts for the SPL token bridge operation",
-        "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `remote_token` - The 20-byte address of the ERC20 token contract on Base",
-        "* `amount`       - Amount of SPL tokens to bridge (in the token's smallest units)"
+        "* `ctx`                   - The context containing accounts for the SPL token bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `remote_token`          - The 20-byte address of the ERC20 token contract on Base",
+        "* `amount`                - Amount of SPL tokens to bridge (in the token's smallest units)"
       ],
       "discriminator": [
         86,
@@ -847,8 +894,7 @@ export const IDL = {
           "docs": [
             "The outgoing message account that stores the cross-chain transfer details."
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "token_program",
@@ -866,6 +912,15 @@ export const IDL = {
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -898,10 +953,11 @@ export const IDL = {
         "or mint the original tokens on Base for the specified recipient.",
         "",
         "# Arguments",
-        "* `ctx`    - The context containing accounts for the wrapped token bridge operation",
-        "* `to`     - The 20-byte Ethereum address that will receive the original tokens on Base",
-        "* `amount` - Amount of wrapped tokens to bridge back (in the token's smallest units)",
-        "* `call`   - Optional additional contract call to execute with the token transfer"
+        "* `ctx`                   - The context containing accounts for the wrapped token bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive the original tokens on Base",
+        "* `amount`                - Amount of wrapped tokens to bridge back (in the token's smallest units)",
+        "* `call`                  - Optional additional contract call to execute with the token transfer"
       ],
       "discriminator": [
         55,
@@ -973,8 +1029,7 @@ export const IDL = {
             "- Space allocated based on call data size",
             "- Will be read by Base relayers to complete the bridge operation"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "token_program",
@@ -992,6 +1047,15 @@ export const IDL = {
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -1025,9 +1089,10 @@ export const IDL = {
         "the original tokens on Base, then executes a call using data from a call buffer.",
         "",
         "# Arguments",
-        "* `ctx`    - The context containing accounts for the wrapped token bridge operation",
-        "* `to`     - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `amount` - Amount of wrapped tokens to bridge back (in the token's smallest units)"
+        "* `ctx`                   - The context containing accounts for the wrapped token bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `amount`                - Amount of wrapped tokens to bridge back (in the token's smallest units)"
       ],
       "discriminator": [
         117,
@@ -1115,8 +1180,7 @@ export const IDL = {
             "The outgoing message account that stores the cross-chain transfer details.",
             "Space is sized based on the current call buffer length so the call data fits."
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "token_program",
@@ -1132,6 +1196,15 @@ export const IDL = {
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -2411,6 +2484,7 @@ export const IDL = {
         "",
         "# Arguments",
         "* `ctx`                    - The transaction context",
+        "* `outgoing_message_salt`  - The salt for the outgoing message account",
         "* `decimals`               - Number of decimal places for the token",
         "* `partial_token_metadata` - Token name, symbol, remote Base token address, and scaler exponent"
       ],
@@ -2467,8 +2541,7 @@ export const IDL = {
             "the wrapped token on the Base blockchain. Contains the encoded function call",
             "with token address, local mint address, and scaling parameters."
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "token_program",
@@ -2486,6 +2559,15 @@ export const IDL = {
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "decimals",
           "type": "u8"
@@ -2589,8 +2671,13 @@ export const IDL = {
     },
     {
       "code": 6001,
+      "name": "Unauthorized",
+      "msg": "Only the owner can close this call buffer"
+    },
+    {
+      "code": 6002,
       "name": "BridgePaused",
-      "msg": "Bridge is paused"
+      "msg": "Bridge is currently paused"
     }
   ],
   "types": [
@@ -3794,6 +3881,11 @@ export const IDL = {
       "name": "NATIVE_SOL_PUBKEY",
       "type": "pubkey",
       "value": "SoL1111111111111111111111111111111111111111"
+    },
+    {
+      "name": "OUTGOING_MESSAGE_SEED",
+      "type": "string",
+      "value": "\"outgoing_message\""
     },
     {
       "name": "OUTPUT_ROOT_SEED",

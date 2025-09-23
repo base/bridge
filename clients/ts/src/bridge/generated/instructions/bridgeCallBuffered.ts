@@ -82,8 +82,7 @@ export type BridgeCallBufferedInstruction<
         ? WritableAccount<TAccountCallBuffer>
         : TAccountCallBuffer,
       TAccountOutgoingMessage extends string
-        ? WritableSignerAccount<TAccountOutgoingMessage> &
-            AccountSignerMeta<TAccountOutgoingMessage>
+        ? WritableAccount<TAccountOutgoingMessage>
         : TAccountOutgoingMessage,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
@@ -94,13 +93,19 @@ export type BridgeCallBufferedInstruction<
 
 export type BridgeCallBufferedInstructionData = {
   discriminator: ReadonlyUint8Array;
+  outgoingMessageSalt: ReadonlyUint8Array;
 };
 
-export type BridgeCallBufferedInstructionDataArgs = {};
+export type BridgeCallBufferedInstructionDataArgs = {
+  outgoingMessageSalt: ReadonlyUint8Array;
+};
 
 export function getBridgeCallBufferedInstructionDataEncoder(): FixedSizeEncoder<BridgeCallBufferedInstructionDataArgs> {
   return transformEncoder(
-    getStructEncoder([['discriminator', fixEncoderSize(getBytesEncoder(), 8)]]),
+    getStructEncoder([
+      ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
+    ]),
     (value) => ({ ...value, discriminator: BRIDGE_CALL_BUFFERED_DISCRIMINATOR })
   );
 }
@@ -108,6 +113,7 @@ export function getBridgeCallBufferedInstructionDataEncoder(): FixedSizeEncoder<
 export function getBridgeCallBufferedInstructionDataDecoder(): FixedSizeDecoder<BridgeCallBufferedInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
   ]);
 }
 
@@ -168,12 +174,13 @@ export type BridgeCallBufferedInput<
    * cover the Call variant
    * - Includes `nonce` and `sender` metadata used on Base
    */
-  outgoingMessage: TransactionSigner<TAccountOutgoingMessage>;
+  outgoingMessage: Address<TAccountOutgoingMessage>;
   /**
    * System program required for creating the outgoing message account.
    * Used internally by Anchor for account initialization.
    */
   systemProgram?: Address<TAccountSystemProgram>;
+  outgoingMessageSalt: BridgeCallBufferedInstructionDataArgs['outgoingMessageSalt'];
 };
 
 export function getBridgeCallBufferedInstruction<
@@ -228,6 +235,9 @@ export function getBridgeCallBufferedInstruction<
     ResolvedAccount
   >;
 
+  // Original args.
+  const args = { ...input };
+
   // Resolve default values.
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
@@ -247,7 +257,9 @@ export function getBridgeCallBufferedInstruction<
       getAccountMeta(accounts.systemProgram),
     ],
     programAddress,
-    data: getBridgeCallBufferedInstructionDataEncoder().encode({}),
+    data: getBridgeCallBufferedInstructionDataEncoder().encode(
+      args as BridgeCallBufferedInstructionDataArgs
+    ),
   } as BridgeCallBufferedInstruction<
     TProgramAddress,
     TAccountPayer,

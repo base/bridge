@@ -8,7 +8,7 @@ use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN},
     solana_to_base::{
         internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, CallBuffer,
-        OutgoingMessage, Transfer,
+        OutgoingMessage, Transfer, OUTGOING_MESSAGE_SEED,
     },
 };
 
@@ -18,6 +18,7 @@ use crate::{
 /// message is created to transfer the equivalent tokens and execute the call on Base. The
 /// call buffer account is consumed (closed) and its rent is returned to the owner.
 #[derive(Accounts)]
+#[instruction(outgoing_message_salt: [u8; 32])]
 pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     /// The account that pays for transaction fees, gas fees, and outgoing message account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees (sent to `gas_fee_receiver`).
@@ -74,6 +75,8 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     #[account(
         init,
         payer = payer,
+        seeds = [OUTGOING_MESSAGE_SEED.as_bytes(), outgoing_message_salt.as_ref()],
+        bump,
         space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Transfer>(call_buffer.data.len()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
@@ -87,6 +90,7 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
 
 pub fn bridge_wrapped_token_with_buffered_call_handler<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, BridgeWrappedTokenWithBufferedCall<'info>>,
+    _outgoing_message_salt: [u8; 32],
     to: [u8; 20],
     amount: u64,
 ) -> Result<()> {
@@ -240,7 +244,15 @@ mod tests {
             .expect("Failed to initialize call buffer");
 
         // Now create the bridge_wrapped_token_with_buffered_call instruction
-        let outgoing_message = Keypair::new();
+        let outgoing_message_salt = [42u8; 32];
+        let outgoing_message = Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0;
 
         // Build the BridgeWrappedTokenWithBufferedCall instruction accounts
         let accounts = accounts::BridgeWrappedTokenWithBufferedCall {
@@ -252,7 +264,7 @@ mod tests {
             bridge: bridge_pda,
             owner: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
-            outgoing_message: outgoing_message.pubkey(),
+            outgoing_message,
             token_program: anchor_spl::token_2022::ID,
             system_program: system_program::ID,
         }
@@ -262,12 +274,17 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeWrappedTokenWithBufferedCallIx { to, amount }.data(),
+            data: BridgeWrappedTokenWithBufferedCallIx {
+                outgoing_message_salt,
+                to,
+                amount,
+            }
+            .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &owner, &outgoing_message],
+            &[&payer, &from, &owner],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
@@ -277,7 +294,7 @@ mod tests {
             .expect("Failed to send bridge_wrapped_token_with_buffered_call transaction");
 
         // Verify the OutgoingMessage account was created correctly
-        let outgoing_message_account = svm.get_account(&outgoing_message.pubkey()).unwrap();
+        let outgoing_message_account = svm.get_account(&outgoing_message).unwrap();
         assert_eq!(outgoing_message_account.owner, ID);
 
         let outgoing_message_data =
@@ -409,7 +426,15 @@ mod tests {
             .expect("Failed to initialize call buffer");
 
         // Now try to use bridge_wrapped_token_with_buffered_call with unauthorized account as owner
-        let outgoing_message = Keypair::new();
+        let outgoing_message_salt = [42u8; 32];
+        let outgoing_message = Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0;
         let to = [1u8; 20];
         let amount = 500_000u64;
 
@@ -423,7 +448,7 @@ mod tests {
             bridge: bridge_pda,
             owner: unauthorized.pubkey(), // Wrong owner
             call_buffer: call_buffer.pubkey(),
-            outgoing_message: outgoing_message.pubkey(),
+            outgoing_message,
             token_program: anchor_spl::token_2022::ID,
             system_program: system_program::ID,
         }
@@ -433,12 +458,17 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeWrappedTokenWithBufferedCallIx { to, amount }.data(),
+            data: BridgeWrappedTokenWithBufferedCallIx {
+                outgoing_message_salt,
+                to,
+                amount,
+            }
+            .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &unauthorized, &outgoing_message],
+            &[&payer, &from, &unauthorized],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
@@ -532,7 +562,15 @@ mod tests {
             .expect("Failed to initialize call buffer");
 
         // Now try bridge_wrapped_token_with_buffered_call with wrong gas fee receiver
-        let outgoing_message = Keypair::new();
+        let outgoing_message_salt = [42u8; 32];
+        let outgoing_message = Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0;
         let to = [1u8; 20];
         let amount = 500_000u64;
 
@@ -546,7 +584,7 @@ mod tests {
             bridge: bridge_pda,
             owner: owner.pubkey(),
             call_buffer: call_buffer.pubkey(),
-            outgoing_message: outgoing_message.pubkey(),
+            outgoing_message,
             token_program: anchor_spl::token_2022::ID,
             system_program: system_program::ID,
         }
@@ -556,12 +594,17 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeWrappedTokenWithBufferedCallIx { to, amount }.data(),
+            data: BridgeWrappedTokenWithBufferedCallIx {
+                outgoing_message_salt,
+                to,
+                amount,
+            }
+            .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &owner, &outgoing_message],
+            &[&payer, &from, &owner],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );

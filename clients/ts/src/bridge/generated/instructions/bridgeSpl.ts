@@ -97,8 +97,7 @@ export type BridgeSplInstruction<
         ? WritableAccount<TAccountTokenVault>
         : TAccountTokenVault,
       TAccountOutgoingMessage extends string
-        ? WritableSignerAccount<TAccountOutgoingMessage> &
-            AccountSignerMeta<TAccountOutgoingMessage>
+        ? WritableAccount<TAccountOutgoingMessage>
         : TAccountOutgoingMessage,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
@@ -112,6 +111,7 @@ export type BridgeSplInstruction<
 
 export type BridgeSplInstructionData = {
   discriminator: ReadonlyUint8Array;
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   remoteToken: ReadonlyUint8Array;
   amount: bigint;
@@ -119,6 +119,7 @@ export type BridgeSplInstructionData = {
 };
 
 export type BridgeSplInstructionDataArgs = {
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   remoteToken: ReadonlyUint8Array;
   amount: number | bigint;
@@ -129,6 +130,7 @@ export function getBridgeSplInstructionDataEncoder(): Encoder<BridgeSplInstructi
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['to', fixEncoderSize(getBytesEncoder(), 20)],
       ['remoteToken', fixEncoderSize(getBytesEncoder(), 20)],
       ['amount', getU64Encoder()],
@@ -141,6 +143,7 @@ export function getBridgeSplInstructionDataEncoder(): Encoder<BridgeSplInstructi
 export function getBridgeSplInstructionDataDecoder(): Decoder<BridgeSplInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['to', fixDecoderSize(getBytesDecoder(), 20)],
     ['remoteToken', fixDecoderSize(getBytesDecoder(), 20)],
     ['amount', getU64Decoder()],
@@ -216,7 +219,7 @@ export type BridgeSplInput<
    * - Used by relayers to execute the bridge operation on Base
    * - The recorded transfer amount equals the net increase in `token_vault` balance
    */
-  outgoingMessage: TransactionSigner<TAccountOutgoingMessage>;
+  outgoingMessage: Address<TAccountOutgoingMessage>;
   /**
    * The SPL Token program interface for executing token transfers.
    * Used for the transfer_checked operation to move tokens to the vault.
@@ -227,6 +230,7 @@ export type BridgeSplInput<
    * initializing the token vault when needed.
    */
   systemProgram?: Address<TAccountSystemProgram>;
+  outgoingMessageSalt: BridgeSplInstructionDataArgs['outgoingMessageSalt'];
   to: BridgeSplInstructionDataArgs['to'];
   remoteToken: BridgeSplInstructionDataArgs['remoteToken'];
   amount: BridgeSplInstructionDataArgs['amount'];

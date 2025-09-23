@@ -86,8 +86,7 @@ export type BridgeSolInstruction<
         ? WritableAccount<TAccountBridge>
         : TAccountBridge,
       TAccountOutgoingMessage extends string
-        ? WritableSignerAccount<TAccountOutgoingMessage> &
-            AccountSignerMeta<TAccountOutgoingMessage>
+        ? WritableAccount<TAccountOutgoingMessage>
         : TAccountOutgoingMessage,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
@@ -98,6 +97,7 @@ export type BridgeSolInstruction<
 
 export type BridgeSolInstructionData = {
   discriminator: ReadonlyUint8Array;
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   remoteToken: ReadonlyUint8Array;
   amount: bigint;
@@ -105,6 +105,7 @@ export type BridgeSolInstructionData = {
 };
 
 export type BridgeSolInstructionDataArgs = {
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   remoteToken: ReadonlyUint8Array;
   amount: number | bigint;
@@ -115,6 +116,7 @@ export function getBridgeSolInstructionDataEncoder(): Encoder<BridgeSolInstructi
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['to', fixEncoderSize(getBytesEncoder(), 20)],
       ['remoteToken', fixEncoderSize(getBytesEncoder(), 20)],
       ['amount', getU64Encoder()],
@@ -127,6 +129,7 @@ export function getBridgeSolInstructionDataEncoder(): Encoder<BridgeSolInstructi
 export function getBridgeSolInstructionDataDecoder(): Decoder<BridgeSolInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['to', fixDecoderSize(getBytesDecoder(), 20)],
     ['remoteToken', fixDecoderSize(getBytesDecoder(), 20)],
     ['amount', getU64Decoder()],
@@ -185,12 +188,13 @@ export type BridgeSolInput<
    * - Payer funds the account creation
    * - Space allocated dynamically based on optional call data size
    */
-  outgoingMessage: TransactionSigner<TAccountOutgoingMessage>;
+  outgoingMessage: Address<TAccountOutgoingMessage>;
   /**
    * System program required for SOL transfers and account creation.
    * Used for transferring SOL from user to vault and creating outgoing message accounts.
    */
   systemProgram?: Address<TAccountSystemProgram>;
+  outgoingMessageSalt: BridgeSolInstructionDataArgs['outgoingMessageSalt'];
   to: BridgeSolInstructionDataArgs['to'];
   remoteToken: BridgeSolInstructionDataArgs['remoteToken'];
   amount: BridgeSolInstructionDataArgs['amount'];

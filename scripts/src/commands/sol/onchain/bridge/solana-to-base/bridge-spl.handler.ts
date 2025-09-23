@@ -39,6 +39,7 @@ import {
   monitorMessageExecution,
 } from "@internal/sol";
 import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
+import { outgoingMessagePubkey } from "@internal/sol/bridge";
 
 export const argsSchema = z.object({
   cluster: z
@@ -142,11 +143,10 @@ export async function handleBridgeSpl(args: BridgeSplArgs): Promise<void> {
     logger.info(`Token Vault: ${tokenVaultAddress}`);
 
     // Generate outgoing message keypair
-    const outgoingMessageKeypair = await generateKeyPair();
-    const outgoingMessageKeypairSigner = await createSignerFromKeyPair(
-      outgoingMessageKeypair
+    const { salt, pubkey: outgoingMessage } = await outgoingMessagePubkey(
+      config.solanaBridge
     );
-    logger.info(`Outgoing message: ${outgoingMessageKeypairSigner.address}`);
+    logger.info(`Outgoing message: ${outgoingMessage}`);
 
     // Fetch bridge state
     const bridge = await fetchBridge(rpc, bridgeAccountAddress);
@@ -163,6 +163,7 @@ export async function handleBridgeSpl(args: BridgeSplArgs): Promise<void> {
     const ixs: Instruction[] = [
       getBridgeSplInstruction(
         {
+          // Accounts
           payer,
           from: payer,
           gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
@@ -170,9 +171,12 @@ export async function handleBridgeSpl(args: BridgeSplArgs): Promise<void> {
           fromTokenAccount: fromTokenAccountAddress,
           tokenVault: tokenVaultAddress,
           bridge: bridgeAccountAddress,
-          outgoingMessage: outgoingMessageKeypairSigner,
+          outgoingMessage,
           tokenProgram: TOKEN_PROGRAM_ADDRESS,
           systemProgram: SYSTEM_PROGRAM_ADDRESS,
+
+          // Arguments
+          outgoingMessageSalt: salt,
           to: toBytes(args.to),
           remoteToken: remoteTokenBytes,
           amount: scaledAmount,
@@ -187,7 +191,7 @@ export async function handleBridgeSpl(args: BridgeSplArgs): Promise<void> {
         await buildPayForRelayInstruction(
           args.cluster,
           args.release,
-          outgoingMessageKeypairSigner.address,
+          outgoingMessage,
           payer
         )
       );
@@ -204,14 +208,10 @@ export async function handleBridgeSpl(args: BridgeSplArgs): Promise<void> {
       await monitorMessageExecution(
         args.cluster,
         args.release,
-        outgoingMessageKeypairSigner.address
+        outgoingMessage
       );
     } else {
-      await relayMessageToBase(
-        args.cluster,
-        args.release,
-        outgoingMessageKeypairSigner.address
-      );
+      await relayMessageToBase(args.cluster, args.release, outgoingMessage);
     }
   } catch (error) {
     logger.error("Bridge SPL operation failed:", error);

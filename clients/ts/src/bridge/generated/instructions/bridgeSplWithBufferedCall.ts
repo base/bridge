@@ -98,8 +98,7 @@ export type BridgeSplWithBufferedCallInstruction<
         ? WritableAccount<TAccountCallBuffer>
         : TAccountCallBuffer,
       TAccountOutgoingMessage extends string
-        ? WritableSignerAccount<TAccountOutgoingMessage> &
-            AccountSignerMeta<TAccountOutgoingMessage>
+        ? WritableAccount<TAccountOutgoingMessage>
         : TAccountOutgoingMessage,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
@@ -113,12 +112,14 @@ export type BridgeSplWithBufferedCallInstruction<
 
 export type BridgeSplWithBufferedCallInstructionData = {
   discriminator: ReadonlyUint8Array;
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   remoteToken: ReadonlyUint8Array;
   amount: bigint;
 };
 
 export type BridgeSplWithBufferedCallInstructionDataArgs = {
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   remoteToken: ReadonlyUint8Array;
   amount: number | bigint;
@@ -128,6 +129,7 @@ export function getBridgeSplWithBufferedCallInstructionDataEncoder(): FixedSizeE
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['to', fixEncoderSize(getBytesEncoder(), 20)],
       ['remoteToken', fixEncoderSize(getBytesEncoder(), 20)],
       ['amount', getU64Encoder()],
@@ -142,6 +144,7 @@ export function getBridgeSplWithBufferedCallInstructionDataEncoder(): FixedSizeE
 export function getBridgeSplWithBufferedCallInstructionDataDecoder(): FixedSizeDecoder<BridgeSplWithBufferedCallInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['to', fixDecoderSize(getBytesDecoder(), 20)],
     ['remoteToken', fixDecoderSize(getBytesDecoder(), 20)],
     ['amount', getU64Decoder()],
@@ -219,7 +222,7 @@ export type BridgeSplWithBufferedCallInput<
    */
   callBuffer: Address<TAccountCallBuffer>;
   /** The outgoing message account that stores the cross-chain transfer details. */
-  outgoingMessage: TransactionSigner<TAccountOutgoingMessage>;
+  outgoingMessage: Address<TAccountOutgoingMessage>;
   /**
    * The SPL Token program interface for executing token transfers.
    * Used for the transfer_checked operation to move tokens to the vault.
@@ -230,6 +233,7 @@ export type BridgeSplWithBufferedCallInput<
    * initializing the token vault when needed.
    */
   systemProgram?: Address<TAccountSystemProgram>;
+  outgoingMessageSalt: BridgeSplWithBufferedCallInstructionDataArgs['outgoingMessageSalt'];
   to: BridgeSplWithBufferedCallInstructionDataArgs['to'];
   remoteToken: BridgeSplWithBufferedCallInstructionDataArgs['remoteToken'];
   amount: BridgeSplWithBufferedCallInstructionDataArgs['amount'];

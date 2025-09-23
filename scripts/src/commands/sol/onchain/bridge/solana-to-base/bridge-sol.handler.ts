@@ -26,6 +26,7 @@ import {
   monitorMessageExecution,
 } from "@internal/sol";
 import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
+import { outgoingMessagePubkey } from "@internal/sol/bridge";
 
 export const argsSchema = z.object({
   cluster: z
@@ -94,22 +95,25 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
     logger.info(`Amount: ${args.amount}`);
     logger.info(`Scaled amount: ${scaledAmount}`);
 
-    const outgoingMessageKeypair = await generateKeyPair();
-    const outgoingMessageKeypairSigner = await createSignerFromKeyPair(
-      outgoingMessageKeypair
+    const { salt, pubkey: outgoingMessage } = await outgoingMessagePubkey(
+      config.solanaBridge
     );
-    logger.info(`Outgoing message: ${outgoingMessageKeypairSigner.address}`);
+    logger.info(`Outgoing message: ${outgoingMessage}`);
 
     const ixs: Instruction[] = [
       getBridgeSolInstruction(
         {
+          // Accounts
           payer,
           from: payer,
           gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
           solVault: solVaultAddress,
           bridge: bridgeAccountAddress,
-          outgoingMessage: outgoingMessageKeypairSigner,
+          outgoingMessage,
           systemProgram: SYSTEM_PROGRAM_ADDRESS,
+
+          // Arguments
+          outgoingMessageSalt: salt,
           to: toBytes(args.to),
           remoteToken,
           amount: scaledAmount,
@@ -124,7 +128,7 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
         await buildPayForRelayInstruction(
           args.cluster,
           args.release,
-          outgoingMessageKeypairSigner.address,
+          outgoingMessage,
           payer
         )
       );
@@ -141,14 +145,10 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
       await monitorMessageExecution(
         args.cluster,
         args.release,
-        outgoingMessageKeypairSigner.address
+        outgoingMessage
       );
     } else {
-      await relayMessageToBase(
-        args.cluster,
-        args.release,
-        outgoingMessageKeypairSigner.address
-      );
+      await relayMessageToBase(args.cluster, args.release, outgoingMessage);
     }
   } catch (error) {
     logger.error("Bridge SOL operation failed:", error);

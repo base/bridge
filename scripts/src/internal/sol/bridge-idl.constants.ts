@@ -1,5 +1,5 @@
 import { address, type Address } from "@solana/kit";
-import { IDL } from "../../../../solana/idl.bridge.ts";
+import { IDL } from "../sol/bridge.idl";
 
 type BridgeConstants = typeof IDL.constants;
 type BridgeConstantNames = BridgeConstants[number]["name"];

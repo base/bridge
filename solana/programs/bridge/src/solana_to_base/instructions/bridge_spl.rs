@@ -3,7 +3,10 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN, TOKEN_VAULT_SEED},
-    solana_to_base::{internal::bridge_spl::bridge_spl_internal, Call, OutgoingMessage, Transfer},
+    solana_to_base::{
+        internal::bridge_spl::bridge_spl_internal, Call, OutgoingMessage, Transfer,
+        OUTGOING_MESSAGE_SEED,
+    },
 };
 
 /// Accounts struct for the bridge_spl instruction that transfers SPL tokens from Solana to Base along
@@ -13,7 +16,7 @@ use crate::{
 /// to mint corresponding tokens and execute the optional call on Base. If the token charges
 /// transfer fees, the outgoing message records the net amount actually received by the vault.
 #[derive(Accounts)]
-#[instruction(_to: [u8; 20], remote_token: [u8; 20], _amount: u64, call: Option<Call>)]
+#[instruction(outgoing_message_salt: [u8; 32], _to: [u8; 20], remote_token: [u8; 20], _amount: u64, call: Option<Call>)]
 pub struct BridgeSpl<'info> {
     /// The account that pays for transaction fees and account creation.
     /// Must be mutable to deduct lamports for gas fees and new account rent.
@@ -72,6 +75,8 @@ pub struct BridgeSpl<'info> {
     #[account(
         init,
         payer = payer,
+        seeds = [OUTGOING_MESSAGE_SEED.as_bytes(), outgoing_message_salt.as_ref()],
+        bump,
         space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Transfer>(call.as_ref().map(|c| c.data.len()).unwrap_or_default()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
@@ -87,6 +92,7 @@ pub struct BridgeSpl<'info> {
 
 pub fn bridge_spl_handler(
     ctx: Context<BridgeSpl>,
+    _outgoing_message_salt: [u8; 32],
     to: [u8; 20],
     remote_token: [u8; 20],
     amount: u64,
@@ -178,7 +184,15 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        let outgoing_message_salt = [42u8; 32];
+        let outgoing_message = Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0;
 
         // Test parameters
         let to = [1u8; 20]; // Base address
@@ -201,7 +215,7 @@ mod tests {
             from_token_account,
             bridge: bridge_pda,
             token_vault,
-            outgoing_message: outgoing_message.pubkey(),
+            outgoing_message,
             token_program: anchor_spl::token_interface::ID,
             system_program: system_program::ID,
         }
@@ -212,6 +226,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: BridgeSplIx {
+                outgoing_message_salt,
                 to,
                 remote_token,
                 amount,
@@ -222,7 +237,7 @@ mod tests {
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
@@ -232,7 +247,7 @@ mod tests {
             .expect("Failed to send bridge_spl transaction");
 
         // Verify the OutgoingMessage account was created correctly
-        let outgoing_message_account = svm.get_account(&outgoing_message.pubkey()).unwrap();
+        let outgoing_message_account = svm.get_account(&outgoing_message).unwrap();
         assert_eq!(outgoing_message_account.owner, ID);
 
         let outgoing_message_data =
@@ -302,7 +317,15 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        let outgoing_message_salt = [42u8; 32];
+        let outgoing_message = Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0;
 
         // Test parameters
         let to = [1u8; 20];
@@ -333,7 +356,7 @@ mod tests {
             from_token_account,
             bridge: bridge_pda,
             token_vault,
-            outgoing_message: outgoing_message.pubkey(),
+            outgoing_message,
             token_program: anchor_spl::token_interface::ID,
             system_program: system_program::ID,
         }
@@ -344,6 +367,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: BridgeSplIx {
+                outgoing_message_salt,
                 to,
                 remote_token,
                 amount,
@@ -354,7 +378,7 @@ mod tests {
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
@@ -364,7 +388,7 @@ mod tests {
             .expect("Failed to send bridge_spl transaction with call");
 
         // Verify the OutgoingMessage account was created correctly
-        let outgoing_message_account = svm.get_account(&outgoing_message.pubkey()).unwrap();
+        let outgoing_message_account = svm.get_account(&outgoing_message).unwrap();
         let outgoing_message_data =
             OutgoingMessage::try_deserialize(&mut &outgoing_message_account.data[..]).unwrap();
 
@@ -418,7 +442,15 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        let outgoing_message_salt = [42u8; 32];
+        let outgoing_message = Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0;
 
         // Test parameters
         let to = [1u8; 20];
@@ -441,7 +473,7 @@ mod tests {
             from_token_account,
             bridge: bridge_pda,
             token_vault,
-            outgoing_message: outgoing_message.pubkey(),
+            outgoing_message,
             token_program: anchor_spl::token_interface::ID,
             system_program: system_program::ID,
         }
@@ -452,6 +484,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: BridgeSplIx {
+                outgoing_message_salt,
                 to,
                 remote_token,
                 amount,
@@ -462,7 +495,7 @@ mod tests {
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
@@ -521,7 +554,15 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        let outgoing_message_salt = [42u8; 32];
+        let outgoing_message = Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0;
 
         // Test parameters
         let to = [1u8; 20];
@@ -544,7 +585,7 @@ mod tests {
             token_vault,
             mint,
             bridge: bridge_pda,
-            outgoing_message: outgoing_message.pubkey(),
+            outgoing_message,
             token_program: anchor_spl::token_interface::spl_token_2022::ID,
             system_program: system_program::ID,
         }
@@ -555,6 +596,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: BridgeSplIx {
+                outgoing_message_salt,
                 to,
                 remote_token,
                 amount,
@@ -565,7 +607,7 @@ mod tests {
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );

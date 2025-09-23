@@ -94,8 +94,7 @@ export type BridgeWrappedTokenWithBufferedCallInstruction<
         ? WritableAccount<TAccountCallBuffer>
         : TAccountCallBuffer,
       TAccountOutgoingMessage extends string
-        ? WritableSignerAccount<TAccountOutgoingMessage> &
-            AccountSignerMeta<TAccountOutgoingMessage>
+        ? WritableAccount<TAccountOutgoingMessage>
         : TAccountOutgoingMessage,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
@@ -109,11 +108,13 @@ export type BridgeWrappedTokenWithBufferedCallInstruction<
 
 export type BridgeWrappedTokenWithBufferedCallInstructionData = {
   discriminator: ReadonlyUint8Array;
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   amount: bigint;
 };
 
 export type BridgeWrappedTokenWithBufferedCallInstructionDataArgs = {
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   amount: number | bigint;
 };
@@ -122,6 +123,7 @@ export function getBridgeWrappedTokenWithBufferedCallInstructionDataEncoder(): F
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['to', fixEncoderSize(getBytesEncoder(), 20)],
       ['amount', getU64Encoder()],
     ]),
@@ -135,6 +137,7 @@ export function getBridgeWrappedTokenWithBufferedCallInstructionDataEncoder(): F
 export function getBridgeWrappedTokenWithBufferedCallInstructionDataDecoder(): FixedSizeDecoder<BridgeWrappedTokenWithBufferedCallInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['to', fixDecoderSize(getBytesDecoder(), 20)],
     ['amount', getU64Decoder()],
   ]);
@@ -208,11 +211,12 @@ export type BridgeWrappedTokenWithBufferedCallInput<
    * The outgoing message account that stores the cross-chain transfer details.
    * Space is sized based on the current call buffer length so the call data fits.
    */
-  outgoingMessage: TransactionSigner<TAccountOutgoingMessage>;
+  outgoingMessage: Address<TAccountOutgoingMessage>;
   /** Token2022 program used for burning the wrapped tokens (burn_checked). */
   tokenProgram?: Address<TAccountTokenProgram>;
   /** System program required for creating the outgoing message account and transferring gas fees. */
   systemProgram?: Address<TAccountSystemProgram>;
+  outgoingMessageSalt: BridgeWrappedTokenWithBufferedCallInstructionDataArgs['outgoingMessageSalt'];
   to: BridgeWrappedTokenWithBufferedCallInstructionDataArgs['to'];
   amount: BridgeWrappedTokenWithBufferedCallInstructionDataArgs['amount'];
 };

@@ -347,9 +347,14 @@ export const IDL = {
   ],
   "errors": [
     {
-      "code": 12000,
-      "name": "UnauthorizedConfigUpdate",
-      "msg": "Unauthorized to update configuration"
+      "code": 6000,
+      "name": "GasLimitTooLow",
+      "msg": "Gas limit too low"
+    },
+    {
+      "code": 6001,
+      "name": "GasLimitExceeded",
+      "msg": "Gas limit exceeded"
     }
   ],
   "types": [

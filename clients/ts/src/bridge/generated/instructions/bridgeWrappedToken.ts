@@ -96,8 +96,7 @@ export type BridgeWrappedTokenInstruction<
         ? WritableAccount<TAccountBridge>
         : TAccountBridge,
       TAccountOutgoingMessage extends string
-        ? WritableSignerAccount<TAccountOutgoingMessage> &
-            AccountSignerMeta<TAccountOutgoingMessage>
+        ? WritableAccount<TAccountOutgoingMessage>
         : TAccountOutgoingMessage,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
@@ -111,12 +110,14 @@ export type BridgeWrappedTokenInstruction<
 
 export type BridgeWrappedTokenInstructionData = {
   discriminator: ReadonlyUint8Array;
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   amount: bigint;
   call: Option<Call>;
 };
 
 export type BridgeWrappedTokenInstructionDataArgs = {
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   amount: number | bigint;
   call: OptionOrNullable<CallArgs>;
@@ -126,6 +127,7 @@ export function getBridgeWrappedTokenInstructionDataEncoder(): Encoder<BridgeWra
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['to', fixEncoderSize(getBytesEncoder(), 20)],
       ['amount', getU64Encoder()],
       ['call', getOptionEncoder(getCallEncoder())],
@@ -137,6 +139,7 @@ export function getBridgeWrappedTokenInstructionDataEncoder(): Encoder<BridgeWra
 export function getBridgeWrappedTokenInstructionDataDecoder(): Decoder<BridgeWrappedTokenInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['to', fixDecoderSize(getBytesDecoder(), 20)],
     ['amount', getU64Decoder()],
     ['call', getOptionDecoder(getCallDecoder())],
@@ -200,7 +203,7 @@ export type BridgeWrappedTokenInput<
    * - Space allocated based on call data size
    * - Will be read by Base relayers to complete the bridge operation
    */
-  outgoingMessage: TransactionSigner<TAccountOutgoingMessage>;
+  outgoingMessage: Address<TAccountOutgoingMessage>;
   /**
    * Token2022 program used for burning the wrapped tokens.
    * Required for all token operations including burn_checked.
@@ -211,6 +214,7 @@ export type BridgeWrappedTokenInput<
    * and transferring the gas payment to the `gas_fee_receiver`.
    */
   systemProgram?: Address<TAccountSystemProgram>;
+  outgoingMessageSalt: BridgeWrappedTokenInstructionDataArgs['outgoingMessageSalt'];
   to: BridgeWrappedTokenInstructionDataArgs['to'];
   amount: BridgeWrappedTokenInstructionDataArgs['amount'];
   call: BridgeWrappedTokenInstructionDataArgs['call'];

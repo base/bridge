@@ -154,8 +154,9 @@
         "the bridge's cross-chain messaging system.",
         "",
         "# Arguments",
-        "* `ctx`  - The context containing accounts for the bridge operation",
-        "* `call` - The contract call details including call type, target address, value, and calldata"
+        "* `ctx`                   - The context containing accounts for the bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `call`                  - The contract call details including call type, target address, value, and calldata"
       ],
       "discriminator": [
         90,
@@ -212,8 +213,7 @@
             "the worst-case message variant to ensure sufficient capacity even for large payloads",
             "- Contains all information needed for execution on Base"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "system_program",
@@ -224,6 +224,15 @@
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "call",
           "type": {
@@ -242,7 +251,8 @@
         "for execution on Base.",
         "",
         "# Arguments",
-        "* `ctx` - The context containing accounts for the bridge operation"
+        "* `ctx`                   - The context containing accounts for the bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account"
       ],
       "discriminator": [
         138,
@@ -318,8 +328,7 @@
             "cover the Call variant",
             "- Includes `nonce` and `sender` metadata used on Base"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "system_program",
@@ -329,7 +338,17 @@
           ]
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "bridge_sol",
@@ -339,11 +358,12 @@
         "tokens on Base for the specified recipient.",
         "",
         "# Arguments",
-        "* `ctx`          - The context containing accounts for the SOL bridge operation",
-        "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `remote_token` - The 20-byte address of the token contract on Base",
-        "* `amount`       - Amount of SOL to bridge (in lamports)",
-        "* `call`         - Optional additional contract call to execute with the token transfer"
+        "* `ctx`                   - The context containing accounts for the SOL bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `remote_token`          - The 20-byte address of the token contract on Base",
+        "* `amount`                - Amount of SOL to bridge (in lamports)",
+        "* `call`                  - Optional additional contract call to execute with the token transfer"
       ],
       "discriminator": [
         190,
@@ -409,8 +429,7 @@
             "- Payer funds the account creation",
             "- Space allocated dynamically based on optional call data size"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "system_program",
@@ -421,6 +440,15 @@
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -463,10 +491,11 @@
         "tokens on Base, then executes a call using data from a call buffer.",
         "",
         "# Arguments",
-        "* `ctx`          - The context containing accounts for the SOL bridge operation",
-        "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `remote_token` - The 20-byte address of the token contract on Base",
-        "* `amount`       - Amount of SOL to bridge (in lamports)"
+        "* `ctx`                   - The context containing accounts for the SOL bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `remote_token`          - The 20-byte address of the token contract on Base",
+        "* `amount`                - Amount of SOL to bridge (in lamports)"
       ],
       "discriminator": [
         52,
@@ -549,8 +578,7 @@
             "- Funded by `payer`",
             "- Space: DISCRIMINATOR_LEN + serialized `OutgoingMessage`"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "system_program",
@@ -560,6 +588,15 @@
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -592,11 +629,12 @@
         "equivalent ERC20 tokens on Base for the specified recipient.",
         "",
         "# Arguments",
-        "* `ctx`          - The context containing accounts for the SPL token bridge operation",
-        "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `remote_token` - The 20-byte address of the ERC20 token contract on Base",
-        "* `amount`       - Amount of SPL tokens to bridge (in the token's smallest units)",
-        "* `call`         - Optional additional contract call to execute with the token transfer"
+        "* `ctx`                   - The context containing accounts for the SPL token bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `remote_token`          - The 20-byte address of the ERC20 token contract on Base",
+        "* `amount`                - Amount of SPL tokens to bridge (in the token's smallest units)",
+        "* `call`                  - Optional additional contract call to execute with the token transfer"
       ],
       "discriminator": [
         87,
@@ -682,8 +720,7 @@
             "- Used by relayers to execute the bridge operation on Base",
             "- The recorded transfer amount equals the net increase in `token_vault` balance"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "token_program",
@@ -701,6 +738,15 @@
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -743,10 +789,11 @@
         "tokens on Base, then executes a call using data from a call buffer.",
         "",
         "# Arguments",
-        "* `ctx`          - The context containing accounts for the SPL token bridge operation",
-        "* `to`           - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `remote_token` - The 20-byte address of the ERC20 token contract on Base",
-        "* `amount`       - Amount of SPL tokens to bridge (in the token's smallest units)"
+        "* `ctx`                   - The context containing accounts for the SPL token bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `remote_token`          - The 20-byte address of the ERC20 token contract on Base",
+        "* `amount`                - Amount of SPL tokens to bridge (in the token's smallest units)"
       ],
       "discriminator": [
         86,
@@ -844,8 +891,7 @@
           "docs": [
             "The outgoing message account that stores the cross-chain transfer details."
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "token_program",
@@ -863,6 +909,15 @@
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -895,10 +950,11 @@
         "or mint the original tokens on Base for the specified recipient.",
         "",
         "# Arguments",
-        "* `ctx`    - The context containing accounts for the wrapped token bridge operation",
-        "* `to`     - The 20-byte Ethereum address that will receive the original tokens on Base",
-        "* `amount` - Amount of wrapped tokens to bridge back (in the token's smallest units)",
-        "* `call`   - Optional additional contract call to execute with the token transfer"
+        "* `ctx`                   - The context containing accounts for the wrapped token bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive the original tokens on Base",
+        "* `amount`                - Amount of wrapped tokens to bridge back (in the token's smallest units)",
+        "* `call`                  - Optional additional contract call to execute with the token transfer"
       ],
       "discriminator": [
         55,
@@ -970,8 +1026,7 @@
             "- Space allocated based on call data size",
             "- Will be read by Base relayers to complete the bridge operation"
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "token_program",
@@ -989,6 +1044,15 @@
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -1022,9 +1086,10 @@
         "the original tokens on Base, then executes a call using data from a call buffer.",
         "",
         "# Arguments",
-        "* `ctx`    - The context containing accounts for the wrapped token bridge operation",
-        "* `to`     - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `amount` - Amount of wrapped tokens to bridge back (in the token's smallest units)"
+        "* `ctx`                   - The context containing accounts for the wrapped token bridge operation",
+        "* `outgoing_message_salt` - The salt for the outgoing message account",
+        "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
+        "* `amount`                - Amount of wrapped tokens to bridge back (in the token's smallest units)"
       ],
       "discriminator": [
         117,
@@ -1112,8 +1177,7 @@
             "The outgoing message account that stores the cross-chain transfer details.",
             "Space is sized based on the current call buffer length so the call data fits."
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "token_program",
@@ -1129,6 +1193,15 @@
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "to",
           "type": {
@@ -2408,6 +2481,7 @@
         "",
         "# Arguments",
         "* `ctx`                    - The transaction context",
+        "* `outgoing_message_salt`  - The salt for the outgoing message account",
         "* `decimals`               - Number of decimal places for the token",
         "* `partial_token_metadata` - Token name, symbol, remote Base token address, and scaler exponent"
       ],
@@ -2464,8 +2538,7 @@
             "the wrapped token on the Base blockchain. Contains the encoded function call",
             "with token address, local mint address, and scaling parameters."
           ],
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "token_program",
@@ -2483,6 +2556,15 @@
         }
       ],
       "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "decimals",
           "type": "u8"
@@ -2586,8 +2668,13 @@
     },
     {
       "code": 6001,
+      "name": "Unauthorized",
+      "msg": "Only the owner can close this call buffer"
+    },
+    {
+      "code": 6002,
       "name": "BridgePaused",
-      "msg": "Bridge is paused"
+      "msg": "Bridge is currently paused"
     }
   ],
   "types": [
@@ -3791,6 +3878,11 @@
       "name": "NATIVE_SOL_PUBKEY",
       "type": "pubkey",
       "value": "SoL1111111111111111111111111111111111111111"
+    },
+    {
+      "name": "OUTGOING_MESSAGE_SEED",
+      "type": "string",
+      "value": "\"outgoing_message\""
     },
     {
       "name": "OUTPUT_ROOT_SEED",

@@ -24,7 +24,7 @@ use solana_to_base::*;
 #[cfg(test)]
 mod test_utils;
 
-declare_id!("Z8DUqPNTT4tZAX3hNoQjYdNoB7rLxDBDX6CrHG972c7");
+declare_id!("524hRwZBKP3wN4r34jcqv7yRv3RJ53DagdbUtHkbCFWE");
 
 #[program]
 pub mod bridge {
@@ -187,14 +187,16 @@ pub mod bridge {
     ///
     /// # Arguments
     /// * `ctx`                    - The transaction context
+    /// * `outgoing_message_salt`  - The salt for the outgoing message account
     /// * `decimals`               - Number of decimal places for the token
     /// * `partial_token_metadata` - Token name, symbol, remote Base token address, and scaler exponent
     pub fn wrap_token(
         ctx: Context<WrapToken>,
+        outgoing_message_salt: [u8; 32],
         decimals: u8,
         partial_token_metadata: PartialTokenMetadata,
     ) -> Result<()> {
-        wrap_token_handler(ctx, decimals, partial_token_metadata)
+        wrap_token_handler(ctx, outgoing_message_salt, decimals, partial_token_metadata)
     }
 
     /// Initiates a cross-chain function call from Solana to Base.
@@ -202,10 +204,15 @@ pub mod bridge {
     /// the bridge's cross-chain messaging system.
     ///
     /// # Arguments
-    /// * `ctx`  - The context containing accounts for the bridge operation
-    /// * `call` - The contract call details including call type, target address, value, and calldata
-    pub fn bridge_call(ctx: Context<BridgeCall>, call: Call) -> Result<()> {
-        bridge_call_handler(ctx, call)
+    /// * `ctx`                   - The context containing accounts for the bridge operation
+    /// * `outgoing_message_salt` - The salt for the outgoing message account
+    /// * `call`                  - The contract call details including call type, target address, value, and calldata
+    pub fn bridge_call(
+        ctx: Context<BridgeCall>,
+        outgoing_message_salt: [u8; 32],
+        call: Call,
+    ) -> Result<()> {
+        bridge_call_handler(ctx, outgoing_message_salt, call)
     }
 
     /// Bridges a call using data from a call buffer account.
@@ -213,11 +220,13 @@ pub mod bridge {
     /// for execution on Base.
     ///
     /// # Arguments
-    /// * `ctx` - The context containing accounts for the bridge operation
+    /// * `ctx`                   - The context containing accounts for the bridge operation
+    /// * `outgoing_message_salt` - The salt for the outgoing message account
     pub fn bridge_call_buffered<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, BridgeCallBuffered<'info>>,
+        outgoing_message_salt: [u8; 32],
     ) -> Result<()> {
-        bridge_call_buffered_handler(ctx)
+        bridge_call_buffered_handler(ctx, outgoing_message_salt)
     }
 
     /// Bridges native SOL tokens from Solana to Base.
@@ -225,19 +234,21 @@ pub mod bridge {
     /// tokens on Base for the specified recipient.
     ///
     /// # Arguments
-    /// * `ctx`          - The context containing accounts for the SOL bridge operation
-    /// * `to`           - The 20-byte Ethereum address that will receive tokens on Base
-    /// * `remote_token` - The 20-byte address of the token contract on Base
-    /// * `amount`       - Amount of SOL to bridge (in lamports)
-    /// * `call`         - Optional additional contract call to execute with the token transfer
+    /// * `ctx`                   - The context containing accounts for the SOL bridge operation
+    /// * `outgoing_message_salt` - The salt for the outgoing message account
+    /// * `to`                    - The 20-byte Ethereum address that will receive tokens on Base
+    /// * `remote_token`          - The 20-byte address of the token contract on Base
+    /// * `amount`                - Amount of SOL to bridge (in lamports)
+    /// * `call`                  - Optional additional contract call to execute with the token transfer
     pub fn bridge_sol(
         ctx: Context<BridgeSol>,
+        outgoing_message_salt: [u8; 32],
         to: [u8; 20],
         remote_token: [u8; 20],
         amount: u64,
         call: Option<Call>,
     ) -> Result<()> {
-        bridge_sol_handler(ctx, to, remote_token, amount, call)
+        bridge_sol_handler(ctx, outgoing_message_salt, to, remote_token, amount, call)
     }
 
     /// Bridges native SOL tokens from Solana to Base with a call using buffered data.
@@ -245,17 +256,19 @@ pub mod bridge {
     /// tokens on Base, then executes a call using data from a call buffer.
     ///
     /// # Arguments
-    /// * `ctx`          - The context containing accounts for the SOL bridge operation
-    /// * `to`           - The 20-byte Ethereum address that will receive tokens on Base
-    /// * `remote_token` - The 20-byte address of the token contract on Base
-    /// * `amount`       - Amount of SOL to bridge (in lamports)
+    /// * `ctx`                   - The context containing accounts for the SOL bridge operation
+    /// * `outgoing_message_salt` - The salt for the outgoing message account
+    /// * `to`                    - The 20-byte Ethereum address that will receive tokens on Base
+    /// * `remote_token`          - The 20-byte address of the token contract on Base
+    /// * `amount`                - Amount of SOL to bridge (in lamports)
     pub fn bridge_sol_with_buffered_call<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, BridgeSolWithBufferedCall<'info>>,
+        outgoing_message_salt: [u8; 32],
         to: [u8; 20],
         remote_token: [u8; 20],
         amount: u64,
     ) -> Result<()> {
-        bridge_sol_with_buffered_call_handler(ctx, to, remote_token, amount)
+        bridge_sol_with_buffered_call_handler(ctx, outgoing_message_salt, to, remote_token, amount)
     }
 
     /// Bridges SPL tokens from Solana to Base.
@@ -263,19 +276,21 @@ pub mod bridge {
     /// equivalent ERC20 tokens on Base for the specified recipient.
     ///
     /// # Arguments
-    /// * `ctx`          - The context containing accounts for the SPL token bridge operation
-    /// * `to`           - The 20-byte Ethereum address that will receive tokens on Base
-    /// * `remote_token` - The 20-byte address of the ERC20 token contract on Base
-    /// * `amount`       - Amount of SPL tokens to bridge (in the token's smallest units)
-    /// * `call`         - Optional additional contract call to execute with the token transfer
+    /// * `ctx`                   - The context containing accounts for the SPL token bridge operation
+    /// * `outgoing_message_salt` - The salt for the outgoing message account
+    /// * `to`                    - The 20-byte Ethereum address that will receive tokens on Base
+    /// * `remote_token`          - The 20-byte address of the ERC20 token contract on Base
+    /// * `amount`                - Amount of SPL tokens to bridge (in the token's smallest units)
+    /// * `call`                  - Optional additional contract call to execute with the token transfer
     pub fn bridge_spl(
         ctx: Context<BridgeSpl>,
+        outgoing_message_salt: [u8; 32],
         to: [u8; 20],
         remote_token: [u8; 20],
         amount: u64,
         call: Option<Call>,
     ) -> Result<()> {
-        bridge_spl_handler(ctx, to, remote_token, amount, call)
+        bridge_spl_handler(ctx, outgoing_message_salt, to, remote_token, amount, call)
     }
 
     /// Bridges SPL tokens from Solana to Base with a call using buffered data.
@@ -283,17 +298,19 @@ pub mod bridge {
     /// tokens on Base, then executes a call using data from a call buffer.
     ///
     /// # Arguments
-    /// * `ctx`          - The context containing accounts for the SPL token bridge operation
-    /// * `to`           - The 20-byte Ethereum address that will receive tokens on Base
-    /// * `remote_token` - The 20-byte address of the ERC20 token contract on Base
-    /// * `amount`       - Amount of SPL tokens to bridge (in the token's smallest units)
+    /// * `ctx`                   - The context containing accounts for the SPL token bridge operation
+    /// * `outgoing_message_salt` - The salt for the outgoing message account
+    /// * `to`                    - The 20-byte Ethereum address that will receive tokens on Base
+    /// * `remote_token`          - The 20-byte address of the ERC20 token contract on Base
+    /// * `amount`                - Amount of SPL tokens to bridge (in the token's smallest units)
     pub fn bridge_spl_with_buffered_call<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, BridgeSplWithBufferedCall<'info>>,
+        outgoing_message_salt: [u8; 32],
         to: [u8; 20],
         remote_token: [u8; 20],
         amount: u64,
     ) -> Result<()> {
-        bridge_spl_with_buffered_call_handler(ctx, to, remote_token, amount)
+        bridge_spl_with_buffered_call_handler(ctx, outgoing_message_salt, to, remote_token, amount)
     }
 
     /// Bridges wrapped tokens from Solana back to their native form on Base.
@@ -301,17 +318,19 @@ pub mod bridge {
     /// or mint the original tokens on Base for the specified recipient.
     ///
     /// # Arguments
-    /// * `ctx`    - The context containing accounts for the wrapped token bridge operation
-    /// * `to`     - The 20-byte Ethereum address that will receive the original tokens on Base
-    /// * `amount` - Amount of wrapped tokens to bridge back (in the token's smallest units)
-    /// * `call`   - Optional additional contract call to execute with the token transfer
+    /// * `ctx`                   - The context containing accounts for the wrapped token bridge operation
+    /// * `outgoing_message_salt` - The salt for the outgoing message account
+    /// * `to`                    - The 20-byte Ethereum address that will receive the original tokens on Base
+    /// * `amount`                - Amount of wrapped tokens to bridge back (in the token's smallest units)
+    /// * `call`                  - Optional additional contract call to execute with the token transfer
     pub fn bridge_wrapped_token(
         ctx: Context<BridgeWrappedToken>,
+        outgoing_message_salt: [u8; 32],
         to: [u8; 20],
         amount: u64,
         call: Option<Call>,
     ) -> Result<()> {
-        bridge_wrapped_token_handler(ctx, to, amount, call)
+        bridge_wrapped_token_handler(ctx, outgoing_message_salt, to, amount, call)
     }
 
     /// Bridges wrapped tokens from Solana back to Base with a call using buffered data.
@@ -319,15 +338,17 @@ pub mod bridge {
     /// the original tokens on Base, then executes a call using data from a call buffer.
     ///
     /// # Arguments
-    /// * `ctx`    - The context containing accounts for the wrapped token bridge operation
-    /// * `to`     - The 20-byte Ethereum address that will receive tokens on Base
-    /// * `amount` - Amount of wrapped tokens to bridge back (in the token's smallest units)
+    /// * `ctx`                   - The context containing accounts for the wrapped token bridge operation
+    /// * `outgoing_message_salt` - The salt for the outgoing message account
+    /// * `to`                    - The 20-byte Ethereum address that will receive tokens on Base
+    /// * `amount`                - Amount of wrapped tokens to bridge back (in the token's smallest units)
     pub fn bridge_wrapped_token_with_buffered_call<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, BridgeWrappedTokenWithBufferedCall<'info>>,
+        outgoing_message_salt: [u8; 32],
         to: [u8; 20],
         amount: u64,
     ) -> Result<()> {
-        bridge_wrapped_token_with_buffered_call_handler(ctx, to, amount)
+        bridge_wrapped_token_with_buffered_call_handler(ctx, outgoing_message_salt, to, amount)
     }
 
     /// Initializes a call buffer account that can store large call data.

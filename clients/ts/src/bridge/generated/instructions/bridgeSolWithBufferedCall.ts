@@ -87,8 +87,7 @@ export type BridgeSolWithBufferedCallInstruction<
         ? WritableAccount<TAccountCallBuffer>
         : TAccountCallBuffer,
       TAccountOutgoingMessage extends string
-        ? WritableSignerAccount<TAccountOutgoingMessage> &
-            AccountSignerMeta<TAccountOutgoingMessage>
+        ? WritableAccount<TAccountOutgoingMessage>
         : TAccountOutgoingMessage,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
@@ -99,12 +98,14 @@ export type BridgeSolWithBufferedCallInstruction<
 
 export type BridgeSolWithBufferedCallInstructionData = {
   discriminator: ReadonlyUint8Array;
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   remoteToken: ReadonlyUint8Array;
   amount: bigint;
 };
 
 export type BridgeSolWithBufferedCallInstructionDataArgs = {
+  outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
   remoteToken: ReadonlyUint8Array;
   amount: number | bigint;
@@ -114,6 +115,7 @@ export function getBridgeSolWithBufferedCallInstructionDataEncoder(): FixedSizeE
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['to', fixEncoderSize(getBytesEncoder(), 20)],
       ['remoteToken', fixEncoderSize(getBytesEncoder(), 20)],
       ['amount', getU64Encoder()],
@@ -128,6 +130,7 @@ export function getBridgeSolWithBufferedCallInstructionDataEncoder(): FixedSizeE
 export function getBridgeSolWithBufferedCallInstructionDataDecoder(): FixedSizeDecoder<BridgeSolWithBufferedCallInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['to', fixDecoderSize(getBytesDecoder(), 20)],
     ['remoteToken', fixDecoderSize(getBytesDecoder(), 20)],
     ['amount', getU64Decoder()],
@@ -195,9 +198,10 @@ export type BridgeSolWithBufferedCallInput<
    * - Funded by `payer`
    * - Space: DISCRIMINATOR_LEN + serialized `OutgoingMessage`
    */
-  outgoingMessage: TransactionSigner<TAccountOutgoingMessage>;
+  outgoingMessage: Address<TAccountOutgoingMessage>;
   /** System program required for account creation and the SOL transfer CPI. */
   systemProgram?: Address<TAccountSystemProgram>;
+  outgoingMessageSalt: BridgeSolWithBufferedCallInstructionDataArgs['outgoingMessageSalt'];
   to: BridgeSolWithBufferedCallInstructionDataArgs['to'];
   remoteToken: BridgeSolWithBufferedCallInstructionDataArgs['remoteToken'];
   amount: BridgeSolWithBufferedCallInstructionDataArgs['amount'];

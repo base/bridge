@@ -81,8 +81,7 @@ export type WrapTokenInstruction<
         ? WritableAccount<TAccountBridge>
         : TAccountBridge,
       TAccountOutgoingMessage extends string
-        ? WritableSignerAccount<TAccountOutgoingMessage> &
-            AccountSignerMeta<TAccountOutgoingMessage>
+        ? WritableAccount<TAccountOutgoingMessage>
         : TAccountOutgoingMessage,
       TAccountTokenProgram extends string
         ? ReadonlyAccount<TAccountTokenProgram>
@@ -96,6 +95,7 @@ export type WrapTokenInstruction<
 
 export type WrapTokenInstructionData = {
   discriminator: ReadonlyUint8Array;
+  outgoingMessageSalt: ReadonlyUint8Array;
   decimals: number;
   /** The human-readable name of the token (e.g., "Wrapped Bitcoin") */
   name: string;
@@ -118,6 +118,7 @@ export type WrapTokenInstructionData = {
 };
 
 export type WrapTokenInstructionDataArgs = {
+  outgoingMessageSalt: ReadonlyUint8Array;
   decimals: number;
   /** The human-readable name of the token (e.g., "Wrapped Bitcoin") */
   name: string;
@@ -143,6 +144,7 @@ export function getWrapTokenInstructionDataEncoder(): Encoder<WrapTokenInstructi
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['decimals', getU8Encoder()],
       ['name', addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())],
       ['symbol', addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())],
@@ -156,6 +158,7 @@ export function getWrapTokenInstructionDataEncoder(): Encoder<WrapTokenInstructi
 export function getWrapTokenInstructionDataDecoder(): Decoder<WrapTokenInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['decimals', getU8Decoder()],
     ['name', addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())],
     ['symbol', addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())],
@@ -208,7 +211,7 @@ export type WrapTokenInput<
    * the wrapped token on the Base blockchain. Contains the encoded function call
    * with token address, local mint address, and scaling parameters.
    */
-  outgoingMessage: TransactionSigner<TAccountOutgoingMessage>;
+  outgoingMessage: Address<TAccountOutgoingMessage>;
   /**
    * SPL Token-2022 program for creating the mint with metadata extensions.
    * Required for initializing tokens with advanced features like metadata pointers.
@@ -219,6 +222,7 @@ export type WrapTokenInput<
    * Used internally by Anchor for account initialization and rent payments.
    */
   systemProgram?: Address<TAccountSystemProgram>;
+  outgoingMessageSalt: WrapTokenInstructionDataArgs['outgoingMessageSalt'];
   decimals: WrapTokenInstructionDataArgs['decimals'];
   name: WrapTokenInstructionDataArgs['name'];
   symbol: WrapTokenInstructionDataArgs['symbol'];

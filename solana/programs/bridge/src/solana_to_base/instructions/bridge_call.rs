@@ -2,7 +2,9 @@ use anchor_lang::prelude::*;
 
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN},
-    solana_to_base::{internal::bridge_call::bridge_call_internal, Call, OutgoingMessage},
+    solana_to_base::{
+        internal::bridge_call::bridge_call_internal, Call, OutgoingMessage, OUTGOING_MESSAGE_SEED,
+    },
 };
 
 /// Accounts struct for the `bridge_call` instruction that enables contract calls
@@ -11,7 +13,7 @@ use crate::{
 /// - Validates call semantics (e.g. creation calls require zero target)
 /// - Charges gas according to the bridge's EIP-1559 configuration and updates its state
 #[derive(Accounts)]
-#[instruction(call: Call)]
+#[instruction(outgoing_message_salt: [u8; 32], call: Call)]
 pub struct BridgeCall<'info> {
     /// The account that pays for the transaction fees and outgoing message account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees.
@@ -43,6 +45,8 @@ pub struct BridgeCall<'info> {
     #[account(
         init,
         payer = payer,
+        seeds = [OUTGOING_MESSAGE_SEED.as_bytes(), outgoing_message_salt.as_ref()],
+        bump,
         space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Call>(call.data.len()),
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
@@ -57,7 +61,11 @@ pub struct BridgeCall<'info> {
 /// - Validates the call
 /// - Charges gas and updates EIP-1559 state
 /// - Persists the `OutgoingMessage` and increments the nonce
-pub fn bridge_call_handler(ctx: Context<BridgeCall>, call: Call) -> Result<()> {
+pub fn bridge_call_handler(
+    ctx: Context<BridgeCall>,
+    _outgoing_message_salt: [u8; 32],
+    call: Call,
+) -> Result<()> {
     // Check if bridge is paused
     require!(!ctx.accounts.bridge.paused, BridgeCallError::BridgePaused);
     bridge_call_internal(
@@ -114,7 +122,15 @@ mod tests {
             .unwrap();
 
         // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        let outgoing_message_salt = [42u8; 32];
+        let outgoing_message = Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0;
 
         // Create test call data
         let call = Call {
@@ -130,7 +146,7 @@ mod tests {
             from: from.pubkey(),
             gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             bridge: bridge_pda,
-            outgoing_message: outgoing_message.pubkey(),
+            outgoing_message,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -139,12 +155,16 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeCallIx { call: call.clone() }.data(),
+            data: BridgeCallIx {
+                outgoing_message_salt,
+                call: call.clone(),
+            }
+            .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
@@ -154,7 +174,7 @@ mod tests {
             .expect("Failed to send bridge_call transaction");
 
         // Assert the OutgoingMessage account was created correctly
-        let outgoing_message_account = svm.get_account(&outgoing_message.pubkey()).unwrap();
+        let outgoing_message_account = svm.get_account(&outgoing_message).unwrap();
         assert_eq!(outgoing_message_account.owner, ID);
 
         let outgoing_message_data =
@@ -195,7 +215,15 @@ mod tests {
             .unwrap();
 
         // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        let outgoing_message_salt = [42u8; 32];
+        let outgoing_message = Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0;
 
         // Create test call data
         let call = Call {
@@ -211,7 +239,7 @@ mod tests {
             from: from.pubkey(),
             gas_fee_receiver: wrong_gas_fee_receiver.pubkey(), // Wrong receiver
             bridge: bridge_pda,
-            outgoing_message: outgoing_message.pubkey(),
+            outgoing_message,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -220,12 +248,16 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeCallIx { call }.data(),
+            data: BridgeCallIx {
+                outgoing_message_salt,
+                call,
+            }
+            .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );
@@ -264,7 +296,15 @@ mod tests {
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         // Create outgoing message account
-        let outgoing_message = Keypair::new();
+        let outgoing_message_salt = [42u8; 32];
+        let outgoing_message = Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0;
 
         // Test parameters
         let call = Call {
@@ -280,7 +320,7 @@ mod tests {
             from: from.pubkey(),
             gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             bridge: bridge_pda,
-            outgoing_message: outgoing_message.pubkey(),
+            outgoing_message,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -289,12 +329,16 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: BridgeCallIx { call }.data(),
+            data: BridgeCallIx {
+                outgoing_message_salt,
+                call,
+            }
+            .data(),
         };
 
         // Build the transaction
         let tx = Transaction::new(
-            &[&payer, &from, &outgoing_message],
+            &[&payer, &from],
             Message::new(&[ix], Some(&payer.pubkey())),
             svm.latest_blockhash(),
         );

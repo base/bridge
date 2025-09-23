@@ -29,6 +29,7 @@ import {
   monitorMessageExecution,
 } from "@internal/sol";
 import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
+import { outgoingMessagePubkey } from "@internal/sol/bridge";
 
 export const argsSchema = z.object({
   cluster: z
@@ -96,8 +97,15 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
       args.remoteToken === "constant" ? config.erc20 : args.remoteToken;
     logger.info(`Remote token: ${remoteToken}`);
 
+    // Generate outgoing message keypair
+    const { salt, pubkey: outgoingMessage } = await outgoingMessagePubkey(
+      config.solanaBridge
+    );
+    logger.info(`Outgoing message: ${outgoingMessage}`);
+
     // Instruction arguments
     const instructionArgs: WrapTokenInstructionDataArgs = {
+      outgoingMessageSalt: salt,
       decimals: args.decimals,
       name: args.name,
       symbol: args.symbol,
@@ -136,13 +144,6 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
     // Fetch bridge state
     const bridge = await fetchBridge(rpc, bridgeAddress);
 
-    // Generate outgoing message keypair
-    const outgoingMessageKeypair = await generateKeyPair();
-    const outgoingMessageKeypairSigner = await createSignerFromKeyPair(
-      outgoingMessageKeypair
-    );
-    logger.info(`Outgoing message: ${outgoingMessageKeypairSigner.address}`);
-
     // Build wrap token instruction
     const ixs: Instruction[] = [
       getWrapTokenInstruction(
@@ -152,7 +153,7 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
           gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
           mint: mintAddress,
           bridge: bridgeAddress,
-          outgoingMessage: outgoingMessageKeypairSigner,
+          outgoingMessage,
           tokenProgram: TOKEN_2022_PROGRAM_ADDRESS,
           systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
@@ -168,7 +169,7 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
         await buildPayForRelayInstruction(
           args.cluster,
           args.release,
-          outgoingMessageKeypairSigner.address,
+          outgoingMessage,
           payer
         )
       );
@@ -185,14 +186,10 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
       await monitorMessageExecution(
         args.cluster,
         args.release,
-        outgoingMessageKeypairSigner.address
+        outgoingMessage
       );
     } else {
-      await relayMessageToBase(
-        args.cluster,
-        args.release,
-        outgoingMessageKeypairSigner.address
-      );
+      await relayMessageToBase(args.cluster, args.release, outgoingMessage);
     }
   } catch (error) {
     logger.error("Token wrap failed:", error);

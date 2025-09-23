@@ -77,8 +77,7 @@ export type BridgeCallInstruction<
         ? WritableAccount<TAccountBridge>
         : TAccountBridge,
       TAccountOutgoingMessage extends string
-        ? WritableSignerAccount<TAccountOutgoingMessage> &
-            AccountSignerMeta<TAccountOutgoingMessage>
+        ? WritableAccount<TAccountOutgoingMessage>
         : TAccountOutgoingMessage,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
@@ -89,15 +88,20 @@ export type BridgeCallInstruction<
 
 export type BridgeCallInstructionData = {
   discriminator: ReadonlyUint8Array;
+  outgoingMessageSalt: ReadonlyUint8Array;
   call: Call;
 };
 
-export type BridgeCallInstructionDataArgs = { call: CallArgs };
+export type BridgeCallInstructionDataArgs = {
+  outgoingMessageSalt: ReadonlyUint8Array;
+  call: CallArgs;
+};
 
 export function getBridgeCallInstructionDataEncoder(): Encoder<BridgeCallInstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['call', getCallEncoder()],
     ]),
     (value) => ({ ...value, discriminator: BRIDGE_CALL_DISCRIMINATOR })
@@ -107,6 +111,7 @@ export function getBridgeCallInstructionDataEncoder(): Encoder<BridgeCallInstruc
 export function getBridgeCallInstructionDataDecoder(): Decoder<BridgeCallInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['call', getCallDecoder()],
   ]);
 }
@@ -156,12 +161,13 @@ export type BridgeCallInput<
    * the worst-case message variant to ensure sufficient capacity even for large payloads
    * - Contains all information needed for execution on Base
    */
-  outgoingMessage: TransactionSigner<TAccountOutgoingMessage>;
+  outgoingMessage: Address<TAccountOutgoingMessage>;
   /**
    * System program required for creating the outgoing message account.
    * Used internally by Anchor for account initialization.
    */
   systemProgram?: Address<TAccountSystemProgram>;
+  outgoingMessageSalt: BridgeCallInstructionDataArgs['outgoingMessageSalt'];
   call: BridgeCallInstructionDataArgs['call'];
 };
 

@@ -27,6 +27,7 @@ import {
   monitorMessageExecution,
 } from "@internal/sol";
 import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
+import { outgoingMessagePubkey } from "@internal/sol/bridge";
 
 export const argsSchema = z.object({
   cluster: z
@@ -103,11 +104,11 @@ export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
     const bridge = await fetchBridge(rpc, bridgeAddress);
 
     // Generate outgoing message keypair
-    const outgoingMessageKeypair = await generateKeyPair();
-    const outgoingMessageKeypairSigner = await createSignerFromKeyPair(
-      outgoingMessageKeypair
+    const { salt, pubkey: outgoingMessage } = await outgoingMessagePubkey(
+      config.solanaBridge
     );
-    logger.info(`Outgoing message: ${outgoingMessageKeypairSigner.address}`);
+
+    logger.info(`Outgoing message: ${outgoingMessage}`);
 
     // Build bridge call instruction
     const ixs: Instruction[] = [
@@ -118,10 +119,11 @@ export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
           from: payer,
           gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
           bridge: bridgeAddress,
-          outgoingMessage: outgoingMessageKeypairSigner,
+          outgoingMessage,
           systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
           // Arguments
+          outgoingMessageSalt: salt,
           call: {
             ty: CallType.Call,
             to: toBytes(targetAddress),
@@ -139,7 +141,7 @@ export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
         await buildPayForRelayInstruction(
           args.cluster,
           args.release,
-          outgoingMessageKeypairSigner.address,
+          outgoingMessage,
           payer
         )
       );
@@ -156,14 +158,10 @@ export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
       await monitorMessageExecution(
         args.cluster,
         args.release,
-        outgoingMessageKeypairSigner.address
+        outgoingMessage
       );
     } else {
-      await relayMessageToBase(
-        args.cluster,
-        args.release,
-        outgoingMessageKeypairSigner.address
-      );
+      await relayMessageToBase(args.cluster, args.release, outgoingMessage);
     }
   } catch (error) {
     logger.error("Bridge call failed:", error);
