@@ -30,7 +30,7 @@ jobs:
           cargo --version
 
       - name: Build
-        run: cargo-build-sbf
+        run: cd solana && cargo-build-sbf
 
       - name: Test
-        run: cargo test
+        run: cd solana && cargo test
