@@ -90,7 +90,7 @@ mod tests {
 
         // Derive PDA for message_to_relay using salt
         let mtr_salt = Pubkey::new_unique().to_bytes();
-        let (message_to_relay_pda, _) = Pubkey::find_program_address(
+        let (message_to_relay, _) = Pubkey::find_program_address(
             &[crate::constants::MTR_SEED, mtr_salt.as_ref()],
             &crate::ID,
         );
@@ -99,7 +99,7 @@ mod tests {
             payer: payer_pk,
             cfg: config_pda,
             gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
-            message_to_relay: message_to_relay_pda,
+            message_to_relay,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -125,7 +125,7 @@ mod tests {
             .expect("failed to send transaction");
 
         // Assert message account was initialized with expected fields
-        let msg_account = svm.get_account(&message_to_relay_pda).unwrap();
+        let msg_account = svm.get_account(&message_to_relay).unwrap();
         let msg = MessageToRelay::try_deserialize(&mut &msg_account.data[..]).unwrap();
         assert_eq!(msg.outgoing_message, outgoing_message);
         assert_eq!(msg.gas_limit, gas_limit);
