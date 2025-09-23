@@ -24,10 +24,19 @@ jobs:
         with:
           cache-all-crates: true
 
+      - name: Install Solana CLI 2.1.21
+        shell: bash
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.21/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+          export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
+          solana --version
+
       - name: Show versions
         run: |
           rustc --version
           cargo --version
+          solana --version
 
       - name: Build
         run: cd solana && cargo-build-sbf
