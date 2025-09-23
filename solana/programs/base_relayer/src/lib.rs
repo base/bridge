@@ -89,6 +89,8 @@ pub mod base_relayer {
     ///                         (for fee window updates), `gas_fee_receiver` (must
     ///                         match configured receiver), and a new
     ///                         `message_to_relay` account.
+    /// * `mtr_salt`         - 32-byte salt used to derive the `message_to_relay`
+    ///                         PDA address, enabling unique messages per request.
     /// * `outgoing_message` - The Base-side message identifier to be executed.
     /// * `gas_limit`        - Maximum gas units to budget for execution on Base.
     ///
@@ -98,9 +100,10 @@ pub mod base_relayer {
     /// fee.
     pub fn pay_for_relay(
         ctx: Context<PayForRelay>,
+        mtr_salt: [u8; 32],
         outgoing_message: Pubkey,
         gas_limit: u64,
     ) -> Result<()> {
-        pay_for_relay_handler(ctx, outgoing_message, gas_limit)
+        pay_for_relay_handler(ctx, mtr_salt, outgoing_message, gas_limit)
     }
 }

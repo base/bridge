@@ -1,12 +1,13 @@
 use anchor_lang::prelude::*;
 
 use crate::{
-    constants::{CFG_SEED, DISCRIMINATOR_LEN},
+    constants::{CFG_SEED, DISCRIMINATOR_LEN, MTR_SEED},
     internal::check_and_pay_for_gas,
     state::{Cfg, MessageToRelay},
 };
 
 #[derive(Accounts)]
+#[instruction(mtr_salt: [u8; 32])]
 pub struct PayForRelay<'info> {
     /// The account that pays for transaction fees and account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees.
@@ -24,7 +25,7 @@ pub struct PayForRelay<'info> {
     #[account(mut, address = cfg.gas_config.gas_fee_receiver @ PayForRelayError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
-    #[account(init, payer = payer, space = DISCRIMINATOR_LEN + MessageToRelay::INIT_SPACE)]
+    #[account(init, payer = payer, seeds = [MTR_SEED, mtr_salt.as_ref()], bump, space = DISCRIMINATOR_LEN + MessageToRelay::INIT_SPACE)]
     pub message_to_relay: Account<'info, MessageToRelay>,
 
     /// System program required for creating new accounts.
@@ -34,6 +35,7 @@ pub struct PayForRelay<'info> {
 
 pub fn pay_for_relay_handler(
     ctx: Context<PayForRelay>,
+    _mtr_salt: [u8; 32],
     outgoing_message: Pubkey,
     gas_limit: u64,
 ) -> Result<()> {
@@ -70,7 +72,6 @@ mod tests {
         solana_program::{instruction::Instruction, system_program},
         InstructionData,
     };
-    use solana_keypair::Keypair;
     use solana_message::Message;
     use solana_signer::Signer;
     use solana_transaction::Transaction;
@@ -87,14 +88,18 @@ mod tests {
         let outgoing_message = Pubkey::new_unique();
         let gas_limit: u64 = 123_456;
 
-        // New account to be initialized by the instruction
-        let message_to_relay = Keypair::new();
+        // Derive PDA for message_to_relay using salt
+        let mtr_salt = Pubkey::new_unique().to_bytes();
+        let (message_to_relay_pda, _) = Pubkey::find_program_address(
+            &[crate::constants::MTR_SEED, mtr_salt.as_ref()],
+            &crate::ID,
+        );
 
         let accounts = accounts::PayForRelay {
             payer: payer_pk,
             cfg: config_pda,
             gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
-            message_to_relay: message_to_relay.pubkey(),
+            message_to_relay: message_to_relay_pda,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -103,6 +108,7 @@ mod tests {
             program_id: crate::ID,
             accounts,
             data: crate::instruction::PayForRelay {
+                mtr_salt,
                 outgoing_message,
                 gas_limit,
             }
@@ -110,7 +116,7 @@ mod tests {
         };
 
         let tx = Transaction::new(
-            &[&payer, &message_to_relay],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
@@ -119,7 +125,7 @@ mod tests {
             .expect("failed to send transaction");
 
         // Assert message account was initialized with expected fields
-        let msg_account = svm.get_account(&message_to_relay.pubkey()).unwrap();
+        let msg_account = svm.get_account(&message_to_relay_pda).unwrap();
         let msg = MessageToRelay::try_deserialize(&mut &msg_account.data[..]).unwrap();
         assert_eq!(msg.outgoing_message, outgoing_message);
         assert_eq!(msg.gas_limit, gas_limit);

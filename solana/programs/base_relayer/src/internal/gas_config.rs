@@ -87,7 +87,6 @@ mod tests {
     use crate::{accounts, instruction};
     use anchor_lang::solana_program::{instruction::Instruction, system_program};
     use anchor_lang::InstructionData;
-    use solana_keypair::Keypair;
     use solana_message::Message;
     use solana_signer::Signer as _;
     use solana_transaction::Transaction;
@@ -172,12 +171,16 @@ mod tests {
 
         // Now pay for relay with gas_limit=123; base_fee=1 => transfer=246
         let outgoing_message = Pubkey::new_unique();
-        let message_to_relay = Keypair::new();
+        let mtr_salt = Pubkey::new_unique().to_bytes();
+        let (message_to_relay_pda, _) = Pubkey::find_program_address(
+            &[crate::constants::MTR_SEED, mtr_salt.as_ref()],
+            &crate::ID,
+        );
         let accounts = accounts::PayForRelay {
             payer: payer_pk,
             cfg: cfg_pda,
             gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
-            message_to_relay: message_to_relay.pubkey(),
+            message_to_relay: message_to_relay_pda,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -187,6 +190,7 @@ mod tests {
             program_id: crate::ID,
             accounts,
             data: crate::instruction::PayForRelay {
+                mtr_salt,
                 outgoing_message,
                 gas_limit,
             }
@@ -194,7 +198,7 @@ mod tests {
         };
 
         let tx = Transaction::new(
-            &[&payer, &message_to_relay],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
@@ -262,12 +266,16 @@ mod tests {
 
         let gas_limit = 100_000u64;
         let outgoing_message = Pubkey::new_unique();
-        let message_to_relay = Keypair::new();
+        let mtr_salt = Pubkey::new_unique().to_bytes();
+        let (message_to_relay_pda, _) = Pubkey::find_program_address(
+            &[crate::constants::MTR_SEED, mtr_salt.as_ref()],
+            &crate::ID,
+        );
         let accounts = accounts::PayForRelay {
             payer: payer_pk,
             cfg: cfg_pda,
             gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
-            message_to_relay: message_to_relay.pubkey(),
+            message_to_relay: message_to_relay_pda,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
@@ -276,6 +284,7 @@ mod tests {
             program_id: crate::ID,
             accounts,
             data: crate::instruction::PayForRelay {
+                mtr_salt,
                 outgoing_message,
                 gas_limit,
             }
@@ -283,7 +292,7 @@ mod tests {
         };
 
         let tx = Transaction::new(
-            &[&payer, &message_to_relay],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
