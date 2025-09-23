@@ -7,7 +7,8 @@ use anchor_spl::{
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN},
     solana_to_base::{
-        internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, OutgoingMessage, Transfer, OUTGOING_MESSAGE_SEED,
+        internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, OutgoingMessage,
+        Transfer, OUTGOING_MESSAGE_SEED,
     },
 };
 
@@ -81,7 +82,10 @@ pub fn bridge_wrapped_token_handler(
     call: Option<Call>,
 ) -> Result<()> {
     // Check if bridge is paused
-    require!(!ctx.accounts.bridge.paused, BridgeWrappedTokenError::BridgePaused);
+    require!(
+        !ctx.accounts.bridge.paused,
+        BridgeWrappedTokenError::BridgePaused
+    );
 
     bridge_wrapped_token_internal(
         &ctx.accounts.payer,
@@ -127,7 +131,7 @@ mod tests {
         instruction::BridgeWrappedToken as BridgeWrappedTokenIx,
         solana_to_base::{Call, CallType},
         test_utils::{
-            create_mock_wrapped_mint, create_mock_token_account, setup_bridge_and_svm,
+            create_mock_token_account, create_mock_wrapped_mint, create_outgoing_message, setup_bridge_and_svm,
             TEST_GAS_FEE_RECEIVER,
         },
         ID,
@@ -141,8 +145,6 @@ mod tests {
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
 
-        
-
         // Create test wrapped token metadata
         let partial_token_metadata = PartialTokenMetadata {
             name: "Test Token".to_string(),
@@ -153,7 +155,8 @@ mod tests {
 
         // Create wrapped token mint
         let initial_amount = 1_000_000u64; // 1 token with 6 decimals
-        let wrapped_mint = create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
+        let wrapped_mint =
+            create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
 
         // Create token account for the from user
         let from_token_account = Keypair::new().pubkey();
@@ -166,15 +169,8 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) =
+                create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20]; // Base address
@@ -272,7 +268,8 @@ mod tests {
 
         // Create wrapped token mint
         let initial_amount = 1_000_000u64; // 1 token with 6 decimals
-        let wrapped_mint = create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
+        let wrapped_mint =
+            create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
 
         // Create token account for the from user
         let from_token_account = Keypair::new().pubkey();
@@ -285,15 +282,8 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) =
+            create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];
@@ -389,7 +379,8 @@ mod tests {
 
         // Create wrapped token mint
         let initial_amount = 1_000_000u64; // 1 token with 6 decimals
-        let wrapped_mint = create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
+        let wrapped_mint =
+            create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
 
         // Create token account for the from user
         let from_token_account = Keypair::new().pubkey();
@@ -402,15 +393,8 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) =
+            create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];
@@ -493,7 +477,8 @@ mod tests {
 
         // Create wrapped token mint
         let initial_amount = 1_000_000u64;
-        let wrapped_mint = create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
+        let wrapped_mint =
+            create_mock_wrapped_mint(&mut svm, initial_amount, 6, &partial_token_metadata);
 
         // Create token account for the from user
         let from_token_account = Keypair::new().pubkey();
@@ -506,15 +491,8 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) =
+            create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];

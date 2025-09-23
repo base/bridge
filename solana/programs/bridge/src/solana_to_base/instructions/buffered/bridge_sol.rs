@@ -148,7 +148,7 @@ mod tests {
             BridgeSolWithBufferedCall as BridgeSolWithBufferedCallIx, InitializeCallBuffer,
         },
         solana_to_base::{CallType, NATIVE_SOL_PUBKEY},
-        test_utils::{setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
+        test_utils::{create_outgoing_message, setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
         ID,
     };
 
@@ -211,15 +211,7 @@ mod tests {
             .expect("Failed to initialize call buffer");
 
         // Now create the bridge_sol_with_buffered_call instruction
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Find SOL vault PDA
         let sol_vault =

@@ -116,9 +116,7 @@ mod tests {
     use super::*;
 
     use anchor_lang::{
-        solana_program::{
-            instruction::Instruction, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey,
-        },
+        solana_program::{instruction::Instruction, native_token::LAMPORTS_PER_SOL},
         system_program, InstructionData,
     };
     use solana_keypair::Keypair;
@@ -131,7 +129,7 @@ mod tests {
         common::bridge::Bridge,
         instruction::{BridgeCallBuffered as BridgeCallBufferedIx, InitializeCallBuffer},
         solana_to_base::CallType,
-        test_utils::{setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
+        test_utils::{create_outgoing_message, setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
         ID,
     };
 
@@ -188,15 +186,7 @@ mod tests {
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Build the BridgeCallBuffered instruction accounts
         let accounts = accounts::BridgeCallBuffered {
@@ -328,15 +318,7 @@ mod tests {
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Build the BridgeCallBuffered instruction accounts with unauthorized owner
         let accounts = accounts::BridgeCallBuffered {
@@ -433,15 +415,7 @@ mod tests {
         let from = Keypair::new();
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Build the BridgeCallBuffered instruction accounts with wrong gas fee receiver
         let accounts = accounts::BridgeCallBuffered {

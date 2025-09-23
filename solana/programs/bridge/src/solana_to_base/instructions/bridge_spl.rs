@@ -149,8 +149,8 @@ mod tests {
         instruction::BridgeSpl as BridgeSplIx,
         solana_to_base::{Call, CallType},
         test_utils::{
-            create_mock_mint, create_mock_token_account, setup_bridge_and_svm,
-            TEST_GAS_FEE_RECEIVER,
+            create_mock_mint, create_mock_token_account, create_outgoing_message,
+            setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER,
         },
         ID,
     };
@@ -184,15 +184,7 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20]; // Base address
@@ -317,15 +309,7 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];
@@ -442,15 +426,7 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];
@@ -554,15 +530,7 @@ mod tests {
         );
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];

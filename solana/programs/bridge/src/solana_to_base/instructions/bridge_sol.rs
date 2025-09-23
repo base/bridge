@@ -122,7 +122,7 @@ mod tests {
         common::{bridge::Bridge, SOL_VAULT_SEED},
         instruction::BridgeSol as BridgeSolIx,
         solana_to_base::{Call, CallType, NATIVE_SOL_PUBKEY},
-        test_utils::{setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
+        test_utils::{create_outgoing_message, setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
         ID,
     };
 
@@ -135,15 +135,7 @@ mod tests {
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20]; // Base address
@@ -243,15 +235,7 @@ mod tests {
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];
@@ -342,15 +326,7 @@ mod tests {
         let wrong_gas_fee_receiver = Keypair::new();
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];
@@ -428,15 +404,7 @@ mod tests {
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL * 5).unwrap();
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];

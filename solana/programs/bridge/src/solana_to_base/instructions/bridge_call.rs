@@ -105,7 +105,7 @@ mod tests {
         common::bridge::Bridge,
         instruction::BridgeCall as BridgeCallIx,
         solana_to_base::CallType,
-        test_utils::{setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
+        test_utils::{create_outgoing_message, setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
         ID,
     };
 
@@ -122,15 +122,7 @@ mod tests {
             .unwrap();
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Create test call data
         let call = Call {
@@ -215,15 +207,7 @@ mod tests {
             .unwrap();
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Create test call data
         let call = Call {
@@ -296,15 +280,7 @@ mod tests {
         svm.airdrop(&from.pubkey(), LAMPORTS_PER_SOL).unwrap();
 
         // Create outgoing message account
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let call = Call {

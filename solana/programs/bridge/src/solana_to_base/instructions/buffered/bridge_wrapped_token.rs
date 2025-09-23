@@ -157,8 +157,8 @@ mod tests {
         },
         solana_to_base::CallType,
         test_utils::{
-            create_mock_token_account, create_mock_wrapped_mint, setup_bridge_and_svm,
-            TEST_GAS_FEE_RECEIVER,
+            create_mock_token_account, create_mock_wrapped_mint, create_outgoing_message,
+            setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER,
         },
         ID,
     };
@@ -244,15 +244,7 @@ mod tests {
             .expect("Failed to initialize call buffer");
 
         // Now create the bridge_wrapped_token_with_buffered_call instruction
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Build the BridgeWrappedTokenWithBufferedCall instruction accounts
         let accounts = accounts::BridgeWrappedTokenWithBufferedCall {
@@ -426,15 +418,8 @@ mod tests {
             .expect("Failed to initialize call buffer");
 
         // Now try to use bridge_wrapped_token_with_buffered_call with unauthorized account as owner
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
+
         let to = [1u8; 20];
         let amount = 500_000u64;
 
@@ -562,15 +547,8 @@ mod tests {
             .expect("Failed to initialize call buffer");
 
         // Now try bridge_wrapped_token_with_buffered_call with wrong gas fee receiver
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
+
         let to = [1u8; 20];
         let amount = 500_000u64;
 

@@ -35,6 +35,7 @@ use crate::{
         WRAPPED_TOKEN_SEED,
     },
     instruction::Initialize,
+    solana_to_base::OUTGOING_MESSAGE_SEED,
     ID,
 };
 pub const TEST_GAS_FEE_RECEIVER: Pubkey = pubkey!("eEwCrQLBdQchykrkYitkYUZskd7MPrU2YxBXcPDPnMt");
@@ -151,6 +152,21 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
     svm.send_transaction(tx).unwrap();
 
     (svm, payer, bridge_pda)
+}
+
+pub fn create_outgoing_message() -> ([u8; 32], Pubkey) {
+    let outgoing_message_salt = [42u8; 32];
+    (
+        outgoing_message_salt,
+        Pubkey::find_program_address(
+            &[
+                OUTGOING_MESSAGE_SEED.as_bytes(),
+                outgoing_message_salt.as_ref(),
+            ],
+            &ID,
+        )
+        .0,
+    )
 }
 
 pub fn mock_clock(svm: &mut LiteSVM, timestamp: i64) {
