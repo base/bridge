@@ -267,7 +267,7 @@ mod tests {
         let gas_limit = 100_000u64;
         let outgoing_message = Pubkey::new_unique();
         let mtr_salt = Pubkey::new_unique().to_bytes();
-        let (message_to_relay_pda, _) = Pubkey::find_program_address(
+        let (message_to_relay, _) = Pubkey::find_program_address(
             &[crate::constants::MTR_SEED, mtr_salt.as_ref()],
             &crate::ID,
         );
@@ -275,7 +275,7 @@ mod tests {
             payer: payer_pk,
             cfg: cfg_pda,
             gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
-            message_to_relay: message_to_relay_pda,
+            message_to_relay,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
