@@ -14,12 +14,14 @@ enum MessageType {
 
 /// @notice Message sent from Solana to Base.
 ///
+/// @custom:field outgoingMessagePubkey The pubkey of the `OutgoingMessage` account on Solana associated with this message.
 /// @custom:field nonce Unique nonce for the message.
 /// @custom:field sender The Solana sender's pubkey.
 /// @custom:field gasLimit The gas limit for the message execution.
 /// @custom:field ty The message type to execute (Call, Transfer, or TransferAndCall).
 /// @custom:field data Encoded payload associated with the message type.
 struct IncomingMessage {
+    Pubkey outgoingMessagePubkey;
     uint64 nonce;
     Pubkey sender;
     uint64 gasLimit;
@@ -29,15 +31,19 @@ struct IncomingMessage {
 
 library MessageLib {
     function getMessageHashCd(IncomingMessage calldata message) internal pure returns (bytes32) {
-        return getMessageHash(message.nonce, getInnerMessageHashCd(message));
+        return getMessageHash(message.nonce, message.outgoingMessagePubkey, getInnerMessageHashCd(message));
     }
 
     function getMessageHash(IncomingMessage memory message) internal pure returns (bytes32) {
-        return getMessageHash(message.nonce, getInnerMessageHash(message));
+        return getMessageHash(message.nonce, message.outgoingMessagePubkey, getInnerMessageHash(message));
     }
 
-    function getMessageHash(uint256 nonce, bytes32 innerMessageHash) internal pure returns (bytes32) {
-        return EfficientHashLib.hash(bytes32(nonce), innerMessageHash);
+    function getMessageHash(uint256 nonce, Pubkey outgoingMessagePubkey, bytes32 innerMessageHash)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return EfficientHashLib.hash(bytes32(nonce), Pubkey.unwrap(outgoingMessagePubkey), innerMessageHash);
     }
 
     function getInnerMessageHashCd(IncomingMessage calldata message) internal pure returns (bytes32) {

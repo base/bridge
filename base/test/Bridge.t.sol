@@ -171,6 +171,7 @@ contract BridgeTest is CommonTest {
     function test_relayMessages_emitsFailureEventAndMarksFailure() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -209,6 +210,7 @@ contract BridgeTest is CommonTest {
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -359,6 +361,7 @@ contract BridgeTest is CommonTest {
     function test_relayMessages_success() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -383,6 +386,7 @@ contract BridgeTest is CommonTest {
         // First, create a message that will succeed with trusted relayer
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -406,6 +410,7 @@ contract BridgeTest is CommonTest {
     function test_relayMessages_emitsSuccessEvent() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -437,6 +442,7 @@ contract BridgeTest is CommonTest {
     function test_relayMessage_callType() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -472,6 +478,7 @@ contract BridgeTest is CommonTest {
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -503,6 +510,7 @@ contract BridgeTest is CommonTest {
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -558,6 +566,7 @@ contract BridgeTest is CommonTest {
     function test_relayMessages_revertsOnInvalidMessage() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -578,6 +587,7 @@ contract BridgeTest is CommonTest {
 
     function test___relayMessage_revertsWhenCalledExternally() public {
         IncomingMessage memory message = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -599,6 +609,7 @@ contract BridgeTest is CommonTest {
     function test_relayMessage_shouldCompleteWithoutCreatingTwinWhenRemoteBridgeIsSender() public {
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: cfg.remoteBridge,
             gasLimit: GAS_LIMIT,
@@ -843,6 +854,7 @@ contract BridgeTest is CommonTest {
         IncomingMessage[] memory messages = new IncomingMessage[](3);
         for (uint256 i; i < 3; i++) {
             messages[i] = IncomingMessage({
+                outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
                 nonce: uint64(i),
                 sender: TEST_SENDER,
                 gasLimit: GAS_LIMIT,
@@ -868,6 +880,7 @@ contract BridgeTest is CommonTest {
         // First message creates Twin
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: 0,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -933,6 +946,7 @@ contract BridgeTest is CommonTest {
         for (uint64 i; i < nonce; i++) {
             IncomingMessage[] memory tempMessages = new IncomingMessage[](1);
             tempMessages[0] = IncomingMessage({
+                outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
                 nonce: i,
                 sender: TEST_SENDER,
                 gasLimit: GAS_LIMIT,
@@ -954,6 +968,7 @@ contract BridgeTest is CommonTest {
         // Now send the actual test message
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: nonce,
             sender: TEST_SENDER,
             gasLimit: GAS_LIMIT,
@@ -1283,6 +1298,7 @@ contract BridgeTest is CommonTest {
 
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: nonce,
             sender: cfg.remoteBridge,
             gasLimit: GAS_LIMIT,

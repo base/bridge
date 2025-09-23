@@ -46,18 +46,21 @@ contract RelayerOrchestrator {
 
     /// @notice Open function to atomically pre-validate and execute a batch of messages in the same transaction
     ///
-    /// @param innerMessageHashes An array of inner message hashes to pre-validate (hash over message data excluding the
-    ///                           nonce and gasLimit).
-    /// @param messages           The messages to relay. Not necessarily a 1:1 mapping with innerMessageHashes.
-    /// @param validatorSigs      A concatenated bytes array of signatures over the EIP-191 `eth_sign` digest of
-    ///                           `abi.encode(messageHashes)`, provided in strictly ascending order by signer address.
+    /// @dev If `signedMessages.length > 0`, messages are pre-validated via `BridgeValidator.registerMessages`
+    ///      using `validatorSigs`. If `messages.length > 0`, they are then relayed via `Bridge.relayMessages`.
+    ///
+    /// @param signedMessages Optional array of `BridgeValidator.SignedMessage` entries to register.
+    /// @param messages       Messages to relay. Not necessarily a 1:1 mapping with `signedMessages`.
+    /// @param validatorSigs  Concatenated ECDSA signatures over the EIP-191 `eth_sign` digest of
+    ///                       `abi.encode(messageHashes)`, sorted strictly by signer address ascending. Must satisfy
+    ///                       Base and partner thresholds configured in `BridgeValidator`.
     function validateAndRelay(
-        bytes32[] calldata innerMessageHashes,
+        BridgeValidator.SignedMessage[] calldata signedMessages,
         IncomingMessage[] calldata messages,
         bytes calldata validatorSigs
     ) external {
-        if (innerMessageHashes.length > 0) {
-            BridgeValidator(BRIDGE_VALIDATOR).registerMessages(innerMessageHashes, validatorSigs);
+        if (signedMessages.length > 0) {
+            BridgeValidator(BRIDGE_VALIDATOR).registerMessages(signedMessages, validatorSigs);
         }
 
         if (messages.length > 0) {

@@ -11,11 +11,15 @@ import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {Twin} from "../src/Twin.sol";
 import {MessageLib} from "../src/libraries/MessageLib.sol";
+
 import {IncomingMessage} from "../src/libraries/MessageLib.sol";
+import {Pubkey} from "../src/libraries/SVMLib.sol";
 import {RelayerOrchestrator} from "../src/periphery/RelayerOrchestrator.sol";
 
 contract CommonTest is Test {
     uint64 public constant GAS_LIMIT = 1_000_000;
+    Pubkey public constant TEST_OUTGOING_MESSAGE =
+        Pubkey.wrap(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
 
     BridgeValidator public bridgeValidator;
     Bridge public bridge;
@@ -26,25 +30,30 @@ contract CommonTest is Test {
     HelperConfig.NetworkConfig public cfg;
 
     function _registerMessage(IncomingMessage memory message) internal {
-        (, bytes32[] memory innerMessageHashes) = _messageToMessageHashes(message);
-        bridgeValidator.registerMessages(innerMessageHashes, _getValidatorSigs(innerMessageHashes));
+        BridgeValidator.SignedMessage[] memory signedMessages = _messageToSignedMessages(message);
+        bridgeValidator.registerMessages(signedMessages, _getValidatorSigs(signedMessages));
         vm.stopPrank();
     }
 
-    function _messageToMessageHashes(IncomingMessage memory message)
+    function _messageToSignedMessages(IncomingMessage memory message)
         internal
-        view
-        returns (bytes32[] memory, bytes32[] memory)
+        pure
+        returns (BridgeValidator.SignedMessage[] memory)
     {
-        bytes32[] memory messageHashes = new bytes32[](1);
-        bytes32[] memory innerMessageHashes = new bytes32[](1);
-        messageHashes[0] = bridge.getMessageHash(message);
-        innerMessageHashes[0] = MessageLib.getInnerMessageHash(message);
-        return (messageHashes, innerMessageHashes);
+        BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
+        signedMessages[0] = BridgeValidator.SignedMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
+            innerMessageHash: MessageLib.getInnerMessageHash(message)
+        });
+        return signedMessages;
     }
 
-    function _getValidatorSigs(bytes32[] memory innerMessageHashes) internal view returns (bytes memory) {
-        bytes32[] memory messageHashes = _calculateFinalHashes(innerMessageHashes);
+    function _getValidatorSigs(BridgeValidator.SignedMessage[] memory signedMessages)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32[] memory messageHashes = _calculateFinalHashes(signedMessages);
         return _createSignature(abi.encode(messageHashes), 1);
     }
 
@@ -53,11 +62,17 @@ contract CommonTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
-    function _calculateFinalHashes(bytes32[] memory innerHashes) internal view returns (bytes32[] memory) {
-        bytes32[] memory finalHashes = new bytes32[](innerHashes.length);
+    function _calculateFinalHashes(BridgeValidator.SignedMessage[] memory signedMessages)
+        internal
+        view
+        returns (bytes32[] memory)
+    {
+        bytes32[] memory finalHashes = new bytes32[](signedMessages.length);
         uint256 currentNonce = bridgeValidator.nextNonce();
-        for (uint256 i; i < innerHashes.length; i++) {
-            finalHashes[i] = keccak256(abi.encode(currentNonce++, innerHashes[i]));
+        for (uint256 i; i < signedMessages.length; i++) {
+            finalHashes[i] = keccak256(
+                abi.encode(currentNonce++, signedMessages[i].outgoingMessagePubkey, signedMessages[i].innerMessageHash)
+            );
         }
         return finalHashes;
     }

@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {DeployScript} from "../../script/Deploy.s.sol";
 
+import {BridgeValidator} from "../../src/BridgeValidator.sol";
 import {Call, CallType} from "../../src/libraries/CallLib.sol";
 import {IncomingMessage, MessageType} from "../../src/libraries/MessageLib.sol";
 import {Pubkey} from "../../src/libraries/SVMLib.sol";
@@ -46,6 +47,7 @@ contract RelayerOrchestratorTest is CommonTest {
         // Build message aligned with current BridgeValidator nonce
         IncomingMessage[] memory messages = new IncomingMessage[](1);
         messages[0] = IncomingMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             nonce: uint64(bridgeValidator.nextNonce()),
             sender: Pubkey.wrap(bytes32(uint256(0x01))),
             gasLimit: GAS_LIMIT,
@@ -54,13 +56,11 @@ contract RelayerOrchestratorTest is CommonTest {
         });
 
         // Compute inner message hash and corresponding validator signatures
-        (, bytes32[] memory innerMessageHashes) = _messageToMessageHashes(messages[0]);
-        bytes memory sigs = _getValidatorSigs(innerMessageHashes);
+        BridgeValidator.SignedMessage[] memory signedMessages = _messageToSignedMessages(messages[0]);
+        bytes memory sigs = _getValidatorSigs(signedMessages);
 
         // Call orchestrator
-        bytes32[] memory innerHashes = new bytes32[](1);
-        innerHashes[0] = innerMessageHashes[0];
-        relayerOrchestrator.validateAndRelay(innerHashes, messages, sigs);
+        relayerOrchestrator.validateAndRelay(signedMessages, messages, sigs);
 
         // Effects: target updated, success recorded, nonce incremented
         assertEq(target.value(), newValue, "call not executed");
