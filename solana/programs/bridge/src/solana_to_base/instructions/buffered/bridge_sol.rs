@@ -372,15 +372,8 @@ mod tests {
             .expect("Failed to initialize call buffer");
 
         // Now try to use bridge_sol_with_buffered_call with unauthorized account as owner
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
+
         let to = [1u8; 20];
         let remote_token = [2u8; 20];
         let amount = LAMPORTS_PER_SOL;
@@ -489,15 +482,8 @@ mod tests {
             .expect("Failed to initialize call buffer");
 
         // Now try bridge_sol_with_buffered_call with wrong gas fee receiver
-        let outgoing_message_salt = [42u8; 32];
-        let outgoing_message = Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
-            &ID,
-        )
-        .0;
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
+
         let to = [1u8; 20];
         let remote_token = [2u8; 20];
         let amount = LAMPORTS_PER_SOL;
