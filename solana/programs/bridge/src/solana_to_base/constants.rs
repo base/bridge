@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 pub const NATIVE_SOL_PUBKEY: Pubkey = pubkey!("SoL1111111111111111111111111111111111111111");
 
 #[constant]
-pub const OUTGOING_MESSAGE_SEED: &str = "outgoing_message";
+pub const OUTGOING_MESSAGE_SEED: &[u8] = b"outgoing_message";
 
 #[constant]
 pub const REMOTE_TOKEN_METADATA_KEY: &str = "remote_token";

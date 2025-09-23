@@ -45,7 +45,7 @@ pub struct BridgeCall<'info> {
     #[account(
         init,
         payer = payer,
-        seeds = [OUTGOING_MESSAGE_SEED.as_bytes(), outgoing_message_salt.as_ref()],
+        seeds = [OUTGOING_MESSAGE_SEED, outgoing_message_salt.as_ref()],
         bump,
         space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Call>(call.data.len()),
     )]

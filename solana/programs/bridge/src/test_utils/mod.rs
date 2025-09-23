@@ -159,10 +159,7 @@ pub fn create_outgoing_message() -> ([u8; 32], Pubkey) {
     (
         outgoing_message_salt,
         Pubkey::find_program_address(
-            &[
-                OUTGOING_MESSAGE_SEED.as_bytes(),
-                outgoing_message_salt.as_ref(),
-            ],
+            &[OUTGOING_MESSAGE_SEED, outgoing_message_salt.as_ref()],
             &ID,
         )
         .0,
