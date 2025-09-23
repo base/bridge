@@ -72,7 +72,7 @@ impl Eip1559 {
         self.window_start_time +=
             (expired_windows_count * self.config.window_duration_seconds) as i64;
 
-        current_base_fee
+        self.current_base_fee
     }
 
     /// Add gas usage to current window
