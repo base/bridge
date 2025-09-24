@@ -51,11 +51,11 @@ export const CONSTANTS = {
       wErc20: address("44PhEvftJp57KRNSR7ypGLns1JUKXqAubewi3h5q1TEo"),
 
       // Base addresses
-      baseBridge: "0x5961B1579913632c91c8cdC771cF48251A4B54F0",
+      baseBridge: "0xB2068ECCDb908902C76E3f965c1712a9cF64171E",
       counter: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
       erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
-      wSol: "0x70445da14e089424E5f7Ab6d3C22F5Fadeb619Ca",
-      wSpl: "0x4752285a93F5d0756bB2D6ed013b40ea8527a8DA",
+      wSol: "0xC5b9112382f3c87AFE8e1A28fa52452aF81085AD",
+      wSpl: "0x955C7356776F9304feD38ed5AeC5699436C7C614",
     },
   },
 } as const;
