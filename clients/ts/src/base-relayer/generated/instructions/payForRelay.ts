@@ -70,8 +70,7 @@ export type PayForRelayInstruction<
         ? WritableAccount<TAccountGasFeeReceiver>
         : TAccountGasFeeReceiver,
       TAccountMessageToRelay extends string
-        ? WritableSignerAccount<TAccountMessageToRelay> &
-            AccountSignerMeta<TAccountMessageToRelay>
+        ? WritableAccount<TAccountMessageToRelay>
         : TAccountMessageToRelay,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
@@ -82,11 +81,13 @@ export type PayForRelayInstruction<
 
 export type PayForRelayInstructionData = {
   discriminator: ReadonlyUint8Array;
+  mtrSalt: ReadonlyUint8Array;
   outgoingMessage: Address;
   gasLimit: bigint;
 };
 
 export type PayForRelayInstructionDataArgs = {
+  mtrSalt: ReadonlyUint8Array;
   outgoingMessage: Address;
   gasLimit: number | bigint;
 };
@@ -95,6 +96,7 @@ export function getPayForRelayInstructionDataEncoder(): FixedSizeEncoder<PayForR
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['mtrSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['outgoingMessage', getAddressEncoder()],
       ['gasLimit', getU64Encoder()],
     ]),
@@ -105,6 +107,7 @@ export function getPayForRelayInstructionDataEncoder(): FixedSizeEncoder<PayForR
 export function getPayForRelayInstructionDataDecoder(): FixedSizeDecoder<PayForRelayInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['mtrSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['outgoingMessage', getAddressDecoder()],
     ['gasLimit', getU64Decoder()],
   ]);
@@ -140,12 +143,13 @@ export type PayForRelayInput<
   cfg: Address<TAccountCfg>;
   /** The account that receives payment for the gas costs of bridging SOL to Base. */
   gasFeeReceiver: Address<TAccountGasFeeReceiver>;
-  messageToRelay: TransactionSigner<TAccountMessageToRelay>;
+  messageToRelay: Address<TAccountMessageToRelay>;
   /**
    * System program required for creating new accounts.
    * Used internally by Anchor for account initialization.
    */
   systemProgram?: Address<TAccountSystemProgram>;
+  mtrSalt: PayForRelayInstructionDataArgs['mtrSalt'];
   outgoingMessage: PayForRelayInstructionDataArgs['outgoingMessage'];
   gasLimit: PayForRelayInstructionDataArgs['gasLimit'];
 };

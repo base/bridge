@@ -108,6 +108,8 @@ export const IDL = {
         "(for fee window updates), `gas_fee_receiver` (must",
         "match configured receiver), and a new",
         "`message_to_relay` account.",
+        "* `mtr_salt`         - 32-byte salt used to derive the `message_to_relay`",
+        "PDA address, enabling unique messages per request.",
         "* `outgoing_message` - The Base-side message identifier to be executed.",
         "* `gas_limit`        - Maximum gas units to budget for execution on Base.",
         "",
@@ -154,8 +156,7 @@ export const IDL = {
         },
         {
           "name": "message_to_relay",
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "system_program",
@@ -166,6 +167,15 @@ export const IDL = {
         }
       ],
       "args": [
+        {
+          "name": "mtr_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
         {
           "name": "outgoing_message",
           "type": "pubkey"
@@ -544,6 +554,11 @@ export const IDL = {
       "name": "CFG_SEED",
       "type": "bytes",
       "value": "[99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "MTR_SEED",
+      "type": "bytes",
+      "value": "[109, 116, 114]"
     },
     {
       "name": "SCALE",

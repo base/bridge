@@ -43,13 +43,6 @@ export async function handleBuild(args: BuildArgs): Promise<void> {
     const projectRoot = await findGitRoot();
     logger.info(`Project root: ${projectRoot}`);
 
-    // Derive features from cluster and release (only for bridge)
-    const features =
-      args.program === "bridge" ? `${args.cluster},${args.release}` : undefined;
-    if (features) {
-      logger.info(`Using features: ${features}`);
-    }
-
     // Find lib.rs
     const libRsPath = await findLibRs(projectRoot, args.program);
     logger.info(`Found lib.rs at: ${libRsPath}`);
@@ -107,13 +100,7 @@ export async function handleBuild(args: BuildArgs): Promise<void> {
       logger.info("Running cargo-build-sbf...");
       const solanaDir = join(projectRoot, "solana");
       const packageName = args.program === "bridge" ? "bridge" : "base_relayer";
-      if (features) {
-        await $`cargo-build-sbf --features ${features} -- -p ${packageName}`.cwd(
-          solanaDir
-        );
-      } else {
-        await $`cargo-build-sbf -- -p ${packageName}`.cwd(solanaDir);
-      }
+      await $`cargo-build-sbf -- -p ${packageName}`.cwd(solanaDir);
 
       logger.success("Program build completed!");
     } finally {

@@ -2671,13 +2671,8 @@ export const IDL = {
     },
     {
       "code": 6001,
-      "name": "Unauthorized",
-      "msg": "Only the owner can close this call buffer"
-    },
-    {
-      "code": 6002,
       "name": "BridgePaused",
-      "msg": "Bridge is currently paused"
+      "msg": "Bridge is paused"
     }
   ],
   "types": [
@@ -3884,8 +3879,8 @@ export const IDL = {
     },
     {
       "name": "OUTGOING_MESSAGE_SEED",
-      "type": "string",
-      "value": "\"outgoing_message\""
+      "type": "bytes",
+      "value": "[111, 117, 116, 103, 111, 105, 110, 103, 95, 109, 101, 115, 115, 97, 103, 101]"
     },
     {
       "name": "OUTPUT_ROOT_SEED",

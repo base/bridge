@@ -7,6 +7,7 @@ import { homedir } from "os";
 import { logger } from "@internal/logger";
 import { findGitRoot } from "@internal/utils";
 import { getKeypairSignerFromPath, CONSTANTS } from "@internal/sol";
+import { getBase58Codec } from "@solana/kit";
 
 export const argsSchema = z.object({
   cluster: z
@@ -71,7 +72,9 @@ export async function handleDeploy(args: DeployArgs): Promise<void> {
     );
     const { address: programAddress } =
       await getKeypairSignerFromPath(programKeypairPath);
-    logger.info(`Program ID: ${programAddress}`);
+
+    const bytes32 = getBase58Codec().encode(programAddress).toHex();
+    logger.info(`Program ID: ${programAddress} (0x${bytes32})`);
 
     const programBinaryPath = await getProgramBinaryPath(
       projectRoot,

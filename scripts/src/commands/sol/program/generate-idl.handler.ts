@@ -32,12 +32,6 @@ export async function handleGenerateIdl(args: GenerateIdlArgs): Promise<void> {
     const projectRoot = await findGitRoot();
     logger.info(`Project root: ${projectRoot}`);
 
-    const features =
-      args.program === "bridge" ? `${args.cluster},${args.release}` : undefined;
-    if (features) {
-      logger.info(`Using features: ${features}`);
-    }
-
     const programDir = args.program === "bridge" ? "bridge" : "base_relayer";
     const solanaDir = join(projectRoot, `solana/programs/${programDir}`);
     const scriptsDir = join(projectRoot, "scripts");
@@ -48,13 +42,7 @@ export async function handleGenerateIdl(args: GenerateIdlArgs): Promise<void> {
     );
 
     logger.info("Generating IDL...");
-    if (features) {
-      await $`anchor idl build -o ${solanaIdlPath} -- --features ${features}`.cwd(
-        solanaDir
-      );
-    } else {
-      await $`anchor idl build -o ${solanaIdlPath}`.cwd(solanaDir);
-    }
+    await $`anchor idl build -o ${solanaIdlPath}`.cwd(solanaDir);
 
     logger.info("Removing address key from IDL...");
     const idlFile = Bun.file(solanaIdlPath);
