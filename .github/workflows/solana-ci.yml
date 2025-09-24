@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  build-and-test-solana-program:
+  build-and-test-solana-programs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

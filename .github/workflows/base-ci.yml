@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  build-and-test-base-contracts:
+    name: Foundry project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Show Forge version
+        run: |
+          forge --version
+
+      - name: Install dependencies
+        run: |
+          cd base && make deps
+        id: deps
+
+      - name: Run Forge fmt
+        run: |
+          cd base && forge fmt --check
+        id: fmt
+
+      - name: Run Forge build
+        run: |
+          cd base && forge build --sizes
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          cd base && forge test -vvv
+        id: test
