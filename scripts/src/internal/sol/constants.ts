@@ -23,11 +23,11 @@ export const CONSTANTS = {
       wErc20: address("3UHHHSeeLcFFJR1KrdhyHKnzKHcwoSnhxGSjHmar4usN"),
 
       // Base addresses
-      baseBridge: "0x03E05A7EB8005a8768805139394c61d2baaB3f6e",
+      baseBridge: "0x91a5d5A71bC3Bd7a835050ED4A337B95De0Ae757",
       counter: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
       erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
-      wSol: "0x2dda899aC8534636EC9F5E17F53C0C5DC64a3a8a",
-      wSpl: "0xEaAdad4bb61A27781C7210d4Eb4B35A4438755Ac",
+      wSol: "0xC50EA8CAeDaE290FE4edA770b10aDEfc41CD698e",
+      wSpl: "0xCf8e666c57651670AA7266Aba3E334E3600B2306",
     },
 
     prod: {

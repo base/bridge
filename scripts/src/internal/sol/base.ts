@@ -1,6 +1,7 @@
 import {
   createSolanaRpc,
   devnet,
+  getBase58Codec,
   getBase58Encoder,
   type Address as SolAddress,
 } from "@solana/kit";
@@ -143,10 +144,8 @@ export async function monitorMessageExecution(
       return;
     }
 
-    await sleep(1000);
+    await sleep(10_000);
   }
-
-  logger.error("Message execution failed.");
 }
 
 function buildEvmMessage(
@@ -163,10 +162,12 @@ function buildEvmMessage(
     )
   );
 
+  const pubkey = getBase58Codec().encode(outgoing.address);
+
   const outerHash = keccak256(
     encodeAbiParameters(
-      [{ type: "uint64" }, { type: "bytes32" }],
-      [nonce, innerHash]
+      [{ type: "uint64" }, { type: "bytes32" }, { type: "bytes32" }],
+      [nonce, `0x${pubkey.toHex()}`, innerHash]
     )
   );
 

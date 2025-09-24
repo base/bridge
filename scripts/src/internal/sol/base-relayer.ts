@@ -38,10 +38,10 @@ export async function buildPayForRelayInstruction(
 
   const cfg = await fetchCfg(solRpc, cfgAddress);
 
-  const mtrKeypair = await generateKeyPair();
-  const mtrKeypairSigner = await createSignerFromKeyPair(mtrKeypair);
-
-  logger.info(`Message To Relay: ${mtrKeypairSigner.address}`);
+  const { salt, pubkey: messageToRelay } = await mtrPubkey(
+    solConfig.baseRelayer
+  );
+  logger.info(`Message To Relay: ${messageToRelay}`);
 
   return getPayForRelayInstruction(
     {
@@ -49,7 +49,8 @@ export async function buildPayForRelayInstruction(
       payer,
       cfg: cfgAddress,
       gasFeeReceiver: cfg.data.gasConfig.gasFeeReceiver,
-      messageToRelay: mtrKeypairSigner,
+      messageToRelay,
+      mtrSalt: salt,
       systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
       // Arguments
@@ -58,4 +59,16 @@ export async function buildPayForRelayInstruction(
     },
     { programAddress: solConfig.baseRelayer }
   );
+}
+
+export async function mtrPubkey(baseRelayer: Address, salt?: Uint8Array) {
+  const bytes = new Uint8Array(32);
+  const s = salt ?? crypto.getRandomValues(bytes);
+
+  const [pubkey] = await getProgramDerivedAddress({
+    programAddress: baseRelayer,
+    seeds: [Buffer.from(getRelayerIdlConstant("MTR_SEED")), Buffer.from(s)],
+  });
+
+  return { salt: s, pubkey };
 }
