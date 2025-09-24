@@ -6,7 +6,6 @@ import {
   devnet,
   type Address,
   type KeyPairSigner,
-  type DevnetUrl,
   createSolanaRpc,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
@@ -268,4 +267,6 @@ async function assertInitialized(
   ) {
     throw new Error("Partner oracle config threshold mismatch!");
   }
+
+  console.log("Bridge config confirmed!");
 }

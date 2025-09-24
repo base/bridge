@@ -44,8 +44,8 @@ export const CONSTANTS = {
       solanaEvmKeychainKey: "0x7f7a481926dc754f5768691a17022c3fa548ed8b",
 
       // Solana addresses
-      solanaBridge: address("83hN2esneZUbKgLfUvo7uzas4g7kyiodeNKAqZgx5MbH"),
-      baseRelayer: address("J29jxzRsQmkpxkJptuaxYXgyNqjFZErxXtDWQ4ma3k51"),
+      solanaBridge: address("HSvNvzehozUpYhRBuCKq3Fq8udpRocTmGMUYXmCSiCCc"),
+      baseRelayer: address("ExS1gcALmaA983oiVpvFSVohi1zCtAUTgsLj5xiFPPgL"),
       spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
       wEth: address("DG4ncVRoiSkYBLVUXxCFbVg38RhByjFKTLZi6UFFmZuf"),
       wErc20: address("44PhEvftJp57KRNSR7ypGLns1JUKXqAubewi3h5q1TEo"),

@@ -177,4 +177,6 @@ async function assertInitialized(
   if (cfgData.data.gasConfig.gasFeeReceiver !== gasConfig.gasFeeReceiver) {
     throw new Error("Gas config gasFeeReceiver mismatch!");
   }
+
+  console.log("Base Relayer config confirmed!");
 }

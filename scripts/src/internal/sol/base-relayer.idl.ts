@@ -4,7 +4,7 @@
 export const IDL = {
   "metadata": {
     "name": "base_relayer",
-    "version": "0.1.0",
+    "version": "0.3.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
@@ -358,13 +358,8 @@ export const IDL = {
   "errors": [
     {
       "code": 6000,
-      "name": "GasLimitTooLow",
-      "msg": "Gas limit too low"
-    },
-    {
-      "code": 6001,
-      "name": "GasLimitExceeded",
-      "msg": "Gas limit exceeded"
+      "name": "IncorrectGasFeeReceiver",
+      "msg": "Incorrect gas fee receiver"
     }
   ],
   "types": [

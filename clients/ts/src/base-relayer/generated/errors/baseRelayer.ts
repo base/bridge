@@ -14,20 +14,16 @@ import {
 } from '@solana/kit';
 import { BASE_RELAYER_PROGRAM_ADDRESS } from '../programs';
 
-/** GasLimitTooLow: Gas limit too low */
-export const BASE_RELAYER_ERROR__GAS_LIMIT_TOO_LOW = 0x1770; // 6000
-/** GasLimitExceeded: Gas limit exceeded */
-export const BASE_RELAYER_ERROR__GAS_LIMIT_EXCEEDED = 0x1771; // 6001
+/** IncorrectGasFeeReceiver: Incorrect gas fee receiver */
+export const BASE_RELAYER_ERROR__INCORRECT_GAS_FEE_RECEIVER = 0x1770; // 6000
 
 export type BaseRelayerError =
-  | typeof BASE_RELAYER_ERROR__GAS_LIMIT_EXCEEDED
-  | typeof BASE_RELAYER_ERROR__GAS_LIMIT_TOO_LOW;
+  typeof BASE_RELAYER_ERROR__INCORRECT_GAS_FEE_RECEIVER;
 
 let baseRelayerErrorMessages: Record<BaseRelayerError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   baseRelayerErrorMessages = {
-    [BASE_RELAYER_ERROR__GAS_LIMIT_EXCEEDED]: `Gas limit exceeded`,
-    [BASE_RELAYER_ERROR__GAS_LIMIT_TOO_LOW]: `Gas limit too low`,
+    [BASE_RELAYER_ERROR__INCORRECT_GAS_FEE_RECEIVER]: `Incorrect gas fee receiver`,
   };
 }
 
