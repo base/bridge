@@ -1,4 +1,6 @@
 name: CI
+permissions:
+  contents: read
 
 on:
   pull_request:
@@ -9,7 +11,7 @@ env:
 
 jobs:
   build-and-test-base-contracts:
-    name: Foundry project
+    name: Build and Test Base Contracts
     runs-on: ubuntu-latest
     steps:
       - name: Harden the runner (Audit all outbound calls)

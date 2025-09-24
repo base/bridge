@@ -1,4 +1,6 @@
 name: CI
+permissions:
+  contents: read
 
 on:
   pull_request:
@@ -6,6 +8,7 @@ on:
 
 jobs:
   build-and-test-solana-programs:
+    name: Build and Test Solana Programs
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
