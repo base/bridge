@@ -14,7 +14,8 @@ enum MessageType {
 
 /// @notice Message sent from Solana to Base.
 ///
-/// @custom:field outgoingMessagePubkey The pubkey of the `OutgoingMessage` account on Solana associated with this message.
+/// @custom:field outgoingMessagePubkey The pubkey of the `OutgoingMessage` account on Solana associated with this
+///               message.
 /// @custom:field nonce Unique nonce for the message.
 /// @custom:field sender The Solana sender's pubkey.
 /// @custom:field gasLimit The gas limit for the message execution.

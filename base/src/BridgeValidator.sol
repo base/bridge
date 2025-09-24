@@ -66,7 +66,7 @@ contract BridgeValidator is Initializable {
 
     /// @notice Emitted when a single message is registered (pre-validated).
     ///
-    /// @param messageHash           The pre-validated message hash (derived from the inner message hash and an 
+    /// @param messageHash           The pre-validated message hash (derived from the inner message hash and an
     ///                              incremental nonce) corresponding to an `IncomingMessage` in the `Bridge` contract.
     /// @param outgoingMessagePubkey The SVM/Solana pubkey associated with the outgoing message for this registration.
     event MessageRegistered(bytes32 indexed messageHash, Pubkey indexed outgoingMessagePubkey);
