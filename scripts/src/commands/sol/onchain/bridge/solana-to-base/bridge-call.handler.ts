@@ -1,7 +1,5 @@
 import { z } from "zod";
 import {
-  createSignerFromKeyPair,
-  generateKeyPair,
   getProgramDerivedAddress,
   createSolanaRpc,
   devnet,
@@ -22,24 +20,20 @@ import {
   getSolanaCliConfigKeypairSigner,
   getKeypairSignerFromPath,
   getIdlConstant,
-  CONSTANTS,
   relayMessageToBase,
   monitorMessageExecution,
+  buildPayForRelayInstruction,
+  outgoingMessagePubkey,
 } from "@internal/sol";
-import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
-import { outgoingMessagePubkey } from "@internal/sol/bridge";
+import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
+    .default("development-alpha"),
   payerKp: z
     .union([z.literal("config"), z.string().brand<"payerKp">()])
     .default("config"),
@@ -64,26 +58,23 @@ export const argsSchema = z.object({
   payForRelay: z.boolean().default(true),
 });
 
-type BridgeCallArgs = z.infer<typeof argsSchema>;
-type PayerKp = z.infer<typeof argsSchema.shape.payerKp>;
+type Args = z.infer<typeof argsSchema>;
+type PayerKpArg = Args["payerKp"];
 
-export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
+export async function handleBridgeCall(args: Args): Promise<void> {
   try {
     logger.info("--- Bridge call script ---");
 
-    // Get config for cluster and release
-    const config = CONSTANTS[args.cluster][args.release];
-
-    const rpcUrl = devnet(`https://${config.rpcUrl}`);
+    const config = CONFIGS[args.deployEnv];
+    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
-    // Resolve payer keypair
     const payer = await resolvePayerKeypair(args.payerKp);
     logger.info(`Payer: ${payer.address}`);
 
-    // Resolve target contract address and call data
-    const targetAddress = args.to === "counter" ? config.counter : args.to;
+    const targetAddress =
+      args.to === "counter" ? config.base.counterContract : args.to;
     logger.info(`Target: ${targetAddress}`);
     const callData =
       args.data === "increment"
@@ -93,9 +84,8 @@ export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
           : args.data;
     logger.info(`Data: ${callData}`);
 
-    // Derive bridge account address
     const [bridgeAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
     });
     logger.info(`Bridge account: ${bridgeAddress}`);
@@ -103,9 +93,8 @@ export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
     // Fetch bridge state
     const bridge = await fetchBridge(rpc, bridgeAddress);
 
-    // Generate outgoing message keypair
     const { salt, pubkey: outgoingMessage } = await outgoingMessagePubkey(
-      config.solanaBridge
+      config.solana.bridgeProgram
     );
 
     logger.info(`Outgoing message: ${outgoingMessage}`);
@@ -131,16 +120,14 @@ export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
             data: Buffer.from(callData.slice(2), "hex"), // Remove 0x prefix
           },
         },
-        { programAddress: config.solanaBridge }
+        { programAddress: config.solana.bridgeProgram }
       ),
     ];
 
-    // Send transaction
     if (args.payForRelay) {
       ixs.push(
         await buildPayForRelayInstruction(
-          args.cluster,
-          args.release,
+          args.deployEnv,
           outgoingMessage,
           payer
         )
@@ -148,20 +135,16 @@ export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
     }
 
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, ixs, payer);
+    const signature = await buildAndSendTransaction(args.deployEnv, ixs, payer);
     logger.success("Bridge call completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
 
     if (args.payForRelay) {
-      await monitorMessageExecution(
-        args.cluster,
-        args.release,
-        outgoingMessage
-      );
+      await monitorMessageExecution(args.deployEnv, outgoingMessage);
     } else {
-      await relayMessageToBase(args.cluster, args.release, outgoingMessage);
+      await relayMessageToBase(args.deployEnv, outgoingMessage);
     }
   } catch (error) {
     logger.error("Bridge call failed:", error);
@@ -169,12 +152,12 @@ export async function handleBridgeCall(args: BridgeCallArgs): Promise<void> {
   }
 }
 
-async function resolvePayerKeypair(payerKp: PayerKp) {
-  if (payerKp === "config") {
+async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
+  if (payerKpArg === "config") {
     logger.info("Using Solana CLI config for payer keypair");
     return await getSolanaCliConfigKeypairSigner();
   }
 
-  logger.info(`Using custom payer keypair: ${payerKp}`);
-  return await getKeypairSignerFromPath(payerKp);
+  logger.info(`Using custom payer keypair: ${payerKpArg}`);
+  return await getKeypairSignerFromPath(payerKpArg);
 }

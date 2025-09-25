@@ -6,8 +6,7 @@ import { logger } from "@internal/logger";
 import { argsSchema, handleDeploy } from "./deploy.handler";
 
 type CommanderOptions = {
-  cluster?: string;
-  release?: string;
+  deployEnv?: string;
   deployerKp?: string;
   program?: string;
   programKp?: string;
@@ -18,37 +17,24 @@ async function collectInteractiveOptions(
 ): Promise<CommanderOptions> {
   let opts = { ...options };
 
-  if (!opts.cluster) {
-    const cluster = await select({
-      message: "Select target cluster:",
-      options: [{ value: "devnet", label: "Devnet" }],
-      initialValue: "devnet",
-    });
-    if (isCancel(cluster)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.cluster = cluster;
-  }
-
-  if (!opts.release) {
-    const release = await select({
-      message: "Select release type:",
+  if (!opts.deployEnv) {
+    const deployEnv = await select({
+      message: "Select target deploy environment:",
       options: [
-        { value: "prod", label: "Prod" },
-        { value: "alpha", label: "Alpha" },
+        { value: "development-alpha", label: "Development Alpha" },
+        { value: "development-prod", label: "Development Prod" },
       ],
-      initialValue: "prod",
+      initialValue: "development-alpha",
     });
-    if (isCancel(release)) {
+    if (isCancel(deployEnv)) {
       cancel("Operation cancelled.");
       process.exit(1);
     }
-    opts.release = release;
+    opts.deployEnv = deployEnv;
   }
 
   if (!opts.deployerKp) {
-    const deployerType = await select({
+    const deployerKp = await select({
       message: "Select deployer keypair source:",
       options: [
         { value: "protocol", label: "Protocol deployer" },
@@ -60,12 +46,12 @@ async function collectInteractiveOptions(
       ],
       initialValue: "protocol",
     });
-    if (isCancel(deployerType)) {
+    if (isCancel(deployerKp)) {
       cancel("Operation cancelled.");
       process.exit(1);
     }
 
-    if (deployerType === "custom") {
+    if (deployerKp === "custom") {
       const deployerPath = await text({
         message: "Enter path to deployer keypair:",
         placeholder: "/path/to/deployer.json",
@@ -87,7 +73,7 @@ async function collectInteractiveOptions(
       // Clean the path before storing
       opts.deployerKp = deployerPath.trim().replace(/^["']|["']$/g, "");
     } else {
-      opts.deployerKp = deployerType;
+      opts.deployerKp = deployerKp;
     }
   }
 
@@ -148,8 +134,10 @@ async function collectInteractiveOptions(
 
 export const deployCommand = new Command("deploy")
   .description("Deploy a Solana program (bridge | base-relayer)")
-  .option("--cluster <cluster>", "Target cluster (devnet)")
-  .option("--release <release>", "Release type (alpha | prod)")
+  .option(
+    "--deploy-env <deployEnv>",
+    "Target deploy environment (development-alpha | development-prod)"
+  )
   .option(
     "--deployer-kp <path>",
     "Deployer keypair: 'protocol', 'config', or custom deployer keypair path"

@@ -1,7 +1,5 @@
 import { z } from "zod";
 import {
-  createSignerFromKeyPair,
-  generateKeyPair,
   getProgramDerivedAddress,
   getU8Codec,
   createSolanaRpc,
@@ -24,24 +22,20 @@ import {
   getSolanaCliConfigKeypairSigner,
   getKeypairSignerFromPath,
   getIdlConstant,
-  CONSTANTS,
+  buildPayForRelayInstruction,
+  outgoingMessagePubkey,
   relayMessageToBase,
   monitorMessageExecution,
 } from "@internal/sol";
-import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
-import { outgoingMessagePubkey } from "@internal/sol/bridge";
+import { CONFIGS, DEPLOY_ENVS, ETH } from "@internal/constants";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
+    .default("development-alpha"),
   decimals: z
     .string()
     .transform((val) => parseInt(val))
@@ -55,7 +49,8 @@ export const argsSchema = z.object({
     .default("Wrapped ERC20"),
   symbol: z.string().nonempty("Token symbol cannot be empty").default("wERC20"),
   remoteToken: z.union([
-    z.literal("constant"),
+    z.literal("constant-erc20"),
+    z.literal("constant-eth"),
     z
       .string()
       .startsWith("0x", "Address must start with 0x")
@@ -74,32 +69,31 @@ export const argsSchema = z.object({
   payForRelay: z.boolean().default(true),
 });
 
-type WrapTokenArgs = z.infer<typeof argsSchema>;
-type PayerKp = z.infer<typeof argsSchema.shape.payerKp>;
+type Args = z.infer<typeof argsSchema>;
+type PayerKpArg = Args["payerKp"];
 
-export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
+export async function handleWrapToken(args: Args): Promise<void> {
   try {
     logger.info("--- Wrap token script ---");
 
-    // Get config for cluster and release
-    const config = CONSTANTS[args.cluster][args.release];
-
-    const rpcUrl = devnet(`https://${config.rpcUrl}`);
+    const config = CONFIGS[args.deployEnv];
+    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
-    // Resolve payer keypair
     const payer = await resolvePayerKeypair(args.payerKp);
     logger.info(`Payer: ${payer.address}`);
 
-    // Resolve remote token address
     const remoteToken =
-      args.remoteToken === "constant" ? config.erc20 : args.remoteToken;
+      args.remoteToken === "constant-erc20"
+        ? config.base.erc20
+        : args.remoteToken === "constant-eth"
+          ? ETH
+          : args.remoteToken;
     logger.info(`Remote token: ${remoteToken}`);
 
-    // Generate outgoing message keypair
     const { salt, pubkey: outgoingMessage } = await outgoingMessagePubkey(
-      config.solanaBridge
+      config.solana.bridgeProgram
     );
     logger.info(`Outgoing message: ${outgoingMessage}`);
 
@@ -123,9 +117,8 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
       ])
     );
 
-    // Derive mint address
     const [mintAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [
         Buffer.from(getIdlConstant("WRAPPED_TOKEN_SEED")),
         Buffer.from([instructionArgs.decimals]),
@@ -134,9 +127,8 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
     });
     logger.info(`Mint: ${mintAddress}`);
 
-    // Derive bridge account address
     const [bridgeAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
     });
     logger.info(`Bridge account: ${bridgeAddress}`);
@@ -160,15 +152,14 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
           // Arguments
           ...instructionArgs,
         },
-        { programAddress: config.solanaBridge }
+        { programAddress: config.solana.bridgeProgram }
       ),
     ];
 
     if (args.payForRelay) {
       ixs.push(
         await buildPayForRelayInstruction(
-          args.cluster,
-          args.release,
+          args.deployEnv,
           outgoingMessage,
           payer
         )
@@ -176,20 +167,16 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
     }
 
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, ixs, payer);
+    const signature = await buildAndSendTransaction(args.deployEnv, ixs, payer);
     logger.success("Token wrap completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
 
     if (args.payForRelay) {
-      await monitorMessageExecution(
-        args.cluster,
-        args.release,
-        outgoingMessage
-      );
+      await monitorMessageExecution(args.deployEnv, outgoingMessage);
     } else {
-      await relayMessageToBase(args.cluster, args.release, outgoingMessage);
+      await relayMessageToBase(args.deployEnv, outgoingMessage);
     }
   } catch (error) {
     logger.error("Token wrap failed:", error);
@@ -197,12 +184,12 @@ export async function handleWrapToken(args: WrapTokenArgs): Promise<void> {
   }
 }
 
-async function resolvePayerKeypair(payerKp: PayerKp) {
-  if (payerKp === "config") {
+async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
+  if (payerKpArg === "config") {
     logger.info("Using Solana CLI config for payer keypair");
     return await getSolanaCliConfigKeypairSigner();
   }
 
-  logger.info(`Using custom payer keypair: ${payerKp}`);
-  return await getKeypairSignerFromPath(payerKp);
+  logger.info(`Using custom payer keypair: ${payerKpArg}`);
+  return await getKeypairSignerFromPath(payerKpArg);
 }

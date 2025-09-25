@@ -10,8 +10,7 @@ import {
 } from "./bridge-wrapped-token.handler";
 
 type CommanderOptions = {
-  cluster?: string;
-  release?: string;
+  deployEnv?: string;
   to?: string;
   mint?: string;
   fromTokenAccount?: string;
@@ -25,33 +24,20 @@ async function collectInteractiveOptions(
 ): Promise<CommanderOptions> {
   let opts = { ...options };
 
-  if (!opts.cluster) {
-    const cluster = await select({
-      message: "Select target cluster:",
-      options: [{ value: "devnet", label: "Devnet" }],
-      initialValue: "devnet",
-    });
-    if (isCancel(cluster)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.cluster = cluster;
-  }
-
-  if (!opts.release) {
-    const release = await select({
-      message: "Select release type:",
+  if (!opts.deployEnv) {
+    const deployEnv = await select({
+      message: "Select target deploy environment:",
       options: [
-        { value: "prod", label: "Prod" },
-        { value: "alpha", label: "Alpha" },
+        { value: "development-alpha", label: "Development Alpha" },
+        { value: "development-prod", label: "Development Prod" },
       ],
-      initialValue: "prod",
+      initialValue: "development-alpha",
     });
-    if (isCancel(release)) {
+    if (isCancel(deployEnv)) {
       cancel("Operation cancelled.");
       process.exit(1);
     }
-    opts.release = release;
+    opts.deployEnv = deployEnv;
   }
 
   if (!opts.mint) {
@@ -209,8 +195,10 @@ async function collectInteractiveOptions(
 
 export const bridgeWrappedTokenCommand = new Command("bridge-wrapped-token")
   .description("Bridge wrapped ERC20 tokens from Solana to Base")
-  .option("--cluster <cluster>", "Target cluster (devnet)")
-  .option("--release <release>", "Release type (alpha | prod)")
+  .option(
+    "--deploy-env <deployEnv>",
+    "Target deploy environment (development-alpha | development-prod)"
+  )
   .option(
     "--mint <address>",
     "Wrapped token mint: 'constants-wErc20', 'constants-wEth', or custom mint address"

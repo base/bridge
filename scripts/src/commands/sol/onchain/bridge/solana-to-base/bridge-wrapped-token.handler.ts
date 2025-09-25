@@ -1,7 +1,5 @@
 import { z } from "zod";
 import {
-  createSignerFromKeyPair,
-  generateKeyPair,
   getProgramDerivedAddress,
   devnet,
   address,
@@ -31,25 +29,21 @@ import {
   getSolanaCliConfigKeypairSigner,
   getKeypairSignerFromPath,
   getIdlConstant,
-  CONSTANTS,
   type Rpc,
   relayMessageToBase,
   monitorMessageExecution,
+  buildPayForRelayInstruction,
+  outgoingMessagePubkey,
 } from "@internal/sol";
-import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
-import { outgoingMessagePubkey } from "@internal/sol/bridge";
+import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
+    .default("development-alpha"),
   mint: z.union([
     z.literal("constants-wErc20"),
     z.literal("constants-wEth"),
@@ -78,31 +72,27 @@ export const argsSchema = z.object({
   payForRelay: z.boolean().default(true),
 });
 
-type BridgeWrappedTokenArgs = z.infer<typeof argsSchema>;
-type FromTokenAccount = BridgeWrappedTokenArgs["fromTokenAccount"];
-type PayerKp = BridgeWrappedTokenArgs["payerKp"];
+type Args = z.infer<typeof argsSchema>;
+type FromTokenAccountArg = Args["fromTokenAccount"];
+type PayerKpArg = Args["payerKp"];
 
-export async function handleBridgeWrappedToken(
-  args: BridgeWrappedTokenArgs
-): Promise<void> {
+export async function handleBridgeWrappedToken(args: Args): Promise<void> {
   try {
     logger.info("--- Bridge Wrapped Token script ---");
 
-    const config = CONSTANTS[args.cluster][args.release];
-    const rpcUrl = devnet(`https://${config.rpcUrl}`);
+    const config = CONFIGS[args.deployEnv];
+    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
-    // Resolve payer keypair
     const payer = await resolvePayerKeypair(args.payerKp);
     logger.info(`Payer: ${payer.address}`);
 
-    // Resolve mint address
     const mintAddress =
       args.mint === "constants-wErc20"
-        ? config.wErc20
+        ? config.solana.wErc20
         : args.mint === "constants-wEth"
-          ? config.wEth
+          ? config.solana.wEth
           : address(args.mint);
     logger.info(`Mint: ${mintAddress}`);
 
@@ -111,9 +101,8 @@ export async function handleBridgeWrappedToken(
       throw new Error("Mint not found");
     }
 
-    // Derive bridge account address
     const [bridgeAccountAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
     });
     logger.info(`Bridge account: ${bridgeAccountAddress}`);
@@ -126,9 +115,8 @@ export async function handleBridgeWrappedToken(
     logger.info(`Decimals: ${maybeMint.data.decimals}`);
     logger.info(`Scaled amount: ${scaledAmount}`);
 
-    // Generate outgoing message keypair
     const { salt, pubkey: outgoingMessage } = await outgoingMessagePubkey(
-      config.solanaBridge
+      config.solana.bridgeProgram
     );
     logger.info(`Outgoing message: ${outgoingMessage}`);
 
@@ -167,15 +155,14 @@ export async function handleBridgeWrappedToken(
           amount: scaledAmount,
           call: null,
         },
-        { programAddress: config.solanaBridge }
+        { programAddress: config.solana.bridgeProgram }
       ),
     ];
 
     if (args.payForRelay) {
       ixs.push(
         await buildPayForRelayInstruction(
-          args.cluster,
-          args.release,
+          args.deployEnv,
           outgoingMessage,
           payer
         )
@@ -183,20 +170,16 @@ export async function handleBridgeWrappedToken(
     }
 
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, ixs, payer);
+    const signature = await buildAndSendTransaction(args.deployEnv, ixs, payer);
     logger.success("Bridge Wrapped Token operation completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
 
     if (args.payForRelay) {
-      await monitorMessageExecution(
-        args.cluster,
-        args.release,
-        outgoingMessage
-      );
+      await monitorMessageExecution(args.deployEnv, outgoingMessage);
     } else {
-      await relayMessageToBase(args.cluster, args.release, outgoingMessage);
+      await relayMessageToBase(args.deployEnv, outgoingMessage);
     }
   } catch (error) {
     logger.error("Bridge Wrapped Token operation failed:", error);
@@ -205,13 +188,13 @@ export async function handleBridgeWrappedToken(
 }
 
 async function resolveFromTokenAccount(
-  fromTokenAccount: FromTokenAccount,
+  fromTokenAccountArg: FromTokenAccountArg,
   rpc: Rpc,
   payerAddress: Address,
   mint: Account<Mint>
 ) {
-  if (fromTokenAccount !== "payer" && fromTokenAccount !== "config") {
-    const customAddress = address(fromTokenAccount);
+  if (fromTokenAccountArg !== "payer" && fromTokenAccountArg !== "config") {
+    const customAddress = address(fromTokenAccountArg);
     const maybeToken = await fetchMaybeToken(rpc, customAddress);
     if (!maybeToken.exists) {
       throw new Error("Token account does not exist");
@@ -221,7 +204,7 @@ async function resolveFromTokenAccount(
   }
 
   const owner =
-    fromTokenAccount === "payer"
+    fromTokenAccountArg === "payer"
       ? payerAddress
       : (await getSolanaCliConfigKeypairSigner()).address;
 
@@ -244,12 +227,12 @@ async function resolveFromTokenAccount(
   return maybeAta.address;
 }
 
-async function resolvePayerKeypair(payerKp: PayerKp) {
-  if (payerKp === "config") {
+async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
+  if (payerKpArg === "config") {
     logger.info("Using Solana CLI config for payer keypair");
     return await getSolanaCliConfigKeypairSigner();
   }
 
-  logger.info(`Using custom payer keypair: ${payerKp}`);
-  return await getKeypairSignerFromPath(payerKp);
+  logger.info(`Using custom payer keypair: ${payerKpArg}`);
+  return await getKeypairSignerFromPath(payerKpArg);
 }

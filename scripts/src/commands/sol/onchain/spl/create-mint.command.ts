@@ -7,8 +7,7 @@ import { logger } from "@internal/logger";
 import { argsSchema, handleCreateMint } from "./create-mint.handler";
 
 type CommanderOptions = {
-  cluster?: string;
-  release?: string;
+  deployEnv?: string;
   decimals?: string;
   mintAuthority?: string;
   payerKp?: string;
@@ -19,34 +18,20 @@ async function collectInteractiveOptions(
 ): Promise<CommanderOptions> {
   let opts = { ...options };
 
-  if (!opts.cluster) {
-    const cluster = await select({
-      message: "Select RPC:",
-      options: [{ value: "devnet", label: "Devnet (api.devnet.solana.com)" }],
-      initialValue: "devnet",
-    });
-    if (isCancel(cluster)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-
-    opts.cluster = cluster;
-  }
-
-  if (!opts.release) {
-    const release = await select({
-      message: "Select release type:",
+  if (!opts.deployEnv) {
+    const deployEnv = await select({
+      message: "Select target deploy environment:",
       options: [
-        { value: "prod", label: "Prod" },
-        { value: "alpha", label: "Alpha" },
+        { value: "development-alpha", label: "Development Alpha" },
+        { value: "development-prod", label: "Development Prod" },
       ],
-      initialValue: "prod",
+      initialValue: "development-alpha",
     });
-    if (isCancel(release)) {
+    if (isCancel(deployEnv)) {
       cancel("Operation cancelled.");
       process.exit(1);
     }
-    opts.release = release;
+    opts.deployEnv = deployEnv;
   }
 
   if (!opts.decimals) {
@@ -120,8 +105,10 @@ async function collectInteractiveOptions(
 
 export const createMintCommand = new Command("create-mint")
   .description("Create a new SPL token mint")
-  .option("--cluster <cluster>", "Cluster: 'devnet'")
-  .option("--release <release>", "Release type (alpha | prod)")
+  .option(
+    "--deploy-env <deployEnv>",
+    "Target deploy environment (development-alpha | development-prod)"
+  )
   .option("--decimals <decimals>", "Token decimals")
   .option(
     "--mint-authority <address>",

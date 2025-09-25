@@ -15,20 +15,16 @@ import {
   getSolanaCliConfigKeypairSigner,
   type Rpc,
   getKeypairSignerFromPath,
-  CONSTANTS,
 } from "@internal/sol";
+import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
+    .default("development-alpha"),
   mint: z.string().nonempty("Mint address cannot be empty"),
   to: z
     .union([z.literal("config"), z.string().brand<"to">()])
@@ -48,18 +44,18 @@ export const argsSchema = z.object({
     .default("config"),
 });
 
-type MintArgs = z.infer<typeof argsSchema>;
-type To = z.infer<typeof argsSchema.shape.to>;
-type PayerKp = z.infer<typeof argsSchema.shape.payerKp>;
-type MintAuthorityKp = z.infer<typeof argsSchema.shape.mintAuthorityKp>;
+type Args = z.infer<typeof argsSchema>;
+type ToArg = z.infer<typeof argsSchema.shape.to>;
+type PayerKpArg = z.infer<typeof argsSchema.shape.payerKp>;
+type MintAuthorityKpArg = z.infer<typeof argsSchema.shape.mintAuthorityKp>;
 
-export async function handleMint(args: MintArgs): Promise<void> {
+export async function handleMint(args: Args): Promise<void> {
   try {
     logger.info("--- Mint script ---");
 
-    const config = CONSTANTS[args.cluster][args.release];
+    const config = CONFIGS[args.deployEnv];
 
-    const rpcUrl = devnet(`https://${config.rpcUrl}`);
+    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
@@ -105,7 +101,7 @@ export async function handleMint(args: MintArgs): Promise<void> {
     // Send transaction
     logger.info("Sending mint transaction...");
     const signature = await buildAndSendTransaction(
-      rpcUrl,
+      args.deployEnv,
       [mintToInstruction],
       payer
     );
@@ -117,9 +113,9 @@ export async function handleMint(args: MintArgs): Promise<void> {
   }
 }
 
-async function resolveRecipient(to: To, rpc: Rpc, mint: Account<Mint>) {
-  if (to !== "config") {
-    return address(to);
+async function resolveRecipient(toArg: ToArg, rpc: Rpc, mint: Account<Mint>) {
+  if (toArg !== "config") {
+    return address(toArg);
   }
 
   const configSigner = await getSolanaCliConfigKeypairSigner();
@@ -143,22 +139,24 @@ async function resolveRecipient(to: To, rpc: Rpc, mint: Account<Mint>) {
   return maybeAta.address;
 }
 
-async function resolveMintAuthorityKeypair(mintAuthorityKp: MintAuthorityKp) {
-  if (mintAuthorityKp === "config") {
+async function resolveMintAuthorityKeypair(
+  mintAuthorityKpArg: MintAuthorityKpArg
+) {
+  if (mintAuthorityKpArg === "config") {
     logger.info("Using Solana CLI config for mint authority keypair");
     return await getSolanaCliConfigKeypairSigner();
   }
 
-  logger.info(`Using custom mint authority keypair: ${mintAuthorityKp}`);
-  return await getKeypairSignerFromPath(mintAuthorityKp);
+  logger.info(`Using custom mint authority keypair: ${mintAuthorityKpArg}`);
+  return await getKeypairSignerFromPath(mintAuthorityKpArg);
 }
 
-async function resolvePayerKeypair(payerKp: PayerKp) {
-  if (payerKp === "config") {
+async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
+  if (payerKpArg === "config") {
     logger.info("Using Solana CLI config for payer keypair");
     return await getSolanaCliConfigKeypairSigner();
   }
 
-  logger.info(`Using custom payer keypair: ${payerKp}`);
-  return await getKeypairSignerFromPath(payerKp);
+  logger.info(`Using custom payer keypair: ${payerKpArg}`);
+  return await getKeypairSignerFromPath(payerKpArg);
 }

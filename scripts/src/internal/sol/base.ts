@@ -1,3 +1,4 @@
+import { sleep } from "bun";
 import {
   createSolanaRpc,
   devnet,
@@ -18,7 +19,6 @@ import {
   type PublicClient,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia } from "viem/chains";
 
 import {
   fetchOutgoingMessage,
@@ -27,8 +27,7 @@ import {
 
 import { BRIDGE_ABI, BRIDGE_VALIDATOR_ABI } from "../base/abi";
 import { logger } from "../logger";
-import { CONSTANTS } from "./constants";
-import { sleep } from "bun";
+import { CONFIGS, type DeployEnv } from "../constants";
 
 // See MessageType enum in MessageLib.sol
 const MessageType = {
@@ -37,18 +36,13 @@ const MessageType = {
   TransferAndCall: 2,
 } as const;
 
-type Cluster = keyof typeof CONSTANTS;
-type Release = keyof (typeof CONSTANTS)[Cluster];
-
 export async function relayMessageToBase(
-  cluster: Cluster,
-  release: Release,
+  deployEnv: DeployEnv,
   outgoingMessagePubkey: SolAddress
 ) {
   logger.info("Relaying message to Base...");
-  const solConfig = CONSTANTS[cluster][release];
-  const solRpc = createSolanaRpc(devnet(`https://${solConfig.rpcUrl}`));
-  const bridgeAddress = solConfig.baseBridge;
+  const config = CONFIGS[deployEnv];
+  const solRpc = createSolanaRpc(devnet(`https://${config.solana.rpcUrl}`));
 
   const outgoing = await fetchOutgoingMessage(solRpc, outgoingMessagePubkey);
 
@@ -57,21 +51,20 @@ export async function relayMessageToBase(
   logger.info(`Computed inner hash: ${innerHash}`);
   logger.info(`Computed outer hash: ${outerHash}`);
 
-  // TODO: Make this dynamic.
   const publicClient = createPublicClient({
-    chain: baseSepolia,
+    chain: config.base.chain,
     transport: http(),
   }) as PublicClient;
 
   const walletClient = createWalletClient({
     account: privateKeyToAccount(process.env.EVM_PRIVATE_KEY as Hex),
-    chain: baseSepolia,
+    chain: config.base.chain,
     transport: http(),
   });
 
   // Resolve BridgeValidator address from Bridge
   const validatorAddress = await publicClient.readContract({
-    address: bridgeAddress,
+    address: config.base.bridgeContract,
     abi: BRIDGE_ABI,
     functionName: "BRIDGE_VALIDATOR",
   });
@@ -82,7 +75,7 @@ export async function relayMessageToBase(
 
   // Optional: assert Bridge.getMessageHash(message) equals expected hash
   const sanity = await publicClient.readContract({
-    address: bridgeAddress,
+    address: config.base.bridgeContract,
     abi: BRIDGE_ABI,
     functionName: "getMessageHash",
     args: [evmMessage],
@@ -97,30 +90,27 @@ export async function relayMessageToBase(
   // Execute the message on Base
   logger.info("Executing Bridge.relayMessages([...]) on Base...");
   const tx = await walletClient.writeContract({
-    address: bridgeAddress,
+    address: config.base.bridgeContract,
     abi: BRIDGE_ABI,
     functionName: "relayMessages",
     args: [[evmMessage]],
   });
   logger.success(
-    `Message executed on Base: https://sepolia.basescan.org/tx/${tx}`
+    `Message executed on Base: ${config.base.chain.blockExplorers.default.url}/tx/${tx}`
   );
 }
 
 export async function monitorMessageExecution(
-  cluster: Cluster,
-  release: Release,
+  deployEnv: DeployEnv,
   outgoingMessagePubkey: SolAddress
 ) {
   logger.info("Monitoring message execution...");
 
-  const solConfig = CONSTANTS[cluster][release];
-  const solRpc = createSolanaRpc(devnet(`https://${solConfig.rpcUrl}`));
-  const bridgeAddress = solConfig.baseBridge;
+  const config = CONFIGS[deployEnv];
+  const solRpc = createSolanaRpc(devnet(`https://${config.solana.rpcUrl}`));
 
-  // TODO: Make this dynamic.
   const publicClient = createPublicClient({
-    chain: baseSepolia,
+    chain: config.base.chain,
     transport: http(),
   }) as PublicClient;
 
@@ -133,7 +123,7 @@ export async function monitorMessageExecution(
     logger.debug(`Waiting for automatic relay of message ${outerHash}...`);
 
     const isSuccessful = await publicClient.readContract({
-      address: bridgeAddress,
+      address: config.base.bridgeContract,
       abi: BRIDGE_ABI,
       functionName: "successes",
       args: [outerHash],

@@ -1,12 +1,9 @@
 import { z } from "zod";
 import {
-  createSignerFromKeyPair,
-  generateKeyPair,
   getProgramDerivedAddress,
   devnet,
   type Address,
   type KeyPairSigner,
-  type DevnetUrl,
   createSolanaRpc,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
@@ -29,36 +26,36 @@ import {
   getSolanaCliConfigKeypairSigner,
   getKeypairSignerFromPath,
   getIdlConstant,
-  CONSTANTS,
 } from "@internal/sol";
+import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
+    .default("development-alpha"),
   payerKp: z
     .union([z.literal("config"), z.string().brand<"payerKp">()])
     .default("config"),
+  guardianKp: z
+    .union([z.literal("payer"), z.string().brand<"guardianKp">()])
+    .default("payer"),
 });
 
-type InitializeArgs = z.infer<typeof argsSchema>;
-type PayerKp = z.infer<typeof argsSchema.shape.payerKp>;
+type Args = z.infer<typeof argsSchema>;
+type PayerKpArg = Args["payerKp"];
+type GuardianKpArg = Args["guardianKp"];
 
-export async function handleInitialize(args: InitializeArgs): Promise<void> {
+export async function handleInitialize(args: Args): Promise<void> {
   try {
     logger.info("--- Initialize bridge script ---");
 
-    // Get config for cluster and release
-    const config = CONSTANTS[args.cluster][args.release];
+    // Get config for deploy environment
+    const config = CONFIGS[args.deployEnv];
 
-    const rpcUrl = devnet(`https://${config.rpcUrl}`);
+    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
     logger.info(`RPC URL: ${rpcUrl}`);
 
     // Resolve payer keypair
@@ -67,14 +64,12 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
 
     // Derive bridge account address
     const [bridgeAccountAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
     });
     logger.info(`Bridge account address: ${bridgeAccountAddress}`);
 
-    // Generate guardian keypair
-    // TODO: Use the real guardian.
-    const guardian = await createSignerFromKeyPair(await generateKeyPair());
+    const guardian = await resolveGuardianKeypair(args.guardianKp, payer);
     const eip1559Config = {
       target: 5_000_000n,
       denominator: 2n,
@@ -97,11 +92,11 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
       threshold: 2,
       signerCount: 2,
       signers: [
-        toBytes(config.solanaEvmLocalKey),
-        toBytes(config.solanaEvmKeychainKey),
+        toBytes(config.solana.evmLocalKey),
+        toBytes(config.solana.evmKeychainKey),
         ...Array.from(
           { length: 14 },
-          () => new Uint8Array(toBytes(config.solanaEvmLocalKey).length)
+          () => new Uint8Array(toBytes(config.solana.evmLocalKey).length)
         ),
       ],
     };
@@ -123,19 +118,23 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
         baseOracleConfig,
         partnerOracleConfig,
       },
-      { programAddress: config.solanaBridge }
+      { programAddress: config.solana.bridgeProgram }
     );
 
     // Send transaction
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, [ix], payer);
+    const signature = await buildAndSendTransaction(
+      args.deployEnv,
+      [ix],
+      payer
+    );
     logger.success("Bridge initialization completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
 
     await assertInitialized(
-      rpcUrl,
+      createSolanaRpc(rpcUrl),
       bridgeAccountAddress,
       guardian,
       eip1559Config,
@@ -151,18 +150,18 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
   }
 }
 
-async function resolvePayerKeypair(payerKp: PayerKp) {
-  if (payerKp === "config") {
+async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
+  if (payerKpArg === "config") {
     logger.info("Using Solana CLI config for payer keypair");
     return await getSolanaCliConfigKeypairSigner();
   }
 
-  logger.info(`Using custom payer keypair: ${payerKp}`);
-  return await getKeypairSignerFromPath(payerKp);
+  logger.info(`Using custom payer keypair: ${payerKpArg}`);
+  return await getKeypairSignerFromPath(payerKpArg);
 }
 
 async function assertInitialized(
-  rpcUrl: string,
+  rpc: ReturnType<typeof createSolanaRpc>,
   bridgeAccountAddress: Address,
   guardian: KeyPairSigner,
   eip1559Config: Eip1559Config,
@@ -172,8 +171,6 @@ async function assertInitialized(
   baseOracleConfig: BaseOracleConfig,
   partnerOracleConfig: PartnerOracleConfig
 ) {
-  const rpc = createSolanaRpc(rpcUrl);
-
   console.log("Confirming bridge configuration...");
   const bridgeData = await fetchBridge(rpc, bridgeAccountAddress);
 
@@ -268,4 +265,17 @@ async function assertInitialized(
   ) {
     throw new Error("Partner oracle config threshold mismatch!");
   }
+}
+
+async function resolveGuardianKeypair(
+  guardianKpArg: GuardianKpArg,
+  payer: KeyPairSigner
+) {
+  if (guardianKpArg === "payer") {
+    logger.info("Using payer as guardian keypair");
+    return payer;
+  }
+
+  logger.info(`Using custom guardian keypair: ${guardianKpArg}`);
+  return await getKeypairSignerFromPath(guardianKpArg);
 }

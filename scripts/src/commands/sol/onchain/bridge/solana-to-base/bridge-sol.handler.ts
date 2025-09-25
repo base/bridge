@@ -1,7 +1,5 @@
 import { z } from "zod";
 import {
-  createSignerFromKeyPair,
-  generateKeyPair,
   getProgramDerivedAddress,
   devnet,
   type Instruction,
@@ -21,24 +19,20 @@ import {
   getSolanaCliConfigKeypairSigner,
   getKeypairSignerFromPath,
   getIdlConstant,
-  CONSTANTS,
   relayMessageToBase,
   monitorMessageExecution,
+  buildPayForRelayInstruction,
+  outgoingMessagePubkey,
 } from "@internal/sol";
-import { buildPayForRelayInstruction } from "@internal/sol/base-relayer";
-import { outgoingMessagePubkey } from "@internal/sol/bridge";
+import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
+    .default("development-alpha"),
   to: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, {
@@ -57,15 +51,15 @@ export const argsSchema = z.object({
   payForRelay: z.boolean().default(true),
 });
 
-type BridgeSolArgs = z.infer<typeof argsSchema>;
-type PayerKp = BridgeSolArgs["payerKp"];
+type Args = z.infer<typeof argsSchema>;
+type PayerKpArg = Args["payerKp"];
 
-export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
+export async function handleBridgeSol(args: Args): Promise<void> {
   try {
     logger.info("--- Bridge SOL script ---");
 
-    const config = CONSTANTS[args.cluster][args.release];
-    const rpcUrl = devnet(`https://${config.rpcUrl}`);
+    const config = CONFIGS[args.deployEnv];
+    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
@@ -73,16 +67,16 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
     logger.info(`Payer: ${payer.address}`);
 
     const [bridgeAccountAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
     });
     logger.info(`Bridge account: ${bridgeAccountAddress}`);
 
     const bridge = await fetchBridge(rpc, bridgeAccountAddress);
 
-    const remoteToken = toBytes(config.wSol);
+    const remoteToken = toBytes(config.base.wSol);
     const [solVaultAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [
         Buffer.from(getIdlConstant("SOL_VAULT_SEED")),
         Buffer.from(remoteToken),
@@ -96,7 +90,7 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
     logger.info(`Scaled amount: ${scaledAmount}`);
 
     const { salt, pubkey: outgoingMessage } = await outgoingMessagePubkey(
-      config.solanaBridge
+      config.solana.bridgeProgram
     );
     logger.info(`Outgoing message: ${outgoingMessage}`);
 
@@ -119,15 +113,14 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
           amount: scaledAmount,
           call: null,
         },
-        { programAddress: config.solanaBridge }
+        { programAddress: config.solana.bridgeProgram }
       ),
     ];
 
     if (args.payForRelay) {
       ixs.push(
         await buildPayForRelayInstruction(
-          args.cluster,
-          args.release,
+          args.deployEnv,
           outgoingMessage,
           payer
         )
@@ -135,20 +128,16 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
     }
 
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, ixs, payer);
+    const signature = await buildAndSendTransaction(args.deployEnv, ixs, payer);
     logger.success("Bridge SOL operation completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
 
     if (args.payForRelay) {
-      await monitorMessageExecution(
-        args.cluster,
-        args.release,
-        outgoingMessage
-      );
+      await monitorMessageExecution(args.deployEnv, outgoingMessage);
     } else {
-      await relayMessageToBase(args.cluster, args.release, outgoingMessage);
+      await relayMessageToBase(args.deployEnv, outgoingMessage);
     }
   } catch (error) {
     logger.error("Bridge SOL operation failed:", error);
@@ -156,12 +145,12 @@ export async function handleBridgeSol(args: BridgeSolArgs): Promise<void> {
   }
 }
 
-async function resolvePayerKeypair(payerKp: PayerKp) {
-  if (payerKp === "config") {
+async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
+  if (payerKpArg === "config") {
     logger.info("Using Solana CLI config for payer keypair");
     return await getSolanaCliConfigKeypairSigner();
   }
 
-  logger.info(`Using custom payer keypair: ${payerKp}`);
-  return await getKeypairSignerFromPath(payerKp);
+  logger.info(`Using custom payer keypair: ${payerKpArg}`);
+  return await getKeypairSignerFromPath(payerKpArg);
 }

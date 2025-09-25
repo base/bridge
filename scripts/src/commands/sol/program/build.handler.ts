@@ -5,19 +5,16 @@ import { join } from "path";
 
 import { logger } from "@internal/logger";
 import { findGitRoot } from "@internal/utils";
-import { getKeypairSignerFromPath, CONSTANTS } from "@internal/sol";
+import { getKeypairSignerFromPath } from "@internal/sol";
+import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
+    .default("development-alpha"),
   program: z
     .enum(["bridge", "base-relayer"], {
       message: "Program must be either 'bridge' or 'base-relayer'",
@@ -28,16 +25,16 @@ export const argsSchema = z.object({
     .default("protocol"),
 });
 
-type BuildArgs = z.infer<typeof argsSchema>;
-type ProgramName = z.infer<typeof argsSchema.shape.program>;
-type ProgramKp = z.infer<typeof argsSchema.shape.programKp>;
+type Args = z.infer<typeof argsSchema>;
+type ProgramArg = z.infer<typeof argsSchema.shape.program>;
+type ProgramKpArg = z.infer<typeof argsSchema.shape.programKp>;
 
-export async function handleBuild(args: BuildArgs): Promise<void> {
+export async function handleBuild(args: Args): Promise<void> {
   try {
     logger.info("--- Build script ---");
 
     // Get config for cluster and release
-    const config = CONSTANTS[args.cluster][args.release];
+    const config = CONFIGS[args.deployEnv];
 
     // Get project root
     const projectRoot = await findGitRoot();
@@ -48,14 +45,15 @@ export async function handleBuild(args: BuildArgs): Promise<void> {
     logger.info(`Found lib.rs at: ${libRsPath}`);
 
     // Get program ID from keypair
-    const programKeyPairRel =
+    const programKpPath =
       args.program === "bridge"
-        ? config.bridgeKeyPair
-        : config.baseRelayerKeyPair;
+        ? config.solana.bridgeKpPath
+        : config.solana.baseRelayerKpPath;
+
     const programId = await resolveProgramId(
       projectRoot,
       args.programKp,
-      programKeyPairRel
+      programKpPath
     );
     logger.info(`Program ID: ${programId}`);
 
@@ -124,9 +122,9 @@ export async function handleBuild(args: BuildArgs): Promise<void> {
 
 async function findLibRs(
   projectRoot: string,
-  program: ProgramName
+  programArg: ProgramArg
 ): Promise<string> {
-  const programDir = program === "bridge" ? "bridge" : "base_relayer";
+  const programDir = programArg === "bridge" ? "bridge" : "base_relayer";
   const libRsPath = join(
     projectRoot,
     `solana/programs/${programDir}/src/lib.rs`
@@ -140,18 +138,18 @@ async function findLibRs(
 
 async function resolveProgramId(
   projectRoot: string,
-  programKp: ProgramKp,
-  bridgeKeyPair: string
+  programKpArg: ProgramKpArg,
+  programKpPath: string
 ): Promise<string> {
-  let keypairPath = programKp;
+  let kpPath = programKpArg;
 
-  if (keypairPath === "protocol") {
-    keypairPath = join(projectRoot, "solana", bridgeKeyPair) as ProgramKp;
-    logger.info(`Using protocol keypair: ${keypairPath}`);
+  if (kpPath === "protocol") {
+    kpPath = join(projectRoot, "solana", programKpPath) as ProgramKpArg;
+    logger.info(`Using protocol keypair: ${kpPath}`);
   } else {
-    logger.info(`Using custom keypair: ${keypairPath}`);
+    logger.info(`Using custom keypair: ${kpPath}`);
   }
 
-  const signer = await getKeypairSignerFromPath(keypairPath);
+  const signer = await getKeypairSignerFromPath(kpPath);
   return signer.address;
 }

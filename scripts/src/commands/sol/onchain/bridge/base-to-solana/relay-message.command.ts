@@ -6,8 +6,7 @@ import { logger } from "@internal/logger";
 import { argsSchema, handleRelayMessage } from "./relay-message.handler";
 
 type CommanderOptions = {
-  cluster?: string;
-  release?: string;
+  deployEnv?: string;
   messageHash?: string;
   payerKp?: string;
 };
@@ -17,33 +16,20 @@ async function collectInteractiveOptions(
 ): Promise<CommanderOptions> {
   let opts = { ...options };
 
-  if (!opts.cluster) {
-    const cluster = await select({
-      message: "Select target cluster:",
-      options: [{ value: "devnet", label: "Devnet" }],
-      initialValue: "devnet",
-    });
-    if (isCancel(cluster)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.cluster = cluster;
-  }
-
-  if (!opts.release) {
-    const release = await select({
-      message: "Select release type:",
+  if (!opts.deployEnv) {
+    const deployEnv = await select({
+      message: "Select target deploy environment:",
       options: [
-        { value: "prod", label: "Prod" },
-        { value: "alpha", label: "Alpha" },
+        { value: "development-alpha", label: "Development Alpha" },
+        { value: "development-prod", label: "Development Prod" },
       ],
-      initialValue: "prod",
+      initialValue: "development-alpha",
     });
-    if (isCancel(release)) {
+    if (isCancel(deployEnv)) {
       cancel("Operation cancelled.");
       process.exit(1);
     }
-    opts.release = release;
+    opts.deployEnv = deployEnv;
   }
 
   if (!opts.messageHash) {
@@ -109,8 +95,10 @@ async function collectInteractiveOptions(
 
 export const relayMessageCommand = new Command("relay-message")
   .description("Relay a message from Base to Solana")
-  .option("--cluster <cluster>", "Target cluster (devnet)")
-  .option("--release <release>", "Release type (alpha | prod)")
+  .option(
+    "--deploy-env <deployEnv>",
+    "Target deploy environment (development-alpha | development-prod)"
+  )
   .option("--message-hash <hash>", "Message hash to relay (0x...)")
   .option(
     "--payer-kp <path>",

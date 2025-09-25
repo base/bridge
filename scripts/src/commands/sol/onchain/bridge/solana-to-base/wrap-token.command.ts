@@ -6,8 +6,7 @@ import { logger } from "@internal/logger";
 import { argsSchema, handleWrapToken } from "./wrap-token.handler";
 
 type CommanderOptions = {
-  cluster?: string;
-  release?: string;
+  deployEnv?: string;
   decimals?: string;
   name?: string;
   symbol?: string;
@@ -22,33 +21,20 @@ async function collectInteractiveOptions(
 ): Promise<CommanderOptions> {
   let opts = { ...options };
 
-  if (!opts.cluster) {
-    const cluster = await select({
-      message: "Select target cluster:",
-      options: [{ value: "devnet", label: "Devnet" }],
-      initialValue: "devnet",
-    });
-    if (isCancel(cluster)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.cluster = cluster;
-  }
-
-  if (!opts.release) {
-    const release = await select({
-      message: "Select release type:",
+  if (!opts.deployEnv) {
+    const deployEnv = await select({
+      message: "Select target deploy environment:",
       options: [
-        { value: "prod", label: "Prod" },
-        { value: "alpha", label: "Alpha" },
+        { value: "development-alpha", label: "Development Alpha" },
+        { value: "development-prod", label: "Development Prod" },
       ],
-      initialValue: "prod",
+      initialValue: "development-alpha",
     });
-    if (isCancel(release)) {
+    if (isCancel(deployEnv)) {
       cancel("Operation cancelled.");
       process.exit(1);
     }
-    opts.release = release;
+    opts.deployEnv = deployEnv;
   }
 
   if (!opts.decimals) {
@@ -110,10 +96,11 @@ async function collectInteractiveOptions(
     const remoteToken = await select({
       message: "Select remote token:",
       options: [
-        { value: "constant", label: "Default ERC20 from constants" },
+        { value: "constant-erc20", label: "ERC20 from constants" },
+        { value: "constant-eth", label: "ETH from constants" },
         { value: "custom", label: "Custom address" },
       ],
-      initialValue: "constant",
+      initialValue: "constant-erc20",
     });
     if (isCancel(remoteToken)) {
       cancel("Operation cancelled.");
@@ -122,7 +109,7 @@ async function collectInteractiveOptions(
 
     if (remoteToken === "custom") {
       const customAddress = await text({
-        message: "Enter ERC20 token address:",
+        message: "Enter token address:",
         placeholder: "0x...",
         validate: (value) => {
           if (!value || value.trim().length === 0) {
@@ -213,14 +200,16 @@ async function collectInteractiveOptions(
 
 export const wrapTokenCommand = new Command("wrap-token")
   .description("Wrap an ERC20 token from Base to Solana")
-  .option("--cluster <cluster>", "Target cluster (devnet)")
-  .option("--release <release>", "Release type (alpha | prod)")
+  .option(
+    "--deploy-env <deployEnv>",
+    "Target deploy environment (development-alpha | development-prod)"
+  )
   .option("--decimals <decimals>", "Token decimals")
   .option("--name <name>", "Token name")
   .option("--symbol <symbol>", "Token symbol")
   .option(
     "--remote-token <remoteToken>",
-    "Remote ERC20 token address: 'constant' or custom address"
+    "Remote token address: 'constant-erc20', 'constant-eth', or custom address"
   )
   .option("--scaler-exponent <scalerExponent>", "Scaler exponent")
   .option(

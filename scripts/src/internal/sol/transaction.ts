@@ -10,20 +10,20 @@ import {
   setTransactionMessageFeePayer,
   setTransactionMessageLifetimeUsingBlockhash,
   signTransactionMessageWithSigners,
-  type ClusterUrl,
   type Instruction,
   type TransactionSigner,
 } from "@solana/kit";
+import { CONFIGS, type DeployEnv } from "../constants";
 
 export async function buildAndSendTransaction(
-  rpcUrl: ClusterUrl,
+  deployEnv: DeployEnv,
   instructions: Instruction[],
   payer: TransactionSigner
 ) {
-  const rpcHostname = rpcUrl.replace("http://", "").replace("https://", "");
-  const rpc = createSolanaRpc(`https://${rpcHostname}`);
+  const config = CONFIGS[deployEnv];
+  const rpc = createSolanaRpc(`https://${config.solana.rpcUrl}`);
   const rpcSubscriptions = createSolanaRpcSubscriptions(
-    devnet(`wss://${rpcHostname}`)
+    devnet(`wss://${config.solana.rpcUrl}`)
   );
 
   const sendAndConfirmTx = sendAndConfirmTransactionFactory({

@@ -3,24 +3,20 @@ import { $ } from "bun";
 import { existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
+import { getBase58Codec } from "@solana/kit";
 
 import { logger } from "@internal/logger";
 import { findGitRoot } from "@internal/utils";
-import { getKeypairSignerFromPath, CONSTANTS } from "@internal/sol";
-import { getBase58Codec } from "@solana/kit";
+import { getKeypairSignerFromPath } from "@internal/sol";
+import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
-
+    .default("development-alpha"),
   deployerKp: z
     .union([
       z.literal("protocol"),
@@ -38,40 +34,40 @@ export const argsSchema = z.object({
     .default("protocol"),
 });
 
-type DeployArgs = z.infer<typeof argsSchema>;
-type ProgramName = z.infer<typeof argsSchema.shape.program>;
-type DeployerKp = z.infer<typeof argsSchema.shape.deployerKp>;
-type ProgramKp = z.infer<typeof argsSchema.shape.programKp>;
+type Args = z.infer<typeof argsSchema>;
+type ProgramArg = z.infer<typeof argsSchema.shape.program>;
+type DeployerKpArg = z.infer<typeof argsSchema.shape.deployerKp>;
+type ProgramKpArg = z.infer<typeof argsSchema.shape.programKp>;
 
-export async function handleDeploy(args: DeployArgs): Promise<void> {
+export async function handleDeploy(args: Args): Promise<void> {
   try {
     logger.info("--- Deploy script ---");
 
     // Get config for cluster and release
-    const config = CONSTANTS[args.cluster][args.release];
+    const config = CONFIGS[args.deployEnv];
 
     // Get project root
     const projectRoot = await findGitRoot();
     logger.info(`Project root: ${projectRoot}`);
 
-    const deployerKeypairPath = await resolveDeployerKeypair(
+    const deployerKpPath = await resolveDeployerKp(
       projectRoot,
       args.deployerKp,
-      config.deployerKeyPair
+      config.solana.deployerKpPath
     );
     const { address: deployerAddress } =
-      await getKeypairSignerFromPath(deployerKeypairPath);
+      await getKeypairSignerFromPath(deployerKpPath);
     logger.info(`Deployer: ${deployerAddress}`);
 
-    const programKeypairPath = await resolveProgramKeypair(
+    const programKpPath = await resolveProgramKp(
       projectRoot,
       args.programKp,
       args.program === "bridge"
-        ? config.bridgeKeyPair
-        : config.baseRelayerKeyPair
+        ? config.solana.bridgeKpPath
+        : config.solana.baseRelayerKpPath
     );
     const { address: programAddress } =
-      await getKeypairSignerFromPath(programKeypairPath);
+      await getKeypairSignerFromPath(programKpPath);
 
     const bytes32 = getBase58Codec().encode(programAddress).toHex();
     logger.info(`Program ID: ${programAddress} (0x${bytes32})`);
@@ -84,7 +80,7 @@ export async function handleDeploy(args: DeployArgs): Promise<void> {
 
     // Deploy program
     logger.info("Deploying program...");
-    await $`solana program deploy --url ${args.cluster} --keypair ${deployerKeypairPath} --program-id ${programKeypairPath} ${programBinaryPath}`;
+    await $`solana program deploy --url ${config.solana.cluster} --keypair ${deployerKpPath} --program-id ${programKpPath} ${programBinaryPath}`;
 
     logger.success("Program deployment completed!");
   } catch (error) {
@@ -93,58 +89,58 @@ export async function handleDeploy(args: DeployArgs): Promise<void> {
   }
 }
 
-async function resolveDeployerKeypair(
+async function resolveDeployerKp(
   projectRoot: string,
-  deployerKp: DeployerKp,
-  deployerKeyPair: string
+  deployerKpArg: DeployerKpArg,
+  deployerKpPath: string
 ): Promise<string> {
-  let keypairPath: string;
+  let kpPath: string;
 
-  if (deployerKp === "protocol") {
-    keypairPath = join(projectRoot, "solana", deployerKeyPair);
-    logger.info(`Using project deployer keypair: ${keypairPath}`);
-  } else if (deployerKp === "config") {
+  if (deployerKpArg === "protocol") {
+    kpPath = join(projectRoot, "solana", deployerKpPath);
+    logger.info(`Using project deployer keypair: ${kpPath}`);
+  } else if (deployerKpArg === "config") {
     const homeDir = homedir();
-    keypairPath = join(homeDir, ".config/solana/id.json");
-    logger.info(`Using Solana CLI config keypair: ${keypairPath}`);
+    kpPath = join(homeDir, ".config/solana/id.json");
+    logger.info(`Using Solana CLI config keypair: ${kpPath}`);
   } else {
-    keypairPath = deployerKp;
-    logger.info(`Using custom deployer keypair: ${deployerKp}`);
+    kpPath = deployerKpArg;
+    logger.info(`Using custom deployer keypair: ${deployerKpArg}`);
   }
 
-  if (!existsSync(keypairPath)) {
-    throw new Error(`Deployer keypair not found at: ${keypairPath}`);
+  if (!existsSync(kpPath)) {
+    throw new Error(`Deployer keypair not found at: ${kpPath}`);
   }
 
-  return keypairPath;
+  return kpPath;
 }
 
-async function resolveProgramKeypair(
+async function resolveProgramKp(
   projectRoot: string,
-  programKp: ProgramKp,
-  bridgeKeyPair: string
+  programKpArg: ProgramKpArg,
+  programKpPath: string
 ): Promise<string> {
-  let keypairPath = programKp;
+  let kpPath = programKpArg;
 
-  if (keypairPath === "protocol") {
-    keypairPath = join(projectRoot, "solana", bridgeKeyPair) as ProgramKp;
-    logger.info(`Using protocol program keypair: ${keypairPath}`);
+  if (kpPath === "protocol") {
+    kpPath = join(projectRoot, "solana", programKpPath) as ProgramKpArg;
+    logger.info(`Using protocol program keypair: ${kpPath}`);
   } else {
-    logger.info(`Using custom program keypair: ${programKp}`);
+    logger.info(`Using custom program keypair: ${programKpArg}`);
   }
 
-  if (!existsSync(keypairPath)) {
-    throw new Error(`Program keypair not found at: ${keypairPath}`);
+  if (!existsSync(kpPath)) {
+    throw new Error(`Program keypair not found at: ${kpPath}`);
   }
 
-  return keypairPath;
+  return kpPath;
 }
 
 async function getProgramBinaryPath(
   projectRoot: string,
-  program: ProgramName
+  programArg: ProgramArg
 ): Promise<string> {
-  const binaryName = program === "bridge" ? "bridge.so" : "base_relayer.so";
+  const binaryName = programArg === "bridge" ? "bridge.so" : "base_relayer.so";
   const programBinaryPath = join(
     projectRoot,
     `solana/target/deploy/${binaryName}`

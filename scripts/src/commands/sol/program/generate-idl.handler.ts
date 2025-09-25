@@ -6,16 +6,6 @@ import { logger } from "@internal/logger";
 import { findGitRoot } from "@internal/utils";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
-    })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
   program: z
     .enum(["bridge", "base-relayer"], {
       message: "Program must be either 'bridge' or 'base-relayer'",
@@ -23,9 +13,9 @@ export const argsSchema = z.object({
     .default("bridge"),
 });
 
-type GenerateIdlArgs = z.infer<typeof argsSchema>;
+type Args = z.infer<typeof argsSchema>;
 
-export async function handleGenerateIdl(args: GenerateIdlArgs): Promise<void> {
+export async function handleGenerateIdl(args: Args): Promise<void> {
   try {
     logger.info("--- Generate IDL script ---");
 

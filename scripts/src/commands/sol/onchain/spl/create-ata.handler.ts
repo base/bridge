@@ -13,20 +13,16 @@ import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
   getKeypairSignerFromPath,
-  CONSTANTS,
 } from "@internal/sol";
+import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
+    .default("development-alpha"),
   mint: z.string().nonempty("Mint address cannot be empty"),
   owner: z
     .union([z.literal("payer"), z.string().brand<"owner">()])
@@ -36,16 +32,16 @@ export const argsSchema = z.object({
     .default("config"),
 });
 
-type CreateAtaArgs = z.infer<typeof argsSchema>;
-type PayerKp = z.infer<typeof argsSchema.shape.payerKp>;
+type Args = z.infer<typeof argsSchema>;
+type PayerKpArg = z.infer<typeof argsSchema.shape.payerKp>;
 
-export async function handleCreateAta(args: CreateAtaArgs): Promise<void> {
+export async function handleCreateAta(args: Args): Promise<void> {
   try {
     logger.info("--- Create ATA script ---");
 
-    const config = CONSTANTS[args.cluster][args.release];
+    const config = CONFIGS[args.deployEnv];
 
-    const rpcUrl = devnet(`https://${config.rpcUrl}`);
+    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
@@ -97,7 +93,7 @@ export async function handleCreateAta(args: CreateAtaArgs): Promise<void> {
     // Send transaction
     logger.info("Sending transaction...");
     const signature = await buildAndSendTransaction(
-      rpcUrl,
+      args.deployEnv,
       [instruction],
       payer
     );
@@ -113,12 +109,12 @@ export async function handleCreateAta(args: CreateAtaArgs): Promise<void> {
   }
 }
 
-async function resolvePayerKeypair(payerKp: PayerKp) {
-  if (payerKp === "config") {
+async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
+  if (payerKpArg === "config") {
     logger.info("Using Solana CLI config for payer keypair");
     return await getSolanaCliConfigKeypairSigner();
   }
 
-  logger.info(`Using custom payer keypair: ${payerKp}`);
-  return await getKeypairSignerFromPath(payerKp);
+  logger.info(`Using custom payer keypair: ${payerKpArg}`);
+  return await getKeypairSignerFromPath(payerKpArg);
 }

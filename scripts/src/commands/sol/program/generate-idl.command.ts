@@ -6,8 +6,6 @@ import { argsSchema, handleGenerateIdl } from "./generate-idl.handler";
 import { handleGenerateClient } from "./generate-client.handler";
 
 type CommanderOptions = {
-  cluster?: string;
-  release?: string;
   program?: string;
   skipClient?: boolean;
 };
@@ -16,35 +14,6 @@ async function collectInteractiveOptions(
   options: CommanderOptions
 ): Promise<CommanderOptions> {
   let opts = { ...options };
-
-  if (!opts.cluster) {
-    const cluster = await select({
-      message: "Select target cluster:",
-      options: [{ value: "devnet", label: "Devnet" }],
-      initialValue: "devnet",
-    });
-    if (isCancel(cluster)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.cluster = cluster;
-  }
-
-  if (!opts.release) {
-    const release = await select({
-      message: "Select release type:",
-      options: [
-        { value: "prod", label: "Prod" },
-        { value: "alpha", label: "Alpha" },
-      ],
-      initialValue: "prod",
-    });
-    if (isCancel(release)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.release = release;
-  }
 
   if (!opts.program) {
     const program = await select({
@@ -79,8 +48,6 @@ async function collectInteractiveOptions(
 
 export const generateIdlCommand = new Command("generate-idl")
   .description("Generate IDL for a Solana program (bridge | base-relayer)")
-  .option("--cluster <cluster>", "Target cluster (devnet)")
-  .option("--release <release>", "Release type (alpha | prod)")
   .option("--program <program>", "Program (bridge | base-relayer)")
   .option("--skip-client", "Skip TypeScript client generation")
   .action(async (options) => {

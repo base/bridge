@@ -6,9 +6,9 @@ import { logger } from "@internal/logger";
 import { argsSchema, handleInitialize } from "./initialize.handler";
 
 type CommanderOptions = {
-  cluster?: string;
-  release?: string;
+  deployEnv?: string;
   payerKp?: string;
+  guardianKp?: string;
 };
 
 async function collectInteractiveOptions(
@@ -16,33 +16,20 @@ async function collectInteractiveOptions(
 ): Promise<CommanderOptions> {
   let opts = { ...options };
 
-  if (!opts.cluster) {
-    const cluster = await select({
-      message: "Select target cluster:",
-      options: [{ value: "devnet", label: "Devnet" }],
-      initialValue: "devnet",
-    });
-    if (isCancel(cluster)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.cluster = cluster;
-  }
-
-  if (!opts.release) {
-    const release = await select({
-      message: "Select release type:",
+  if (!opts.deployEnv) {
+    const deployEnv = await select({
+      message: "Select target deploy environment:",
       options: [
-        { value: "prod", label: "Prod" },
-        { value: "alpha", label: "Alpha" },
+        { value: "development-alpha", label: "Development Alpha" },
+        { value: "development-prod", label: "Development Prod" },
       ],
-      initialValue: "prod",
+      initialValue: "development-alpha",
     });
-    if (isCancel(release)) {
+    if (isCancel(deployEnv)) {
       cancel("Operation cancelled.");
       process.exit(1);
     }
-    opts.release = release;
+    opts.deployEnv = deployEnv;
   }
 
   if (!opts.payerKp) {
@@ -79,16 +66,56 @@ async function collectInteractiveOptions(
     }
   }
 
+  if (!opts.guardianKp) {
+    const usePayerAsGuardian = await confirm({
+      message: "Use payer as guardian keypair?",
+      initialValue: true,
+    });
+    if (isCancel(usePayerAsGuardian)) {
+      cancel("Operation cancelled.");
+      process.exit(1);
+    }
+
+    if (usePayerAsGuardian) {
+      opts.guardianKp = "payer";
+    } else {
+      const keypairPath = await text({
+        message: "Enter path to guardian keypair:",
+        placeholder: "/path/to/guardian.json",
+        validate: (value) => {
+          if (!value || value.trim().length === 0) {
+            return "Keypair path cannot be empty";
+          }
+          const cleanPath = value.trim().replace(/^["']|["']$/g, "");
+          if (!existsSync(cleanPath)) {
+            return "Guardian keypair file does not exist";
+          }
+        },
+      });
+      if (isCancel(keypairPath)) {
+        cancel("Operation cancelled.");
+        process.exit(1);
+      }
+      opts.guardianKp = keypairPath.trim().replace(/^["']|["']$/g, "");
+    }
+  }
+
   return opts;
 }
 
 export const initializeCommand = new Command("initialize")
   .description("Initialize the Bridge Solana program")
-  .option("--cluster <cluster>", "Target cluster (devnet)")
-  .option("--release <release>", "Release type (alpha | prod)")
+  .option(
+    "--deploy-env <deployEnv>",
+    "Target deploy environment (development-alpha | development-prod)"
+  )
   .option(
     "--payer-kp <path>",
     "Payer keypair: 'config' or custom payer keypair path"
+  )
+  .option(
+    "--guardian-kp <path>",
+    "Guardian keypair: 'payer' or custom guardian keypair path"
   )
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);

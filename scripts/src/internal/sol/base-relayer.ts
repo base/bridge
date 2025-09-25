@@ -1,8 +1,6 @@
 import {
-  createSignerFromKeyPair,
   createSolanaRpc,
   devnet,
-  generateKeyPair,
   getProgramDerivedAddress,
   type Address,
   type KeyPairSigner,
@@ -16,30 +14,26 @@ import {
 
 import { logger } from "@internal/logger";
 
-import { CONSTANTS } from "./constants";
+import { CONFIGS, type DeployEnv } from "../constants";
 import { getRelayerIdlConstant } from "./base-relayer-idl.constants";
 
-type Cluster = keyof typeof CONSTANTS;
-type Release = keyof (typeof CONSTANTS)[Cluster];
-
 export async function buildPayForRelayInstruction(
-  cluster: Cluster,
-  release: Release,
+  env: DeployEnv,
   outgoingMessage: Address,
   payer: KeyPairSigner<string>
 ) {
-  const solConfig = CONSTANTS[cluster][release];
-  const solRpc = createSolanaRpc(devnet(`https://${solConfig.rpcUrl}`));
+  const config = CONFIGS[env];
+  const solRpc = createSolanaRpc(devnet(`https://${config.solana.rpcUrl}`));
 
   const [cfgAddress] = await getProgramDerivedAddress({
-    programAddress: solConfig.baseRelayer,
+    programAddress: config.solana.baseRelayerProgram,
     seeds: [Buffer.from(getRelayerIdlConstant("CFG_SEED"))],
   });
 
   const cfg = await fetchCfg(solRpc, cfgAddress);
 
   const { salt, pubkey: messageToRelay } = await mtrPubkey(
-    solConfig.baseRelayer
+    config.solana.baseRelayerProgram
   );
   logger.info(`Message To Relay: ${messageToRelay}`);
 
@@ -57,16 +51,19 @@ export async function buildPayForRelayInstruction(
       outgoingMessage: outgoingMessage,
       gasLimit: 200_000n,
     },
-    { programAddress: solConfig.baseRelayer }
+    { programAddress: config.solana.baseRelayerProgram }
   );
 }
 
-export async function mtrPubkey(baseRelayer: Address, salt?: Uint8Array) {
+export async function mtrPubkey(
+  baseRelayerProgram: Address,
+  salt?: Uint8Array
+) {
   const bytes = new Uint8Array(32);
   const s = salt ?? crypto.getRandomValues(bytes);
 
   const [pubkey] = await getProgramDerivedAddress({
-    programAddress: baseRelayer,
+    programAddress: baseRelayerProgram,
     seeds: [Buffer.from(getRelayerIdlConstant("MTR_SEED")), Buffer.from(s)],
   });
 

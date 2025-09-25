@@ -24,24 +24,21 @@ import {
 import { logger } from "@internal/logger";
 import {
   buildAndSendTransaction,
-  CONSTANTS,
   getIdlConstant,
   getKeypairSignerFromPath,
   getSolanaCliConfigKeypairSigner,
   type Rpc,
 } from "@internal/sol";
 
+import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
+
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be either 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
+    .default("development-alpha"),
   messageHash: z
     .string()
     .regex(/^0x[a-fA-F0-9]{64}$/, {
@@ -54,33 +51,27 @@ export const argsSchema = z.object({
     .default("config"),
 });
 
-type RelayMessageArgs = z.infer<typeof argsSchema>;
-type PayerKp = z.infer<typeof argsSchema.shape.payerKp>;
+type Args = z.infer<typeof argsSchema>;
+type PayerKpArg = Args["payerKp"];
 
 // NOTE: This version does not support relaying messages whose calls have other accounts as signers.
 //       We would need to collect the signatures (or the private keys and sign with them) which is not
 //       supported by this script.
 
-export async function handleRelayMessage(
-  args: RelayMessageArgs
-): Promise<void> {
+export async function handleRelayMessage(args: Args): Promise<void> {
   try {
     logger.info("--- Relay message script ---");
 
-    // Get config for cluster and release
-    const config = CONSTANTS[args.cluster][args.release];
-
-    const rpcUrl = devnet(`https://${config.rpcUrl}`);
+    const config = CONFIGS[args.deployEnv];
+    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
-    // Resolve payer keypair
     const payer = await resolvePayerKeypair(args.payerKp);
     logger.info(`Payer: ${payer.address}`);
 
-    // Find the message PDA using the message hash (from prove-message)
     const [messagePda] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [
         Buffer.from(getIdlConstant("INCOMING_MESSAGE_SEED")),
         toBytes(args.messageHash),
@@ -99,11 +90,8 @@ export async function handleRelayMessage(
       return;
     }
 
-    // Find the bridge CPI authority PDA. Not always needed, but simpler to always compute it here.
-    // It is only really needed if the relayed message needs to CPI into a program that requires
-    // the bridge CPI authority as a signer.
     const [bridgeCpiAuthorityPda] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [
         Buffer.from(getIdlConstant("BRIDGE_CPI_AUTHORITY_SEED")),
         Buffer.from(incomingMessage.data.sender),
@@ -116,7 +104,11 @@ export async function handleRelayMessage(
     let remainingAccounts =
       message.__kind === "Call"
         ? await messageCallAccounts(message)
-        : await messageTransferAccounts(rpc, message, config.solanaBridge);
+        : await messageTransferAccounts(
+            rpc,
+            message,
+            config.solana.bridgeProgram
+          );
 
     // Set the role to readonly for the bridge CPI authority account (if it exists)
     remainingAccounts = remainingAccounts.map((acct) => {
@@ -130,7 +122,7 @@ export async function handleRelayMessage(
     });
 
     const [bridgeAccountAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
     });
     logger.info(`Bridge account address: ${bridgeAccountAddress}`);
@@ -140,7 +132,7 @@ export async function handleRelayMessage(
         message: messagePda,
         bridge: bridgeAccountAddress,
       },
-      { programAddress: config.solanaBridge }
+      { programAddress: config.solana.bridgeProgram }
     );
 
     const relayMessageIxWithRemainingAccounts: Instruction = {
@@ -151,7 +143,7 @@ export async function handleRelayMessage(
 
     logger.info("Sending transaction...");
     const signature = await buildAndSendTransaction(
-      rpcUrl,
+      args.deployEnv,
       [relayMessageIxWithRemainingAccounts],
       payer
     );
@@ -164,14 +156,14 @@ export async function handleRelayMessage(
   }
 }
 
-async function resolvePayerKeypair(payerKp: PayerKp) {
-  if (payerKp === "config") {
+async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
+  if (payerKpArg === "config") {
     logger.info("Using Solana CLI config for payer keypair");
     return await getSolanaCliConfigKeypairSigner();
   }
 
-  logger.info(`Using custom payer keypair: ${payerKp}`);
-  return await getKeypairSignerFromPath(payerKp);
+  logger.info(`Using custom payer keypair: ${payerKpArg}`);
+  return await getKeypairSignerFromPath(payerKpArg);
 }
 
 async function getIxAccounts(ixs: Ix[]) {

@@ -7,8 +7,7 @@ import { argsSchema, handleProveMessage } from "./prove-message.handler";
 import { handleRelayMessage } from "./relay-message.handler";
 
 type CommanderOptions = {
-  cluster?: string;
-  release?: string;
+  deployEnv?: string;
   transactionHash?: string;
   payerKp?: string;
   skipRelay?: boolean;
@@ -19,33 +18,20 @@ async function collectInteractiveOptions(
 ): Promise<CommanderOptions> {
   let opts = { ...options };
 
-  if (!opts.cluster) {
-    const cluster = await select({
-      message: "Select target cluster:",
-      options: [{ value: "devnet", label: "Devnet" }],
-      initialValue: "devnet",
-    });
-    if (isCancel(cluster)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.cluster = cluster;
-  }
-
-  if (!opts.release) {
-    const release = await select({
-      message: "Select release type:",
+  if (!opts.deployEnv) {
+    const deployEnv = await select({
+      message: "Select target deploy environment:",
       options: [
-        { value: "prod", label: "Prod" },
-        { value: "alpha", label: "Alpha" },
+        { value: "development-alpha", label: "Development Alpha" },
+        { value: "development-prod", label: "Development Prod" },
       ],
-      initialValue: "prod",
+      initialValue: "development-alpha",
     });
-    if (isCancel(release)) {
+    if (isCancel(deployEnv)) {
       cancel("Operation cancelled.");
       process.exit(1);
     }
-    opts.release = release;
+    opts.deployEnv = deployEnv;
   }
 
   if (!opts.transactionHash) {
@@ -123,8 +109,10 @@ async function collectInteractiveOptions(
 
 export const proveMessageCommand = new Command("prove-message")
   .description("Prove a message from Base transaction on Solana")
-  .option("--cluster <cluster>", "Target cluster (devnet)")
-  .option("--release <release>", "Release type (alpha | prod)")
+  .option(
+    "--deploy-env <deployEnv>",
+    "Target deploy environment (development-alpha | development-prod)"
+  )
   .option("--transaction-hash <hash>", "Base transaction hash to prove (0x...)")
   .option(
     "--payer-kp <path>",
@@ -147,8 +135,7 @@ export const proveMessageCommand = new Command("prove-message")
     if (!opts.skipRelay) {
       logger.info("Relaying message...");
       await handleRelayMessage({
-        cluster: parsed.data.cluster,
-        release: parsed.data.release,
+        deployEnv: parsed.data.deployEnv,
         messageHash: messageHash as any,
         payerKp: parsed.data.payerKp,
       });

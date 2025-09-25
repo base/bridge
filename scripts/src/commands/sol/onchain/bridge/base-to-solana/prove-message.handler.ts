@@ -29,22 +29,17 @@ import {
   getSolanaCliConfigKeypairSigner,
   getKeypairSignerFromPath,
   getIdlConstant,
-  CONSTANTS,
 } from "@internal/sol";
-
-import { BRIDGE_ABI } from "@internal/base/abi/bridge.abi";
+import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
+import { BRIDGE_ABI } from "@internal/base/abi";
 
 export const argsSchema = z.object({
-  cluster: z
-    .enum(["devnet"], {
-      message: "Cluster must be 'devnet'",
+  deployEnv: z
+    .enum(DEPLOY_ENVS, {
+      message:
+        "Deploy environment must be either 'development-alpha' or 'development-prod'",
     })
-    .default("devnet"),
-  release: z
-    .enum(["alpha", "prod"], {
-      message: "Release must be either 'alpha' or 'prod'",
-    })
-    .default("prod"),
+    .default("development-alpha"),
   transactionHash: z
     .string()
     .regex(/^0x[a-fA-F0-9]{64}$/, {
@@ -57,27 +52,23 @@ export const argsSchema = z.object({
     .default("config"),
 });
 
-type ProveMessageArgs = z.infer<typeof argsSchema>;
-type PayerKp = z.infer<typeof argsSchema.shape.payerKp>;
+type Args = z.infer<typeof argsSchema>;
+type PayerKpArg = Args["payerKp"];
 
-export async function handleProveMessage(args: ProveMessageArgs) {
+export async function handleProveMessage(args: Args) {
   try {
     logger.info("--- Prove message script ---");
 
-    // Get config for cluster and release
-    const config = CONSTANTS[args.cluster][args.release];
-
-    const rpcUrl = devnet(`https://${config.rpcUrl}`);
+    const config = CONFIGS[args.deployEnv];
+    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
-    // Resolve payer keypair
     const payer = await resolvePayerKeypair(args.payerKp);
     logger.info(`Payer: ${payer.address}`);
 
-    // Derive bridge PDA and fetch bridge state
     const [bridgeAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
     });
     logger.info(`Bridge: ${bridgeAddress}`);
@@ -86,9 +77,8 @@ export async function handleProveMessage(args: ProveMessageArgs) {
     const baseBlockNumber = bridge.data.baseBlockNumber;
     logger.info(`Base Block Number: ${baseBlockNumber}`);
 
-    // Derive output root PDA
     const [outputRootAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [
         Buffer.from(getIdlConstant("OUTPUT_ROOT_SEED")),
         getU64Encoder({ endian: Endian.Little }).encode(baseBlockNumber),
@@ -96,16 +86,14 @@ export async function handleProveMessage(args: ProveMessageArgs) {
     });
     logger.info(`Output Root: ${outputRootAddress}`);
 
-    // Generate proof from Base transaction
     const { event, rawProof } = await generateProof(
       args.transactionHash as Hash,
       baseBlockNumber,
-      config.baseBridge
+      config.base.bridgeContract
     );
 
-    // Derive message PDA
     const [messageAddress] = await getProgramDerivedAddress({
-      programAddress: config.solanaBridge,
+      programAddress: config.solana.bridgeProgram,
       seeds: [
         Buffer.from(getIdlConstant("INCOMING_MESSAGE_SEED")),
         toBytes(event.messageHash),
@@ -134,12 +122,15 @@ export async function handleProveMessage(args: ProveMessageArgs) {
         proof: rawProof.map((e: string) => toBytes(e)),
         messageHash: toBytes(event.messageHash),
       },
-      { programAddress: config.solanaBridge }
+      { programAddress: config.solana.bridgeProgram }
     );
 
-    // Send transaction
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(rpcUrl, [ix], payer);
+    const signature = await buildAndSendTransaction(
+      args.deployEnv,
+      [ix],
+      payer
+    );
     logger.success("Message proof completed");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
@@ -230,12 +221,12 @@ async function generateProof(
   };
 }
 
-async function resolvePayerKeypair(payerKp: PayerKp) {
-  if (payerKp === "config") {
+async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
+  if (payerKpArg === "config") {
     logger.info("Using Solana CLI config for payer keypair");
     return await getSolanaCliConfigKeypairSigner();
   }
 
-  logger.info(`Using custom payer keypair: ${payerKp}`);
-  return await getKeypairSignerFromPath(payerKp);
+  logger.info(`Using custom payer keypair: ${payerKpArg}`);
+  return await getKeypairSignerFromPath(payerKpArg);
 }
