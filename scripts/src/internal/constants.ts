@@ -99,27 +99,27 @@ export const CONFIGS = {
       evmKeychainKey: "0x7f7a481926dc754f5768691a17022c3fa548ed8b",
 
       // Programs
-      bridgeProgram: address("83hN2esneZUbKgLfUvo7uzas4g7kyiodeNKAqZgx5MbH"),
+      bridgeProgram: address("HSvNvzehozUpYhRBuCKq3Fq8udpRocTmGMUYXmCSiCCc"),
       baseRelayerProgram: address(
-        "J29jxzRsQmkpxkJptuaxYXgyNqjFZErxXtDWQ4ma3k51"
+        "ExS1gcALmaA983oiVpvFSVohi1zCtAUTgsLj5xiFPPgL"
       ),
 
       // SPLs
       spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
-      wEth: address("DG4ncVRoiSkYBLVUXxCFbVg38RhByjFKTLZi6UFFmZuf"),
-      wErc20: address("44PhEvftJp57KRNSR7ypGLns1JUKXqAubewi3h5q1TEo"),
+      wEth: address("EgN6b7stvhxJGo9br4kFefmFWjMjM6NThNX4uFvwJGbE"),
+      wErc20: address("ESyyyhXapf6HdqwVtxpfg6Sit7AdqEoLRBCGja9sBLx1"),
     },
     base: {
       chain: baseSepolia,
 
       // Contracts
-      bridgeContract: "0x5961B1579913632c91c8cdC771cF48251A4B54F0",
+      bridgeContract: "0xB2068ECCDb908902C76E3f965c1712a9cF64171E",
       counterContract: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
 
       // ERC20s
       erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
-      wSol: "0x70445da14e089424E5f7Ab6d3C22F5Fadeb619Ca",
-      wSpl: "0x4752285a93F5d0756bB2D6ed013b40ea8527a8DA",
+      wSol: "0xC5b9112382f3c87AFE8e1A28fa52452aF81085AD",
+      wSpl: "0x955C7356776F9304feD38ed5AeC5699436C7C614",
     },
   },
 } as const satisfies Record<DeployEnv, Config>;

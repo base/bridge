@@ -87,7 +87,7 @@ contract HelperConfig is Script {
 
         return NetworkConfig({
             initialOwner: bridgeAdmin,
-            remoteBridge: Pubkey.wrap(0x68b29bb2aca46156b4dd9e1f1aa704ba4477f2bad04297098659b15ce3e9ca04), // 83hN2esneZUbKgLfUvo7uzas4g7kyiodeNKAqZgx5MbH
+            remoteBridge: Pubkey.wrap(0xf45eddaa5a77f376ff73f620f0cd923963dbd6cb456fed23ce12c4bddd18ab05), // HSvNvzehozUpYhRBuCKq3Fq8udpRocTmGMUYXmCSiCCc
             erc1967Factory: ERC1967FactoryConstants.ADDRESS,
             baseValidators: baseValidators,
             baseSignatureThreshold: 2,

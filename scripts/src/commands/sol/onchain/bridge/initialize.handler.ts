@@ -265,6 +265,8 @@ async function assertInitialized(
   ) {
     throw new Error("Partner oracle config threshold mismatch!");
   }
+
+  console.log("Bridge config confirmed!");
 }
 
 async function resolveGuardianKeypair(

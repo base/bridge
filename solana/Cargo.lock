@@ -718,7 +718,7 @@ checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 
 [[package]]
 name = "base_relayer"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "anchor-lang",
  "litesvm",
@@ -879,7 +879,7 @@ dependencies = [
 
 [[package]]
 name = "bridge"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-type-parser",
