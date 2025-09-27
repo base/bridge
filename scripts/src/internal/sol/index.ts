@@ -6,3 +6,4 @@ export * from "./bridge";
 export * from "./key-pair";
 export * from "./transaction";
 export * from "./types";
+export * from "./mcm";

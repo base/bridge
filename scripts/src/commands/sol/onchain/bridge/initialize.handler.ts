@@ -171,7 +171,7 @@ async function assertInitialized(
   baseOracleConfig: BaseOracleConfig,
   partnerOracleConfig: PartnerOracleConfig
 ) {
-  console.log("Confirming bridge configuration...");
+  logger.info("Confirming bridge configuration...");
   const bridgeData = await fetchBridge(rpc, bridgeAccountAddress);
 
   // EIP1559 confirmation
@@ -266,7 +266,7 @@ async function assertInitialized(
     throw new Error("Partner oracle config threshold mismatch!");
   }
 
-  console.log("Bridge config confirmed!");
+  logger.success("Bridge config confirmed!");
 }
 
 async function resolveGuardianKeypair(

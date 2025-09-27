@@ -178,7 +178,7 @@ async function assertInitialized(
     throw new Error("Gas config gasFeeReceiver mismatch!");
   }
 
-  console.log("Base Relayer config confirmed!");
+  logger.success("Base Relayer config confirmed!");
 }
 
 async function resolveGuardianKeypair(

@@ -25,6 +25,7 @@ export type Config = {
     // Programs
     bridgeProgram: SolanaAddress;
     baseRelayerProgram: SolanaAddress;
+    mcmProgram: SolanaAddress;
 
     // SPLs
     spl: SolanaAddress;
@@ -65,6 +66,7 @@ export const CONFIGS = {
       baseRelayerProgram: address(
         "2NYWv6ySV2UwZ7wNxkRnr7KktA78qNwZVxfeqUQRof5u"
       ),
+      mcmProgram: address("55CNTEUq6cAa2sBA7bkDfJ2bb3uWs7Zh77vAF9H8TnJL"),
 
       // SPLs
       spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),
@@ -103,6 +105,7 @@ export const CONFIGS = {
       baseRelayerProgram: address(
         "ExS1gcALmaA983oiVpvFSVohi1zCtAUTgsLj5xiFPPgL"
       ),
+      mcmProgram: address("55CNTEUq6cAa2sBA7bkDfJ2bb3uWs7Zh77vAF9H8TnJL"),
 
       // SPLs
       spl: address("8KkQRERXdASmXqeWw7sPFB56wLxyHMKc9NPDW64EEL31"),

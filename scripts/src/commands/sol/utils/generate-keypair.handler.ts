@@ -25,7 +25,7 @@ export async function handleGenerateKeypair(): Promise<void> {
     const address = await getAddressFromPublicKey(publicKey);
 
     logger.success("Keypair generated successfully!");
-    console.log({
+    logger.success({
       keypair: {
         address,
         publicKey: Array.from(publicKeyBytes),
