@@ -36,9 +36,9 @@ export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
       message:
-        "Deploy environment must be either 'development-alpha' or 'development-prod'",
+        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
     })
-    .default("development-alpha"),
+    .default("testnet-alpha"),
   messageHash: z
     .string()
     .regex(/^0x[a-fA-F0-9]{64}$/, {

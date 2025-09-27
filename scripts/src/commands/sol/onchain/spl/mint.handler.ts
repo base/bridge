@@ -22,9 +22,9 @@ export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
       message:
-        "Deploy environment must be either 'development-alpha' or 'development-prod'",
+        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
     })
-    .default("development-alpha"),
+    .default("testnet-alpha"),
   mint: z.string().nonempty("Mint address cannot be empty"),
   to: z
     .union([z.literal("config"), z.string().brand<"to">()])

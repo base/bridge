@@ -43,9 +43,9 @@ export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
       message:
-        "Deploy environment must be either 'development-alpha' or 'development-prod'",
+        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
     })
-    .default("development-alpha"),
+    .default("testnet-alpha"),
   mint: z.union([z.literal("constant"), z.string().brand<"solanaAddress">()]),
   remoteToken: z.union([
     z.literal("constant"),

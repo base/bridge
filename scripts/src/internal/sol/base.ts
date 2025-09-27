@@ -162,6 +162,7 @@ function buildEvmMessage(
   );
 
   const evmMessage = {
+    outgoingMessagePubkey: bytes32FromPubkey(outgoing.address),
     gasLimit: 100_000n,
     nonce,
     sender: senderBytes32,

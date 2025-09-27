@@ -3,11 +3,6 @@ export const BRIDGE_VALIDATOR_ABI = [
     type: "constructor",
     inputs: [
       {
-        name: "partnerThreshold",
-        type: "uint256",
-        internalType: "uint256",
-      },
-      {
         name: "bridgeAddress",
         type: "address",
         internalType: "address",
@@ -74,19 +69,6 @@ export const BRIDGE_VALIDATOR_ABI = [
   },
   {
     type: "function",
-    name: "PARTNER_VALIDATOR_THRESHOLD",
-    inputs: [],
-    outputs: [
-      {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
     name: "addValidator",
     inputs: [
       {
@@ -97,6 +79,19 @@ export const BRIDGE_VALIDATOR_ABI = [
     ],
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getBaseThreshold",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint128",
+        internalType: "uint128",
+      },
+    ],
+    stateMutability: "view",
   },
   {
     type: "function",
@@ -111,6 +106,11 @@ export const BRIDGE_VALIDATOR_ABI = [
         name: "baseThreshold",
         type: "uint128",
         internalType: "uint128",
+      },
+      {
+        name: "partnerThreshold",
+        type: "uint256",
+        internalType: "uint256",
       },
     ],
     outputs: [],
@@ -131,12 +131,37 @@ export const BRIDGE_VALIDATOR_ABI = [
   },
   {
     type: "function",
+    name: "partnerValidatorThreshold",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "registerMessages",
     inputs: [
       {
-        name: "innerMessageHashes",
-        type: "bytes32[]",
-        internalType: "bytes32[]",
+        name: "signedMessages",
+        type: "tuple[]",
+        internalType: "struct BridgeValidator.SignedMessage[]",
+        components: [
+          {
+            name: "innerMessageHash",
+            type: "bytes32",
+            internalType: "bytes32",
+          },
+          {
+            name: "outgoingMessagePubkey",
+            type: "bytes32",
+            internalType: "Pubkey",
+          },
+        ],
       },
       {
         name: "validatorSigs",
@@ -155,6 +180,19 @@ export const BRIDGE_VALIDATOR_ABI = [
         name: "validator",
         type: "address",
         internalType: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setPartnerThreshold",
+    inputs: [
+      {
+        name: "newThreshold",
+        type: "uint256",
+        internalType: "uint256",
       },
     ],
     outputs: [],
@@ -215,6 +253,31 @@ export const BRIDGE_VALIDATOR_ABI = [
         indexed: true,
         internalType: "bytes32",
       },
+      {
+        name: "outgoingMessagePubkey",
+        type: "bytes32",
+        indexed: true,
+        internalType: "Pubkey",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "PartnerThresholdUpdated",
+    inputs: [
+      {
+        name: "oldThreshold",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
+      {
+        name: "newThreshold",
+        type: "uint256",
+        indexed: false,
+        internalType: "uint256",
+      },
     ],
     anonymous: false,
   },
@@ -259,6 +322,11 @@ export const BRIDGE_VALIDATOR_ABI = [
   },
   {
     type: "error",
+    name: "BaseSignerCountTooHigh",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "BaseThresholdNotMet",
     inputs: [],
   },
@@ -294,12 +362,22 @@ export const BRIDGE_VALIDATOR_ABI = [
   },
   {
     type: "error",
+    name: "NoMessages",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "NotInitializing",
     inputs: [],
   },
   {
     type: "error",
     name: "PartnerThresholdNotMet",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "Paused",
     inputs: [],
   },
   {

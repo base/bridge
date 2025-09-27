@@ -4,7 +4,7 @@ import { baseSepolia } from "viem/chains";
 
 export const ETH = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 
-export const DEPLOY_ENVS = ["development-alpha", "development-prod"] as const;
+export const DEPLOY_ENVS = ["testnet-alpha", "testnet-prod"] as const;
 
 export type DeployEnv = (typeof DEPLOY_ENVS)[number];
 
@@ -46,7 +46,7 @@ export type Config = {
 };
 
 export const CONFIGS = {
-  "development-alpha": {
+  "testnet-alpha": {
     solana: {
       cluster: "devnet",
       rpcUrl: "api.devnet.solana.com",
@@ -84,7 +84,7 @@ export const CONFIGS = {
       wSpl: "0xCf8e666c57651670AA7266Aba3E334E3600B2306",
     },
   },
-  "development-prod": {
+  "testnet-prod": {
     solana: {
       cluster: "devnet",
       rpcUrl: "api.devnet.solana.com",

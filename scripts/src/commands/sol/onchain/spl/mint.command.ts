@@ -24,10 +24,10 @@ async function collectInteractiveOptions(
     const deployEnv = await select({
       message: "Select target deploy environment:",
       options: [
-        { value: "development-alpha", label: "Development Alpha" },
-        { value: "development-prod", label: "Development Prod" },
+        { value: "testnet-alpha", label: "Testnet Alpha" },
+        { value: "testnet-prod", label: "Testnet Prod" },
       ],
-      initialValue: "development-alpha",
+      initialValue: "testnet-alpha",
     });
     if (isCancel(deployEnv)) {
       cancel("Operation cancelled.");
@@ -156,7 +156,7 @@ export const mintCommand = new Command("mint")
   .description("Mint SPL tokens to an ATA")
   .option(
     "--deploy-env <deployEnv>",
-    "Target deploy environment (development-alpha | development-prod)"
+    "Target deploy environment (testnet-alpha | testnet-prod)"
   )
   .option("--mint <address>", "Mint address")
   .option(

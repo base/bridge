@@ -100,6 +100,11 @@ export const BRIDGE_ABI = [
         internalType: "struct IncomingMessage",
         components: [
           {
+            name: "outgoingMessagePubkey",
+            type: "bytes32",
+            internalType: "Pubkey",
+          },
+          {
             name: "nonce",
             type: "uint64",
             internalType: "uint64",
@@ -308,6 +313,11 @@ export const BRIDGE_ABI = [
         type: "tuple",
         internalType: "struct IncomingMessage",
         components: [
+          {
+            name: "outgoingMessagePubkey",
+            type: "bytes32",
+            internalType: "Pubkey",
+          },
           {
             name: "nonce",
             type: "uint64",
@@ -528,6 +538,11 @@ export const BRIDGE_ABI = [
         type: "tuple[]",
         internalType: "struct IncomingMessage[]",
         components: [
+          {
+            name: "outgoingMessagePubkey",
+            type: "bytes32",
+            internalType: "Pubkey",
+          },
           {
             name: "nonce",
             type: "uint64",
@@ -975,17 +990,17 @@ export const BRIDGE_ABI = [
   },
   {
     type: "error",
+    name: "InvalidSerializedAccountLength",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "LeafIndexOutOfBounds",
     inputs: [],
   },
   {
     type: "error",
     name: "LeafNotFound",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "MessageAlreadySuccessfullyRelayed",
     inputs: [],
   },
   {
@@ -1020,7 +1035,27 @@ export const BRIDGE_ABI = [
   },
   {
     type: "error",
+    name: "SerializedMessageTooBig",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "SiblingNodeOutOfBounds",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "TooManyAccounts",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "TooManyInstructions",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "TooManySignatures",
     inputs: [],
   },
   {
@@ -1036,6 +1071,11 @@ export const BRIDGE_ABI = [
   {
     type: "error",
     name: "ZeroAddress",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ZeroAmount",
     inputs: [],
   },
 ] as const;

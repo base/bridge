@@ -22,10 +22,10 @@ async function collectInteractiveOptions(
     const deployEnv = await select({
       message: "Select target deploy environment:",
       options: [
-        { value: "development-alpha", label: "Development Alpha" },
-        { value: "development-prod", label: "Development Prod" },
+        { value: "testnet-alpha", label: "Testnet Alpha" },
+        { value: "testnet-prod", label: "Testnet Prod" },
       ],
-      initialValue: "development-alpha",
+      initialValue: "testnet-alpha",
     });
     if (isCancel(deployEnv)) {
       cancel("Operation cancelled.");
@@ -107,7 +107,7 @@ export const createMintCommand = new Command("create-mint")
   .description("Create a new SPL token mint")
   .option(
     "--deploy-env <deployEnv>",
-    "Target deploy environment (development-alpha | development-prod)"
+    "Target deploy environment (testnet-alpha | testnet-prod)"
   )
   .option("--decimals <decimals>", "Token decimals")
   .option(
