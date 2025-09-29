@@ -137,7 +137,7 @@ library SVMLib {
                 }
 
                 // Last byte stores is_signer bit in LSB
-                bool isSigner = (uint8(acct[SERIALIZED_ACCOUNT_LENGTH - 1]) & 1) == 1;
+                bool isSigner = uint8(acct[SERIALIZED_ACCOUNT_LENGTH - 1]) == 1;
                 if (!isSigner) {
                     continue;
                 }
