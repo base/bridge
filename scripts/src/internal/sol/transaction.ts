@@ -13,6 +13,7 @@ import {
   type Instruction,
   type TransactionSigner,
 } from "@solana/kit";
+import { addSignersToTransactionMessage } from "@solana/signers";
 import { CONFIGS, type DeployEnv } from "../constants";
 
 export async function buildAndSendTransaction(
@@ -37,7 +38,8 @@ export async function buildAndSendTransaction(
     createTransactionMessage({ version: 0 }),
     (tx) => setTransactionMessageFeePayer(payer.address, tx),
     (tx) => setTransactionMessageLifetimeUsingBlockhash(blockhash.value, tx),
-    (tx) => appendTransactionMessageInstructions(instructions, tx)
+    (tx) => appendTransactionMessageInstructions(instructions, tx),
+    (tx) => addSignersToTransactionMessage([payer], tx)
   );
 
   const signedTransaction =
