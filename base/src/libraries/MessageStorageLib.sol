@@ -44,7 +44,7 @@ library MessageStorageLib {
     /// @param messageHash The message's hash.
     /// @param mmrRoot The root of the MMR after the message is registered.
     /// @param message The message.
-    event MessageRegistered(bytes32 indexed messageHash, bytes32 indexed mmrRoot, Message message);
+    event MessageInitiated(bytes32 indexed messageHash, bytes32 indexed mmrRoot, Message message);
 
     //////////////////////////////////////////////////////////////
     ///                       Errors                           ///
@@ -159,7 +159,7 @@ library MessageStorageLib {
             ++$.nextNonce;
         }
 
-        emit MessageRegistered({messageHash: messageHash, mmrRoot: mmrRoot, message: message});
+        emit MessageInitiated({messageHash: messageHash, mmrRoot: mmrRoot, message: message});
     }
 
     //////////////////////////////////////////////////////////////

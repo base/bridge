@@ -121,7 +121,7 @@ contract MessageStorageLibTest is Test {
         // Verify event structure
         assertEq(
             logs[0].topics[0],
-            keccak256("MessageRegistered(bytes32,bytes32,(uint64,address,bytes))"),
+            keccak256("MessageInitiated(bytes32,bytes32,(uint64,address,bytes))"),
             "Event signature mismatch"
         );
         assertEq(logs[0].topics[1], expectedMessageHash, "Message hash mismatch");
