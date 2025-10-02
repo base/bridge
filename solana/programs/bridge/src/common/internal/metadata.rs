@@ -147,11 +147,13 @@ impl TryFrom<&AccountInfo<'_>> for PartialTokenMetadata {
 
 impl PartialTokenMetadata {
     /// Computes a keccak256 hash of the metadata fields as:
-    /// `keccak(name || symbol || remote_token || scaler_exponent_le)`,
+    /// `keccak(len(name) || name || len(symbol) || symbol || remote_token || scaler_exponent_le)`,
     /// where `scaler_exponent_le` is the little-endian byte representation.
     pub fn hash(&self) -> [u8; 32] {
         let mut data = Vec::new();
+        data.extend_from_slice(&self.name.len().to_le_bytes());
         data.extend_from_slice(self.name.as_bytes());
+        data.extend_from_slice(&self.symbol.len().to_le_bytes());
         data.extend_from_slice(self.symbol.as_bytes());
         data.extend_from_slice(self.remote_token.as_ref());
         data.extend_from_slice(&self.scaler_exponent.to_le_bytes());
