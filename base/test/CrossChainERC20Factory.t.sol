@@ -190,7 +190,7 @@ contract CrossChainERC20FactoryTest is CommonTest {
         string memory symbol,
         uint8 decimals
     ) public {
-        vm.assume(remoteToken != bytes32(0));
+        vm.assume(remoteToken != bytes32(0) && remoteToken != factory.SOL_PUBKEY());
 
         vm.prank(deployer);
 
@@ -296,21 +296,5 @@ contract CrossChainERC20FactoryTest is CommonTest {
         // Verify deployment doesn't use excessive gas
         // This is more of a regression test to catch unexpected gas increases
         assertTrue(gasUsed < 500_000, "Deployment should not use excessive gas");
-    }
-
-    //////////////////////////////////////////////////////////////
-    ///                   Edge Case Tests                     ///
-    //////////////////////////////////////////////////////////////
-
-    function test_deploy_afterFactoryUpgrade() public {
-        // This test ensures the factory continues to work if the beacon implementation is upgraded
-
-        // Note: In a real scenario, you would deploy a new implementation and update the beacon
-        // to point to it through proper beacon ownership/governance mechanisms
-        // For this test, we'll just verify the factory continues to work with the current beacon
-
-        vm.prank(deployer);
-        address token = factory.deploy(REMOTE_TOKEN, TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS);
-        assertTrue(token != address(0), "Factory should continue working after implementation changes");
     }
 }

@@ -16,6 +16,9 @@ contract CrossChainERC20Factory {
     /// @notice Address of the ERC-1967 beacon contract used by deployed proxies for CrossChainERC20.
     address public immutable BEACON;
 
+    /// @notice Special pubkey designating remote native SOL
+    bytes32 public constant SOL_PUBKEY = 0x069be72ab836d4eacc02525b7350a78a395da2f1253a40ebafd6630000000000;
+
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
@@ -44,6 +47,10 @@ contract CrossChainERC20Factory {
     /// @notice Thrown when a zero address is detected
     error ZeroAddress();
 
+    /// @notice Thrown when someone tries to deploy a native SOL wrapper. This can only be done once at contract
+    ///         initialization
+    error CannotWrapNativeSOL();
+
     //////////////////////////////////////////////////////////////
     ///                       Public Functions                 ///
     //////////////////////////////////////////////////////////////
@@ -54,6 +61,11 @@ contract CrossChainERC20Factory {
     constructor(address beacon) {
         require(beacon != address(0), ZeroAddress());
         BEACON = beacon;
+    }
+
+    /// @notice Deploys a native SOL wrapper. Can only be called once.
+    function deploySolWrapper() external returns (address) {
+        return _deploy(SOL_PUBKEY, "Solana", "SOL", 9);
     }
 
     /// @notice Deploys a new CrossChainERC20 token with deterministic address using CREATE2
@@ -71,6 +83,14 @@ contract CrossChainERC20Factory {
     /// @return localToken The address of the newly deployed CrossChainERC20 contract
     function deploy(bytes32 remoteToken, string memory name, string memory symbol, uint8 decimals)
         external
+        returns (address)
+    {
+        require(remoteToken != SOL_PUBKEY, CannotWrapNativeSOL());
+        return _deploy(remoteToken, name, symbol, decimals);
+    }
+
+    function _deploy(bytes32 remoteToken, string memory name, string memory symbol, uint8 decimals)
+        private
         returns (address localToken)
     {
         bytes32 salt = keccak256(abi.encode(remoteToken, name, symbol, decimals));
