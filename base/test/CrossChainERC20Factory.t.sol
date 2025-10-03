@@ -298,7 +298,6 @@ contract CrossChainERC20FactoryTest is CommonTest {
         assertTrue(gasUsed < 500_000, "Deployment should not use excessive gas");
     }
 
-
     //////////////////////////////////////////////////////////////
     ///                   Edge Case Tests                     ///
     //////////////////////////////////////////////////////////////
