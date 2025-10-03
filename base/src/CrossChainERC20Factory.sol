@@ -17,6 +17,7 @@ contract CrossChainERC20Factory {
     address public immutable BEACON;
 
     /// @notice Special pubkey designating remote native SOL
+    /// @dev This corresponds to `SoL1111111111111111111111111111111111111111` in base58
     bytes32 public constant SOL_PUBKEY = 0x069be72ab836d4eacc02525b7350a78a395da2f1253a40ebafd6630000000000;
 
     //////////////////////////////////////////////////////////////
