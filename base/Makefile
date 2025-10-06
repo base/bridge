@@ -3,9 +3,9 @@
 BASE_RPC=https://base-sepolia.cbhq.net
 # BASE_RPC=https://mainnet.base.org
 
-# Update values in this section to specify token recipients / token amount
+# Update values in this section to specify token recipients and token amounts
 ####################################################################################################
-# alpha or prod
+# Environment: alpha or prod
 ENV_NAME=alpha
 
 SOLANA_SOL_RECEIVER = 0x9827993b7b317eb6c74279d49074a13b33a3495a30637c86a7513922014ba424

@@ -40,7 +40,7 @@ bun install
 
 ## Non-Interactive Mode
 
-All commands support non-interactive execution by providing required arguments:
+All commands support non-interactive execution by providing the required arguments:
 
 ```bash
 bun cli sol onchain bridge bridge-sol --cluster devnet --release prod --to 0x1234567890123456789012345678901234567890 --amount 10 --payer-kp config

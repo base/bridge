@@ -29,7 +29,7 @@ A bridge between Base and blockchains outside the Ethereum ecosystem. Currently 
 [![GitHub pull requests by-label](https://img.shields.io/github/issues-pr-raw/base/bridge)](https://github.com/base/bridge/pulls)
 [![GitHub Issues](https://img.shields.io/github/issues-raw/base/bridge.svg)](https://github.com/base/bridge/issues)
 
-## How it Works
+## How It Works
 
 This bridge allows you to:
 

@@ -38,6 +38,6 @@ cargo test
 
 ## Usage
 
-Make sure you have a funded solana keypair in `~/.config/solana/id.json`. You can use the `solana-keygen new` command to generate a new keypair. You can use this solana faucet to fund your account on devnet: https://solfaucet.com/.
+Make sure you have a funded Solana keypair in `~/.config/solana/id.json`. You can use the `solana-keygen new` command to generate a new keypair. You can use this Solana faucet to fund your account on devnet: https://solfaucet.com/.
 
 The `scripts/` directory contains an interactive CLI for interacting with the program. See [scripts/README.md](../scripts/README.md) for detailed usage instructions and available commands.

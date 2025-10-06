@@ -70,7 +70,7 @@ bun run tx:wrap-token devnet-alpha
 
 ### Base Side
 - **Bridge.sol**: Main contract receiving calls from Solana and managing message execution
-- **Twin.sol**: Execution contract for each Solana sender pubkey  
+- **Twin.sol**: Execution contract for each Solana sender pubkey
 - **CrossChainERC20.sol**: Mintable/burnable ERC20 for cross-chain transfers
 - **CrossChainERC20Factory.sol**: Factory for deploying wrapped tokens
 
@@ -91,7 +91,7 @@ bun run tx:wrap-token devnet-alpha
 - Requires `testnet-admin` wallet account for deployments
 - Environment variables in `base/Makefile` for contract addresses
 
-### Solana Program  
+### Solana Program
 - Uses Anchor framework with Rust
 - Requires keypair files in `keypairs/` directory
 - Two environments: devnet-alpha and devnet-prod
@@ -105,6 +105,6 @@ bun run tx:wrap-token devnet-alpha
 ## Key Files to Understand
 
 - `base/src/Bridge.sol` - Core Base bridge logic
-- `solana/programs/bridge/src/lib.rs` - Solana program entry point  
+- `solana/programs/bridge/src/lib.rs` - Solana program entry point
 - `base/script/Deploy.s.sol` - Base deployment script
 - `solana/scripts/onchain/` - Solana transaction examples
