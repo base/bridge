@@ -248,6 +248,16 @@ contract BridgeValidator is Initializable {
         return VerificationLib.getBaseThreshold();
     }
 
+    /// @notice Gets the registered Base validator count
+    function getBaseValidatorCount() external view returns (uint256) {
+        return VerificationLib.getBaseValidatorCount();
+    }
+
+    /// @notice Returns true if `validator` is a registered Base validator address
+    function isBaseValidator(address validator) external view returns (bool) {
+        return VerificationLib.isBaseValidator(validator);
+    }
+
     //////////////////////////////////////////////////////////////
     ///                    Private Functions                   ///
     //////////////////////////////////////////////////////////////

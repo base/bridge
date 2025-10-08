@@ -166,6 +166,12 @@ library VerificationLib {
         return $.threshold;
     }
 
+    /// @notice Gets the registered validator count
+    function getBaseValidatorCount() internal view returns (uint128) {
+        VerificationLibStorage storage $ = getVerificationLibStorage();
+        return $.validatorCount;
+    }
+
     /// @notice Checks if an address is a validator.
     ///
     /// @param validator The address to check.
