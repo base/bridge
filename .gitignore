@@ -1,11 +1,40 @@
+# Anchor
 .anchor
-.DS_Store
 target
 **/*.rs.bk
-node_modules
 test-ledger
-.yarn
 
+# Node.js
+node_modules
+.yarn
+bun.lockb
+
+# Environment files
 .env
-keypairs/
+.env.local
+.env.*.local
+
+# IDE
+.DS_Store
 /.idea/
+.vscode/
+*.swp
+*.swo
+
+# Keys and secrets
+keypairs/
+*.pem
+*.key
+
+# Build artifacts
+out/
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# Cache
+.cache/
+.temp/
