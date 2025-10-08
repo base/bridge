@@ -162,14 +162,12 @@ library VerificationLib {
     ///
     /// @return The current threshold.
     function getBaseThreshold() internal view returns (uint128) {
-        VerificationLibStorage storage $ = getVerificationLibStorage();
-        return $.threshold;
+        return getVerificationLibStorage().threshold;
     }
 
     /// @notice Gets the registered validator count
     function getBaseValidatorCount() internal view returns (uint128) {
-        VerificationLibStorage storage $ = getVerificationLibStorage();
-        return $.validatorCount;
+        return getVerificationLibStorage().validatorCount;
     }
 
     /// @notice Checks if an address is a validator.
@@ -177,8 +175,7 @@ library VerificationLib {
     /// @param validator The address to check.
     /// @return True if the address is a validator, false otherwise.
     function isBaseValidator(address validator) internal view returns (bool) {
-        VerificationLibStorage storage $ = getVerificationLibStorage();
-        return $.validators[validator];
+        return getVerificationLibStorage().validators[validator];
     }
 
     /// @notice Splits signature bytes into v, r, s components
