@@ -87,7 +87,7 @@ export const CONFIGS = {
   "testnet-prod": {
     solana: {
       cluster: "devnet",
-      rpcUrl: "api.devnet.solana.com",
+      rpcUrl: "c3-chainproxy-solana-devnet.cbhq.net",
 
       // Keypairs
       deployerKpPath: "keypairs/deployer.devnet.prod.json",

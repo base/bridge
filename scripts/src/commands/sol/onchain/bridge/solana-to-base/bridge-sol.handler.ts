@@ -89,56 +89,62 @@ export async function handleBridgeSol(args: Args): Promise<void> {
     logger.info(`Amount: ${args.amount}`);
     logger.info(`Scaled amount: ${scaledAmount}`);
 
-    const { salt, pubkey: outgoingMessage } = await outgoingMessagePubkey(
-      config.solana.bridgeProgram
-    );
-    logger.info(`Outgoing message: ${outgoingMessage}`);
+    for (let j = 0; j < 100; j++) {
+      let promises = [];
+      for (let i = 0; i < 100; i++) {
+        const {salt, pubkey: outgoingMessage} = await outgoingMessagePubkey(
+            config.solana.bridgeProgram
+        );
+        logger.info(`Outgoing message: ${outgoingMessage}`);
 
-    const ixs: Instruction[] = [
-      getBridgeSolInstruction(
-        {
-          // Accounts
-          payer,
-          from: payer,
-          gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
-          solVault: solVaultAddress,
-          bridge: bridgeAccountAddress,
-          outgoingMessage,
-          systemProgram: SYSTEM_PROGRAM_ADDRESS,
+        const ixs: Instruction[] = [
+          getBridgeSolInstruction(
+              {
+                // Accounts
+                payer,
+                from: payer,
+                gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
+                solVault: solVaultAddress,
+                bridge: bridgeAccountAddress,
+                outgoingMessage,
+                systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
-          // Arguments
-          outgoingMessageSalt: salt,
-          to: toBytes(args.to),
-          remoteToken,
-          amount: scaledAmount,
-          call: null,
-        },
-        { programAddress: config.solana.bridgeProgram }
-      ),
-    ];
+                // Arguments
+                outgoingMessageSalt: salt,
+                to: toBytes(args.to),
+                remoteToken,
+                amount: scaledAmount,
+                call: null,
+              },
+              {programAddress: config.solana.bridgeProgram}
+          ),
+        ];
 
-    if (args.payForRelay) {
-      ixs.push(
-        await buildPayForRelayInstruction(
-          args.deployEnv,
-          outgoingMessage,
-          payer
-        )
-      );
+        if (args.payForRelay) {
+          ixs.push(
+              await buildPayForRelayInstruction(
+                  args.deployEnv,
+                  outgoingMessage,
+                  payer
+              )
+          );
+        }
+
+        logger.info("Sending transaction...");
+        const promise = buildAndSendTransaction(args.deployEnv, ixs, payer);
+        promises.push(promise);
+        logger.success("Bridge SOL operation completed!");
+      }
+      await Promise.all(promises);
+
+      logger.info("All bridge operations completed!");
     }
 
-    logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(args.deployEnv, ixs, payer);
-    logger.success("Bridge SOL operation completed!");
-    logger.info(
-      `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
-    );
-
-    if (args.payForRelay) {
-      await monitorMessageExecution(args.deployEnv, outgoingMessage);
-    } else {
-      await relayMessageToBase(args.deployEnv, outgoingMessage);
-    }
+    // if (args.payForRelay) {
+    //   await monitorMessageExecution(args.deployEnv, outgoingMessage);
+    // } else {
+    //   await relayMessageToBase(args.deployEnv, outgoingMessage);
+    // }
   } catch (error) {
     logger.error("Bridge SOL operation failed:", error);
     throw error;

@@ -6,7 +6,7 @@ import {
   devnet,
   getSignatureFromTransaction,
   pipe,
-  sendAndConfirmTransactionFactory,
+  sendTransactionWithoutConfirmingFactory,
   setTransactionMessageFeePayer,
   setTransactionMessageLifetimeUsingBlockhash,
   signTransactionMessageWithSigners,
@@ -23,13 +23,13 @@ export async function buildAndSendTransaction(
 ) {
   const config = CONFIGS[deployEnv];
   const rpc = createSolanaRpc(`https://${config.solana.rpcUrl}`);
-  const rpcSubscriptions = createSolanaRpcSubscriptions(
-    devnet(`wss://${config.solana.rpcUrl}`)
-  );
+  // const rpcSubscriptions = createSolanaRpcSubscriptions(
+  //   devnet(`wss://${config.solana.rpcUrl}`)
+  // );
 
-  const sendAndConfirmTx = sendAndConfirmTransactionFactory({
+  const sendAndConfirmTx = sendTransactionWithoutConfirmingFactory({
     rpc,
-    rpcSubscriptions,
+    // rpcSubscriptions,
   });
 
   const blockhash = await rpc.getLatestBlockhash().send();
