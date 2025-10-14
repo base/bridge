@@ -2,10 +2,11 @@ import { z } from "zod";
 import {
   getProgramDerivedAddress,
   devnet,
-  type Address,
+  type Address as SolanaAddress,
   type KeyPairSigner,
   createSolanaRpc,
-  address,
+  address as solanaAddress,
+  isAddress as isSolanaAddress,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 
@@ -25,20 +26,45 @@ import {
 } from "@internal/sol";
 import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
-export const argsSchema = z.object({
-  deployEnv: z
-    .enum(DEPLOY_ENVS, {
-      message:
-        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
-    })
-    .default("testnet-alpha"),
-  payerKp: z
-    .union([z.literal("config"), z.string().brand<"payerKp">()])
-    .default("config"),
-  guardianKp: z
-    .union([z.literal("payer"), z.string().brand<"guardianKp">()])
-    .default("payer"),
+const solAddressSchema = z
+  .string()
+  .refine((value) => isSolanaAddress(value), {
+    message: "Value must be a base58 address",
+  })
+  .transform((value) => solanaAddress(value));
+
+const bigintStringSchema = z
+  .string()
+  .regex(/^[0-9]+$/, { message: "Value must be a base-10 integer string" })
+  .transform((value) => BigInt(value));
+
+const baseArgsSchema = z.object({
+  deployEnv: z.enum(DEPLOY_ENVS, {
+    message:
+      "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
+  }),
+  payerKp: z.union([z.literal("config"), z.string().brand<"payerKp">()]),
+  guardianKp: z.union([z.literal("payer"), z.string().brand<"guardianKp">()]),
 });
+
+const eip1559FlatSchema = z.object({
+  eip1559Target: bigintStringSchema,
+  eip1559Denominator: bigintStringSchema,
+  eip1559WindowDurationSeconds: bigintStringSchema,
+  eip1559MinimumBaseFee: bigintStringSchema,
+});
+
+const gasFlatSchema = z.object({
+  minGasLimitPerMessage: bigintStringSchema,
+  maxGasLimitPerMessage: bigintStringSchema,
+  gasCostScaler: bigintStringSchema,
+  gasCostScalerDp: bigintStringSchema,
+  gasFeeReceiver: solAddressSchema,
+});
+
+export const argsSchema = baseArgsSchema
+  .extend(eip1559FlatSchema.shape)
+  .extend(gasFlatSchema.shape);
 
 type Args = z.infer<typeof argsSchema>;
 type PayerKpArg = Args["payerKp"];
@@ -63,20 +89,20 @@ export async function handleInitialize(args: Args): Promise<void> {
 
     const guardian = await resolveGuardianKeypair(args.guardianKp, payer);
 
-    const eip1559Config = {
-      target: 5_000_000n,
-      denominator: 2n,
-      windowDurationSeconds: 1n,
-      minimumBaseFee: 1n,
-    } as const;
+    const eip1559Config: Eip1559Config = {
+      target: args.eip1559Target,
+      denominator: args.eip1559Denominator,
+      windowDurationSeconds: args.eip1559WindowDurationSeconds,
+      minimumBaseFee: args.eip1559MinimumBaseFee,
+    };
 
-    const gasConfig = {
-      minGasLimitPerMessage: 100_000n,
-      maxGasLimitPerMessage: 5_000_000n,
-      gasCostScaler: 1_000_000n,
-      gasCostScalerDp: 1_000_000n,
-      gasFeeReceiver: payer.address,
-    } as const;
+    const gasConfig: GasConfig = {
+      minGasLimitPerMessage: args.minGasLimitPerMessage,
+      maxGasLimitPerMessage: args.maxGasLimitPerMessage,
+      gasCostScaler: args.gasCostScaler,
+      gasCostScalerDp: args.gasCostScalerDp,
+      gasFeeReceiver: args.gasFeeReceiver,
+    };
 
     const ix = getInitializeInstruction(
       {
@@ -84,7 +110,7 @@ export async function handleInitialize(args: Args): Promise<void> {
         cfg: cfgAddress,
         guardian,
         systemProgram: SYSTEM_PROGRAM_ADDRESS,
-        newGuardian: address(guardian.address),
+        newGuardian: guardian.address,
         eip1559Config,
         gasConfig,
       },
@@ -127,7 +153,7 @@ async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
 
 async function assertInitialized(
   rpc: ReturnType<typeof createSolanaRpc>,
-  cfg: Address,
+  cfg: SolanaAddress,
   guardian: KeyPairSigner,
   eip1559Config: Eip1559Config,
   gasConfig: GasConfig

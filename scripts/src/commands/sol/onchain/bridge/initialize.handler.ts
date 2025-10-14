@@ -2,12 +2,14 @@ import { z } from "zod";
 import {
   getProgramDerivedAddress,
   devnet,
-  type Address,
+  type Address as SolanaAddress,
   type KeyPairSigner,
   createSolanaRpc,
+  address as solanaAddress,
+  isAddress as isSolanaAddress,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
-import { toBytes, toHex } from "viem";
+import { toBytes, toHex, isAddress as isEvmAddress } from "viem";
 
 import {
   fetchBridge,
@@ -29,26 +31,108 @@ import {
 } from "@internal/sol";
 import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
-export const argsSchema = z.object({
-  deployEnv: z
-    .enum(DEPLOY_ENVS, {
-      message:
-        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
-    })
-    .default("testnet-alpha"),
-  payerKp: z
-    .union([z.literal("config"), z.string().brand<"payerKp">()])
-    .default("config"),
-  guardianKp: z
-    .union([z.literal("payer"), z.string().brand<"guardianKp">()])
-    .default("payer"),
+const evmAddressSchema = z.string().refine((value) => isEvmAddress(value), {
+  message: "Value must be a valid EVM address",
 });
 
-type Args = z.infer<typeof argsSchema>;
-type PayerKpArg = Args["payerKp"];
-type GuardianKpArg = Args["guardianKp"];
+const solAddressSchema = z
+  .string()
+  .refine((value) => isSolanaAddress(value), {
+    message: "Value must be a base58 address",
+  })
+  .transform((value) => solanaAddress(value));
 
-export async function handleInitialize(args: Args): Promise<void> {
+const bigintStringSchema = z
+  .string()
+  .regex(/^[0-9]+$/, { message: "Value must be a base-10 integer string" })
+  .transform((value) => BigInt(value));
+
+const baseArgsSchema = z.object({
+  deployEnv: z.enum(DEPLOY_ENVS, {
+    message:
+      "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
+  }),
+  payerKp: z.union([z.literal("config"), z.string().brand<"payerKp">()]),
+  guardianKp: z.union([z.literal("payer"), z.string().brand<"guardianKp">()]),
+});
+
+const eip1559FlatSchema = z.object({
+  eip1559Target: bigintStringSchema,
+  eip1559Denominator: bigintStringSchema,
+  eip1559WindowDurationSeconds: bigintStringSchema,
+  eip1559MinimumBaseFee: bigintStringSchema,
+});
+
+const gasFlatSchema = z.object({
+  gasPerCall: bigintStringSchema,
+  gasCostScaler: bigintStringSchema,
+  gasCostScalerDp: bigintStringSchema,
+  gasFeeReceiver: solAddressSchema,
+});
+
+const protocolFlatSchema = z.object({
+  protocolBlockIntervalRequirement: bigintStringSchema,
+});
+
+const bufferFlatSchema = z.object({
+  bufferMaxCallBufferSize: bigintStringSchema,
+});
+
+const baseOracleFlatSchema = z.object({
+  baseOracleThreshold: z
+    .string()
+    .regex(/^[0-9]+$/, { message: "Threshold must be a base-10 integer" })
+    .transform((value) => Number(value))
+    .refine((value) => Number.isInteger(value) && value >= 0, {
+      message: "Threshold must be a non-negative integer",
+    }),
+  baseOracleSignerCount: z
+    .string()
+    .regex(/^[0-9]+$/, { message: "Signer count must be a base-10 integer" })
+    .transform((value) => Number(value))
+    .refine((value) => Number.isInteger(value) && value >= 0, {
+      message: "Signer count must be a non-negative integer",
+    }),
+  baseOracleSigners: z
+    .string()
+    .transform((value) =>
+      value
+        .split(/[\s,]+/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0)
+    )
+    .pipe(
+      z
+        .array(evmAddressSchema)
+        .nonempty({ message: "At least one base oracle signer is required" })
+    ),
+});
+
+const partnerOracleFlatSchema = z.object({
+  partnerOracleRequiredThreshold: z
+    .string()
+    .regex(/^[0-9]+$/, {
+      message: "Required threshold must be a base-10 integer",
+    })
+    .transform((value) => Number(value))
+    .refine((value) => Number.isInteger(value) && value > 0, {
+      message: "Required threshold must be a positive integer",
+    }),
+});
+
+export const argsSchema = baseArgsSchema
+  .extend(eip1559FlatSchema.shape)
+  .extend(gasFlatSchema.shape)
+  .extend(protocolFlatSchema.shape)
+  .extend(bufferFlatSchema.shape)
+  .extend(baseOracleFlatSchema.shape)
+  .extend(partnerOracleFlatSchema.shape);
+
+export type InitializeArgs = z.infer<typeof argsSchema>;
+type PayerKpArg = InitializeArgs["payerKp"];
+type GuardianKpArg = InitializeArgs["guardianKp"];
+
+export async function handleInitialize(args: InitializeArgs): Promise<void> {
   try {
     logger.info("--- Initialize bridge script ---");
 
@@ -70,38 +154,59 @@ export async function handleInitialize(args: Args): Promise<void> {
     logger.info(`Bridge account address: ${bridgeAccountAddress}`);
 
     const guardian = await resolveGuardianKeypair(args.guardianKp, payer);
-    const eip1559Config = {
-      target: 5_000_000n,
-      denominator: 2n,
-      windowDurationSeconds: 1n,
-      minimumBaseFee: 1n,
+
+    const eip1559Config: Eip1559Config = {
+      target: args.eip1559Target,
+      denominator: args.eip1559Denominator,
+      windowDurationSeconds: args.eip1559WindowDurationSeconds,
+      minimumBaseFee: args.eip1559MinimumBaseFee,
     };
-    const gasConfig = {
-      gasPerCall: 125_000n,
-      gasCostScaler: 1_000_000n,
-      gasCostScalerDp: 1_000_000n,
-      gasFeeReceiver: payer.address,
+
+    const gasConfig: GasConfig = {
+      gasPerCall: args.gasPerCall,
+      gasCostScaler: args.gasCostScaler,
+      gasCostScalerDp: args.gasCostScalerDp,
+      gasFeeReceiver: args.gasFeeReceiver,
     };
-    const protocolConfig = {
-      blockIntervalRequirement: 300n,
+
+    const protocolConfig: ProtocolConfig = {
+      blockIntervalRequirement: args.protocolBlockIntervalRequirement,
     };
-    const bufferConfig = {
-      maxCallBufferSize: 8n * 1024n,
+
+    const bufferConfig: BufferConfig = {
+      maxCallBufferSize: args.bufferMaxCallBufferSize,
     };
-    const baseOracleConfig = {
-      threshold: 2,
-      signerCount: 2,
+
+    const baseOracleSigners = args.baseOracleSigners.map((signer) =>
+      toBytes(signer)
+    );
+
+    if (baseOracleSigners.length !== args.baseOracleSignerCount) {
+      throw new Error(
+        "Base oracle signer count does not match provided signer array length"
+      );
+    }
+
+    const maxSignerCount = getIdlConstant("MAX_SIGNER_COUNT");
+    if (baseOracleSigners.length > maxSignerCount) {
+      throw new Error(
+        "Base oracle signer count cannot be greater than max signer count"
+      );
+    }
+
+    const baseOracleConfig: BaseOracleConfig = {
+      threshold: args.baseOracleThreshold,
+      signerCount: args.baseOracleSignerCount,
       signers: [
-        toBytes(config.solana.evmLocalKey),
-        toBytes(config.solana.evmKeychainKey),
-        ...Array.from(
-          { length: 14 },
-          () => new Uint8Array(toBytes(config.solana.evmLocalKey).length)
+        ...baseOracleSigners,
+        ...Array(maxSignerCount - baseOracleSigners.length).fill(
+          new Uint8Array(20)
         ),
       ],
     };
-    const partnerOracleConfig = {
-      requiredThreshold: 3,
+
+    const partnerOracleConfig: PartnerOracleConfig = {
+      requiredThreshold: args.partnerOracleRequiredThreshold,
     };
 
     // Build initialize instruction
@@ -162,7 +267,7 @@ async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
 
 async function assertInitialized(
   rpc: ReturnType<typeof createSolanaRpc>,
-  bridgeAccountAddress: Address,
+  bridgeAccountAddress: SolanaAddress,
   guardian: KeyPairSigner,
   eip1559Config: Eip1559Config,
   gasConfig: GasConfig,

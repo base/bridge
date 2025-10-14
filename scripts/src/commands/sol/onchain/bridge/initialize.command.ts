@@ -1,14 +1,139 @@
 import { Command } from "commander";
 import { select, text, confirm, isCancel, cancel } from "@clack/prompts";
 import { existsSync } from "fs";
+import { isAddress as isSolanaAddress } from "@solana/kit";
+import { isAddress as isEvmAddress } from "viem";
 
 import { logger } from "@internal/logger";
 import { argsSchema, handleInitialize } from "./initialize.handler";
+
+const getInteractiveInput = async (
+  message: string,
+  placeholder: string,
+  validate: (input: string) => string | undefined
+): Promise<string> => {
+  const result = await text({ message, placeholder, validate });
+  if (isCancel(result)) {
+    cancel("Operation cancelled.");
+    process.exit(1);
+  }
+  return result.trim();
+};
+
+const ensureBigintString = async (
+  value: string | undefined,
+  label: string
+): Promise<string> => {
+  const validate = (input: string) => {
+    const trimmed = input.trim();
+    if (trimmed.length === 0) {
+      return "Value cannot be empty";
+    }
+    if (!/^[0-9]+$/.test(trimmed)) {
+      return "Value must be a positive integer";
+    }
+    return undefined;
+  };
+
+  if (value !== undefined) {
+    const trimmed = value.trim();
+    const error = validate(trimmed);
+    if (error) {
+      logger.error(`${label}: ${error}`);
+      process.exit(1);
+    }
+    return trimmed;
+  }
+
+  return getInteractiveInput(label, "12345", validate);
+};
+
+const ensureSolanaAddressString = async (
+  value: string | undefined,
+  label: string
+): Promise<string> => {
+  const validate = (input: string) => {
+    const trimmed = input.trim();
+    if (trimmed.length === 0) {
+      return "Value cannot be empty";
+    }
+    if (!isSolanaAddress(trimmed)) {
+      return "Value must be a base58 address";
+    }
+    return undefined;
+  };
+
+  if (value !== undefined) {
+    const trimmed = value.trim();
+    const error = validate(trimmed);
+    if (error) {
+      logger.error(`${label}: ${error}`);
+      process.exit(1);
+    }
+    return trimmed;
+  }
+
+  return getInteractiveInput(label, "Solana address", validate);
+};
+
+const ensureEvmAddressList = async (
+  value: string | undefined,
+  label: string
+): Promise<string> => {
+  const parseAddresses = (input: string): string[] =>
+    input
+      .split(/[\s,]+/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+
+  const validate = (input: string) => {
+    const trimmed = input.trim();
+    if (trimmed.length === 0) {
+      return "At least one signer is required";
+    }
+    const addresses = parseAddresses(trimmed);
+    if (addresses.length === 0) {
+      return "At least one signer is required";
+    }
+    for (const address of addresses) {
+      if (!isEvmAddress(address)) {
+        return `Invalid EVM address: ${address}`;
+      }
+    }
+    return undefined;
+  };
+
+  if (value !== undefined) {
+    const trimmed = value.trim();
+    const error = validate(trimmed);
+    if (error) {
+      logger.error(`${label}: ${error}`);
+      process.exit(1);
+    }
+    return trimmed;
+  }
+
+  return getInteractiveInput(label, "0xSigner1, 0xSigner2", validate);
+};
 
 type CommanderOptions = {
   deployEnv?: string;
   payerKp?: string;
   guardianKp?: string;
+  eip1559Target?: string;
+  eip1559Denominator?: string;
+  eip1559WindowDurationSeconds?: string;
+  eip1559MinimumBaseFee?: string;
+  gasPerCall?: string;
+  gasCostScaler?: string;
+  gasCostScalerDp?: string;
+  gasFeeReceiver?: string;
+  protocolBlockIntervalRequirement?: string;
+  bufferMaxCallBufferSize?: string;
+  baseOracleThreshold?: string;
+  baseOracleSignerCount?: string;
+  baseOracleSigners?: string;
+  partnerOracleRequiredThreshold?: string;
 };
 
 async function collectInteractiveOptions(
@@ -100,6 +225,68 @@ async function collectInteractiveOptions(
     }
   }
 
+  opts.eip1559Target = await ensureBigintString(
+    opts.eip1559Target,
+    "Enter EIP-1559 target (bigint)"
+  );
+  opts.eip1559Denominator = await ensureBigintString(
+    opts.eip1559Denominator,
+    "Enter EIP-1559 denominator (bigint)"
+  );
+  opts.eip1559WindowDurationSeconds = await ensureBigintString(
+    opts.eip1559WindowDurationSeconds,
+    "Enter EIP-1559 window duration seconds (bigint)"
+  );
+  opts.eip1559MinimumBaseFee = await ensureBigintString(
+    opts.eip1559MinimumBaseFee,
+    "Enter EIP-1559 minimum base fee (bigint)"
+  );
+
+  opts.gasPerCall = await ensureBigintString(
+    opts.gasPerCall,
+    "Enter gas per call (bigint)"
+  );
+  opts.gasCostScaler = await ensureBigintString(
+    opts.gasCostScaler,
+    "Enter gas cost scaler (bigint)"
+  );
+  opts.gasCostScalerDp = await ensureBigintString(
+    opts.gasCostScalerDp,
+    "Enter gas cost scaler decimal precision (bigint)"
+  );
+  opts.gasFeeReceiver = await ensureSolanaAddressString(
+    opts.gasFeeReceiver,
+    "Enter gas fee receiver (solana address)"
+  );
+
+  opts.protocolBlockIntervalRequirement = await ensureBigintString(
+    opts.protocolBlockIntervalRequirement,
+    "Enter protocol block interval requirement (bigint)"
+  );
+
+  opts.bufferMaxCallBufferSize = await ensureBigintString(
+    opts.bufferMaxCallBufferSize,
+    "Enter buffer max call buffer size (bigint)"
+  );
+
+  opts.baseOracleThreshold = await ensureBigintString(
+    opts.baseOracleThreshold,
+    "Enter base oracle threshold (bigint)"
+  );
+  opts.baseOracleSignerCount = await ensureBigintString(
+    opts.baseOracleSignerCount,
+    "Enter base oracle signer count (bigint)"
+  );
+  opts.baseOracleSigners = await ensureEvmAddressList(
+    opts.baseOracleSigners,
+    "Enter base oracle signers (comma-separated EVM addresses)"
+  );
+
+  opts.partnerOracleRequiredThreshold = await ensureBigintString(
+    opts.partnerOracleRequiredThreshold,
+    "Enter partner oracle required threshold (bigint)"
+  );
+
   return opts;
 }
 
@@ -117,9 +304,47 @@ export const initializeCommand = new Command("initialize")
     "--guardian-kp <path>",
     "Guardian keypair: 'payer' or custom guardian keypair path"
   )
+  .option("--eip1559-target <uint>", "EIP-1559 target (bigint)")
+  .option("--eip1559-denominator <uint>", "EIP-1559 denominator (bigint)")
+  .option(
+    "--eip1559-window-duration-seconds <uint>",
+    "EIP-1559 window duration seconds (bigint)"
+  )
+  .option(
+    "--eip1559-minimum-base-fee <uint>",
+    "EIP-1559 minimum base fee (bigint)"
+  )
+  .option("--gas-per-call <uint>", "Gas per call (bigint)")
+  .option("--gas-cost-scaler <uint>", "Gas cost scaler (bigint)")
+  .option(
+    "--gas-cost-scaler-dp <uint>",
+    "Gas cost scaler decimal precision (bigint)"
+  )
+  .option("--gas-fee-receiver <hex>", "Gas fee receiver address (hex)")
+  .option(
+    "--protocol-block-interval-requirement <uint>",
+    "Protocol block interval requirement (bigint)"
+  )
+  .option(
+    "--buffer-max-call-buffer-size <uint>",
+    "Buffer max call buffer size (bigint)"
+  )
+  .option("--base-oracle-threshold <int>", "Base oracle threshold (bigint)")
+  .option(
+    "--base-oracle-signer-count <int>",
+    "Base oracle signer count (bigint)"
+  )
+  .option(
+    "--base-oracle-signers <hexes>",
+    "Comma or space separated base oracle signer addresses"
+  )
+  .option(
+    "--partner-oracle-required-threshold <int>",
+    "Partner oracle required threshold (bigint)"
+  )
   .action(async (options) => {
-    const opts = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(opts);
+    const collected = await collectInteractiveOptions(options);
+    const parsed = argsSchema.safeParse(collected);
     if (!parsed.success) {
       logger.error("Validation failed:");
       parsed.error.issues.forEach((err) => {

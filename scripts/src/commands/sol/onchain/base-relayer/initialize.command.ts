@@ -4,11 +4,90 @@ import { existsSync } from "fs";
 
 import { logger } from "@internal/logger";
 import { argsSchema, handleInitialize } from "./initialize.handler";
+import { isAddress as isSolanaAddress } from "@solana/kit";
+
+const getInteractiveInput = async (
+  message: string,
+  placeholder: string,
+  validate: (input: string) => string | undefined
+): Promise<string> => {
+  const result = await text({ message, placeholder, validate });
+  if (isCancel(result)) {
+    cancel("Operation cancelled.");
+    process.exit(1);
+  }
+  return result.trim();
+};
+
+const ensureBigintString = async (
+  value: string | undefined,
+  label: string
+): Promise<string> => {
+  const validate = (input: string) => {
+    const trimmed = input.trim();
+    if (trimmed.length === 0) {
+      return "Value cannot be empty";
+    }
+    if (!/^[0-9]+$/.test(trimmed)) {
+      return "Value must be a positive integer";
+    }
+    return undefined;
+  };
+
+  if (value !== undefined) {
+    const trimmed = value.trim();
+    const error = validate(trimmed);
+    if (error) {
+      logger.error(`${label}: ${error}`);
+      process.exit(1);
+    }
+    return trimmed;
+  }
+
+  return getInteractiveInput(label, "12345", validate);
+};
+
+const ensureSolanaAddressString = async (
+  value: string | undefined,
+  label: string
+): Promise<string> => {
+  const validate = (input: string) => {
+    const trimmed = input.trim();
+    if (trimmed.length === 0) {
+      return "Value cannot be empty";
+    }
+    if (!isSolanaAddress(trimmed)) {
+      return "Value must be a base58 address";
+    }
+    return undefined;
+  };
+
+  if (value !== undefined) {
+    const trimmed = value.trim();
+    const error = validate(trimmed);
+    if (error) {
+      logger.error(`${label}: ${error}`);
+      process.exit(1);
+    }
+    return trimmed;
+  }
+
+  return getInteractiveInput(label, "Solana address", validate);
+};
 
 type CommanderOptions = {
   deployEnv?: string;
   payerKp?: string;
   guardianKp?: string;
+  eip1559Target?: string;
+  eip1559Denominator?: string;
+  eip1559WindowDurationSeconds?: string;
+  eip1559MinimumBaseFee?: string;
+  minGasLimitPerMessage?: string;
+  maxGasLimitPerMessage?: string;
+  gasCostScaler?: string;
+  gasCostScalerDp?: string;
+  gasFeeReceiver?: string;
 };
 
 async function collectInteractiveOptions(
@@ -100,6 +179,44 @@ async function collectInteractiveOptions(
     }
   }
 
+  opts.eip1559Target = await ensureBigintString(
+    opts.eip1559Target,
+    "Enter EIP-1559 target (bigint)"
+  );
+  opts.eip1559Denominator = await ensureBigintString(
+    opts.eip1559Denominator,
+    "Enter EIP-1559 denominator (bigint)"
+  );
+  opts.eip1559WindowDurationSeconds = await ensureBigintString(
+    opts.eip1559WindowDurationSeconds,
+    "Enter EIP-1559 window duration seconds (bigint)"
+  );
+  opts.eip1559MinimumBaseFee = await ensureBigintString(
+    opts.eip1559MinimumBaseFee,
+    "Enter EIP-1559 minimum base fee (bigint)"
+  );
+
+  opts.minGasLimitPerMessage = await ensureBigintString(
+    opts.minGasLimitPerMessage,
+    "Enter minimum gas limit per message (bigint)"
+  );
+  opts.maxGasLimitPerMessage = await ensureBigintString(
+    opts.maxGasLimitPerMessage,
+    "Enter maximum gas limit per message (bigint)"
+  );
+  opts.gasCostScaler = await ensureBigintString(
+    opts.gasCostScaler,
+    "Enter gas cost scaler (bigint)"
+  );
+  opts.gasCostScalerDp = await ensureBigintString(
+    opts.gasCostScalerDp,
+    "Enter gas cost scaler decimal precision (bigint)"
+  );
+  opts.gasFeeReceiver = await ensureSolanaAddressString(
+    opts.gasFeeReceiver,
+    "Enter gas fee receiver (solana address)"
+  );
+
   return opts;
 }
 
@@ -117,6 +234,30 @@ export const initializeCommand = new Command("initialize")
     "--guardian-kp <path>",
     "Guardian keypair: 'payer' or custom guardian keypair path"
   )
+  .option("--eip1559-target <uint>", "EIP-1559 target (bigint)")
+  .option("--eip1559-denominator <uint>", "EIP-1559 denominator (bigint)")
+  .option(
+    "--eip1559-window-duration-seconds <uint>",
+    "EIP-1559 window duration seconds (bigint)"
+  )
+  .option(
+    "--eip1559-minimum-base-fee <uint>",
+    "EIP-1559 minimum base fee (bigint)"
+  )
+  .option(
+    "--min-gas-limit-per-message <uint>",
+    "Minimum gas limit per message (bigint)"
+  )
+  .option(
+    "--max-gas-limit-per-message <uint>",
+    "Maximum gas limit per message (bigint)"
+  )
+  .option("--gas-cost-scaler <uint>", "Gas cost scaler (bigint)")
+  .option(
+    "--gas-cost-scaler-dp <uint>",
+    "Gas cost scaler decimal precision (bigint)"
+  )
+  .option("--gas-fee-receiver <address>", "Gas fee receiver (solana address)")
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
     const parsed = argsSchema.safeParse(opts);

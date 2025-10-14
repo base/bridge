@@ -13,7 +13,6 @@ import {
   toBytes,
   type Address,
   type Hash,
-  type Hex,
 } from "viem";
 import { baseSepolia } from "viem/chains";
 import { decodeEventLog } from "viem/utils";
