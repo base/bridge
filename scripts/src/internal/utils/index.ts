@@ -8,3 +8,5 @@ export async function findGitRoot(): Promise<string> {
     throw new Error("Not in a git repository or git not found");
   }
 }
+
+export * from "./cli";

@@ -1,6 +1,6 @@
 import { Command } from "commander";
-import { select, isCancel, cancel } from "@clack/prompts";
 
+import { getInteractiveSelect, validateAndExecute } from "@internal/utils/cli";
 import { logger } from "@internal/logger";
 import { argsSchema, handleGenerateClient } from "./generate-client.handler";
 
@@ -14,7 +14,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.program) {
-    const program = await select({
+    opts.program = await getInteractiveSelect({
       message: "Select program to generate client for:",
       options: [
         { value: "bridge", label: "Bridge" },
@@ -22,11 +22,6 @@ async function collectInteractiveOptions(
       ],
       initialValue: "bridge",
     });
-    if (isCancel(program)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.program = program;
   }
 
   return opts;
@@ -38,16 +33,7 @@ export const generateClientCommand = new Command("generate-client")
   .action(async (options) => {
     try {
       const opts = await collectInteractiveOptions(options);
-      const parsed = argsSchema.safeParse(opts);
-      if (!parsed.success) {
-        logger.error("Validation failed:");
-        parsed.error.issues.forEach((err) => {
-          logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-        });
-        process.exit(1);
-      }
-
-      await handleGenerateClient(parsed.data);
+      await validateAndExecute(argsSchema, opts, handleGenerateClient);
     } catch (error) {
       logger.error("Client generation failed:", error);
       process.exit(1);

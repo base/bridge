@@ -1,8 +1,11 @@
 import { Command } from "commander";
-import { select, text, confirm, isCancel, cancel } from "@clack/prompts";
-import { existsSync } from "fs";
 
-import { logger } from "@internal/logger";
+import {
+  getInteractiveSelect,
+  getOrPromptHash,
+  getOrPromptKeypairPath,
+  validateAndExecute,
+} from "@internal/utils/cli";
 import { argsSchema, handleRelayMessage } from "./relay-message.handler";
 
 type CommanderOptions = {
@@ -17,7 +20,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    const deployEnv = await select({
+    opts.deployEnv = await getInteractiveSelect({
       message: "Select target deploy environment:",
       options: [
         { value: "testnet-alpha", label: "Testnet Alpha" },
@@ -25,70 +28,18 @@ async function collectInteractiveOptions(
       ],
       initialValue: "testnet-alpha",
     });
-    if (isCancel(deployEnv)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.deployEnv = deployEnv;
   }
 
-  if (!opts.messageHash) {
-    const messageHash = await text({
-      message: "Enter message hash to relay:",
-      placeholder: "0x...",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Message hash cannot be empty";
-        }
-        const cleanHash = value.trim();
-        if (!cleanHash.startsWith("0x")) {
-          return "Message hash must start with 0x";
-        }
-        if (cleanHash.length !== 66) {
-          return "Message hash must be 32 bytes (66 characters including 0x)";
-        }
-      },
-    });
-    if (isCancel(messageHash)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.messageHash = messageHash.trim();
-  }
+  opts.messageHash = await getOrPromptHash(
+    opts.messageHash,
+    "Enter message hash to relay"
+  );
 
-  if (!opts.payerKp) {
-    const useConfigPayer = await confirm({
-      message: "Use config payer keypair?",
-      initialValue: true,
-    });
-    if (isCancel(useConfigPayer)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-
-    if (useConfigPayer) {
-      opts.payerKp = "config";
-    } else {
-      const keypairPath = await text({
-        message: "Enter path to payer keypair:",
-        placeholder: "/path/to/keypair.json",
-        validate: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "Keypair path cannot be empty";
-          }
-          const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-          if (!existsSync(cleanPath)) {
-            return "Keypair file does not exist";
-          }
-        },
-      });
-      if (isCancel(keypairPath)) {
-        cancel("Operation cancelled.");
-        process.exit(1);
-      }
-      opts.payerKp = keypairPath.trim().replace(/^["']|["']$/g, "");
-    }
-  }
+  opts.payerKp = await getOrPromptKeypairPath(
+    opts.payerKp,
+    "Enter payer keypair path (or 'config' for Solana CLI config)",
+    ["config"]
+  );
 
   return opts;
 }
@@ -106,13 +57,5 @@ export const relayMessageCommand = new Command("relay-message")
   )
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(opts);
-    if (!parsed.success) {
-      logger.error("Validation failed:");
-      parsed.error.issues.forEach((err) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-      });
-      process.exit(1);
-    }
-    await handleRelayMessage(parsed.data);
+    await validateAndExecute(argsSchema, opts, handleRelayMessage);
   });

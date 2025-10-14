@@ -1,8 +1,14 @@
 import { Command } from "commander";
-import { text, select, confirm, isCancel, cancel } from "@clack/prompts";
-import { existsSync } from "fs";
 
-import { logger } from "@internal/logger";
+import {
+  getInteractiveSelect,
+  getInteractiveConfirm,
+  getOrPromptInteger,
+  getOrPromptString,
+  getOrPromptEvmAddress,
+  getOrPromptKeypairPath,
+  validateAndExecute,
+} from "@internal/utils/cli";
 import { argsSchema, handleWrapToken } from "./wrap-token.handler";
 
 type CommanderOptions = {
@@ -22,7 +28,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    const deployEnv = await select({
+    opts.deployEnv = await getInteractiveSelect({
       message: "Select target deploy environment:",
       options: [
         { value: "testnet-alpha", label: "Testnet Alpha" },
@@ -30,70 +36,28 @@ async function collectInteractiveOptions(
       ],
       initialValue: "testnet-alpha",
     });
-    if (isCancel(deployEnv)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.deployEnv = deployEnv;
   }
 
-  if (!opts.decimals) {
-    const decimals = await text({
-      message: "Enter token decimals:",
-      placeholder: "6",
-      initialValue: "6",
-      validate: (value) => {
-        const num = parseInt(value);
-        if (isNaN(num) || num < 0) {
-          return "Decimals must be a non-negative number";
-        }
-      },
-    });
-    if (isCancel(decimals)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.decimals = decimals.trim();
-  }
+  opts.decimals = await getOrPromptInteger(
+    opts.decimals,
+    "Enter token decimals",
+    0
+  );
 
-  if (!opts.name) {
-    const name = await text({
-      message: "Enter token name:",
-      placeholder: "Wrapped ERC20",
-      initialValue: "Wrapped ERC20",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Token name cannot be empty";
-        }
-      },
-    });
-    if (isCancel(name)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.name = name.trim();
-  }
+  opts.name = await getOrPromptString(
+    opts.name,
+    "Enter token name",
+    "Wrapped ERC20"
+  );
 
-  if (!opts.symbol) {
-    const symbol = await text({
-      message: "Enter token symbol:",
-      placeholder: "wERC20",
-      initialValue: "wERC20",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Token symbol cannot be empty";
-        }
-      },
-    });
-    if (isCancel(symbol)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.symbol = symbol.trim();
-  }
+  opts.symbol = await getOrPromptString(
+    opts.symbol,
+    "Enter token symbol",
+    "wERC20"
+  );
 
   if (!opts.remoteToken) {
-    const remoteToken = await select({
+    const remoteToken = await getInteractiveSelect({
       message: "Select remote token:",
       options: [
         { value: "constant-erc20", label: "ERC20 from constants" },
@@ -102,97 +66,34 @@ async function collectInteractiveOptions(
       ],
       initialValue: "constant-erc20",
     });
-    if (isCancel(remoteToken)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
 
     if (remoteToken === "custom") {
-      const customAddress = await text({
-        message: "Enter token address:",
-        placeholder: "0x...",
-        validate: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "Token address cannot be empty";
-          }
-          if (!value.trim().startsWith("0x")) {
-            return "Address must start with 0x";
-          }
-        },
-      });
-      if (isCancel(customAddress)) {
-        cancel("Operation cancelled.");
-        process.exit(1);
-      }
-      opts.remoteToken = customAddress.trim();
+      opts.remoteToken = await getOrPromptEvmAddress(
+        undefined,
+        "Enter token address"
+      );
     } else {
       opts.remoteToken = remoteToken;
     }
   }
 
-  if (!opts.scalerExponent) {
-    const scalerExponent = await text({
-      message: "Enter scaler exponent:",
-      placeholder: "9",
-      initialValue: "9",
-      validate: (value) => {
-        const num = parseInt(value);
-        if (isNaN(num) || num < 0) {
-          return "Scaler exponent must be a non-negative number";
-        }
-      },
-    });
-    if (isCancel(scalerExponent)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.scalerExponent = scalerExponent.trim();
-  }
+  opts.scalerExponent = await getOrPromptInteger(
+    opts.scalerExponent,
+    "Enter scaler exponent",
+    0
+  );
 
-  if (!opts.payerKp) {
-    const useConfigPayer = await confirm({
-      message: "Use config payer keypair?",
-      initialValue: true,
-    });
-    if (isCancel(useConfigPayer)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-
-    if (useConfigPayer) {
-      opts.payerKp = "config";
-    } else {
-      const keypairPath = await text({
-        message: "Enter path to payer keypair:",
-        placeholder: "/path/to/keypair.json",
-        validate: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "Keypair path cannot be empty";
-          }
-          const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-          if (!existsSync(cleanPath)) {
-            return "Keypair file does not exist";
-          }
-        },
-      });
-      if (isCancel(keypairPath)) {
-        cancel("Operation cancelled.");
-        process.exit(1);
-      }
-      opts.payerKp = keypairPath.trim().replace(/^["']|["']$/g, "");
-    }
-  }
+  opts.payerKp = await getOrPromptKeypairPath(
+    opts.payerKp,
+    "Enter payer keypair path (or 'config' for Solana CLI config)",
+    ["config"]
+  );
 
   if (opts.payForRelay === undefined) {
-    const payForRelay = await confirm({
-      message: "Pay for relaying the message to Base?",
-      initialValue: true,
-    });
-    if (isCancel(payForRelay)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.payForRelay = payForRelay;
+    opts.payForRelay = await getInteractiveConfirm(
+      "Pay for relaying the message to Base?",
+      true
+    );
   }
 
   return opts;
@@ -219,13 +120,5 @@ export const wrapTokenCommand = new Command("wrap-token")
   .option("--pay-for-relay", "Pay for relaying the message to Base")
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(opts);
-    if (!parsed.success) {
-      logger.error("Validation failed:");
-      parsed.error.issues.forEach((err) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-      });
-      process.exit(1);
-    }
-    await handleWrapToken(parsed.data);
+    await validateAndExecute(argsSchema, opts, handleWrapToken);
   });

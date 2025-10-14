@@ -1,9 +1,12 @@
-import { existsSync } from "fs";
 import { Command } from "commander";
-import { text, isCancel, cancel, select } from "@clack/prompts";
-import { isAddress } from "@solana/kit";
 
-import { logger } from "@internal/logger";
+import {
+  getInteractiveSelect,
+  getOrPromptSolanaAddress,
+  getOrPromptDecimal,
+  getOrPromptKeypairPath,
+  validateAndExecute,
+} from "@internal/utils/cli";
 import { argsSchema, handleMint } from "./mint.handler";
 
 type CommanderOptions = {
@@ -21,7 +24,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    const deployEnv = await select({
+    opts.deployEnv = await getInteractiveSelect({
       message: "Select target deploy environment:",
       options: [
         { value: "testnet-alpha", label: "Testnet Alpha" },
@@ -29,125 +32,34 @@ async function collectInteractiveOptions(
       ],
       initialValue: "testnet-alpha",
     });
-    if (isCancel(deployEnv)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.deployEnv = deployEnv;
   }
 
-  if (!opts.mint) {
-    const mint = await text({
-      message: "Enter mint address:",
-      placeholder: "11111111111111111111111111111112",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Mint address cannot be empty";
-        }
-        if (!isAddress(value.trim())) {
-          return "Invalid mint address";
-        }
-      },
-    });
-    if (isCancel(mint)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.mint = mint.trim();
-  }
+  opts.mint = await getOrPromptSolanaAddress(opts.mint, "Enter mint address");
 
-  if (!opts.to) {
-    const to = await text({
-      message: "Enter recipient address (or 'config' for Solana CLI config):",
-      placeholder: "config",
-      initialValue: "config",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Recipient address cannot be empty";
-        }
+  // 'to' can be "config" or a Solana address - handled by handler
+  opts.to = await getOrPromptSolanaAddress(
+    opts.to,
+    "Enter recipient address (or 'config' for Solana CLI config)",
+    ["config"]
+  );
 
-        if (value !== "config") {
-          if (!isAddress(value.trim())) {
-            return "Invalid recipient address";
-          }
-        }
-      },
-    });
-    if (isCancel(to)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.to = to.trim();
-  }
+  opts.amount = await getOrPromptDecimal(
+    opts.amount,
+    "Enter amount to mint",
+    0.001
+  );
 
-  if (!opts.amount) {
-    const amount = await text({
-      message: "Enter amount to mint:",
-      placeholder: "100",
-      initialValue: "100",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Amount cannot be empty";
-        }
-        const num = parseFloat(value);
-        if (isNaN(num) || num <= 0) {
-          return "Amount must be a positive number";
-        }
-      },
-    });
-    if (isCancel(amount)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.amount = amount.trim();
-  }
+  opts.mintAuthorityKp = await getOrPromptKeypairPath(
+    opts.mintAuthorityKp,
+    "Enter mint authority keypair path (or 'config' for Solana CLI config)",
+    ["config"]
+  );
 
-  if (!opts.mintAuthorityKp) {
-    const mintAuthorityKp = await text({
-      message:
-        "Enter mint authority keypair path (or 'config' for Solana CLI config):",
-      placeholder: "config",
-      initialValue: "config",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Mint authority keypair cannot be empty";
-        }
-        const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-        if (cleanPath !== "config" && !existsSync(cleanPath)) {
-          return "Mint authority keypair file does not exist";
-        }
-      },
-    });
-    if (isCancel(mintAuthorityKp)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    // Clean the path before storing
-    opts.mintAuthorityKp = mintAuthorityKp.trim().replace(/^["']|["']$/g, "");
-  }
-
-  if (!opts.payerKp) {
-    const payerKp = await text({
-      message: "Enter payer keypair path (or 'config' for Solana CLI config):",
-      placeholder: "config",
-      initialValue: "config",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Payer keypair cannot be empty";
-        }
-        const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-        if (cleanPath !== "config" && !existsSync(cleanPath)) {
-          return "Payer keypair file does not exist";
-        }
-      },
-    });
-    if (isCancel(payerKp)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    // Clean the path before storing
-    opts.payerKp = payerKp.trim().replace(/^["']|["']$/g, "");
-  }
+  opts.payerKp = await getOrPromptKeypairPath(
+    opts.payerKp,
+    "Enter payer keypair path (or 'config' for Solana CLI config)",
+    ["config"]
+  );
 
   return opts;
 }
@@ -174,13 +86,5 @@ export const mintCommand = new Command("mint")
   )
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(opts);
-    if (!parsed.success) {
-      logger.error("Validation failed:");
-      parsed.error.issues.forEach((err) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-      });
-      process.exit(1);
-    }
-    await handleMint(parsed.data);
+    await validateAndExecute(argsSchema, opts, handleMint);
   });

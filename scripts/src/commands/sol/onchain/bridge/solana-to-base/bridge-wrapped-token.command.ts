@@ -1,9 +1,14 @@
 import { Command } from "commander";
-import { select, text, isCancel, cancel, confirm } from "@clack/prompts";
-import { existsSync } from "fs";
-import { isAddress } from "@solana/kit";
 
-import { logger } from "@internal/logger";
+import {
+  getInteractiveSelect,
+  getInteractiveConfirm,
+  getOrPromptEvmAddress,
+  getOrPromptSolanaAddress,
+  getOrPromptDecimal,
+  getOrPromptKeypairPath,
+  validateAndExecute,
+} from "@internal/utils/cli";
 import {
   argsSchema,
   handleBridgeWrappedToken,
@@ -25,7 +30,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    const deployEnv = await select({
+    opts.deployEnv = await getInteractiveSelect({
       message: "Select target deploy environment:",
       options: [
         { value: "testnet-alpha", label: "Testnet Alpha" },
@@ -33,15 +38,10 @@ async function collectInteractiveOptions(
       ],
       initialValue: "testnet-alpha",
     });
-    if (isCancel(deployEnv)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.deployEnv = deployEnv;
   }
 
   if (!opts.mint) {
-    const mint = await select({
+    const mint = await getInteractiveSelect({
       message: "Select wrapped token mint:",
       options: [
         { value: "constants-wErc20", label: "Wrapped ERC20 from constants" },
@@ -50,36 +50,19 @@ async function collectInteractiveOptions(
       ],
       initialValue: "constants-wErc20",
     });
-    if (isCancel(mint)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
 
     if (mint === "custom") {
-      const customAddress = await text({
-        message: "Enter wrapped token mint address:",
-        placeholder: "mint address...",
-        validate: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "Mint address cannot be empty";
-          }
-          if (!isAddress(value.trim())) {
-            return "Invalid Solana address format";
-          }
-        },
-      });
-      if (isCancel(customAddress)) {
-        cancel("Operation cancelled.");
-        process.exit(1);
-      }
-      opts.mint = customAddress.trim();
+      opts.mint = await getOrPromptSolanaAddress(
+        undefined,
+        "Enter wrapped token mint address"
+      );
     } else {
       opts.mint = mint;
     }
   }
 
   if (!opts.fromTokenAccount) {
-    const fromTokenAccount = await select({
+    const fromTokenAccount = await getInteractiveSelect({
       message: "Select from token account:",
       options: [
         { value: "payer", label: "ATA derived from payer" },
@@ -88,106 +71,39 @@ async function collectInteractiveOptions(
       ],
       initialValue: "payer",
     });
-    if (isCancel(fromTokenAccount)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
 
     if (fromTokenAccount === "custom") {
-      const customAddress = await text({
-        message: "Enter token account address:",
-        placeholder: "token account address...",
-        validate: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "Token account address cannot be empty";
-          }
-          if (!isAddress(value.trim())) {
-            return "Invalid Solana address format";
-          }
-        },
-      });
-      if (isCancel(customAddress)) {
-        cancel("Operation cancelled.");
-        process.exit(1);
-      }
-      opts.fromTokenAccount = customAddress.trim();
+      opts.fromTokenAccount = await getOrPromptSolanaAddress(
+        undefined,
+        "Enter token account address"
+      );
     } else {
       opts.fromTokenAccount = fromTokenAccount;
     }
   }
 
-  if (!opts.to) {
-    const to = await text({
-      message: "Enter recipient address (Base address):",
-      placeholder: "0x...",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Recipient address cannot be empty";
-        }
-        const cleanAddress = value.trim();
-        if (!cleanAddress.startsWith("0x") || cleanAddress.length !== 42) {
-          return "Invalid address format";
-        }
-      },
-    });
-    if (isCancel(to)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.to = to.trim();
-  }
+  opts.to = await getOrPromptEvmAddress(
+    opts.to,
+    "Enter recipient address (Base address)"
+  );
 
-  if (!opts.amount) {
-    const amount = await text({
-      message: "Enter amount to bridge (in token units):",
-      placeholder: "1",
-      initialValue: "1",
-      validate: (value) => {
-        const num = parseFloat(value);
-        if (isNaN(num) || num <= 0) {
-          return "Amount must be a positive number";
-        }
-      },
-    });
-    if (isCancel(amount)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.amount = amount;
-  }
+  opts.amount = await getOrPromptDecimal(
+    opts.amount,
+    "Enter amount to bridge (in token units)",
+    0.001
+  );
 
-  if (!opts.payerKp) {
-    const payerKp = await text({
-      message: "Enter payer keypair path (or 'config' for Solana CLI config):",
-      placeholder: "config",
-      initialValue: "config",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Payer keypair cannot be empty";
-        }
-        const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-        if (cleanPath !== "config" && !existsSync(cleanPath)) {
-          return "Payer keypair file does not exist";
-        }
-      },
-    });
-    if (isCancel(payerKp)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.payerKp = payerKp.trim().replace(/^["']|["']$/g, "");
-  }
+  opts.payerKp = await getOrPromptKeypairPath(
+    opts.payerKp,
+    "Enter payer keypair path (or 'config' for Solana CLI config)",
+    ["config"]
+  );
 
   if (opts.payForRelay === undefined) {
-    const payForRelay = await confirm({
-      message: "Pay for relaying the message to Base?",
-      initialValue: true,
-    });
-    if (isCancel(payForRelay)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.payForRelay = payForRelay;
+    opts.payForRelay = await getInteractiveConfirm(
+      "Pay for relaying the message to Base?",
+      true
+    );
   }
 
   return opts;
@@ -216,13 +132,5 @@ export const bridgeWrappedTokenCommand = new Command("bridge-wrapped-token")
   .option("--pay-for-relay", "Pay for relaying the message to Base")
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(opts);
-    if (!parsed.success) {
-      logger.error("Validation failed:");
-      parsed.error.issues.forEach((err) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-      });
-      process.exit(1);
-    }
-    await handleBridgeWrappedToken(parsed.data);
+    await validateAndExecute(argsSchema, opts, handleBridgeWrappedToken);
   });

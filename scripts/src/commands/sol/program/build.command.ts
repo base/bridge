@@ -1,8 +1,11 @@
 import { Command } from "commander";
-import { select, text, confirm, isCancel, cancel } from "@clack/prompts";
-import { existsSync } from "fs";
 
-import { logger } from "@internal/logger";
+import {
+  getInteractiveSelect,
+  getInteractiveConfirm,
+  getOrPromptKeypairPath,
+  validateAndExecute,
+} from "@internal/utils/cli";
 import { argsSchema, handleBuild } from "./build.handler";
 
 type CommanderOptions = {
@@ -17,7 +20,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    const deployEnv = await select({
+    opts.deployEnv = await getInteractiveSelect({
       message: "Select target deploy environment:",
       options: [
         { value: "testnet-alpha", label: "Testnet Alpha" },
@@ -25,59 +28,41 @@ async function collectInteractiveOptions(
       ],
       initialValue: "testnet-alpha",
     });
-    if (isCancel(deployEnv)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.deployEnv = deployEnv;
   }
 
-  const ensureProgramKeypair = async (
-    optionKey: "bridgeProgramKp" | "baseRelayerProgramKp",
-    programLabel: string
-  ) => {
-    if (opts[optionKey]) {
-      return;
+  // Bridge program keypair with "protocol" as default
+  if (!opts.bridgeProgramKp) {
+    const useProtocol = await getInteractiveConfirm(
+      "Use protocol keypair for Bridge?",
+      true
+    );
+    if (useProtocol) {
+      opts.bridgeProgramKp = "protocol";
+    } else {
+      opts.bridgeProgramKp = await getOrPromptKeypairPath(
+        undefined,
+        "Enter path to Bridge program keypair",
+        []
+      );
     }
+  }
 
-    const useProtocolKeypair = await confirm({
-      message: `Use protocol keypair for ${programLabel}?`,
-      initialValue: true,
-    });
-    if (isCancel(useProtocolKeypair)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
+  // Base Relayer program keypair with "protocol" as default
+  if (!opts.baseRelayerProgramKp) {
+    const useProtocol = await getInteractiveConfirm(
+      "Use protocol keypair for Base Relayer?",
+      true
+    );
+    if (useProtocol) {
+      opts.baseRelayerProgramKp = "protocol";
+    } else {
+      opts.baseRelayerProgramKp = await getOrPromptKeypairPath(
+        undefined,
+        "Enter path to Base Relayer program keypair",
+        []
+      );
     }
-
-    if (useProtocolKeypair) {
-      opts[optionKey] = "protocol";
-      return;
-    }
-
-    const keypairPath = await text({
-      message: `Enter path to ${programLabel} program keypair:`,
-      placeholder: "/path/to/keypair.json",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Keypair path cannot be empty";
-        }
-        // Remove surrounding quotes if present
-        const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-        if (!existsSync(cleanPath)) {
-          return "Keypair file does not exist";
-        }
-      },
-    });
-    if (isCancel(keypairPath)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    // Clean the path before storing
-    opts[optionKey] = keypairPath.trim().replace(/^["']|["']$/g, "");
-  };
-
-  await ensureProgramKeypair("bridgeProgramKp", "Bridge");
-  await ensureProgramKeypair("baseRelayerProgramKp", "Base Relayer");
+  }
 
   return opts;
 }
@@ -98,13 +83,5 @@ export const buildCommand = new Command("build")
   )
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(opts);
-    if (!parsed.success) {
-      logger.error("Validation failed:");
-      parsed.error.issues.forEach((err) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-      });
-      process.exit(1);
-    }
-    await handleBuild(parsed.data);
+    await validateAndExecute(argsSchema, opts, handleBuild);
   });

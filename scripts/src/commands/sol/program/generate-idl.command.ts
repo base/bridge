@@ -1,6 +1,10 @@
 import { Command } from "commander";
-import { select, confirm, isCancel, cancel } from "@clack/prompts";
 
+import {
+  getInteractiveSelect,
+  getInteractiveConfirm,
+  validateAndExecute,
+} from "@internal/utils/cli";
 import { logger } from "@internal/logger";
 import { argsSchema, handleGenerateIdl } from "./generate-idl.handler";
 import { handleGenerateClient } from "./generate-client.handler";
@@ -16,7 +20,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.program) {
-    const program = await select({
+    opts.program = await getInteractiveSelect({
       message: "Select program to generate IDL for:",
       options: [
         { value: "bridge", label: "Bridge" },
@@ -24,22 +28,13 @@ async function collectInteractiveOptions(
       ],
       initialValue: "bridge",
     });
-    if (isCancel(program)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.program = program;
   }
 
-  if (!opts.skipClient) {
-    const generateClient = await confirm({
-      message: "Generate TypeScript client after IDL?",
-      initialValue: true,
-    });
-    if (isCancel(generateClient)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
+  if (opts.skipClient === undefined) {
+    const generateClient = await getInteractiveConfirm(
+      "Generate TypeScript client after IDL?",
+      true
+    );
     opts.skipClient = !generateClient;
   }
 
@@ -52,19 +47,13 @@ export const generateIdlCommand = new Command("generate-idl")
   .option("--skip-client", "Skip TypeScript client generation")
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(opts);
-    if (!parsed.success) {
-      logger.error("Validation failed:");
-      parsed.error.issues.forEach((err) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-      });
-      process.exit(1);
-    }
 
-    await handleGenerateIdl(parsed.data);
+    await validateAndExecute(argsSchema, opts, async (parsed) => {
+      await handleGenerateIdl(parsed);
 
-    if (!opts.skipClient) {
-      logger.info("Generating TypeScript client...");
-      await handleGenerateClient(parsed.data);
-    }
+      if (!opts.skipClient) {
+        logger.info("Generating TypeScript client...");
+        await handleGenerateClient(parsed);
+      }
+    });
   });

@@ -1,8 +1,11 @@
 import { Command } from "commander";
-import { select, text, confirm, isCancel, cancel } from "@clack/prompts";
-import { existsSync } from "fs";
 
-import { logger } from "@internal/logger";
+import {
+  getInteractiveSelect,
+  getInteractiveConfirm,
+  getOrPromptKeypairPath,
+  validateAndExecute,
+} from "@internal/utils/cli";
 import { argsSchema, handleDeploy } from "./deploy.handler";
 
 type CommanderOptions = {
@@ -18,7 +21,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    const deployEnv = await select({
+    opts.deployEnv = await getInteractiveSelect({
       message: "Select target deploy environment:",
       options: [
         { value: "testnet-alpha", label: "Testnet Alpha" },
@@ -26,15 +29,10 @@ async function collectInteractiveOptions(
       ],
       initialValue: "testnet-alpha",
     });
-    if (isCancel(deployEnv)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.deployEnv = deployEnv;
   }
 
   if (!opts.deployerKp) {
-    const deployerKp = await select({
+    const deployerKp = await getInteractiveSelect({
       message: "Select deployer keypair source:",
       options: [
         { value: "protocol", label: "Protocol deployer" },
@@ -46,39 +44,20 @@ async function collectInteractiveOptions(
       ],
       initialValue: "protocol",
     });
-    if (isCancel(deployerKp)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
 
     if (deployerKp === "custom") {
-      const deployerPath = await text({
-        message: "Enter path to deployer keypair:",
-        placeholder: "/path/to/deployer.json",
-        validate: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "Deployer keypair path cannot be empty";
-          }
-          // Remove surrounding quotes if present
-          const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-          if (!existsSync(cleanPath)) {
-            return "Deployer keypair file does not exist";
-          }
-        },
-      });
-      if (isCancel(deployerPath)) {
-        cancel("Operation cancelled.");
-        process.exit(1);
-      }
-      // Clean the path before storing
-      opts.deployerKp = deployerPath.trim().replace(/^["']|["']$/g, "");
+      opts.deployerKp = await getOrPromptKeypairPath(
+        undefined,
+        "Enter path to deployer keypair",
+        []
+      );
     } else {
       opts.deployerKp = deployerKp;
     }
   }
 
   if (!opts.program) {
-    const program = await select({
+    opts.program = await getInteractiveSelect({
       message: "Select program to deploy:",
       options: [
         { value: "bridge", label: "Bridge" },
@@ -86,46 +65,22 @@ async function collectInteractiveOptions(
       ],
       initialValue: "bridge",
     });
-    if (isCancel(program)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.program = program;
   }
 
   if (!opts.programKp) {
-    const useProtocolProgram = await confirm({
-      message: "Use protocol program keypair?",
-      initialValue: true,
-    });
-    if (isCancel(useProtocolProgram)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
+    const useProtocol = await getInteractiveConfirm(
+      "Use protocol program keypair?",
+      true
+    );
 
-    if (useProtocolProgram) {
+    if (useProtocol) {
       opts.programKp = "protocol";
     } else {
-      const programPath = await text({
-        message: "Enter path to program keypair:",
-        placeholder: "/path/to/program.json",
-        validate: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "Program keypair path cannot be empty";
-          }
-          // Remove surrounding quotes if present
-          const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-          if (!existsSync(cleanPath)) {
-            return "Program keypair file does not exist";
-          }
-        },
-      });
-      if (isCancel(programPath)) {
-        cancel("Operation cancelled.");
-        process.exit(1);
-      }
-      // Clean the path before storing
-      opts.programKp = programPath.trim().replace(/^["']|["']$/g, "");
+      opts.programKp = await getOrPromptKeypairPath(
+        undefined,
+        "Enter path to program keypair",
+        []
+      );
     }
   }
 
@@ -149,13 +104,5 @@ export const deployCommand = new Command("deploy")
   )
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(opts);
-    if (!parsed.success) {
-      logger.error("Validation failed:");
-      parsed.error.issues.forEach((err) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-      });
-      process.exit(1);
-    }
-    await handleDeploy(parsed.data);
+    await validateAndExecute(argsSchema, opts, handleDeploy);
   });

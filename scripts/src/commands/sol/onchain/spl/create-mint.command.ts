@@ -1,9 +1,12 @@
 import { Command } from "commander";
-import { select, text, isCancel, cancel } from "@clack/prompts";
-import { existsSync } from "fs";
-import { isAddress } from "@solana/kit";
 
-import { logger } from "@internal/logger";
+import {
+  getInteractiveSelect,
+  getOrPromptInteger,
+  getOrPromptSolanaAddress,
+  getOrPromptKeypairPath,
+  validateAndExecute,
+} from "@internal/utils/cli";
 import { argsSchema, handleCreateMint } from "./create-mint.handler";
 
 type CommanderOptions = {
@@ -19,7 +22,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    const deployEnv = await select({
+    opts.deployEnv = await getInteractiveSelect({
       message: "Select target deploy environment:",
       options: [
         { value: "testnet-alpha", label: "Testnet Alpha" },
@@ -27,78 +30,27 @@ async function collectInteractiveOptions(
       ],
       initialValue: "testnet-alpha",
     });
-    if (isCancel(deployEnv)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.deployEnv = deployEnv;
   }
 
-  if (!opts.decimals) {
-    const decimals = await text({
-      message: "Enter token decimals:",
-      placeholder: "9",
-      initialValue: "9",
-      validate: (value) => {
-        const num = parseInt(value);
-        if (isNaN(num) || num < 0 || num > 18) {
-          return "Decimals must be a number between 0 and 18";
-        }
-      },
-    });
-    if (isCancel(decimals)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.decimals = decimals;
-  }
+  opts.decimals = await getOrPromptInteger(
+    opts.decimals,
+    "Enter token decimals",
+    0,
+    18
+  );
 
-  if (!opts.mintAuthority) {
-    const mintAuthority = await text({
-      message: "Enter mint authority address (or 'payer' for payer address):",
-      placeholder: "payer",
-      initialValue: "payer",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Mint authority cannot be empty";
-        }
+  // mintAuthority accepts "payer" or a Solana address
+  opts.mintAuthority = await getOrPromptSolanaAddress(
+    opts.mintAuthority,
+    "Enter mint authority address (or 'payer' for payer address)",
+    ["payer"]
+  );
 
-        if (value !== "payer") {
-          if (!isAddress(value.trim())) {
-            return "Invalid address";
-          }
-        }
-      },
-    });
-    if (isCancel(mintAuthority)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.mintAuthority = mintAuthority.trim();
-  }
-
-  if (!opts.payerKp) {
-    const payerKp = await text({
-      message: "Enter payer keypair path (or 'config' for Solana CLI config):",
-      placeholder: "config",
-      initialValue: "config",
-      validate: (value) => {
-        if (!value || value.trim().length === 0) {
-          return "Payer keypair cannot be empty";
-        }
-        const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-        if (cleanPath !== "config" && !existsSync(cleanPath)) {
-          return "Payer keypair file does not exist";
-        }
-      },
-    });
-    if (isCancel(payerKp)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    // Clean the path before storing
-    opts.payerKp = payerKp.trim().replace(/^["']|["']$/g, "");
-  }
+  opts.payerKp = await getOrPromptKeypairPath(
+    opts.payerKp,
+    "Enter payer keypair path (or 'config' for Solana CLI config)",
+    ["config"]
+  );
 
   return opts;
 }
@@ -120,13 +72,5 @@ export const createMintCommand = new Command("create-mint")
   )
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(opts);
-    if (!parsed.success) {
-      logger.error("Validation failed:");
-      parsed.error.issues.forEach((err) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-      });
-      process.exit(1);
-    }
-    await handleCreateMint(parsed.data);
+    await validateAndExecute(argsSchema, opts, handleCreateMint);
   });

@@ -2,78 +2,12 @@ import { Command } from "commander";
 import { select, text, confirm, isCancel, cancel } from "@clack/prompts";
 import { existsSync } from "fs";
 
-import { logger } from "@internal/logger";
+import {
+  getOrPromptBigint,
+  getOrPromptSolanaAddress,
+  validateAndExecute,
+} from "@internal/utils/cli";
 import { argsSchema, handleInitialize } from "./initialize.handler";
-import { isAddress as isSolanaAddress } from "@solana/kit";
-
-const getInteractiveInput = async (
-  message: string,
-  placeholder: string,
-  validate: (input: string) => string | undefined
-): Promise<string> => {
-  const result = await text({ message, placeholder, validate });
-  if (isCancel(result)) {
-    cancel("Operation cancelled.");
-    process.exit(1);
-  }
-  return result.trim();
-};
-
-const ensureBigintString = async (
-  value: string | undefined,
-  label: string
-): Promise<string> => {
-  const validate = (input: string) => {
-    const trimmed = input.trim();
-    if (trimmed.length === 0) {
-      return "Value cannot be empty";
-    }
-    if (!/^[0-9]+$/.test(trimmed)) {
-      return "Value must be a positive integer";
-    }
-    return undefined;
-  };
-
-  if (value !== undefined) {
-    const trimmed = value.trim();
-    const error = validate(trimmed);
-    if (error) {
-      logger.error(`${label}: ${error}`);
-      process.exit(1);
-    }
-    return trimmed;
-  }
-
-  return getInteractiveInput(label, "12345", validate);
-};
-
-const ensureSolanaAddressString = async (
-  value: string | undefined,
-  label: string
-): Promise<string> => {
-  const validate = (input: string) => {
-    const trimmed = input.trim();
-    if (trimmed.length === 0) {
-      return "Value cannot be empty";
-    }
-    if (!isSolanaAddress(trimmed)) {
-      return "Value must be a base58 address";
-    }
-    return undefined;
-  };
-
-  if (value !== undefined) {
-    const trimmed = value.trim();
-    const error = validate(trimmed);
-    if (error) {
-      logger.error(`${label}: ${error}`);
-      process.exit(1);
-    }
-    return trimmed;
-  }
-
-  return getInteractiveInput(label, "Solana address", validate);
-};
 
 type CommanderOptions = {
   deployEnv?: string;
@@ -179,40 +113,40 @@ async function collectInteractiveOptions(
     }
   }
 
-  opts.eip1559Target = await ensureBigintString(
+  opts.eip1559Target = await getOrPromptBigint(
     opts.eip1559Target,
     "Enter EIP-1559 target (bigint)"
   );
-  opts.eip1559Denominator = await ensureBigintString(
+  opts.eip1559Denominator = await getOrPromptBigint(
     opts.eip1559Denominator,
     "Enter EIP-1559 denominator (bigint)"
   );
-  opts.eip1559WindowDurationSeconds = await ensureBigintString(
+  opts.eip1559WindowDurationSeconds = await getOrPromptBigint(
     opts.eip1559WindowDurationSeconds,
     "Enter EIP-1559 window duration seconds (bigint)"
   );
-  opts.eip1559MinimumBaseFee = await ensureBigintString(
+  opts.eip1559MinimumBaseFee = await getOrPromptBigint(
     opts.eip1559MinimumBaseFee,
     "Enter EIP-1559 minimum base fee (bigint)"
   );
 
-  opts.minGasLimitPerMessage = await ensureBigintString(
+  opts.minGasLimitPerMessage = await getOrPromptBigint(
     opts.minGasLimitPerMessage,
     "Enter minimum gas limit per message (bigint)"
   );
-  opts.maxGasLimitPerMessage = await ensureBigintString(
+  opts.maxGasLimitPerMessage = await getOrPromptBigint(
     opts.maxGasLimitPerMessage,
     "Enter maximum gas limit per message (bigint)"
   );
-  opts.gasCostScaler = await ensureBigintString(
+  opts.gasCostScaler = await getOrPromptBigint(
     opts.gasCostScaler,
     "Enter gas cost scaler (bigint)"
   );
-  opts.gasCostScalerDp = await ensureBigintString(
+  opts.gasCostScalerDp = await getOrPromptBigint(
     opts.gasCostScalerDp,
     "Enter gas cost scaler decimal precision (bigint)"
   );
-  opts.gasFeeReceiver = await ensureSolanaAddressString(
+  opts.gasFeeReceiver = await getOrPromptSolanaAddress(
     opts.gasFeeReceiver,
     "Enter gas fee receiver (solana address)"
   );
@@ -260,13 +194,5 @@ export const initializeCommand = new Command("initialize")
   .option("--gas-fee-receiver <address>", "Gas fee receiver (solana address)")
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(opts);
-    if (!parsed.success) {
-      logger.error("Validation failed:");
-      parsed.error.issues.forEach((err) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-      });
-      process.exit(1);
-    }
-    await handleInitialize(parsed.data);
+    await validateAndExecute(argsSchema, opts, handleInitialize);
   });

@@ -1,120 +1,14 @@
 import { Command } from "commander";
 import { select, text, confirm, isCancel, cancel } from "@clack/prompts";
 import { existsSync } from "fs";
-import { isAddress as isSolanaAddress } from "@solana/kit";
-import { isAddress as isEvmAddress } from "viem";
 
-import { logger } from "@internal/logger";
+import {
+  getOrPromptBigint,
+  getOrPromptSolanaAddress,
+  getOrPromptEvmAddressList,
+  validateAndExecute,
+} from "@internal/utils/cli";
 import { argsSchema, handleInitialize } from "./initialize.handler";
-
-const getInteractiveInput = async (
-  message: string,
-  placeholder: string,
-  validate: (input: string) => string | undefined
-): Promise<string> => {
-  const result = await text({ message, placeholder, validate });
-  if (isCancel(result)) {
-    cancel("Operation cancelled.");
-    process.exit(1);
-  }
-  return result.trim();
-};
-
-const ensureBigintString = async (
-  value: string | undefined,
-  label: string
-): Promise<string> => {
-  const validate = (input: string) => {
-    const trimmed = input.trim();
-    if (trimmed.length === 0) {
-      return "Value cannot be empty";
-    }
-    if (!/^[0-9]+$/.test(trimmed)) {
-      return "Value must be a positive integer";
-    }
-    return undefined;
-  };
-
-  if (value !== undefined) {
-    const trimmed = value.trim();
-    const error = validate(trimmed);
-    if (error) {
-      logger.error(`${label}: ${error}`);
-      process.exit(1);
-    }
-    return trimmed;
-  }
-
-  return getInteractiveInput(label, "12345", validate);
-};
-
-const ensureSolanaAddressString = async (
-  value: string | undefined,
-  label: string
-): Promise<string> => {
-  const validate = (input: string) => {
-    const trimmed = input.trim();
-    if (trimmed.length === 0) {
-      return "Value cannot be empty";
-    }
-    if (!isSolanaAddress(trimmed)) {
-      return "Value must be a base58 address";
-    }
-    return undefined;
-  };
-
-  if (value !== undefined) {
-    const trimmed = value.trim();
-    const error = validate(trimmed);
-    if (error) {
-      logger.error(`${label}: ${error}`);
-      process.exit(1);
-    }
-    return trimmed;
-  }
-
-  return getInteractiveInput(label, "Solana address", validate);
-};
-
-const ensureEvmAddressList = async (
-  value: string | undefined,
-  label: string
-): Promise<string> => {
-  const parseAddresses = (input: string): string[] =>
-    input
-      .split(/[\s,]+/)
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0);
-
-  const validate = (input: string) => {
-    const trimmed = input.trim();
-    if (trimmed.length === 0) {
-      return "At least one signer is required";
-    }
-    const addresses = parseAddresses(trimmed);
-    if (addresses.length === 0) {
-      return "At least one signer is required";
-    }
-    for (const address of addresses) {
-      if (!isEvmAddress(address)) {
-        return `Invalid EVM address: ${address}`;
-      }
-    }
-    return undefined;
-  };
-
-  if (value !== undefined) {
-    const trimmed = value.trim();
-    const error = validate(trimmed);
-    if (error) {
-      logger.error(`${label}: ${error}`);
-      process.exit(1);
-    }
-    return trimmed;
-  }
-
-  return getInteractiveInput(label, "0xSigner1, 0xSigner2", validate);
-};
 
 type CommanderOptions = {
   deployEnv?: string;
@@ -225,64 +119,64 @@ async function collectInteractiveOptions(
     }
   }
 
-  opts.eip1559Target = await ensureBigintString(
+  opts.eip1559Target = await getOrPromptBigint(
     opts.eip1559Target,
     "Enter EIP-1559 target (bigint)"
   );
-  opts.eip1559Denominator = await ensureBigintString(
+  opts.eip1559Denominator = await getOrPromptBigint(
     opts.eip1559Denominator,
     "Enter EIP-1559 denominator (bigint)"
   );
-  opts.eip1559WindowDurationSeconds = await ensureBigintString(
+  opts.eip1559WindowDurationSeconds = await getOrPromptBigint(
     opts.eip1559WindowDurationSeconds,
     "Enter EIP-1559 window duration seconds (bigint)"
   );
-  opts.eip1559MinimumBaseFee = await ensureBigintString(
+  opts.eip1559MinimumBaseFee = await getOrPromptBigint(
     opts.eip1559MinimumBaseFee,
     "Enter EIP-1559 minimum base fee (bigint)"
   );
 
-  opts.gasPerCall = await ensureBigintString(
+  opts.gasPerCall = await getOrPromptBigint(
     opts.gasPerCall,
     "Enter gas per call (bigint)"
   );
-  opts.gasCostScaler = await ensureBigintString(
+  opts.gasCostScaler = await getOrPromptBigint(
     opts.gasCostScaler,
     "Enter gas cost scaler (bigint)"
   );
-  opts.gasCostScalerDp = await ensureBigintString(
+  opts.gasCostScalerDp = await getOrPromptBigint(
     opts.gasCostScalerDp,
     "Enter gas cost scaler decimal precision (bigint)"
   );
-  opts.gasFeeReceiver = await ensureSolanaAddressString(
+  opts.gasFeeReceiver = await getOrPromptSolanaAddress(
     opts.gasFeeReceiver,
     "Enter gas fee receiver (solana address)"
   );
 
-  opts.protocolBlockIntervalRequirement = await ensureBigintString(
+  opts.protocolBlockIntervalRequirement = await getOrPromptBigint(
     opts.protocolBlockIntervalRequirement,
     "Enter protocol block interval requirement (bigint)"
   );
 
-  opts.bufferMaxCallBufferSize = await ensureBigintString(
+  opts.bufferMaxCallBufferSize = await getOrPromptBigint(
     opts.bufferMaxCallBufferSize,
     "Enter buffer max call buffer size (bigint)"
   );
 
-  opts.baseOracleThreshold = await ensureBigintString(
+  opts.baseOracleThreshold = await getOrPromptBigint(
     opts.baseOracleThreshold,
     "Enter base oracle threshold (bigint)"
   );
-  opts.baseOracleSignerCount = await ensureBigintString(
+  opts.baseOracleSignerCount = await getOrPromptBigint(
     opts.baseOracleSignerCount,
     "Enter base oracle signer count (bigint)"
   );
-  opts.baseOracleSigners = await ensureEvmAddressList(
+  opts.baseOracleSigners = await getOrPromptEvmAddressList(
     opts.baseOracleSigners,
     "Enter base oracle signers (comma-separated EVM addresses)"
   );
 
-  opts.partnerOracleRequiredThreshold = await ensureBigintString(
+  opts.partnerOracleRequiredThreshold = await getOrPromptBigint(
     opts.partnerOracleRequiredThreshold,
     "Enter partner oracle required threshold (bigint)"
   );
@@ -344,13 +238,5 @@ export const initializeCommand = new Command("initialize")
   )
   .action(async (options) => {
     const collected = await collectInteractiveOptions(options);
-    const parsed = argsSchema.safeParse(collected);
-    if (!parsed.success) {
-      logger.error("Validation failed:");
-      parsed.error.issues.forEach((err) => {
-        logger.error(`  - ${err.path.join(".")}: ${err.message}`);
-      });
-      process.exit(1);
-    }
-    await handleInitialize(parsed.data);
+    await validateAndExecute(argsSchema, collected, handleInitialize);
   });
