@@ -8,6 +8,11 @@ import { findGitRoot } from "@internal/utils";
 import { getKeypairSignerFromPath } from "@internal/sol";
 import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
+const programKeypairSchema = z.union([
+  z.literal("protocol"),
+  z.string().brand<"programKp">(),
+]);
+
 export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
@@ -15,19 +20,23 @@ export const argsSchema = z.object({
         "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
     })
     .default("testnet-alpha"),
-  program: z
-    .enum(["bridge", "base-relayer"], {
-      message: "Program must be either 'bridge' or 'base-relayer'",
-    })
-    .default("bridge"),
-  programKp: z
-    .union([z.literal("protocol"), z.string().brand<"programKp">()])
-    .default("protocol"),
+  bridgeProgramKp: programKeypairSchema.default("protocol"),
+  baseRelayerProgramKp: programKeypairSchema.default("protocol"),
 });
 
 type Args = z.infer<typeof argsSchema>;
-type ProgramArg = z.infer<typeof argsSchema.shape.program>;
-type ProgramKpArg = z.infer<typeof argsSchema.shape.programKp>;
+type ProgramKpArg = z.infer<typeof programKeypairSchema>;
+type ProgramDir = "bridge" | "base_relayer";
+
+type ProgramContext = {
+  name: string;
+  dir: ProgramDir;
+  kpArg: ProgramKpArg;
+  configKeypairPath: string;
+  libRsPath: string;
+  backupPath: string;
+  isRestored: boolean;
+};
 
 export async function handleBuild(args: Args): Promise<void> {
   try {
@@ -40,42 +49,56 @@ export async function handleBuild(args: Args): Promise<void> {
     const projectRoot = await findGitRoot();
     logger.info(`Project root: ${projectRoot}`);
 
-    // Find lib.rs
-    const libRsPath = await findLibRs(projectRoot, args.program);
-    logger.info(`Found lib.rs at: ${libRsPath}`);
+    // Prepare program contexts
+    const programContexts: ProgramContext[] = [];
 
-    // Get program ID from keypair
-    const programKpPath =
-      args.program === "bridge"
-        ? config.solana.bridgeKpPath
-        : config.solana.baseRelayerKpPath;
+    const programDefinitions: Array<
+      Omit<ProgramContext, "libRsPath" | "backupPath" | "isRestored">
+    > = [
+      {
+        name: "Bridge",
+        dir: "bridge",
+        kpArg: args.bridgeProgramKp,
+        configKeypairPath: config.solana.bridgeKpPath,
+      },
+      {
+        name: "Base Relayer",
+        dir: "base_relayer",
+        kpArg: args.baseRelayerProgramKp,
+        configKeypairPath: config.solana.baseRelayerKpPath,
+      },
+    ];
 
-    const programId = await resolveProgramId(
-      projectRoot,
-      args.programKp,
-      programKpPath
-    );
-    logger.info(`Program ID: ${programId}`);
+    for (const definition of programDefinitions) {
+      const libRsPath = await findLibRs(projectRoot, definition.dir);
+      logger.info(`[${definition.name}] Found lib.rs at: ${libRsPath}`);
 
-    // Backup lib.rs
-    const backupPath = `${libRsPath}.backup`;
-    await $`cp ${libRsPath} ${backupPath}`;
-    logger.info("Backed up lib.rs");
+      const backupPath = `${libRsPath}.backup`;
+      await $`cp ${libRsPath} ${backupPath}`;
+      logger.info(`[${definition.name}] Backed up lib.rs`);
+
+      programContexts.push({
+        ...definition,
+        libRsPath,
+        backupPath,
+        isRestored: false,
+      });
+    }
 
     // Setup signal handlers to ensure cleanup on interruption
-    let isRestored = false;
-    const restoreLibRs = async () => {
-      if (!isRestored && existsSync(backupPath)) {
-        logger.info("Interrupted! Restoring lib.rs...");
-        await $`mv ${backupPath} ${libRsPath}`;
-        logger.info("lib.rs restored");
-        isRestored = true;
+    const restoreAllLibs = async () => {
+      for (const context of programContexts) {
+        if (!context.isRestored && existsSync(context.backupPath)) {
+          await $`mv ${context.backupPath} ${context.libRsPath}`;
+          logger.info(`[${context.name}] Restored lib.rs`);
+          context.isRestored = true;
+        }
       }
     };
 
     const signalHandler = async (signal: string) => {
       logger.info(`\nReceived ${signal}, cleaning up...`);
-      await restoreLibRs();
+      await restoreAllLibs();
       process.exit(128 + (signal === "SIGINT" ? 2 : 15));
     };
 
@@ -85,14 +108,25 @@ export async function handleBuild(args: Args): Promise<void> {
     process.on("SIGHUP", () => signalHandler("SIGHUP")); // Terminal closed
 
     try {
-      // Update declare_id in lib.rs
-      const libContent = await Bun.file(libRsPath).text();
-      const updatedContent = libContent.replace(
-        /declare_id!\("([^"]+)"\)/,
-        `declare_id!("${programId}")`
-      );
-      await Bun.write(libRsPath, updatedContent);
-      logger.info("Updated declare_id in lib.rs");
+      // Update declare_id in lib.rs for each program
+      for (const context of programContexts) {
+        const programId = await resolveProgramId(
+          projectRoot,
+          context.kpArg,
+          context.configKeypairPath,
+          context.name
+        );
+        logger.info(`[${context.name}] Program ID: ${programId}`);
+
+        const libContent = await Bun.file(context.libRsPath).text();
+        const updatedContent = libContent.replace(
+          /declare_id!\("([^"]+)"\)/,
+          `declare_id!("${programId}")`
+        );
+
+        await Bun.write(context.libRsPath, updatedContent);
+        logger.info(`[${context.name}] Updated declare_id in lib.rs`);
+      }
 
       // Build program with cargo-build-sbf
       logger.info("Running cargo-build-sbf...");
@@ -102,11 +136,7 @@ export async function handleBuild(args: Args): Promise<void> {
       logger.success("Program build completed!");
     } finally {
       // Always restore lib.rs
-      if (!isRestored) {
-        await $`mv ${backupPath} ${libRsPath}`;
-        logger.info("Restored lib.rs");
-        isRestored = true;
-      }
+      await restoreAllLibs();
 
       // Remove signal handlers
       process.removeAllListeners("SIGINT");
@@ -121,9 +151,8 @@ export async function handleBuild(args: Args): Promise<void> {
 
 async function findLibRs(
   projectRoot: string,
-  programArg: ProgramArg
+  programDir: ProgramDir
 ): Promise<string> {
-  const programDir = programArg === "bridge" ? "bridge" : "base_relayer";
   const libRsPath = join(
     projectRoot,
     `solana/programs/${programDir}/src/lib.rs`
@@ -138,15 +167,16 @@ async function findLibRs(
 async function resolveProgramId(
   projectRoot: string,
   programKpArg: ProgramKpArg,
-  programKpPath: string
+  programKpPath: string,
+  programName: string
 ): Promise<string> {
   let kpPath = programKpArg;
 
   if (kpPath === "protocol") {
     kpPath = join(projectRoot, "solana", programKpPath) as ProgramKpArg;
-    logger.info(`Using protocol keypair: ${kpPath}`);
+    logger.info(`[${programName}] Using protocol keypair: ${kpPath}`);
   } else {
-    logger.info(`Using custom keypair: ${kpPath}`);
+    logger.info(`[${programName}] Using custom keypair: ${kpPath}`);
   }
 
   const signer = await getKeypairSignerFromPath(kpPath);

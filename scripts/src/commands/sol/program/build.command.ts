@@ -7,8 +7,8 @@ import { argsSchema, handleBuild } from "./build.handler";
 
 type CommanderOptions = {
   deployEnv?: string;
-  program?: string;
-  programKp?: string;
+  bridgeProgramKp?: string;
+  baseRelayerProgramKp?: string;
 };
 
 async function collectInteractiveOptions(
@@ -32,25 +32,16 @@ async function collectInteractiveOptions(
     opts.deployEnv = deployEnv;
   }
 
-  if (!opts.program) {
-    const program = await select({
-      message: "Select program to build:",
-      options: [
-        { value: "bridge", label: "Bridge" },
-        { value: "base-relayer", label: "Base Relayer" },
-      ],
-      initialValue: "bridge",
-    });
-    if (isCancel(program)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
+  const ensureProgramKeypair = async (
+    optionKey: "bridgeProgramKp" | "baseRelayerProgramKp",
+    programLabel: string
+  ) => {
+    if (opts[optionKey]) {
+      return;
     }
-    opts.program = program;
-  }
 
-  if (!opts.programKp) {
     const useProtocolKeypair = await confirm({
-      message: "Use protocol keypair?",
+      message: `Use protocol keypair for ${programLabel}?`,
       initialValue: true,
     });
     if (isCancel(useProtocolKeypair)) {
@@ -59,44 +50,51 @@ async function collectInteractiveOptions(
     }
 
     if (useProtocolKeypair) {
-      opts.programKp = "protocol";
-    } else {
-      const keypairPath = await text({
-        message: "Enter path to program keypair:",
-        placeholder: "/path/to/keypair.json",
-        validate: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "Keypair path cannot be empty";
-          }
-          // Remove surrounding quotes if present
-          const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-          if (!existsSync(cleanPath)) {
-            return "Keypair file does not exist";
-          }
-        },
-      });
-      if (isCancel(keypairPath)) {
-        cancel("Operation cancelled.");
-        process.exit(1);
-      }
-      // Clean the path before storing
-      opts.programKp = keypairPath.trim().replace(/^["']|["']$/g, "");
+      opts[optionKey] = "protocol";
+      return;
     }
-  }
+
+    const keypairPath = await text({
+      message: `Enter path to ${programLabel} program keypair:`,
+      placeholder: "/path/to/keypair.json",
+      validate: (value) => {
+        if (!value || value.trim().length === 0) {
+          return "Keypair path cannot be empty";
+        }
+        // Remove surrounding quotes if present
+        const cleanPath = value.trim().replace(/^["']|["']$/g, "");
+        if (!existsSync(cleanPath)) {
+          return "Keypair file does not exist";
+        }
+      },
+    });
+    if (isCancel(keypairPath)) {
+      cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    // Clean the path before storing
+    opts[optionKey] = keypairPath.trim().replace(/^["']|["']$/g, "");
+  };
+
+  await ensureProgramKeypair("bridgeProgramKp", "Bridge");
+  await ensureProgramKeypair("baseRelayerProgramKp", "Base Relayer");
 
   return opts;
 }
 
 export const buildCommand = new Command("build")
-  .description("Build a Solana program (bridge | base-relayer)")
+  .description("Build the Solana bridge and base-relayer programs")
   .option(
     "--deploy-env <deployEnv>",
     "Target deploy environment (testnet-alpha | testnet-prod)"
   )
-  .option("--program <program>", "Program to build (bridge | base-relayer)")
   .option(
-    "--program-kp <path>",
-    "Program keypair: 'protocol' or custom program keypair path"
+    "--bridge-program-kp <path>",
+    "Bridge program keypair: 'protocol' or custom program keypair path"
+  )
+  .option(
+    "--base-relayer-program-kp <path>",
+    "Base relayer program keypair: 'protocol' or custom program keypair path"
   )
   .action(async (options) => {
     const opts = await collectInteractiveOptions(options);
