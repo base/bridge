@@ -97,8 +97,7 @@ export async function handleBuild(args: Args): Promise<void> {
       // Build program with cargo-build-sbf
       logger.info("Running cargo-build-sbf...");
       const solanaDir = join(projectRoot, "solana");
-      const packageName = args.program === "bridge" ? "bridge" : "base_relayer";
-      await $`cargo-build-sbf -- -p ${packageName}`.cwd(solanaDir);
+      await $`cargo-build-sbf`.cwd(solanaDir);
 
       logger.success("Program build completed!");
     } finally {
