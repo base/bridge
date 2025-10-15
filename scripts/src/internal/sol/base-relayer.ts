@@ -23,7 +23,7 @@ export async function buildPayForRelayInstruction(
   payer: KeyPairSigner<string>
 ) {
   const config = CONFIGS[env];
-  const solRpc = createSolanaRpc(devnet(`https://${config.solana.rpcUrl}`));
+  const solRpc = createSolanaRpc(devnet(config.solana.rpcUrl));
 
   const [cfgAddress] = await getProgramDerivedAddress({
     programAddress: config.solana.baseRelayerProgram,

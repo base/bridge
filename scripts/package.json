@@ -20,7 +20,8 @@
         "@types/bun": "latest",
         "viem": "2.38.2",
         "zod": "4.1.12",
-        "@clack/prompts": "0.11.0"
+        "@clack/prompts": "0.11.0",
+        "@base/bridge": "workspace:*"
     },
     "peerDependencies": {
         "typescript": "5.9.3"

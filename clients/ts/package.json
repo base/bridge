@@ -56,10 +56,11 @@
   },
   "homepage": "https://github.com/base/bridge#readme",
   "devDependencies": {
+    "@solana/kit": "4.0.0",
     "@types/bun": "latest",
-    "typescript": "^5.9.2"
+    "typescript": "5.9.3"
   },
   "peerDependencies": {
-    "@solana/kit": "^2.3.0"
+    "@solana/kit": "4.0.0"
   }
 }

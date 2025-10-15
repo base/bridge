@@ -2666,13 +2666,13 @@ export const IDL = {
   "errors": [
     {
       "code": 6000,
-      "name": "IncorrectGasFeeReceiver",
-      "msg": "Incorrect gas fee receiver"
+      "name": "MaxSizeExceeded",
+      "msg": "Call buffer size exceeds maximum allowed size"
     },
     {
       "code": 6001,
-      "name": "BridgePaused",
-      "msg": "Bridge is paused"
+      "name": "InvalidBufferSize",
+      "msg": "Invalid buffer size provided"
     }
   ],
   "types": [

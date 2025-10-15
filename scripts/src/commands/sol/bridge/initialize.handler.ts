@@ -19,7 +19,7 @@ import {
   type GasConfig,
   type PartnerOracleConfig,
   type ProtocolConfig,
-} from "../../../../../clients/ts/src/bridge";
+} from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
 import {

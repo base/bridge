@@ -14,7 +14,7 @@ import {
   getInitializeInstruction,
   type Eip1559Config,
   type GasConfig,
-} from "../../../../../clients/ts/src/base-relayer/generated";
+} from "@base/bridge/base-relayer";
 
 import { logger } from "@internal/logger";
 import {

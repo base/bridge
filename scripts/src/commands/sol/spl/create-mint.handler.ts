@@ -52,7 +52,7 @@ export async function handleCreateMint(args: Args): Promise<void> {
 
     const config = CONFIGS[args.deployEnv];
 
-    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
+    const rpcUrl = devnet(config.solana.rpcUrl);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 

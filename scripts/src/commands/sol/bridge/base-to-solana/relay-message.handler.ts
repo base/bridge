@@ -19,7 +19,7 @@ import {
   type BridgeBaseToSolanaStateIncomingMessageMessage,
   type BridgeBaseToSolanaStateIncomingMessageTransfer,
   type Ix,
-} from "../../../../../../clients/ts/src/bridge";
+} from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -63,7 +63,7 @@ export async function handleRelayMessage(args: Args): Promise<void> {
     logger.info("--- Relay message script ---");
 
     const config = CONFIGS[args.deployEnv];
-    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
+    const rpcUrl = devnet(config.solana.rpcUrl);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 

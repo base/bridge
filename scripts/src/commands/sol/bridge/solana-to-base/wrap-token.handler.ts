@@ -5,6 +5,8 @@ import {
   createSolanaRpc,
   devnet,
   type Instruction,
+  getU64Encoder,
+  Endian,
 } from "@solana/kit";
 import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
@@ -14,7 +16,7 @@ import {
   fetchBridge,
   getWrapTokenInstruction,
   type WrapTokenInstructionDataArgs,
-} from "../../../../../../clients/ts/src/bridge";
+} from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -77,7 +79,7 @@ export async function handleWrapToken(args: Args): Promise<void> {
     logger.info("--- Wrap token script ---");
 
     const config = CONFIGS[args.deployEnv];
-    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
+    const rpcUrl = devnet(config.solana.rpcUrl);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
@@ -107,10 +109,20 @@ export async function handleWrapToken(args: Args): Promise<void> {
       scalerExponent: args.scalerExponent,
     };
 
+    const nameLengthLeBytes = getU64Encoder({ endian: Endian.Little }).encode(
+      instructionArgs.name.length
+    );
+
+    const symbolLengthLeBytes = getU64Encoder({ endian: Endian.Little }).encode(
+      instructionArgs.symbol.length
+    );
+
     // Calculate metadata hash
     const metadataHash = keccak256(
       Buffer.concat([
+        Buffer.from(nameLengthLeBytes),
         Buffer.from(instructionArgs.name),
+        Buffer.from(symbolLengthLeBytes),
         Buffer.from(instructionArgs.symbol),
         Buffer.from(instructionArgs.remoteToken),
         Buffer.from(getU8Codec().encode(instructionArgs.scalerExponent)),

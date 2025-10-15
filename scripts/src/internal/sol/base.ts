@@ -20,10 +20,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-import {
-  fetchOutgoingMessage,
-  type Call,
-} from "../../../../clients/ts/src/bridge";
+import { fetchOutgoingMessage, type Call } from "@base/bridge/bridge";
 
 import { BRIDGE_ABI, BRIDGE_VALIDATOR_ABI } from "../base/abi";
 import { logger } from "../logger";
@@ -42,7 +39,7 @@ export async function relayMessageToBase(
 ) {
   logger.info("Relaying message to Base...");
   const config = CONFIGS[deployEnv];
-  const solRpc = createSolanaRpc(devnet(`https://${config.solana.rpcUrl}`));
+  const solRpc = createSolanaRpc(devnet(config.solana.rpcUrl));
 
   const outgoing = await fetchOutgoingMessage(solRpc, outgoingMessagePubkey);
 
@@ -107,7 +104,7 @@ export async function monitorMessageExecution(
   logger.info("Monitoring message execution...");
 
   const config = CONFIGS[deployEnv];
-  const solRpc = createSolanaRpc(devnet(`https://${config.solana.rpcUrl}`));
+  const solRpc = createSolanaRpc(devnet(config.solana.rpcUrl));
 
   const publicClient = createPublicClient({
     chain: config.base.chain,

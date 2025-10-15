@@ -20,7 +20,7 @@ import { decodeEventLog } from "viem/utils";
 import {
   fetchBridge,
   getProveMessageInstruction,
-} from "../../../../../../clients/ts/src/bridge";
+} from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -59,7 +59,7 @@ export async function handleProveMessage(args: Args) {
     logger.info("--- Prove message script ---");
 
     const config = CONFIGS[args.deployEnv];
-    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
+    const rpcUrl = devnet(config.solana.rpcUrl);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
@@ -72,7 +72,8 @@ export async function handleProveMessage(args: Args) {
     });
     logger.info(`Bridge: ${bridgeAddress}`);
 
-    const bridge = await fetchBridge(rpc, bridgeAddress);
+    const accountRpc = rpc as Parameters<typeof fetchBridge>[0];
+    const bridge = await fetchBridge(accountRpc, bridgeAddress);
     const baseBlockNumber = bridge.data.baseBlockNumber;
     logger.info(`Base Block Number: ${baseBlockNumber}`);
 

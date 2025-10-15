@@ -14,20 +14,20 @@ import {
 } from '@solana/kit';
 import { BRIDGE_PROGRAM_ADDRESS } from '../programs';
 
-/** IncorrectGasFeeReceiver: Incorrect gas fee receiver */
-export const BRIDGE_ERROR__INCORRECT_GAS_FEE_RECEIVER = 0x1770; // 6000
-/** BridgePaused: Bridge is paused */
-export const BRIDGE_ERROR__BRIDGE_PAUSED = 0x1771; // 6001
+/** MaxSizeExceeded: Call buffer size exceeds maximum allowed size */
+export const BRIDGE_ERROR__MAX_SIZE_EXCEEDED = 0x1770; // 6000
+/** InvalidBufferSize: Invalid buffer size provided */
+export const BRIDGE_ERROR__INVALID_BUFFER_SIZE = 0x1771; // 6001
 
 export type BridgeError =
-  | typeof BRIDGE_ERROR__BRIDGE_PAUSED
-  | typeof BRIDGE_ERROR__INCORRECT_GAS_FEE_RECEIVER;
+  | typeof BRIDGE_ERROR__INVALID_BUFFER_SIZE
+  | typeof BRIDGE_ERROR__MAX_SIZE_EXCEEDED;
 
 let bridgeErrorMessages: Record<BridgeError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   bridgeErrorMessages = {
-    [BRIDGE_ERROR__BRIDGE_PAUSED]: `Bridge is paused`,
-    [BRIDGE_ERROR__INCORRECT_GAS_FEE_RECEIVER]: `Incorrect gas fee receiver`,
+    [BRIDGE_ERROR__INVALID_BUFFER_SIZE]: `Invalid buffer size provided`,
+    [BRIDGE_ERROR__MAX_SIZE_EXCEEDED]: `Call buffer size exceeds maximum allowed size`,
   };
 }
 

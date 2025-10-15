@@ -20,10 +20,7 @@ import {
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import { toBytes, isAddress as isEvmAddress } from "viem";
 
-import {
-  fetchBridge,
-  getBridgeSplInstruction,
-} from "../../../../../../clients/ts/src/bridge";
+import { fetchBridge, getBridgeSplInstruction } from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -86,7 +83,7 @@ export async function handleBridgeSpl(args: Args): Promise<void> {
     logger.info("--- Bridge SPL script ---");
 
     const config = CONFIGS[args.deployEnv];
-    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
+    const rpcUrl = devnet(config.solana.rpcUrl);
     const rpc = createSolanaRpc(rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
 
