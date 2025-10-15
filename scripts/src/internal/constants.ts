@@ -49,7 +49,7 @@ export const CONFIGS = {
   "testnet-alpha": {
     solana: {
       cluster: "devnet",
-      rpcUrl: "api.devnet.solana.com",
+      rpcUrl: "https://api.devnet.solana.com",
 
       // Keypairs
       deployerKpPath: "keypairs/deployer.devnet.alpha.json",
@@ -87,7 +87,7 @@ export const CONFIGS = {
   "testnet-prod": {
     solana: {
       cluster: "devnet",
-      rpcUrl: "api.devnet.solana.com",
+      rpcUrl: "https://api.devnet.solana.com",
 
       // Keypairs
       deployerKpPath: "keypairs/deployer.devnet.prod.json",

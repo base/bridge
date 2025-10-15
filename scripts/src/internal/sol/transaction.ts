@@ -30,9 +30,11 @@ export async function buildAndSendTransaction(
     rpcConfig.type === "deploy-env"
       ? CONFIGS[rpcConfig.value].solana.rpcUrl
       : rpcConfig.value;
-  const rpc = createSolanaRpc(`https://${rpcUrl}`);
+
+  const rpcHostName = rpcUrl.replace("https://", "");
+  const rpc = createSolanaRpc(`https://${rpcHostName}`);
   const rpcSubscriptions = createSolanaRpcSubscriptions(
-    devnet(`wss://${rpcUrl}`)
+    devnet(`wss://${rpcHostName}`)
   );
 
   const sendAndConfirmTx = sendAndConfirmTransactionFactory({
