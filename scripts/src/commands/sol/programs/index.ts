@@ -5,11 +5,11 @@ import { deployCommand } from "./deploy.command";
 import { generateIdlCommand } from "./generate-idl.command";
 import { generateClientCommand } from "./generate-client.command";
 
-export const programCommand = new Command("program").description(
+export const programsCommand = new Command("programs").description(
   "Program management commands"
 );
 
-programCommand.addCommand(buildCommand);
-programCommand.addCommand(deployCommand);
-programCommand.addCommand(generateIdlCommand);
-programCommand.addCommand(generateClientCommand);
+programsCommand.addCommand(buildCommand);
+programsCommand.addCommand(deployCommand);
+programsCommand.addCommand(generateIdlCommand);
+programsCommand.addCommand(generateClientCommand);
