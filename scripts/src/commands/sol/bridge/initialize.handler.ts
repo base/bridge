@@ -28,7 +28,6 @@ import {
   getKeypairSignerFromPath,
   getIdlConstant,
 } from "@internal/sol";
-import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 import {
   bigintSchema,
   integerSchema,
@@ -37,10 +36,10 @@ import {
 } from "@internal/utils/cli";
 
 const baseArgsSchema = z.object({
-  deployEnv: z.enum(DEPLOY_ENVS, {
-    message:
-      "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
-  }),
+  programId: solanaAddressSchema.transform((value) =>
+    solanaAddress(value)
+  ),
+  rpcUrl: z.string().url("RPC URL must be a valid URL"),
   payerKp: z.union([z.literal("config"), z.string().brand<"payerKp">()]),
   guardianKp: z.union([z.literal("payer"), z.string().brand<"guardianKp">()]),
 });
@@ -107,11 +106,9 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
   try {
     logger.info("--- Initialize bridge script ---");
 
-    // Get config for deploy environment
-    const config = CONFIGS[args.deployEnv];
-
-    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
+    const rpcUrl = devnet(args.rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
+    logger.info(`Program ID: ${args.programId}`);
 
     // Resolve payer keypair
     const payer = await resolvePayerKeypair(args.payerKp);
@@ -119,7 +116,7 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
 
     // Derive bridge account address
     const [bridgeAccountAddress] = await getProgramDerivedAddress({
-      programAddress: config.solana.bridgeProgram,
+      programAddress: args.programId,
       seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
     });
     logger.info(`Bridge account address: ${bridgeAccountAddress}`);
@@ -194,13 +191,13 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
         baseOracleConfig,
         partnerOracleConfig,
       },
-      { programAddress: config.solana.bridgeProgram }
+      { programAddress: args.programId }
     );
 
     // Send transaction
     logger.info("Sending transaction...");
     const signature = await buildAndSendTransaction(
-      { type: "deploy-env", value: args.deployEnv },
+      { type: "rpc-url", value: args.rpcUrl },
       [ix],
       payer
     );

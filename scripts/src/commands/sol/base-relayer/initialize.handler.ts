@@ -23,14 +23,13 @@ import {
   getKeypairSignerFromPath,
   getRelayerIdlConstant,
 } from "@internal/sol";
-import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 import { bigintSchema, solanaAddressSchema } from "@internal/utils/cli";
 
 const baseArgsSchema = z.object({
-  deployEnv: z.enum(DEPLOY_ENVS, {
-    message:
-      "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
-  }),
+  programId: solanaAddressSchema.transform((value) =>
+    solanaAddress(value)
+  ),
+  rpcUrl: z.string().url("RPC URL must be a valid URL"),
   payerKp: z.union([z.literal("config"), z.string().brand<"payerKp">()]),
   guardianKp: z.union([z.literal("payer"), z.string().brand<"guardianKp">()]),
 });
@@ -64,15 +63,15 @@ export async function handleInitialize(args: Args): Promise<void> {
   try {
     logger.info("--- Initialize base-relayer script ---");
 
-    const config = CONFIGS[args.deployEnv];
-    const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
+    const rpcUrl = devnet(args.rpcUrl);
     logger.info(`RPC URL: ${rpcUrl}`);
+    logger.info(`Program ID: ${args.programId}`);
 
     const payer = await resolvePayerKeypair(args.payerKp);
     logger.info(`Payer: ${payer.address}`);
 
     const [cfgAddress] = await getProgramDerivedAddress({
-      programAddress: config.solana.baseRelayerProgram,
+      programAddress: args.programId,
       seeds: [Buffer.from(getRelayerIdlConstant("CFG_SEED"))],
     });
     logger.info(`Cfg PDA: ${cfgAddress}`);
@@ -104,12 +103,12 @@ export async function handleInitialize(args: Args): Promise<void> {
         eip1559Config,
         gasConfig,
       },
-      { programAddress: config.solana.baseRelayerProgram }
+      { programAddress: args.programId }
     );
 
     logger.info("Sending transaction...");
     const signature = await buildAndSendTransaction(
-      { type: "deploy-env", value: args.deployEnv },
+      { type: "rpc-url", value: args.rpcUrl },
       [ix],
       payer
     );

@@ -1,7 +1,7 @@
 import { Command } from "commander";
+import { text, isCancel, cancel } from "@clack/prompts";
 
 import {
-  getInteractiveSelect,
   getOrPromptBigint,
   getOrPromptSolanaAddress,
   getOrPromptFilePath,
@@ -10,7 +10,8 @@ import {
 import { argsSchema, handleInitialize } from "./initialize.handler";
 
 type CommanderOptions = {
-  deployEnv?: string;
+  programId?: string;
+  rpcUrl?: string;
   payerKp?: string;
   guardianKp?: string;
   eip1559Target?: string;
@@ -29,15 +30,33 @@ async function collectInteractiveOptions(
 ): Promise<CommanderOptions> {
   let opts = { ...options };
 
-  if (!opts.deployEnv) {
-    opts.deployEnv = await getInteractiveSelect({
-      message: "Select target deploy environment:",
-      options: [
-        { value: "testnet-alpha", label: "Testnet Alpha" },
-        { value: "testnet-prod", label: "Testnet Prod" },
-      ],
-      initialValue: "testnet-alpha",
+  opts.programId = await getOrPromptSolanaAddress(
+    opts.programId,
+    "Enter Base Relayer program ID (Solana address)"
+  );
+
+  if (!opts.rpcUrl) {
+    const rpcUrl = await text({
+      message: "Enter Solana RPC URL:",
+      placeholder: "https://api.devnet.solana.com",
+      validate: (value) => {
+        if (!value || value.trim().length === 0) {
+          return "RPC URL is required";
+        }
+        try {
+          new URL(value);
+          return undefined;
+        } catch {
+          return "Invalid URL format";
+        }
+      },
     });
+
+    if (isCancel(rpcUrl)) {
+      cancel("Operation cancelled.");
+      process.exit(1);
+    }
+    opts.rpcUrl = rpcUrl;
   }
 
   opts.payerKp = await getOrPromptFilePath(
@@ -95,9 +114,10 @@ async function collectInteractiveOptions(
 
 export const initializeCommand = new Command("initialize")
   .description("Initialize the Base Relayer program")
+  .option("--program-id <address>", "Base Relayer program address")
   .option(
-    "--deploy-env <deployEnv>",
-    "Target deploy environment (testnet-alpha | testnet-prod)"
+    "--rpc-url <url>",
+    "Solana RPC URL (e.g., https://api.devnet.solana.com)"
   )
   .option(
     "--payer-kp <path>",
