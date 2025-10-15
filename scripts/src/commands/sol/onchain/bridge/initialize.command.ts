@@ -214,7 +214,7 @@ export const initializeCommand = new Command("initialize")
     "--gas-cost-scaler-dp <uint>",
     "Gas cost scaler decimal precision (bigint)"
   )
-  .option("--gas-fee-receiver <hex>", "Gas fee receiver address (hex)")
+  .option("--gas-fee-receiver <address>", "Gas fee receiver (solana address)")
   .option(
     "--protocol-block-interval-requirement <uint>",
     "Protocol block interval requirement (bigint)"
