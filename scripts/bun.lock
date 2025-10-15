@@ -3,10 +3,8 @@
   "workspaces": {
     "": {
       "name": "scripts",
-      "dependencies": {
-        "@base/bridge": "file:../clients/ts",
-      },
       "devDependencies": {
+        "@base/bridge": "file:../clients/ts",
         "@clack/prompts": "0.11.0",
         "@codama/nodes-from-anchor": "1.2.9",
         "@codama/renderers-js": "1.4.3",
@@ -19,7 +17,7 @@
         "codama": "1.3.7",
         "commander": "14.0.1",
         "consola": "3.4.2",
-        "viem": "2.38.2",
+        "viem": "2.38.0",
         "zod": "4.1.12",
       },
       "peerDependencies": {
@@ -324,7 +322,7 @@
 
     "uuid": ["uuid@8.3.2", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg=="],
 
-    "viem": ["viem@2.38.2", "", { "dependencies": { "@noble/curves": "1.9.1", "@noble/hashes": "1.8.0", "@scure/bip32": "1.7.0", "@scure/bip39": "1.6.0", "abitype": "1.1.0", "isows": "1.0.7", "ox": "0.9.6", "ws": "8.18.3" }, "peerDependencies": { "typescript": ">=5.0.4" }, "optionalPeers": ["typescript"] }, "sha512-MJDiTDD9gfOT7lPQRimdmw+g46hU/aWJ3loqb+tN6UBOO00XEd0O4LJx+Kp5/uCRnMlJr8zJ1bNzCK7eG6gMjg=="],
+    "viem": ["viem@2.38.0", "", { "dependencies": { "@noble/curves": "1.9.1", "@noble/hashes": "1.8.0", "@scure/bip32": "1.7.0", "@scure/bip39": "1.6.0", "abitype": "1.1.0", "isows": "1.0.7", "ox": "0.9.6", "ws": "8.18.3" }, "peerDependencies": { "typescript": ">=5.0.4" }, "optionalPeers": ["typescript"] }, "sha512-YU5TG8dgBNeYPrCMww0u9/JVeq2ZCk9fzk6QybrPkBooFysamHXL1zC3ua10aLPt9iWoA/gSVf1D9w7nc5B1aA=="],
 
     "webidl-conversions": ["webidl-conversions@3.0.1", "", {}, "sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ=="],
 
