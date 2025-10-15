@@ -3,7 +3,7 @@ import { Command } from "commander";
 import {
   getInteractiveSelect,
   getInteractiveConfirm,
-  getOrPromptKeypairPath,
+  getOrPromptFilePath,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleBuild } from "./build.handler";
@@ -39,7 +39,7 @@ async function collectInteractiveOptions(
     if (useProtocol) {
       opts.bridgeProgramKp = "protocol";
     } else {
-      opts.bridgeProgramKp = await getOrPromptKeypairPath(
+      opts.bridgeProgramKp = await getOrPromptFilePath(
         undefined,
         "Enter path to Bridge program keypair",
         []
@@ -56,7 +56,7 @@ async function collectInteractiveOptions(
     if (useProtocol) {
       opts.baseRelayerProgramKp = "protocol";
     } else {
-      opts.baseRelayerProgramKp = await getOrPromptKeypairPath(
+      opts.baseRelayerProgramKp = await getOrPromptFilePath(
         undefined,
         "Enter path to Base Relayer program keypair",
         []

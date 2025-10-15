@@ -23,17 +23,28 @@ import { z } from "zod";
 
 import { logger } from "@internal/logger";
 
-const bigintSchema = z.coerce.bigint();
+const bigintSchema = z
+  .string()
+  .transform((val) => val.replace(/_/g, ""))
+  .pipe(z.coerce.bigint());
 const integerSchema = (min?: number, max?: number) => {
-  let schema = z.coerce.number().int();
+  let schema = z.number().int();
   if (min !== undefined) schema = schema.min(min);
   if (max !== undefined) schema = schema.max(max);
-  return schema;
+
+  return z
+    .string()
+    .transform((val) => Number(val.replace(/_/g, "")))
+    .pipe(schema);
 };
 const decimalSchema = (min?: number) => {
-  let schema = z.coerce.number();
+  let schema = z.number();
   if (min !== undefined) schema = schema.min(min);
-  return schema;
+
+  return z
+    .string()
+    .transform((val) => Number(val.replace(/_/g, "")))
+    .pipe(schema);
 };
 const solanaAddressSchema = z.string().refine(isSolanaAddress, {
   message: "Value must be a base58 address",
@@ -173,7 +184,7 @@ export async function getOrPromptDecimal(
 /**
  * Validates and returns a keypair file path (from CLI or interactive prompt)
  */
-export async function getOrPromptKeypairPath(
+export async function getOrPromptFilePath(
   value: string | undefined,
   label: string,
   allowedKeywords?: string[]
@@ -206,9 +217,10 @@ export async function getOrPromptKeypairPath(
     return cleanPath;
   }
 
-  const placeholder = allowedKeywords && allowedKeywords.length > 0 && allowedKeywords[0]
-    ? allowedKeywords[0]
-    : "/path/to/keypair.json";
+  const placeholder =
+    allowedKeywords && allowedKeywords.length > 0 && allowedKeywords[0]
+      ? allowedKeywords[0]
+      : "/path/to/keypair.json";
 
   const result = await getInteractiveInput(label, placeholder, validate);
   return result.replace(/^["']|["']$/g, "");

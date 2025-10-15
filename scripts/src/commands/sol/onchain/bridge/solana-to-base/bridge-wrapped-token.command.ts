@@ -6,7 +6,7 @@ import {
   getOrPromptEvmAddress,
   getOrPromptSolanaAddress,
   getOrPromptDecimal,
-  getOrPromptKeypairPath,
+  getOrPromptFilePath,
   validateAndExecute,
 } from "@internal/utils/cli";
 import {
@@ -93,7 +93,7 @@ async function collectInteractiveOptions(
     0.001
   );
 
-  opts.payerKp = await getOrPromptKeypairPath(
+  opts.payerKp = await getOrPromptFilePath(
     opts.payerKp,
     "Enter payer keypair path (or 'config' for Solana CLI config)",
     ["config"]

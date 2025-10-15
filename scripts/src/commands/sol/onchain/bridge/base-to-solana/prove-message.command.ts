@@ -4,7 +4,7 @@ import {
   getInteractiveSelect,
   getInteractiveConfirm,
   getOrPromptHash,
-  getOrPromptKeypairPath,
+  getOrPromptFilePath,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { logger } from "@internal/logger";
@@ -39,7 +39,7 @@ async function collectInteractiveOptions(
     "Enter Base transaction hash to prove"
   );
 
-  opts.payerKp = await getOrPromptKeypairPath(
+  opts.payerKp = await getOrPromptFilePath(
     opts.payerKp,
     "Enter payer keypair path (or 'config' for Solana CLI config)",
     ["config"]

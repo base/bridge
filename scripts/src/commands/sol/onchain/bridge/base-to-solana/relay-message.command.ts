@@ -3,7 +3,7 @@ import { Command } from "commander";
 import {
   getInteractiveSelect,
   getOrPromptHash,
-  getOrPromptKeypairPath,
+  getOrPromptFilePath,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleRelayMessage } from "./relay-message.handler";
@@ -35,7 +35,7 @@ async function collectInteractiveOptions(
     "Enter message hash to relay"
   );
 
-  opts.payerKp = await getOrPromptKeypairPath(
+  opts.payerKp = await getOrPromptFilePath(
     opts.payerKp,
     "Enter payer keypair path (or 'config' for Solana CLI config)",
     ["config"]

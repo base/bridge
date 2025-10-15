@@ -4,7 +4,7 @@ import {
   getInteractiveSelect,
   getInteractiveConfirm,
   getOrPromptSolanaAddress,
-  getOrPromptKeypairPath,
+  getOrPromptFilePath,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleCreateAta } from "./create-ata.handler";
@@ -50,7 +50,7 @@ async function collectInteractiveOptions(
     }
   }
 
-  opts.payerKp = await getOrPromptKeypairPath(
+  opts.payerKp = await getOrPromptFilePath(
     opts.payerKp,
     "Enter payer keypair path (or 'config' for Solana CLI config)",
     ["config"]

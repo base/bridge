@@ -4,7 +4,7 @@ import {
   getInteractiveSelect,
   getOrPromptSolanaAddress,
   getOrPromptDecimal,
-  getOrPromptKeypairPath,
+  getOrPromptFilePath,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleMint } from "./mint.handler";
@@ -49,13 +49,13 @@ async function collectInteractiveOptions(
     0.001
   );
 
-  opts.mintAuthorityKp = await getOrPromptKeypairPath(
+  opts.mintAuthorityKp = await getOrPromptFilePath(
     opts.mintAuthorityKp,
     "Enter mint authority keypair path (or 'config' for Solana CLI config)",
     ["config"]
   );
 
-  opts.payerKp = await getOrPromptKeypairPath(
+  opts.payerKp = await getOrPromptFilePath(
     opts.payerKp,
     "Enter payer keypair path (or 'config' for Solana CLI config)",
     ["config"]

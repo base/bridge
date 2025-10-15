@@ -3,7 +3,7 @@ import { Command } from "commander";
 import {
   getInteractiveSelect,
   getInteractiveConfirm,
-  getOrPromptKeypairPath,
+  getOrPromptFilePath,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleDeploy } from "./deploy.handler";
@@ -46,7 +46,7 @@ async function collectInteractiveOptions(
     });
 
     if (deployerKp === "custom") {
-      opts.deployerKp = await getOrPromptKeypairPath(
+      opts.deployerKp = await getOrPromptFilePath(
         undefined,
         "Enter path to deployer keypair",
         []
@@ -76,7 +76,7 @@ async function collectInteractiveOptions(
     if (useProtocol) {
       opts.programKp = "protocol";
     } else {
-      opts.programKp = await getOrPromptKeypairPath(
+      opts.programKp = await getOrPromptFilePath(
         undefined,
         "Enter path to program keypair",
         []

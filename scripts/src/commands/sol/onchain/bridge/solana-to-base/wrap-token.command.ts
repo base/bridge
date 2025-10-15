@@ -6,7 +6,7 @@ import {
   getOrPromptInteger,
   getOrPromptString,
   getOrPromptEvmAddress,
-  getOrPromptKeypairPath,
+  getOrPromptFilePath,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleWrapToken } from "./wrap-token.handler";
@@ -83,7 +83,7 @@ async function collectInteractiveOptions(
     0
   );
 
-  opts.payerKp = await getOrPromptKeypairPath(
+  opts.payerKp = await getOrPromptFilePath(
     opts.payerKp,
     "Enter payer keypair path (or 'config' for Solana CLI config)",
     ["config"]

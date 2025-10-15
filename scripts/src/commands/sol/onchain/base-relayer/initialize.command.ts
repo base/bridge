@@ -4,7 +4,7 @@ import {
   getInteractiveSelect,
   getOrPromptBigint,
   getOrPromptSolanaAddress,
-  getOrPromptKeypairPath,
+  getOrPromptFilePath,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleInitialize } from "./initialize.handler";
@@ -40,13 +40,13 @@ async function collectInteractiveOptions(
     });
   }
 
-  opts.payerKp = await getOrPromptKeypairPath(
+  opts.payerKp = await getOrPromptFilePath(
     opts.payerKp,
     "Enter payer keypair path (or 'config' for Solana CLI config)",
     ["config"]
   );
 
-  opts.guardianKp = await getOrPromptKeypairPath(
+  opts.guardianKp = await getOrPromptFilePath(
     opts.guardianKp,
     "Enter guardian keypair path (or 'payer' for payer keypair)",
     ["payer"]
