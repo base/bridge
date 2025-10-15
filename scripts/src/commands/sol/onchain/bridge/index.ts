@@ -1,6 +1,7 @@
 import { Command } from "commander";
 
 import { initializeCommand } from "./initialize.command";
+import { solVaultCommand } from "./sol-vault.command";
 import {
   bridgeCallCommand,
   bridgeSolCommand,
@@ -15,6 +16,7 @@ export const bridgeCommand = new Command("bridge").description(
 );
 
 bridgeCommand.addCommand(initializeCommand);
+bridgeCommand.addCommand(solVaultCommand);
 
 // Solana to Base
 bridgeCommand.addCommand(bridgeCallCommand);

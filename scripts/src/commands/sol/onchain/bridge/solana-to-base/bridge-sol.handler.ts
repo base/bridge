@@ -6,7 +6,7 @@ import {
   createSolanaRpc,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
-import { toBytes } from "viem";
+import { toBytes, isAddress as isEvmAddress } from "viem";
 
 import {
   fetchBridge,
@@ -35,7 +35,7 @@ export const argsSchema = z.object({
     .default("testnet-alpha"),
   to: z
     .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/, {
+    .refine((value) => isEvmAddress(value), {
       message: "Invalid Base/Ethereum address format",
     })
     .brand<"baseAddress">(),

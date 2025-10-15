@@ -18,7 +18,7 @@ import {
   type Mint,
 } from "@solana-program/token";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
-import { toBytes } from "viem";
+import { toBytes, isAddress as isEvmAddress } from "viem";
 
 import {
   fetchBridge,
@@ -51,7 +51,7 @@ export const argsSchema = z.object({
     z.literal("constant"),
     z
       .string()
-      .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid ERC20 address format")
+      .refine(isEvmAddress, "Invalid ERC20 address format")
       .brand<"remoteToken">(),
   ]),
   fromTokenAccount: z.union([
@@ -61,7 +61,7 @@ export const argsSchema = z.object({
   ]),
   to: z
     .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/, {
+    .refine((value) => isEvmAddress(value), {
       message: "Invalid Base/Ethereum address format",
     })
     .brand<"baseAddress">(),
