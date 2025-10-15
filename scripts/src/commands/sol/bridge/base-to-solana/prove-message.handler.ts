@@ -20,7 +20,7 @@ import { decodeEventLog } from "viem/utils";
 import {
   fetchBridge,
   getProveMessageInstruction,
-} from "../../../../../../../clients/ts/src/bridge";
+} from "../../../../../../clients/ts/src/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -126,7 +126,7 @@ export async function handleProveMessage(args: Args) {
 
     logger.info("Sending transaction...");
     const signature = await buildAndSendTransaction(
-      args.deployEnv,
+      { type: "deploy-env", value: args.deployEnv },
       [ix],
       payer
     );

@@ -1,5 +1,6 @@
 import {
   appendTransactionMessageInstructions,
+  assertIsSendableTransaction,
   createSolanaRpc,
   createSolanaRpcSubscriptions,
   createTransactionMessage,
@@ -14,17 +15,23 @@ import {
   type TransactionSigner,
 } from "@solana/kit";
 import { addSignersToTransactionMessage } from "@solana/signers";
+
 import { CONFIGS, type DeployEnv } from "../constants";
 
 export async function buildAndSendTransaction(
-  deployEnv: DeployEnv,
+  rpcConfig:
+    | { type: "deploy-env"; value: DeployEnv }
+    | { type: "rpc-url"; value: string },
   instructions: Instruction[],
   payer: TransactionSigner
 ) {
-  const config = CONFIGS[deployEnv];
-  const rpc = createSolanaRpc(`https://${config.solana.rpcUrl}`);
+  const rpcUrl =
+    rpcConfig.type === "deploy-env"
+      ? CONFIGS[rpcConfig.value].solana.rpcUrl
+      : rpcConfig.value;
+  const rpc = createSolanaRpc(`https://${rpcUrl}`);
   const rpcSubscriptions = createSolanaRpcSubscriptions(
-    devnet(`wss://${config.solana.rpcUrl}`)
+    devnet(`wss://${rpcUrl}`)
   );
 
   const sendAndConfirmTx = sendAndConfirmTransactionFactory({
@@ -46,6 +53,8 @@ export async function buildAndSendTransaction(
     await signTransactionMessageWithSigners(transactionMessage);
 
   const signature = getSignatureFromTransaction(signedTransaction);
+
+  assertIsSendableTransaction(signedTransaction);
 
   await sendAndConfirmTx(signedTransaction, {
     commitment: "confirmed",

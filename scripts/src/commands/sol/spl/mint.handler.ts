@@ -101,7 +101,7 @@ export async function handleMint(args: Args): Promise<void> {
     // Send transaction
     logger.info("Sending mint transaction...");
     const signature = await buildAndSendTransaction(
-      args.deployEnv,
+      { type: "deploy-env", value: args.deployEnv },
       [mintToInstruction],
       payer
     );

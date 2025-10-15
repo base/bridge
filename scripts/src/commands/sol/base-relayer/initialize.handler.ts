@@ -14,7 +14,7 @@ import {
   getInitializeInstruction,
   type Eip1559Config,
   type GasConfig,
-} from "../../../../../../clients/ts/src/base-relayer/generated";
+} from "../../../../../clients/ts/src/base-relayer/generated";
 
 import { logger } from "@internal/logger";
 import {
@@ -109,7 +109,7 @@ export async function handleInitialize(args: Args): Promise<void> {
 
     logger.info("Sending transaction...");
     const signature = await buildAndSendTransaction(
-      args.deployEnv,
+      { type: "deploy-env", value: args.deployEnv },
       [ix],
       payer
     );

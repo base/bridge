@@ -93,7 +93,7 @@ export async function handleCreateAta(args: Args): Promise<void> {
     // Send transaction
     logger.info("Sending transaction...");
     const signature = await buildAndSendTransaction(
-      args.deployEnv,
+      { type: "deploy-env", value: args.deployEnv },
       [instruction],
       payer
     );

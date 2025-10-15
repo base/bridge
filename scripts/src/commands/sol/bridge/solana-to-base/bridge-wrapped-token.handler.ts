@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  getBase58Encoder,
   getProgramDerivedAddress,
   devnet,
   address,
@@ -10,7 +9,6 @@ import {
   type Instruction,
 } from "@solana/kit";
 import {
-  TOKEN_PROGRAM_ADDRESS,
   findAssociatedTokenPda,
   ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
   fetchMaybeToken,
@@ -22,8 +20,8 @@ import { toBytes, isAddress as isEvmAddress } from "viem";
 
 import {
   fetchBridge,
-  getBridgeSplInstruction,
-} from "../../../../../../../clients/ts/src/bridge";
+  getBridgeWrappedTokenInstruction,
+} from "../../../../../../clients/ts/src/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -46,13 +44,10 @@ export const argsSchema = z.object({
         "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
     })
     .default("testnet-alpha"),
-  mint: z.union([z.literal("constant"), z.string().brand<"solanaAddress">()]),
-  remoteToken: z.union([
-    z.literal("constant"),
-    z
-      .string()
-      .refine(isEvmAddress, "Invalid ERC20 address format")
-      .brand<"remoteToken">(),
+  mint: z.union([
+    z.literal("constants-wErc20"),
+    z.literal("constants-wEth"),
+    z.string().brand<"solanaAddress">(),
   ]),
   fromTokenAccount: z.union([
     z.literal("payer"),
@@ -81,9 +76,9 @@ type Args = z.infer<typeof argsSchema>;
 type FromTokenAccountArg = Args["fromTokenAccount"];
 type PayerKpArg = Args["payerKp"];
 
-export async function handleBridgeSpl(args: Args): Promise<void> {
+export async function handleBridgeWrappedToken(args: Args): Promise<void> {
   try {
-    logger.info("--- Bridge SPL script ---");
+    logger.info("--- Bridge Wrapped Token script ---");
 
     const config = CONFIGS[args.deployEnv];
     const rpcUrl = devnet(`https://${config.solana.rpcUrl}`);
@@ -94,7 +89,11 @@ export async function handleBridgeSpl(args: Args): Promise<void> {
     logger.info(`Payer: ${payer.address}`);
 
     const mintAddress =
-      args.mint === "constant" ? config.solana.spl : address(args.mint);
+      args.mint === "constants-wErc20"
+        ? config.solana.wErc20
+        : args.mint === "constants-wEth"
+          ? config.solana.wEth
+          : address(args.mint);
     logger.info(`Mint: ${mintAddress}`);
 
     const maybeMint = await fetchMaybeMint(rpc, mintAddress);
@@ -108,11 +107,6 @@ export async function handleBridgeSpl(args: Args): Promise<void> {
     });
     logger.info(`Bridge account: ${bridgeAccountAddress}`);
 
-    const remoteTokenAddress =
-      args.remoteToken === "constant" ? config.base.wSpl : args.remoteToken;
-    const remoteTokenBytes = toBytes(remoteTokenAddress);
-    const mintBytes = getBase58Encoder().encode(mintAddress);
-
     // Calculate scaled amount (amount * 10^decimals)
     const scaledAmount = BigInt(
       Math.floor(args.amount * Math.pow(10, maybeMint.data.decimals))
@@ -120,16 +114,6 @@ export async function handleBridgeSpl(args: Args): Promise<void> {
     logger.info(`Amount: ${args.amount}`);
     logger.info(`Decimals: ${maybeMint.data.decimals}`);
     logger.info(`Scaled amount: ${scaledAmount}`);
-
-    const [tokenVaultAddress] = await getProgramDerivedAddress({
-      programAddress: config.solana.bridgeProgram,
-      seeds: [
-        Buffer.from(getIdlConstant("TOKEN_VAULT_SEED")),
-        mintBytes,
-        Buffer.from(remoteTokenBytes),
-      ],
-    });
-    logger.info(`Token Vault: ${tokenVaultAddress}`);
 
     const { salt, pubkey: outgoingMessage } = await outgoingMessagePubkey(
       config.solana.bridgeProgram
@@ -148,8 +132,11 @@ export async function handleBridgeSpl(args: Args): Promise<void> {
     );
     logger.info(`From Token Account: ${fromTokenAccountAddress}`);
 
+    const tokenProgram = maybeMint.programAddress;
+    logger.info(`Token Program: ${tokenProgram}`);
+
     const ixs: Instruction[] = [
-      getBridgeSplInstruction(
+      getBridgeWrappedTokenInstruction(
         {
           // Accounts
           payer,
@@ -157,16 +144,14 @@ export async function handleBridgeSpl(args: Args): Promise<void> {
           gasFeeReceiver: bridge.data.gasConfig.gasFeeReceiver,
           mint: mintAddress,
           fromTokenAccount: fromTokenAccountAddress,
-          tokenVault: tokenVaultAddress,
           bridge: bridgeAccountAddress,
           outgoingMessage,
-          tokenProgram: TOKEN_PROGRAM_ADDRESS,
+          tokenProgram,
           systemProgram: SYSTEM_PROGRAM_ADDRESS,
 
           // Arguments
           outgoingMessageSalt: salt,
           to: toBytes(args.to),
-          remoteToken: remoteTokenBytes,
           amount: scaledAmount,
           call: null,
         },
@@ -185,8 +170,12 @@ export async function handleBridgeSpl(args: Args): Promise<void> {
     }
 
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(args.deployEnv, ixs, payer);
-    logger.success("Bridge SPL operation completed!");
+    const signature = await buildAndSendTransaction(
+      { type: "deploy-env", value: args.deployEnv },
+      ixs,
+      payer
+    );
+    logger.success("Bridge Wrapped Token operation completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
     );
@@ -197,7 +186,7 @@ export async function handleBridgeSpl(args: Args): Promise<void> {
       await relayMessageToBase(args.deployEnv, outgoingMessage);
     }
   } catch (error) {
-    logger.error("Bridge SPL operation failed:", error);
+    logger.error("Bridge Wrapped Token operation failed:", error);
     throw error;
   }
 }

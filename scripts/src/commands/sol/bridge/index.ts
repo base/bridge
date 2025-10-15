@@ -18,13 +18,11 @@ export const bridgeCommand = new Command("bridge").description(
 bridgeCommand.addCommand(initializeCommand);
 bridgeCommand.addCommand(solVaultCommand);
 
-// Solana to Base
 bridgeCommand.addCommand(bridgeCallCommand);
 bridgeCommand.addCommand(bridgeSolCommand);
 bridgeCommand.addCommand(bridgeSplCommand);
 bridgeCommand.addCommand(bridgeWrappedTokenCommand);
 bridgeCommand.addCommand(wrapTokenCommand);
 
-// Base to Solana
 bridgeCommand.addCommand(proveMessageCommand);
 bridgeCommand.addCommand(relayMessageCommand);

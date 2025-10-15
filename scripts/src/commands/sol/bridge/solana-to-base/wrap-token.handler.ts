@@ -14,7 +14,7 @@ import {
   fetchBridge,
   getWrapTokenInstruction,
   type WrapTokenInstructionDataArgs,
-} from "../../../../../../../clients/ts/src/bridge";
+} from "../../../../../../clients/ts/src/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -167,7 +167,11 @@ export async function handleWrapToken(args: Args): Promise<void> {
     }
 
     logger.info("Sending transaction...");
-    const signature = await buildAndSendTransaction(args.deployEnv, ixs, payer);
+    const signature = await buildAndSendTransaction(
+      { type: "deploy-env", value: args.deployEnv },
+      ixs,
+      payer
+    );
     logger.success("Token wrap completed!");
     logger.info(
       `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
