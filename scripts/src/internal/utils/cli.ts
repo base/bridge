@@ -23,11 +23,11 @@ import { z } from "zod";
 
 import { logger } from "@internal/logger";
 
-const bigintSchema = z
+export const bigintSchema = z
   .string()
   .transform((val) => val.replace(/_/g, ""))
   .pipe(z.coerce.bigint());
-const integerSchema = (min?: number, max?: number) => {
+export const integerSchema = (min?: number, max?: number) => {
   let schema = z.number().int();
   if (min !== undefined) schema = schema.min(min);
   if (max !== undefined) schema = schema.max(max);
@@ -37,7 +37,7 @@ const integerSchema = (min?: number, max?: number) => {
     .transform((val) => Number(val.replace(/_/g, "")))
     .pipe(schema);
 };
-const decimalSchema = (min?: number) => {
+export const decimalSchema = (min?: number) => {
   let schema = z.number();
   if (min !== undefined) schema = schema.min(min);
 
@@ -46,14 +46,14 @@ const decimalSchema = (min?: number) => {
     .transform((val) => Number(val.replace(/_/g, "")))
     .pipe(schema);
 };
-const solanaAddressSchema = z.string().refine(isSolanaAddress, {
+export const solanaAddressSchema = z.string().refine(isSolanaAddress, {
   message: "Value must be a base58 address",
 });
-const evmAddressSchema = z.string().refine(isEvmAddress, {
+export const evmAddressSchema = z.string().refine(isEvmAddress, {
   message: "Invalid EVM address",
 });
-const hexSchema = z.hex();
-const hashSchema = z.string().refine(isHash, {
+export const hexSchema = z.hex();
+export const hashSchema = z.string().refine(isHash, {
   message: "Value must be a valid 32-byte hash (0x... 66 characters)",
 });
 

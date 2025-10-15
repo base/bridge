@@ -6,10 +6,9 @@ import {
   type KeyPairSigner,
   createSolanaRpc,
   address as solanaAddress,
-  isAddress as isSolanaAddress,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
-import { toBytes, toHex, isAddress as isEvmAddress } from "viem";
+import { toBytes, toHex } from "viem";
 
 import {
   fetchBridge,
@@ -30,22 +29,12 @@ import {
   getIdlConstant,
 } from "@internal/sol";
 import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
-
-const evmAddressSchema = z.string().refine((value) => isEvmAddress(value), {
-  message: "Value must be a valid EVM address",
-});
-
-const solAddressSchema = z
-  .string()
-  .refine((value) => isSolanaAddress(value), {
-    message: "Value must be a base58 address",
-  })
-  .transform((value) => solanaAddress(value));
-
-const bigintStringSchema = z
-  .string()
-  .regex(/^[0-9]+$/, { message: "Value must be a base-10 integer string" })
-  .transform((value) => BigInt(value));
+import {
+  bigintSchema,
+  integerSchema,
+  solanaAddressSchema,
+  evmAddressSchema,
+} from "@internal/utils/cli";
 
 const baseArgsSchema = z.object({
   deployEnv: z.enum(DEPLOY_ENVS, {
@@ -57,42 +46,32 @@ const baseArgsSchema = z.object({
 });
 
 const eip1559FlatSchema = z.object({
-  eip1559Target: bigintStringSchema,
-  eip1559Denominator: bigintStringSchema,
-  eip1559WindowDurationSeconds: bigintStringSchema,
-  eip1559MinimumBaseFee: bigintStringSchema,
+  eip1559Target: bigintSchema,
+  eip1559Denominator: bigintSchema,
+  eip1559WindowDurationSeconds: bigintSchema,
+  eip1559MinimumBaseFee: bigintSchema,
 });
 
 const gasFlatSchema = z.object({
-  gasPerCall: bigintStringSchema,
-  gasCostScaler: bigintStringSchema,
-  gasCostScalerDp: bigintStringSchema,
-  gasFeeReceiver: solAddressSchema,
+  gasPerCall: bigintSchema,
+  gasCostScaler: bigintSchema,
+  gasCostScalerDp: bigintSchema,
+  gasFeeReceiver: solanaAddressSchema.transform((value) =>
+    solanaAddress(value)
+  ),
 });
 
 const protocolFlatSchema = z.object({
-  protocolBlockIntervalRequirement: bigintStringSchema,
+  protocolBlockIntervalRequirement: bigintSchema,
 });
 
 const bufferFlatSchema = z.object({
-  bufferMaxCallBufferSize: bigintStringSchema,
+  bufferMaxCallBufferSize: bigintSchema,
 });
 
 const baseOracleFlatSchema = z.object({
-  baseOracleThreshold: z
-    .string()
-    .regex(/^[0-9]+$/, { message: "Threshold must be a base-10 integer" })
-    .transform((value) => Number(value))
-    .refine((value) => Number.isInteger(value) && value >= 0, {
-      message: "Threshold must be a non-negative integer",
-    }),
-  baseOracleSignerCount: z
-    .string()
-    .regex(/^[0-9]+$/, { message: "Signer count must be a base-10 integer" })
-    .transform((value) => Number(value))
-    .refine((value) => Number.isInteger(value) && value >= 0, {
-      message: "Signer count must be a non-negative integer",
-    }),
+  baseOracleThreshold: integerSchema(0),
+  baseOracleSignerCount: integerSchema(0),
   baseOracleSigners: z
     .string()
     .transform((value) =>
@@ -109,15 +88,7 @@ const baseOracleFlatSchema = z.object({
 });
 
 const partnerOracleFlatSchema = z.object({
-  partnerOracleRequiredThreshold: z
-    .string()
-    .regex(/^[0-9]+$/, {
-      message: "Required threshold must be a base-10 integer",
-    })
-    .transform((value) => Number(value))
-    .refine((value) => Number.isInteger(value) && value > 0, {
-      message: "Required threshold must be a positive integer",
-    }),
+  partnerOracleRequiredThreshold: integerSchema(1),
 });
 
 export const argsSchema = baseArgsSchema
