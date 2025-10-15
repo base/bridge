@@ -1,11 +1,11 @@
 import { Command } from "commander";
-import { select, text, confirm, isCancel, cancel } from "@clack/prompts";
-import { existsSync } from "fs";
 
 import {
+  getInteractiveSelect,
   getOrPromptBigint,
   getOrPromptSolanaAddress,
   getOrPromptEvmAddressList,
+  getOrPromptKeypairPath,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleInitialize } from "./initialize.handler";
@@ -36,7 +36,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    const deployEnv = await select({
+    opts.deployEnv = await getInteractiveSelect({
       message: "Select target deploy environment:",
       options: [
         { value: "testnet-alpha", label: "Testnet Alpha" },
@@ -44,80 +44,19 @@ async function collectInteractiveOptions(
       ],
       initialValue: "testnet-alpha",
     });
-    if (isCancel(deployEnv)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-    opts.deployEnv = deployEnv;
   }
 
-  if (!opts.payerKp) {
-    const useConfigPayer = await confirm({
-      message: "Use config payer keypair?",
-      initialValue: true,
-    });
-    if (isCancel(useConfigPayer)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
+  opts.payerKp = await getOrPromptKeypairPath(
+    opts.payerKp,
+    "Enter payer keypair path (or 'config' for Solana CLI config)",
+    ["config"]
+  );
 
-    if (useConfigPayer) {
-      opts.payerKp = "config";
-    } else {
-      const keypairPath = await text({
-        message: "Enter path to payer keypair:",
-        placeholder: "/path/to/keypair.json",
-        validate: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "Keypair path cannot be empty";
-          }
-          const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-          if (!existsSync(cleanPath)) {
-            return "Keypair file does not exist";
-          }
-        },
-      });
-      if (isCancel(keypairPath)) {
-        cancel("Operation cancelled.");
-        process.exit(1);
-      }
-      opts.payerKp = keypairPath.trim().replace(/^["']|["']$/g, "");
-    }
-  }
-
-  if (!opts.guardianKp) {
-    const usePayerAsGuardian = await confirm({
-      message: "Use payer as guardian keypair?",
-      initialValue: true,
-    });
-    if (isCancel(usePayerAsGuardian)) {
-      cancel("Operation cancelled.");
-      process.exit(1);
-    }
-
-    if (usePayerAsGuardian) {
-      opts.guardianKp = "payer";
-    } else {
-      const keypairPath = await text({
-        message: "Enter path to guardian keypair:",
-        placeholder: "/path/to/guardian.json",
-        validate: (value) => {
-          if (!value || value.trim().length === 0) {
-            return "Keypair path cannot be empty";
-          }
-          const cleanPath = value.trim().replace(/^["']|["']$/g, "");
-          if (!existsSync(cleanPath)) {
-            return "Guardian keypair file does not exist";
-          }
-        },
-      });
-      if (isCancel(keypairPath)) {
-        cancel("Operation cancelled.");
-        process.exit(1);
-      }
-      opts.guardianKp = keypairPath.trim().replace(/^["']|["']$/g, "");
-    }
-  }
+  opts.guardianKp = await getOrPromptKeypairPath(
+    opts.guardianKp,
+    "Enter guardian keypair path (or 'payer' for payer keypair)",
+    ["payer"]
+  );
 
   opts.eip1559Target = await getOrPromptBigint(
     opts.eip1559Target,
