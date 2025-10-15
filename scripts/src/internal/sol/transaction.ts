@@ -1,6 +1,7 @@
 import {
   appendTransactionMessageInstructions,
   assertIsSendableTransaction,
+  assertIsTransactionWithBlockhashLifetime,
   createSolanaRpc,
   createSolanaRpcSubscriptions,
   createTransactionMessage,
@@ -55,6 +56,7 @@ export async function buildAndSendTransaction(
   const signature = getSignatureFromTransaction(signedTransaction);
 
   assertIsSendableTransaction(signedTransaction);
+  assertIsTransactionWithBlockhashLifetime(signedTransaction);
 
   await sendAndConfirmTx(signedTransaction, {
     commitment: "confirmed",

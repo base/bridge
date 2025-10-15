@@ -358,8 +358,13 @@ export const IDL = {
   "errors": [
     {
       "code": 6000,
-      "name": "IncorrectGasFeeReceiver",
-      "msg": "Incorrect gas fee receiver"
+      "name": "GasLimitTooLow",
+      "msg": "Gas limit too low"
+    },
+    {
+      "code": 6001,
+      "name": "GasLimitExceeded",
+      "msg": "Gas limit exceeded"
     }
   ],
   "types": [
