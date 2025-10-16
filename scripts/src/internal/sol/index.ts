@@ -4,5 +4,6 @@ export * from "./base";
 export * from "./bridge-idl.constants";
 export * from "./bridge";
 export * from "./key-pair";
+export * from "./loader-v3";
 export * from "./transaction";
 export * from "./types";

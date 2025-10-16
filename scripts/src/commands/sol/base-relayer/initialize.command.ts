@@ -13,7 +13,7 @@ type CommanderOptions = {
   programId?: string;
   rpcUrl?: string;
   payerKp?: string;
-  guardianKp?: string;
+  guardian?: string;
   eip1559Target?: string;
   eip1559Denominator?: string;
   eip1559WindowDurationSeconds?: string;
@@ -65,9 +65,9 @@ async function collectInteractiveOptions(
     ["config"]
   );
 
-  opts.guardianKp = await getOrPromptFilePath(
-    opts.guardianKp,
-    "Enter guardian keypair path (or 'payer' for payer keypair)",
+  opts.guardian = await getOrPromptSolanaAddress(
+    opts.guardian,
+    "Enter guardian address (or 'payer' to use payer address)",
     ["payer"]
   );
 
@@ -124,8 +124,8 @@ export const initializeCommand = new Command("initialize")
     "Payer keypair: 'config' or custom payer keypair path"
   )
   .option(
-    "--guardian-kp <path>",
-    "Guardian keypair: 'payer' or custom guardian keypair path"
+    "--guardian <address>",
+    "Guardian address: 'payer' or Solana public key"
   )
   .option("--eip1559-target <uint>", "EIP-1559 target (bigint)")
   .option("--eip1559-denominator <uint>", "EIP-1559 denominator (bigint)")

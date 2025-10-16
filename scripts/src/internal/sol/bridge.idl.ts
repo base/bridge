@@ -1305,8 +1305,9 @@ export const IDL = {
         "This function sets up the initial bridge configuration and must be called once during deployment.",
         "",
         "# Arguments",
-        "* `ctx` - The context containing all accounts needed for initialization, including the guardian signer",
-        "* `cfg` - All the configuration parameters needed to initialize the bridge"
+        "* `ctx`      - The context containing all accounts needed for initialization, including the guardian signer",
+        "* `guardian` - The guardian account that will have administrative authority over the bridge",
+        "* `cfg`      - All the configuration parameters needed to initialize the bridge"
       ],
       "discriminator": [
         175,
@@ -1320,10 +1321,19 @@ export const IDL = {
       ],
       "accounts": [
         {
+          "name": "upgrade_authority",
+          "docs": [
+            "The upgrade authority that is authorized to initialize the bridge.",
+            "This ensures only the program deployer can set the initial configuration."
+          ],
+          "signer": true
+        },
+        {
           "name": "payer",
           "docs": [
             "The account that pays for the transaction and bridge account creation.",
-            "Must be mutable to deduct lamports for account rent."
+            "Must be mutable to deduct lamports for account rent.",
+            "Can be different from the upgrade_authority."
           ],
           "writable": true,
           "signer": true
@@ -1339,13 +1349,18 @@ export const IDL = {
           "writable": true
         },
         {
-          "name": "guardian",
+          "name": "program_data",
           "docs": [
-            "The guardian account that will have administrative authority over the bridge.",
-            "Must be a signer to prove ownership of the guardian key. The payer and guardian",
-            "may be distinct signers."
-          ],
-          "signer": true
+            "Program data account containing the upgrade authority.",
+            "Validates that the signer is indeed the upgrade authority."
+          ]
+        },
+        {
+          "name": "program",
+          "docs": [
+            "The bridge program itself.",
+            "Validates that program_data is the correct ProgramData account for this program."
+          ]
         },
         {
           "name": "system_program",
@@ -1356,6 +1371,10 @@ export const IDL = {
         }
       ],
       "args": [
+        {
+          "name": "guardian",
+          "type": "pubkey"
+        },
         {
           "name": "cfg",
           "type": {
@@ -2274,6 +2293,13 @@ export const IDL = {
       ],
       "accounts": [
         {
+          "name": "upgrade_authority",
+          "docs": [
+            "The upgrade authority account"
+          ],
+          "signer": true
+        },
+        {
           "name": "bridge",
           "docs": [
             "The bridge account containing configuration"
@@ -2281,11 +2307,10 @@ export const IDL = {
           "writable": true
         },
         {
-          "name": "guardian",
-          "docs": [
-            "The guardian account authorized to update configuration"
-          ],
-          "signer": true
+          "name": "program_data"
+        },
+        {
+          "name": "program"
         }
       ],
       "args": [
@@ -2320,6 +2345,13 @@ export const IDL = {
       ],
       "accounts": [
         {
+          "name": "upgrade_authority",
+          "docs": [
+            "The upgrade authority account"
+          ],
+          "signer": true
+        },
+        {
           "name": "bridge",
           "docs": [
             "The bridge account containing configuration"
@@ -2327,11 +2359,10 @@ export const IDL = {
           "writable": true
         },
         {
-          "name": "guardian",
-          "docs": [
-            "The guardian account authorized to update configuration"
-          ],
-          "signer": true
+          "name": "program_data"
+        },
+        {
+          "name": "program"
         }
       ],
       "args": [
@@ -2665,14 +2696,224 @@ export const IDL = {
   ],
   "errors": [
     {
-      "code": 6000,
-      "name": "MaxSizeExceeded",
+      "code": 12000,
+      "name": "BridgePaused",
+      "msg": "Bridge is currently paused"
+    },
+    {
+      "code": 12001,
+      "name": "IncorrectBridgeProgram",
+      "msg": "Incorrect bridge program"
+    },
+    {
+      "code": 12002,
+      "name": "IncorrectGasFeeReceiver",
+      "msg": "Incorrect gas fee receiver"
+    },
+    {
+      "code": 12100,
+      "name": "UnauthorizedInitialization",
+      "msg": "Only the upgrade authority can initialize the bridge"
+    },
+    {
+      "code": 12101,
+      "name": "UnauthorizedConfigUpdate",
+      "msg": "Unauthorized to update configuration"
+    },
+    {
+      "code": 12200,
+      "name": "BufferUnauthorizedClose",
+      "msg": "Only the owner can close this buffer"
+    },
+    {
+      "code": 12201,
+      "name": "BufferUnauthorizedAppend",
+      "msg": "Only the owner can append to this buffer"
+    },
+    {
+      "code": 12202,
+      "name": "BufferMaxSizeExceeded",
       "msg": "Call buffer size exceeds maximum allowed size"
     },
     {
-      "code": 6001,
-      "name": "InvalidBufferSize",
-      "msg": "Invalid buffer size provided"
+      "code": 12300,
+      "name": "InvalidRecoveryId",
+      "msg": "Invalid recovery ID"
+    },
+    {
+      "code": 12301,
+      "name": "SignatureVerificationFailed",
+      "msg": "Signature verification failed"
+    },
+    {
+      "code": 12302,
+      "name": "InsufficientBaseSignatures",
+      "msg": "Insufficient base oracle signatures to meet threshold"
+    },
+    {
+      "code": 12303,
+      "name": "InsufficientPartnerSignatures",
+      "msg": "Insufficient partner oracle signatures to meet threshold"
+    },
+    {
+      "code": 12400,
+      "name": "InvalidProof",
+      "msg": "Invalid proof"
+    },
+    {
+      "code": 12401,
+      "name": "MmrShouldBeEmpty",
+      "msg": "MMR should be empty"
+    },
+    {
+      "code": 12402,
+      "name": "EmptyMmr",
+      "msg": "MMR is empty"
+    },
+    {
+      "code": 12403,
+      "name": "LeafMountainNotFound",
+      "msg": "Leaf's mountain not found"
+    },
+    {
+      "code": 12404,
+      "name": "InsufficientProofElementsForIntraMountainPath",
+      "msg": "Insufficient proof elements for intra-mountain path"
+    },
+    {
+      "code": 12405,
+      "name": "InsufficientProofElementsForOtherMountainPeaks",
+      "msg": "Insufficient proof elements for other mountain peaks"
+    },
+    {
+      "code": 12406,
+      "name": "UnusedProofElementsRemaining",
+      "msg": "Unused proof elements remaining"
+    },
+    {
+      "code": 12407,
+      "name": "NoPeaksFoundForNonEmptyMmr",
+      "msg": "No peaks found for non-empty MMR"
+    },
+    {
+      "code": 12500,
+      "name": "InvalidMessageHash",
+      "msg": "Invalid message hash"
+    },
+    {
+      "code": 12501,
+      "name": "AlreadyExecuted",
+      "msg": "Message already executed"
+    },
+    {
+      "code": 12502,
+      "name": "IncorrectBlockNumber",
+      "msg": "Incorrect block number"
+    },
+    {
+      "code": 12600,
+      "name": "MintDoesNotMatchLocalToken",
+      "msg": "Mint does not match local token"
+    },
+    {
+      "code": 12601,
+      "name": "TokenAccountDoesNotMatchTo",
+      "msg": "Token account does not match to address"
+    },
+    {
+      "code": 12602,
+      "name": "IncorrectTokenVault",
+      "msg": "Incorrect token vault"
+    },
+    {
+      "code": 12603,
+      "name": "MintIsWrappedToken",
+      "msg": "Mint is a wrapped token"
+    },
+    {
+      "code": 12604,
+      "name": "IncorrectTo",
+      "msg": "Incorrect to"
+    },
+    {
+      "code": 12605,
+      "name": "IncorrectSolVault",
+      "msg": "Incorrect sol vault"
+    },
+    {
+      "code": 12700,
+      "name": "RemoteTokenNotFound",
+      "msg": "Remote token not found"
+    },
+    {
+      "code": 12701,
+      "name": "ScalerExponentNotFound",
+      "msg": "Scaler exponent not found"
+    },
+    {
+      "code": 12702,
+      "name": "InvalidRemoteToken",
+      "msg": "Invalid remote token"
+    },
+    {
+      "code": 12703,
+      "name": "InvalidScalerExponent",
+      "msg": "Invalid scaler exponent"
+    },
+    {
+      "code": 12704,
+      "name": "MintIsNotFromToken2022",
+      "msg": "Mint is not a token 2022 mint"
+    },
+    {
+      "code": 12705,
+      "name": "MintIsNotWrappedTokenPda",
+      "msg": "Mint is not a valid wrapped token PDA"
+    },
+    {
+      "code": 12800,
+      "name": "InvalidThreshold",
+      "msg": "Threshold must be <= number of signers"
+    },
+    {
+      "code": 12801,
+      "name": "TooManySigners",
+      "msg": "Too many signers (max 32)"
+    },
+    {
+      "code": 12802,
+      "name": "DuplicateSigner",
+      "msg": "Duplicate signer found"
+    },
+    {
+      "code": 12803,
+      "name": "InvalidPartnerThreshold",
+      "msg": "Invalid partner threshold"
+    },
+    {
+      "code": 12804,
+      "name": "InvalidDenominator",
+      "msg": "Invalid denominator"
+    },
+    {
+      "code": 12805,
+      "name": "InvalidWindowDurationSeconds",
+      "msg": "Invalid window duration seconds"
+    },
+    {
+      "code": 12806,
+      "name": "InvalidGasCostScalerDp",
+      "msg": "Invalid gas cost scaler dp"
+    },
+    {
+      "code": 12807,
+      "name": "InvalidBlockIntervalRequirement",
+      "msg": "Invalid block interval requirement"
+    },
+    {
+      "code": 12900,
+      "name": "CreationWithNonZeroTarget",
+      "msg": "Creation with non-zero target"
     }
   ],
   "types": [
