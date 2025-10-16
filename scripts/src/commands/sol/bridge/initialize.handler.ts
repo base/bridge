@@ -3,7 +3,6 @@ import {
   getProgramDerivedAddress,
   devnet,
   type Address as SolanaAddress,
-  type KeyPairSigner,
   createSolanaRpc,
   address as solanaAddress,
 } from "@solana/kit";
@@ -27,6 +26,7 @@ import {
   getSolanaCliConfigKeypairSigner,
   getKeypairSignerFromPath,
   getIdlConstant,
+  getProgramDataAddress,
 } from "@internal/sol";
 import {
   bigintSchema,
@@ -36,12 +36,13 @@ import {
 } from "@internal/utils/cli";
 
 const baseArgsSchema = z.object({
-  programId: solanaAddressSchema.transform((value) =>
-    solanaAddress(value)
-  ),
+  programId: solanaAddressSchema.transform((value) => solanaAddress(value)),
   rpcUrl: z.string().url("RPC URL must be a valid URL"),
   payerKp: z.union([z.literal("config"), z.string().brand<"payerKp">()]),
-  guardianKp: z.union([z.literal("payer"), z.string().brand<"guardianKp">()]),
+  guardian: z.union([
+    z.literal("payer"),
+    solanaAddressSchema.transform((value) => solanaAddress(value)),
+  ]),
 });
 
 const eip1559FlatSchema = z.object({
@@ -100,7 +101,7 @@ export const argsSchema = baseArgsSchema
 
 export type InitializeArgs = z.infer<typeof argsSchema>;
 type PayerKpArg = InitializeArgs["payerKp"];
-type GuardianKpArg = InitializeArgs["guardianKp"];
+type GuardianArg = InitializeArgs["guardian"];
 
 export async function handleInitialize(args: InitializeArgs): Promise<void> {
   try {
@@ -114,14 +115,16 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
     const payer = await resolvePayerKeypair(args.payerKp);
     logger.info(`Payer: ${payer.address}`);
 
-    // Derive bridge account address
     const [bridgeAccountAddress] = await getProgramDerivedAddress({
       programAddress: args.programId,
       seeds: [Buffer.from(getIdlConstant("BRIDGE_SEED"))],
     });
     logger.info(`Bridge account address: ${bridgeAccountAddress}`);
 
-    const guardian = await resolveGuardianKeypair(args.guardianKp, payer);
+    const programDataAddress = await getProgramDataAddress(args.programId);
+    logger.info(`Program data address: ${programDataAddress}`);
+
+    const guardianAddress = resolveGuardianAddress(args.guardian, payer);
 
     const eip1559Config: Eip1559Config = {
       target: args.eip1559Target,
@@ -177,13 +180,18 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
       requiredThreshold: args.partnerOracleRequiredThreshold,
     };
 
-    // Build initialize instruction
     const ix = getInitializeInstruction(
       {
-        payer: payer,
+        // Accounts
+        upgradeAuthority: payer,
+        payer,
         bridge: bridgeAccountAddress,
+        programData: programDataAddress,
+        program: args.programId,
         systemProgram: SYSTEM_PROGRAM_ADDRESS,
-        guardian,
+
+        // Arguments
+        guardian: guardianAddress,
         eip1559Config,
         gasConfig,
         protocolConfig,
@@ -209,7 +217,7 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
     await assertInitialized(
       createSolanaRpc(rpcUrl),
       bridgeAccountAddress,
-      guardian,
+      guardianAddress,
       eip1559Config,
       gasConfig,
       protocolConfig,
@@ -236,7 +244,7 @@ async function resolvePayerKeypair(payerKpArg: PayerKpArg) {
 async function assertInitialized(
   rpc: ReturnType<typeof createSolanaRpc>,
   bridgeAccountAddress: SolanaAddress,
-  guardian: KeyPairSigner,
+  guardian: SolanaAddress,
   eip1559Config: Eip1559Config,
   gasConfig: GasConfig,
   protocolConfig: ProtocolConfig,
@@ -247,8 +255,7 @@ async function assertInitialized(
   console.log("Confirming bridge configuration...");
   const bridgeData = await fetchBridge(rpc, bridgeAccountAddress);
 
-  // EIP1559 confirmation
-  if (bridgeData.data.guardian !== guardian.address) {
+  if (bridgeData.data.guardian !== guardian) {
     throw new Error("Guardian mismatch!");
   }
   if (bridgeData.data.eip1559.config.target !== eip1559Config.target) {
@@ -342,15 +349,15 @@ async function assertInitialized(
   console.log("Bridge config confirmed!");
 }
 
-async function resolveGuardianKeypair(
-  guardianKpArg: GuardianKpArg,
-  payer: KeyPairSigner
-) {
-  if (guardianKpArg === "payer") {
-    logger.info("Using payer as guardian keypair");
-    return payer;
+function resolveGuardianAddress(
+  guardianArg: GuardianArg,
+  payer: Awaited<ReturnType<typeof resolvePayerKeypair>>
+): SolanaAddress {
+  if (guardianArg === "payer") {
+    logger.info("Using payer address as guardian");
+    return payer.address;
   }
 
-  logger.info(`Using custom guardian keypair: ${guardianKpArg}`);
-  return await getKeypairSignerFromPath(guardianKpArg);
+  logger.info(`Using custom guardian address: ${guardianArg}`);
+  return guardianArg;
 }

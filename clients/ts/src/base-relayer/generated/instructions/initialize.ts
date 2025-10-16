@@ -56,9 +56,11 @@ export function getInitializeDiscriminatorBytes() {
 
 export type InitializeInstruction<
   TProgram extends string = typeof BASE_RELAYER_PROGRAM_ADDRESS,
+  TAccountUpgradeAuthority extends string | AccountMeta<string> = string,
   TAccountPayer extends string | AccountMeta<string> = string,
   TAccountCfg extends string | AccountMeta<string> = string,
-  TAccountGuardian extends string | AccountMeta<string> = string,
+  TAccountProgramData extends string | AccountMeta<string> = string,
+  TAccountProgram extends string | AccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | AccountMeta<string> = '11111111111111111111111111111111',
@@ -67,15 +69,21 @@ export type InitializeInstruction<
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
+      TAccountUpgradeAuthority extends string
+        ? ReadonlySignerAccount<TAccountUpgradeAuthority> &
+            AccountSignerMeta<TAccountUpgradeAuthority>
+        : TAccountUpgradeAuthority,
       TAccountPayer extends string
         ? WritableSignerAccount<TAccountPayer> &
             AccountSignerMeta<TAccountPayer>
         : TAccountPayer,
       TAccountCfg extends string ? WritableAccount<TAccountCfg> : TAccountCfg,
-      TAccountGuardian extends string
-        ? ReadonlySignerAccount<TAccountGuardian> &
-            AccountSignerMeta<TAccountGuardian>
-        : TAccountGuardian,
+      TAccountProgramData extends string
+        ? ReadonlyAccount<TAccountProgramData>
+        : TAccountProgramData,
+      TAccountProgram extends string
+        ? ReadonlyAccount<TAccountProgram>
+        : TAccountProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -85,13 +93,13 @@ export type InitializeInstruction<
 
 export type InitializeInstructionData = {
   discriminator: ReadonlyUint8Array;
-  newGuardian: Address;
+  guardian: Address;
   eip1559Config: Eip1559Config;
   gasConfig: GasConfig;
 };
 
 export type InitializeInstructionDataArgs = {
-  newGuardian: Address;
+  guardian: Address;
   eip1559Config: Eip1559ConfigArgs;
   gasConfig: GasConfigArgs;
 };
@@ -100,7 +108,7 @@ export function getInitializeInstructionDataEncoder(): FixedSizeEncoder<Initiali
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
-      ['newGuardian', getAddressEncoder()],
+      ['guardian', getAddressEncoder()],
       ['eip1559Config', getEip1559ConfigEncoder()],
       ['gasConfig', getGasConfigEncoder()],
     ]),
@@ -111,7 +119,7 @@ export function getInitializeInstructionDataEncoder(): FixedSizeEncoder<Initiali
 export function getInitializeInstructionDataDecoder(): FixedSizeDecoder<InitializeInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
-    ['newGuardian', getAddressDecoder()],
+    ['guardian', getAddressDecoder()],
     ['eip1559Config', getEip1559ConfigDecoder()],
     ['gasConfig', getGasConfigDecoder()],
   ]);
@@ -128,57 +136,76 @@ export function getInitializeInstructionDataCodec(): FixedSizeCodec<
 }
 
 export type InitializeInput<
+  TAccountUpgradeAuthority extends string = string,
   TAccountPayer extends string = string,
   TAccountCfg extends string = string,
-  TAccountGuardian extends string = string,
+  TAccountProgramData extends string = string,
+  TAccountProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   /**
-   * The account that pays for the transaction and bridge account creation.
+   * The upgrade authority that is authorized to initialize the relayer.
+   * This ensures only the program deployer can set the initial configuration.
+   */
+  upgradeAuthority: TransactionSigner<TAccountUpgradeAuthority>;
+  /**
+   * The account that pays for the transaction and config account creation.
    * Must be mutable to deduct lamports for account rent.
+   * Can be different from the upgrade_authority.
    */
   payer: TransactionSigner<TAccountPayer>;
   /**
    * The relayer config state account that tracks fee parameters.
    * - Uses PDA with CFG_SEED for deterministic address
-   * - Mutable to update EIP1559 fee data
+   * - Payer funds the account creation
+   * - Space allocated for config state (DISCRIMINATOR_LEN + Cfg::INIT_SPACE)
    */
   cfg: Address<TAccountCfg>;
   /**
-   * The guardian account that will have administrative authority over the bridge.
-   * Must be a signer to prove ownership of the guardian key. The payer and guardian
-   * may be distinct signers.
+   * Program data account containing the upgrade authority.
+   * Validates that the signer is indeed the upgrade authority.
    */
-  guardian: TransactionSigner<TAccountGuardian>;
+  programData: Address<TAccountProgramData>;
+  /**
+   * The base_relayer program itself.
+   * Validates that program_data is the correct ProgramData account for this program.
+   */
+  program: Address<TAccountProgram>;
   /**
    * System program required for creating new accounts.
    * Used internally by Anchor for account initialization.
    */
   systemProgram?: Address<TAccountSystemProgram>;
-  newGuardian: InitializeInstructionDataArgs['newGuardian'];
+  guardian: InitializeInstructionDataArgs['guardian'];
   eip1559Config: InitializeInstructionDataArgs['eip1559Config'];
   gasConfig: InitializeInstructionDataArgs['gasConfig'];
 };
 
 export function getInitializeInstruction<
+  TAccountUpgradeAuthority extends string,
   TAccountPayer extends string,
   TAccountCfg extends string,
-  TAccountGuardian extends string,
+  TAccountProgramData extends string,
+  TAccountProgram extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof BASE_RELAYER_PROGRAM_ADDRESS,
 >(
   input: InitializeInput<
+    TAccountUpgradeAuthority,
     TAccountPayer,
     TAccountCfg,
-    TAccountGuardian,
+    TAccountProgramData,
+    TAccountProgram,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): InitializeInstruction<
   TProgramAddress,
+  TAccountUpgradeAuthority,
   TAccountPayer,
   TAccountCfg,
-  TAccountGuardian,
+  TAccountProgramData,
+  TAccountProgram,
   TAccountSystemProgram
 > {
   // Program address.
@@ -186,9 +213,14 @@ export function getInitializeInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    upgradeAuthority: {
+      value: input.upgradeAuthority ?? null,
+      isWritable: false,
+    },
     payer: { value: input.payer ?? null, isWritable: true },
     cfg: { value: input.cfg ?? null, isWritable: true },
-    guardian: { value: input.guardian ?? null, isWritable: false },
+    programData: { value: input.programData ?? null, isWritable: false },
+    program: { value: input.program ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -208,9 +240,11 @@ export function getInitializeInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   return Object.freeze({
     accounts: [
+      getAccountMeta(accounts.upgradeAuthority),
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.cfg),
-      getAccountMeta(accounts.guardian),
+      getAccountMeta(accounts.programData),
+      getAccountMeta(accounts.program),
       getAccountMeta(accounts.systemProgram),
     ],
     data: getInitializeInstructionDataEncoder().encode(
@@ -219,9 +253,11 @@ export function getInitializeInstruction<
     programAddress,
   } as InitializeInstruction<
     TProgramAddress,
+    TAccountUpgradeAuthority,
     TAccountPayer,
     TAccountCfg,
-    TAccountGuardian,
+    TAccountProgramData,
+    TAccountProgram,
     TAccountSystemProgram
   >);
 }
@@ -233,27 +269,38 @@ export type ParsedInitializeInstruction<
   programAddress: Address<TProgram>;
   accounts: {
     /**
-     * The account that pays for the transaction and bridge account creation.
-     * Must be mutable to deduct lamports for account rent.
+     * The upgrade authority that is authorized to initialize the relayer.
+     * This ensures only the program deployer can set the initial configuration.
      */
-    payer: TAccountMetas[0];
+    upgradeAuthority: TAccountMetas[0];
+    /**
+     * The account that pays for the transaction and config account creation.
+     * Must be mutable to deduct lamports for account rent.
+     * Can be different from the upgrade_authority.
+     */
+    payer: TAccountMetas[1];
     /**
      * The relayer config state account that tracks fee parameters.
      * - Uses PDA with CFG_SEED for deterministic address
-     * - Mutable to update EIP1559 fee data
+     * - Payer funds the account creation
+     * - Space allocated for config state (DISCRIMINATOR_LEN + Cfg::INIT_SPACE)
      */
-    cfg: TAccountMetas[1];
+    cfg: TAccountMetas[2];
     /**
-     * The guardian account that will have administrative authority over the bridge.
-     * Must be a signer to prove ownership of the guardian key. The payer and guardian
-     * may be distinct signers.
+     * Program data account containing the upgrade authority.
+     * Validates that the signer is indeed the upgrade authority.
      */
-    guardian: TAccountMetas[2];
+    programData: TAccountMetas[3];
+    /**
+     * The base_relayer program itself.
+     * Validates that program_data is the correct ProgramData account for this program.
+     */
+    program: TAccountMetas[4];
     /**
      * System program required for creating new accounts.
      * Used internally by Anchor for account initialization.
      */
-    systemProgram: TAccountMetas[3];
+    systemProgram: TAccountMetas[5];
   };
   data: InitializeInstructionData;
 };
@@ -266,7 +313,7 @@ export function parseInitializeInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedInitializeInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -279,9 +326,11 @@ export function parseInitializeInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      upgradeAuthority: getNextAccount(),
       payer: getNextAccount(),
       cfg: getNextAccount(),
-      guardian: getNextAccount(),
+      programData: getNextAccount(),
+      program: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeInstructionDataDecoder().decode(instruction.data),

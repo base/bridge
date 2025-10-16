@@ -186,7 +186,7 @@ pub fn setup_relayer() -> SetupRelayerResult {
         program_id: ID,
         accounts,
         data: Initialize {
-            new_guardian: guardian_pk,
+            guardian: guardian_pk,
             eip1559_config: Eip1559Config::test_new(),
             gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
         }

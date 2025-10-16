@@ -14,20 +14,188 @@ import {
 } from '@solana/kit';
 import { BRIDGE_PROGRAM_ADDRESS } from '../programs';
 
-/** MaxSizeExceeded: Call buffer size exceeds maximum allowed size */
-export const BRIDGE_ERROR__MAX_SIZE_EXCEEDED = 0x1770; // 6000
-/** InvalidBufferSize: Invalid buffer size provided */
-export const BRIDGE_ERROR__INVALID_BUFFER_SIZE = 0x1771; // 6001
+/** BridgePaused: Bridge is currently paused */
+export const BRIDGE_ERROR__BRIDGE_PAUSED = 0x2ee0; // 12000
+/** IncorrectBridgeProgram: Incorrect bridge program */
+export const BRIDGE_ERROR__INCORRECT_BRIDGE_PROGRAM = 0x2ee1; // 12001
+/** IncorrectGasFeeReceiver: Incorrect gas fee receiver */
+export const BRIDGE_ERROR__INCORRECT_GAS_FEE_RECEIVER = 0x2ee2; // 12002
+/** UnauthorizedInitialization: Only the upgrade authority can initialize the bridge */
+export const BRIDGE_ERROR__UNAUTHORIZED_INITIALIZATION = 0x2f44; // 12100
+/** UnauthorizedConfigUpdate: Unauthorized to update configuration */
+export const BRIDGE_ERROR__UNAUTHORIZED_CONFIG_UPDATE = 0x2f45; // 12101
+/** BufferUnauthorizedClose: Only the owner can close this buffer */
+export const BRIDGE_ERROR__BUFFER_UNAUTHORIZED_CLOSE = 0x2fa8; // 12200
+/** BufferUnauthorizedAppend: Only the owner can append to this buffer */
+export const BRIDGE_ERROR__BUFFER_UNAUTHORIZED_APPEND = 0x2fa9; // 12201
+/** BufferMaxSizeExceeded: Call buffer size exceeds maximum allowed size */
+export const BRIDGE_ERROR__BUFFER_MAX_SIZE_EXCEEDED = 0x2faa; // 12202
+/** InvalidRecoveryId: Invalid recovery ID */
+export const BRIDGE_ERROR__INVALID_RECOVERY_ID = 0x300c; // 12300
+/** SignatureVerificationFailed: Signature verification failed */
+export const BRIDGE_ERROR__SIGNATURE_VERIFICATION_FAILED = 0x300d; // 12301
+/** InsufficientBaseSignatures: Insufficient base oracle signatures to meet threshold */
+export const BRIDGE_ERROR__INSUFFICIENT_BASE_SIGNATURES = 0x300e; // 12302
+/** InsufficientPartnerSignatures: Insufficient partner oracle signatures to meet threshold */
+export const BRIDGE_ERROR__INSUFFICIENT_PARTNER_SIGNATURES = 0x300f; // 12303
+/** InvalidProof: Invalid proof */
+export const BRIDGE_ERROR__INVALID_PROOF = 0x3070; // 12400
+/** MmrShouldBeEmpty: MMR should be empty */
+export const BRIDGE_ERROR__MMR_SHOULD_BE_EMPTY = 0x3071; // 12401
+/** EmptyMmr: MMR is empty */
+export const BRIDGE_ERROR__EMPTY_MMR = 0x3072; // 12402
+/** LeafMountainNotFound: Leaf's mountain not found */
+export const BRIDGE_ERROR__LEAF_MOUNTAIN_NOT_FOUND = 0x3073; // 12403
+/** InsufficientProofElementsForIntraMountainPath: Insufficient proof elements for intra-mountain path */
+export const BRIDGE_ERROR__INSUFFICIENT_PROOF_ELEMENTS_FOR_INTRA_MOUNTAIN_PATH = 0x3074; // 12404
+/** InsufficientProofElementsForOtherMountainPeaks: Insufficient proof elements for other mountain peaks */
+export const BRIDGE_ERROR__INSUFFICIENT_PROOF_ELEMENTS_FOR_OTHER_MOUNTAIN_PEAKS = 0x3075; // 12405
+/** UnusedProofElementsRemaining: Unused proof elements remaining */
+export const BRIDGE_ERROR__UNUSED_PROOF_ELEMENTS_REMAINING = 0x3076; // 12406
+/** NoPeaksFoundForNonEmptyMmr: No peaks found for non-empty MMR */
+export const BRIDGE_ERROR__NO_PEAKS_FOUND_FOR_NON_EMPTY_MMR = 0x3077; // 12407
+/** InvalidMessageHash: Invalid message hash */
+export const BRIDGE_ERROR__INVALID_MESSAGE_HASH = 0x30d4; // 12500
+/** AlreadyExecuted: Message already executed */
+export const BRIDGE_ERROR__ALREADY_EXECUTED = 0x30d5; // 12501
+/** IncorrectBlockNumber: Incorrect block number */
+export const BRIDGE_ERROR__INCORRECT_BLOCK_NUMBER = 0x30d6; // 12502
+/** MintDoesNotMatchLocalToken: Mint does not match local token */
+export const BRIDGE_ERROR__MINT_DOES_NOT_MATCH_LOCAL_TOKEN = 0x3138; // 12600
+/** TokenAccountDoesNotMatchTo: Token account does not match to address */
+export const BRIDGE_ERROR__TOKEN_ACCOUNT_DOES_NOT_MATCH_TO = 0x3139; // 12601
+/** IncorrectTokenVault: Incorrect token vault */
+export const BRIDGE_ERROR__INCORRECT_TOKEN_VAULT = 0x313a; // 12602
+/** MintIsWrappedToken: Mint is a wrapped token */
+export const BRIDGE_ERROR__MINT_IS_WRAPPED_TOKEN = 0x313b; // 12603
+/** IncorrectTo: Incorrect to */
+export const BRIDGE_ERROR__INCORRECT_TO = 0x313c; // 12604
+/** IncorrectSolVault: Incorrect sol vault */
+export const BRIDGE_ERROR__INCORRECT_SOL_VAULT = 0x313d; // 12605
+/** RemoteTokenNotFound: Remote token not found */
+export const BRIDGE_ERROR__REMOTE_TOKEN_NOT_FOUND = 0x319c; // 12700
+/** ScalerExponentNotFound: Scaler exponent not found */
+export const BRIDGE_ERROR__SCALER_EXPONENT_NOT_FOUND = 0x319d; // 12701
+/** InvalidRemoteToken: Invalid remote token */
+export const BRIDGE_ERROR__INVALID_REMOTE_TOKEN = 0x319e; // 12702
+/** InvalidScalerExponent: Invalid scaler exponent */
+export const BRIDGE_ERROR__INVALID_SCALER_EXPONENT = 0x319f; // 12703
+/** MintIsNotFromToken2022: Mint is not a token 2022 mint */
+export const BRIDGE_ERROR__MINT_IS_NOT_FROM_TOKEN2022 = 0x31a0; // 12704
+/** MintIsNotWrappedTokenPda: Mint is not a valid wrapped token PDA */
+export const BRIDGE_ERROR__MINT_IS_NOT_WRAPPED_TOKEN_PDA = 0x31a1; // 12705
+/** InvalidThreshold: Threshold must be <= number of signers */
+export const BRIDGE_ERROR__INVALID_THRESHOLD = 0x3200; // 12800
+/** TooManySigners: Too many signers (max 32) */
+export const BRIDGE_ERROR__TOO_MANY_SIGNERS = 0x3201; // 12801
+/** DuplicateSigner: Duplicate signer found */
+export const BRIDGE_ERROR__DUPLICATE_SIGNER = 0x3202; // 12802
+/** InvalidPartnerThreshold: Invalid partner threshold */
+export const BRIDGE_ERROR__INVALID_PARTNER_THRESHOLD = 0x3203; // 12803
+/** InvalidDenominator: Invalid denominator */
+export const BRIDGE_ERROR__INVALID_DENOMINATOR = 0x3204; // 12804
+/** InvalidWindowDurationSeconds: Invalid window duration seconds */
+export const BRIDGE_ERROR__INVALID_WINDOW_DURATION_SECONDS = 0x3205; // 12805
+/** InvalidGasCostScalerDp: Invalid gas cost scaler dp */
+export const BRIDGE_ERROR__INVALID_GAS_COST_SCALER_DP = 0x3206; // 12806
+/** InvalidBlockIntervalRequirement: Invalid block interval requirement */
+export const BRIDGE_ERROR__INVALID_BLOCK_INTERVAL_REQUIREMENT = 0x3207; // 12807
+/** CreationWithNonZeroTarget: Creation with non-zero target */
+export const BRIDGE_ERROR__CREATION_WITH_NON_ZERO_TARGET = 0x3264; // 12900
 
 export type BridgeError =
-  | typeof BRIDGE_ERROR__INVALID_BUFFER_SIZE
-  | typeof BRIDGE_ERROR__MAX_SIZE_EXCEEDED;
+  | typeof BRIDGE_ERROR__ALREADY_EXECUTED
+  | typeof BRIDGE_ERROR__BRIDGE_PAUSED
+  | typeof BRIDGE_ERROR__BUFFER_MAX_SIZE_EXCEEDED
+  | typeof BRIDGE_ERROR__BUFFER_UNAUTHORIZED_APPEND
+  | typeof BRIDGE_ERROR__BUFFER_UNAUTHORIZED_CLOSE
+  | typeof BRIDGE_ERROR__CREATION_WITH_NON_ZERO_TARGET
+  | typeof BRIDGE_ERROR__DUPLICATE_SIGNER
+  | typeof BRIDGE_ERROR__EMPTY_MMR
+  | typeof BRIDGE_ERROR__INCORRECT_BLOCK_NUMBER
+  | typeof BRIDGE_ERROR__INCORRECT_BRIDGE_PROGRAM
+  | typeof BRIDGE_ERROR__INCORRECT_GAS_FEE_RECEIVER
+  | typeof BRIDGE_ERROR__INCORRECT_SOL_VAULT
+  | typeof BRIDGE_ERROR__INCORRECT_TO
+  | typeof BRIDGE_ERROR__INCORRECT_TOKEN_VAULT
+  | typeof BRIDGE_ERROR__INSUFFICIENT_BASE_SIGNATURES
+  | typeof BRIDGE_ERROR__INSUFFICIENT_PARTNER_SIGNATURES
+  | typeof BRIDGE_ERROR__INSUFFICIENT_PROOF_ELEMENTS_FOR_INTRA_MOUNTAIN_PATH
+  | typeof BRIDGE_ERROR__INSUFFICIENT_PROOF_ELEMENTS_FOR_OTHER_MOUNTAIN_PEAKS
+  | typeof BRIDGE_ERROR__INVALID_BLOCK_INTERVAL_REQUIREMENT
+  | typeof BRIDGE_ERROR__INVALID_DENOMINATOR
+  | typeof BRIDGE_ERROR__INVALID_GAS_COST_SCALER_DP
+  | typeof BRIDGE_ERROR__INVALID_MESSAGE_HASH
+  | typeof BRIDGE_ERROR__INVALID_PARTNER_THRESHOLD
+  | typeof BRIDGE_ERROR__INVALID_PROOF
+  | typeof BRIDGE_ERROR__INVALID_RECOVERY_ID
+  | typeof BRIDGE_ERROR__INVALID_REMOTE_TOKEN
+  | typeof BRIDGE_ERROR__INVALID_SCALER_EXPONENT
+  | typeof BRIDGE_ERROR__INVALID_THRESHOLD
+  | typeof BRIDGE_ERROR__INVALID_WINDOW_DURATION_SECONDS
+  | typeof BRIDGE_ERROR__LEAF_MOUNTAIN_NOT_FOUND
+  | typeof BRIDGE_ERROR__MINT_DOES_NOT_MATCH_LOCAL_TOKEN
+  | typeof BRIDGE_ERROR__MINT_IS_NOT_FROM_TOKEN2022
+  | typeof BRIDGE_ERROR__MINT_IS_NOT_WRAPPED_TOKEN_PDA
+  | typeof BRIDGE_ERROR__MINT_IS_WRAPPED_TOKEN
+  | typeof BRIDGE_ERROR__MMR_SHOULD_BE_EMPTY
+  | typeof BRIDGE_ERROR__NO_PEAKS_FOUND_FOR_NON_EMPTY_MMR
+  | typeof BRIDGE_ERROR__REMOTE_TOKEN_NOT_FOUND
+  | typeof BRIDGE_ERROR__SCALER_EXPONENT_NOT_FOUND
+  | typeof BRIDGE_ERROR__SIGNATURE_VERIFICATION_FAILED
+  | typeof BRIDGE_ERROR__TOKEN_ACCOUNT_DOES_NOT_MATCH_TO
+  | typeof BRIDGE_ERROR__TOO_MANY_SIGNERS
+  | typeof BRIDGE_ERROR__UNAUTHORIZED_CONFIG_UPDATE
+  | typeof BRIDGE_ERROR__UNAUTHORIZED_INITIALIZATION
+  | typeof BRIDGE_ERROR__UNUSED_PROOF_ELEMENTS_REMAINING;
 
 let bridgeErrorMessages: Record<BridgeError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   bridgeErrorMessages = {
-    [BRIDGE_ERROR__INVALID_BUFFER_SIZE]: `Invalid buffer size provided`,
-    [BRIDGE_ERROR__MAX_SIZE_EXCEEDED]: `Call buffer size exceeds maximum allowed size`,
+    [BRIDGE_ERROR__ALREADY_EXECUTED]: `Message already executed`,
+    [BRIDGE_ERROR__BRIDGE_PAUSED]: `Bridge is currently paused`,
+    [BRIDGE_ERROR__BUFFER_MAX_SIZE_EXCEEDED]: `Call buffer size exceeds maximum allowed size`,
+    [BRIDGE_ERROR__BUFFER_UNAUTHORIZED_APPEND]: `Only the owner can append to this buffer`,
+    [BRIDGE_ERROR__BUFFER_UNAUTHORIZED_CLOSE]: `Only the owner can close this buffer`,
+    [BRIDGE_ERROR__CREATION_WITH_NON_ZERO_TARGET]: `Creation with non-zero target`,
+    [BRIDGE_ERROR__DUPLICATE_SIGNER]: `Duplicate signer found`,
+    [BRIDGE_ERROR__EMPTY_MMR]: `MMR is empty`,
+    [BRIDGE_ERROR__INCORRECT_BLOCK_NUMBER]: `Incorrect block number`,
+    [BRIDGE_ERROR__INCORRECT_BRIDGE_PROGRAM]: `Incorrect bridge program`,
+    [BRIDGE_ERROR__INCORRECT_GAS_FEE_RECEIVER]: `Incorrect gas fee receiver`,
+    [BRIDGE_ERROR__INCORRECT_SOL_VAULT]: `Incorrect sol vault`,
+    [BRIDGE_ERROR__INCORRECT_TO]: `Incorrect to`,
+    [BRIDGE_ERROR__INCORRECT_TOKEN_VAULT]: `Incorrect token vault`,
+    [BRIDGE_ERROR__INSUFFICIENT_BASE_SIGNATURES]: `Insufficient base oracle signatures to meet threshold`,
+    [BRIDGE_ERROR__INSUFFICIENT_PARTNER_SIGNATURES]: `Insufficient partner oracle signatures to meet threshold`,
+    [BRIDGE_ERROR__INSUFFICIENT_PROOF_ELEMENTS_FOR_INTRA_MOUNTAIN_PATH]: `Insufficient proof elements for intra-mountain path`,
+    [BRIDGE_ERROR__INSUFFICIENT_PROOF_ELEMENTS_FOR_OTHER_MOUNTAIN_PEAKS]: `Insufficient proof elements for other mountain peaks`,
+    [BRIDGE_ERROR__INVALID_BLOCK_INTERVAL_REQUIREMENT]: `Invalid block interval requirement`,
+    [BRIDGE_ERROR__INVALID_DENOMINATOR]: `Invalid denominator`,
+    [BRIDGE_ERROR__INVALID_GAS_COST_SCALER_DP]: `Invalid gas cost scaler dp`,
+    [BRIDGE_ERROR__INVALID_MESSAGE_HASH]: `Invalid message hash`,
+    [BRIDGE_ERROR__INVALID_PARTNER_THRESHOLD]: `Invalid partner threshold`,
+    [BRIDGE_ERROR__INVALID_PROOF]: `Invalid proof`,
+    [BRIDGE_ERROR__INVALID_RECOVERY_ID]: `Invalid recovery ID`,
+    [BRIDGE_ERROR__INVALID_REMOTE_TOKEN]: `Invalid remote token`,
+    [BRIDGE_ERROR__INVALID_SCALER_EXPONENT]: `Invalid scaler exponent`,
+    [BRIDGE_ERROR__INVALID_THRESHOLD]: `Threshold must be <= number of signers`,
+    [BRIDGE_ERROR__INVALID_WINDOW_DURATION_SECONDS]: `Invalid window duration seconds`,
+    [BRIDGE_ERROR__LEAF_MOUNTAIN_NOT_FOUND]: `Leaf's mountain not found`,
+    [BRIDGE_ERROR__MINT_DOES_NOT_MATCH_LOCAL_TOKEN]: `Mint does not match local token`,
+    [BRIDGE_ERROR__MINT_IS_NOT_FROM_TOKEN2022]: `Mint is not a token 2022 mint`,
+    [BRIDGE_ERROR__MINT_IS_NOT_WRAPPED_TOKEN_PDA]: `Mint is not a valid wrapped token PDA`,
+    [BRIDGE_ERROR__MINT_IS_WRAPPED_TOKEN]: `Mint is a wrapped token`,
+    [BRIDGE_ERROR__MMR_SHOULD_BE_EMPTY]: `MMR should be empty`,
+    [BRIDGE_ERROR__NO_PEAKS_FOUND_FOR_NON_EMPTY_MMR]: `No peaks found for non-empty MMR`,
+    [BRIDGE_ERROR__REMOTE_TOKEN_NOT_FOUND]: `Remote token not found`,
+    [BRIDGE_ERROR__SCALER_EXPONENT_NOT_FOUND]: `Scaler exponent not found`,
+    [BRIDGE_ERROR__SIGNATURE_VERIFICATION_FAILED]: `Signature verification failed`,
+    [BRIDGE_ERROR__TOKEN_ACCOUNT_DOES_NOT_MATCH_TO]: `Token account does not match to address`,
+    [BRIDGE_ERROR__TOO_MANY_SIGNERS]: `Too many signers (max 32)`,
+    [BRIDGE_ERROR__UNAUTHORIZED_CONFIG_UPDATE]: `Unauthorized to update configuration`,
+    [BRIDGE_ERROR__UNAUTHORIZED_INITIALIZATION]: `Only the upgrade authority can initialize the bridge`,
+    [BRIDGE_ERROR__UNUSED_PROOF_ELEMENTS_REMAINING]: `Unused proof elements remaining`,
   };
 }
 

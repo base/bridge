@@ -29,18 +29,19 @@ pub mod base_relayer {
     /// called once during deployment.
     ///
     /// # Arguments
-    /// * `ctx` - The context containing accounts for initialization: `payer` funds
-    ///           account creation, `cfg` PDA is created with seeds, and `guardian`
-    ///           is recorded as the admin authority.
-    /// * `cfg` - Initial configuration values: guardian pubkey, EIP-1559 state and
-    ///           config, and gas-cost configuration.
+    /// * `ctx`            - The context containing accounts for initialization: `payer` funds
+    ///                      account creation, `cfg` PDA is created with seeds, and `guardian`
+    ///                      is recorded as the admin authority.
+    /// * `guardian`       - The guardian address authorized to update configuration.
+    /// * `eip1559_config` - The EIP-1559 configuration.
+    /// * `gas_config`     - The gas configuration.
     pub fn initialize(
         ctx: Context<Initialize>,
-        new_guardian: Pubkey,
+        guardian: Pubkey,
         eip1559_config: Eip1559Config,
         gas_config: GasConfig,
     ) -> Result<()> {
-        initialize_handler(ctx, new_guardian, eip1559_config, gas_config)
+        initialize_handler(ctx, guardian, eip1559_config, gas_config)
     }
 
     /// Updates the EIP1559 configuration.

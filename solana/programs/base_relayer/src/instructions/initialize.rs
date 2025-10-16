@@ -120,7 +120,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: instruction::Initialize {
-                new_guardian: guardian_pk,
+                guardian: guardian_pk,
                 eip1559_config: Eip1559Config::test_new(),
                 gas_config: GasConfig::test_new(gas_fee_receiver),
             }
@@ -184,7 +184,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: instruction::Initialize {
-                new_guardian: guardian_pk,
+                guardian: guardian_pk,
                 eip1559_config: Eip1559Config::test_new(),
                 gas_config: GasConfig::test_new(gas_fee_receiver),
             }

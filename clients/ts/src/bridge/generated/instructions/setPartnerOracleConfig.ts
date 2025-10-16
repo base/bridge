@@ -24,6 +24,7 @@ import {
   type Instruction,
   type InstructionWithAccounts,
   type InstructionWithData,
+  type ReadonlyAccount,
   type ReadonlySignerAccount,
   type ReadonlyUint8Array,
   type TransactionSigner,
@@ -50,20 +51,28 @@ export function getSetPartnerOracleConfigDiscriminatorBytes() {
 
 export type SetPartnerOracleConfigInstruction<
   TProgram extends string = typeof BRIDGE_PROGRAM_ADDRESS,
+  TAccountUpgradeAuthority extends string | AccountMeta<string> = string,
   TAccountBridge extends string | AccountMeta<string> = string,
-  TAccountGuardian extends string | AccountMeta<string> = string,
+  TAccountProgramData extends string | AccountMeta<string> = string,
+  TAccountProgram extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
+      TAccountUpgradeAuthority extends string
+        ? ReadonlySignerAccount<TAccountUpgradeAuthority> &
+            AccountSignerMeta<TAccountUpgradeAuthority>
+        : TAccountUpgradeAuthority,
       TAccountBridge extends string
         ? WritableAccount<TAccountBridge>
         : TAccountBridge,
-      TAccountGuardian extends string
-        ? ReadonlySignerAccount<TAccountGuardian> &
-            AccountSignerMeta<TAccountGuardian>
-        : TAccountGuardian,
+      TAccountProgramData extends string
+        ? ReadonlyAccount<TAccountProgramData>
+        : TAccountProgramData,
+      TAccountProgram extends string
+        ? ReadonlyAccount<TAccountProgram>
+        : TAccountProgram,
       ...TRemainingAccounts,
     ]
   >;
@@ -108,35 +117,53 @@ export function getSetPartnerOracleConfigInstructionDataCodec(): FixedSizeCodec<
 }
 
 export type SetPartnerOracleConfigInput<
+  TAccountUpgradeAuthority extends string = string,
   TAccountBridge extends string = string,
-  TAccountGuardian extends string = string,
+  TAccountProgramData extends string = string,
+  TAccountProgram extends string = string,
 > = {
+  /** The upgrade authority account */
+  upgradeAuthority: TransactionSigner<TAccountUpgradeAuthority>;
   /** The bridge account containing configuration */
   bridge: Address<TAccountBridge>;
-  /** The guardian account authorized to update configuration */
-  guardian: TransactionSigner<TAccountGuardian>;
+  programData: Address<TAccountProgramData>;
+  program: Address<TAccountProgram>;
   newConfig: SetPartnerOracleConfigInstructionDataArgs['newConfig'];
 };
 
 export function getSetPartnerOracleConfigInstruction<
+  TAccountUpgradeAuthority extends string,
   TAccountBridge extends string,
-  TAccountGuardian extends string,
+  TAccountProgramData extends string,
+  TAccountProgram extends string,
   TProgramAddress extends Address = typeof BRIDGE_PROGRAM_ADDRESS,
 >(
-  input: SetPartnerOracleConfigInput<TAccountBridge, TAccountGuardian>,
+  input: SetPartnerOracleConfigInput<
+    TAccountUpgradeAuthority,
+    TAccountBridge,
+    TAccountProgramData,
+    TAccountProgram
+  >,
   config?: { programAddress?: TProgramAddress }
 ): SetPartnerOracleConfigInstruction<
   TProgramAddress,
+  TAccountUpgradeAuthority,
   TAccountBridge,
-  TAccountGuardian
+  TAccountProgramData,
+  TAccountProgram
 > {
   // Program address.
   const programAddress = config?.programAddress ?? BRIDGE_PROGRAM_ADDRESS;
 
   // Original accounts.
   const originalAccounts = {
+    upgradeAuthority: {
+      value: input.upgradeAuthority ?? null,
+      isWritable: false,
+    },
     bridge: { value: input.bridge ?? null, isWritable: true },
-    guardian: { value: input.guardian ?? null, isWritable: false },
+    programData: { value: input.programData ?? null, isWritable: false },
+    program: { value: input.program ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
     keyof typeof originalAccounts,
@@ -149,8 +176,10 @@ export function getSetPartnerOracleConfigInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   return Object.freeze({
     accounts: [
+      getAccountMeta(accounts.upgradeAuthority),
       getAccountMeta(accounts.bridge),
-      getAccountMeta(accounts.guardian),
+      getAccountMeta(accounts.programData),
+      getAccountMeta(accounts.program),
     ],
     data: getSetPartnerOracleConfigInstructionDataEncoder().encode(
       args as SetPartnerOracleConfigInstructionDataArgs
@@ -158,8 +187,10 @@ export function getSetPartnerOracleConfigInstruction<
     programAddress,
   } as SetPartnerOracleConfigInstruction<
     TProgramAddress,
+    TAccountUpgradeAuthority,
     TAccountBridge,
-    TAccountGuardian
+    TAccountProgramData,
+    TAccountProgram
   >);
 }
 
@@ -169,10 +200,12 @@ export type ParsedSetPartnerOracleConfigInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
+    /** The upgrade authority account */
+    upgradeAuthority: TAccountMetas[0];
     /** The bridge account containing configuration */
-    bridge: TAccountMetas[0];
-    /** The guardian account authorized to update configuration */
-    guardian: TAccountMetas[1];
+    bridge: TAccountMetas[1];
+    programData: TAccountMetas[2];
+    program: TAccountMetas[3];
   };
   data: SetPartnerOracleConfigInstructionData;
 };
@@ -185,7 +218,7 @@ export function parseSetPartnerOracleConfigInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedSetPartnerOracleConfigInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 2) {
+  if (instruction.accounts.length < 4) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -197,7 +230,12 @@ export function parseSetPartnerOracleConfigInstruction<
   };
   return {
     programAddress: instruction.programAddress,
-    accounts: { bridge: getNextAccount(), guardian: getNextAccount() },
+    accounts: {
+      upgradeAuthority: getNextAccount(),
+      bridge: getNextAccount(),
+      programData: getNextAccount(),
+      program: getNextAccount(),
+    },
     data: getSetPartnerOracleConfigInstructionDataDecoder().decode(
       instruction.data
     ),

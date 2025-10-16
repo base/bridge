@@ -15,11 +15,12 @@
         "called once during deployment.",
         "",
         "# Arguments",
-        "* `ctx` - The context containing accounts for initialization: `payer` funds",
+        "* `ctx`            - The context containing accounts for initialization: `payer` funds",
         "account creation, `cfg` PDA is created with seeds, and `guardian`",
         "is recorded as the admin authority.",
-        "* `cfg` - Initial configuration values: guardian pubkey, EIP-1559 state and",
-        "config, and gas-cost configuration."
+        "* `guardian`       - The guardian address authorized to update configuration.",
+        "* `eip1559_config` - The EIP-1559 configuration.",
+        "* `gas_config`     - The gas configuration."
       ],
       "discriminator": [
         175,
@@ -33,10 +34,19 @@
       ],
       "accounts": [
         {
+          "name": "upgrade_authority",
+          "docs": [
+            "The upgrade authority that is authorized to initialize the relayer.",
+            "This ensures only the program deployer can set the initial configuration."
+          ],
+          "signer": true
+        },
+        {
           "name": "payer",
           "docs": [
-            "The account that pays for the transaction and bridge account creation.",
-            "Must be mutable to deduct lamports for account rent."
+            "The account that pays for the transaction and config account creation.",
+            "Must be mutable to deduct lamports for account rent.",
+            "Can be different from the upgrade_authority."
           ],
           "writable": true,
           "signer": true
@@ -46,18 +56,24 @@
           "docs": [
             "The relayer config state account that tracks fee parameters.",
             "- Uses PDA with CFG_SEED for deterministic address",
-            "- Mutable to update EIP1559 fee data"
+            "- Payer funds the account creation",
+            "- Space allocated for config state (DISCRIMINATOR_LEN + Cfg::INIT_SPACE)"
           ],
           "writable": true
         },
         {
-          "name": "guardian",
+          "name": "program_data",
           "docs": [
-            "The guardian account that will have administrative authority over the bridge.",
-            "Must be a signer to prove ownership of the guardian key. The payer and guardian",
-            "may be distinct signers."
-          ],
-          "signer": true
+            "Program data account containing the upgrade authority.",
+            "Validates that the signer is indeed the upgrade authority."
+          ]
+        },
+        {
+          "name": "program",
+          "docs": [
+            "The base_relayer program itself.",
+            "Validates that program_data is the correct ProgramData account for this program."
+          ]
         },
         {
           "name": "system_program",
@@ -69,7 +85,7 @@
       ],
       "args": [
         {
-          "name": "new_guardian",
+          "name": "guardian",
           "type": "pubkey"
         },
         {
@@ -354,14 +370,34 @@
   ],
   "errors": [
     {
-      "code": 6000,
+      "code": 12000,
+      "name": "UnauthorizedInitialization",
+      "msg": "Only the upgrade authority can initialize the relayer"
+    },
+    {
+      "code": 12001,
+      "name": "IncorrectRelayerProgram",
+      "msg": "Incorrect relayer program"
+    },
+    {
+      "code": 12100,
+      "name": "UnauthorizedConfigUpdate",
+      "msg": "Unauthorized to update configuration"
+    },
+    {
+      "code": 12200,
       "name": "GasLimitTooLow",
       "msg": "Gas limit too low"
     },
     {
-      "code": 6001,
+      "code": 12201,
       "name": "GasLimitExceeded",
       "msg": "Gas limit exceeded"
+    },
+    {
+      "code": 12300,
+      "name": "IncorrectGasFeeReceiver",
+      "msg": "Incorrect gas fee receiver"
     }
   ],
   "types": [

@@ -10,6 +10,8 @@ import {
   combineCodec,
   fixDecoderSize,
   fixEncoderSize,
+  getAddressDecoder,
+  getAddressEncoder,
   getBytesDecoder,
   getBytesEncoder,
   getStructDecoder,
@@ -70,9 +72,11 @@ export function getInitializeDiscriminatorBytes() {
 
 export type InitializeInstruction<
   TProgram extends string = typeof BRIDGE_PROGRAM_ADDRESS,
+  TAccountUpgradeAuthority extends string | AccountMeta<string> = string,
   TAccountPayer extends string | AccountMeta<string> = string,
   TAccountBridge extends string | AccountMeta<string> = string,
-  TAccountGuardian extends string | AccountMeta<string> = string,
+  TAccountProgramData extends string | AccountMeta<string> = string,
+  TAccountProgram extends string | AccountMeta<string> = string,
   TAccountSystemProgram extends
     | string
     | AccountMeta<string> = '11111111111111111111111111111111',
@@ -81,6 +85,10 @@ export type InitializeInstruction<
   InstructionWithData<ReadonlyUint8Array> &
   InstructionWithAccounts<
     [
+      TAccountUpgradeAuthority extends string
+        ? ReadonlySignerAccount<TAccountUpgradeAuthority> &
+            AccountSignerMeta<TAccountUpgradeAuthority>
+        : TAccountUpgradeAuthority,
       TAccountPayer extends string
         ? WritableSignerAccount<TAccountPayer> &
             AccountSignerMeta<TAccountPayer>
@@ -88,10 +96,12 @@ export type InitializeInstruction<
       TAccountBridge extends string
         ? WritableAccount<TAccountBridge>
         : TAccountBridge,
-      TAccountGuardian extends string
-        ? ReadonlySignerAccount<TAccountGuardian> &
-            AccountSignerMeta<TAccountGuardian>
-        : TAccountGuardian,
+      TAccountProgramData extends string
+        ? ReadonlyAccount<TAccountProgramData>
+        : TAccountProgramData,
+      TAccountProgram extends string
+        ? ReadonlyAccount<TAccountProgram>
+        : TAccountProgram,
       TAccountSystemProgram extends string
         ? ReadonlyAccount<TAccountSystemProgram>
         : TAccountSystemProgram,
@@ -101,6 +111,7 @@ export type InitializeInstruction<
 
 export type InitializeInstructionData = {
   discriminator: ReadonlyUint8Array;
+  guardian: Address;
   /** Configuration parameters for EIP-1559-inspired fee calculations */
   eip1559Config: Eip1559Config;
   /** Configuration parameters for outgoing message pricing */
@@ -116,6 +127,7 @@ export type InitializeInstructionData = {
 };
 
 export type InitializeInstructionDataArgs = {
+  guardian: Address;
   /** Configuration parameters for EIP-1559-inspired fee calculations */
   eip1559Config: Eip1559ConfigArgs;
   /** Configuration parameters for outgoing message pricing */
@@ -134,6 +146,7 @@ export function getInitializeInstructionDataEncoder(): FixedSizeEncoder<Initiali
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
+      ['guardian', getAddressEncoder()],
       ['eip1559Config', getEip1559ConfigEncoder()],
       ['gasConfig', getGasConfigEncoder()],
       ['protocolConfig', getProtocolConfigEncoder()],
@@ -148,6 +161,7 @@ export function getInitializeInstructionDataEncoder(): FixedSizeEncoder<Initiali
 export function getInitializeInstructionDataDecoder(): FixedSizeDecoder<InitializeInstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
+    ['guardian', getAddressDecoder()],
     ['eip1559Config', getEip1559ConfigDecoder()],
     ['gasConfig', getGasConfigDecoder()],
     ['protocolConfig', getProtocolConfigDecoder()],
@@ -168,14 +182,22 @@ export function getInitializeInstructionDataCodec(): FixedSizeCodec<
 }
 
 export type InitializeInput<
+  TAccountUpgradeAuthority extends string = string,
   TAccountPayer extends string = string,
   TAccountBridge extends string = string,
-  TAccountGuardian extends string = string,
+  TAccountProgramData extends string = string,
+  TAccountProgram extends string = string,
   TAccountSystemProgram extends string = string,
 > = {
   /**
+   * The upgrade authority that is authorized to initialize the bridge.
+   * This ensures only the program deployer can set the initial configuration.
+   */
+  upgradeAuthority: TransactionSigner<TAccountUpgradeAuthority>;
+  /**
    * The account that pays for the transaction and bridge account creation.
    * Must be mutable to deduct lamports for account rent.
+   * Can be different from the upgrade_authority.
    */
   payer: TransactionSigner<TAccountPayer>;
   /**
@@ -186,16 +208,21 @@ export type InitializeInput<
    */
   bridge: Address<TAccountBridge>;
   /**
-   * The guardian account that will have administrative authority over the bridge.
-   * Must be a signer to prove ownership of the guardian key. The payer and guardian
-   * may be distinct signers.
+   * Program data account containing the upgrade authority.
+   * Validates that the signer is indeed the upgrade authority.
    */
-  guardian: TransactionSigner<TAccountGuardian>;
+  programData: Address<TAccountProgramData>;
+  /**
+   * The bridge program itself.
+   * Validates that program_data is the correct ProgramData account for this program.
+   */
+  program: Address<TAccountProgram>;
   /**
    * System program required for creating new accounts.
    * Used internally by Anchor for account initialization.
    */
   systemProgram?: Address<TAccountSystemProgram>;
+  guardian: InitializeInstructionDataArgs['guardian'];
   eip1559Config: InitializeInstructionDataArgs['eip1559Config'];
   gasConfig: InitializeInstructionDataArgs['gasConfig'];
   protocolConfig: InitializeInstructionDataArgs['protocolConfig'];
@@ -205,24 +232,30 @@ export type InitializeInput<
 };
 
 export function getInitializeInstruction<
+  TAccountUpgradeAuthority extends string,
   TAccountPayer extends string,
   TAccountBridge extends string,
-  TAccountGuardian extends string,
+  TAccountProgramData extends string,
+  TAccountProgram extends string,
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof BRIDGE_PROGRAM_ADDRESS,
 >(
   input: InitializeInput<
+    TAccountUpgradeAuthority,
     TAccountPayer,
     TAccountBridge,
-    TAccountGuardian,
+    TAccountProgramData,
+    TAccountProgram,
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
 ): InitializeInstruction<
   TProgramAddress,
+  TAccountUpgradeAuthority,
   TAccountPayer,
   TAccountBridge,
-  TAccountGuardian,
+  TAccountProgramData,
+  TAccountProgram,
   TAccountSystemProgram
 > {
   // Program address.
@@ -230,9 +263,14 @@ export function getInitializeInstruction<
 
   // Original accounts.
   const originalAccounts = {
+    upgradeAuthority: {
+      value: input.upgradeAuthority ?? null,
+      isWritable: false,
+    },
     payer: { value: input.payer ?? null, isWritable: true },
     bridge: { value: input.bridge ?? null, isWritable: true },
-    guardian: { value: input.guardian ?? null, isWritable: false },
+    programData: { value: input.programData ?? null, isWritable: false },
+    program: { value: input.program ?? null, isWritable: false },
     systemProgram: { value: input.systemProgram ?? null, isWritable: false },
   };
   const accounts = originalAccounts as Record<
@@ -252,9 +290,11 @@ export function getInitializeInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   return Object.freeze({
     accounts: [
+      getAccountMeta(accounts.upgradeAuthority),
       getAccountMeta(accounts.payer),
       getAccountMeta(accounts.bridge),
-      getAccountMeta(accounts.guardian),
+      getAccountMeta(accounts.programData),
+      getAccountMeta(accounts.program),
       getAccountMeta(accounts.systemProgram),
     ],
     data: getInitializeInstructionDataEncoder().encode(
@@ -263,9 +303,11 @@ export function getInitializeInstruction<
     programAddress,
   } as InitializeInstruction<
     TProgramAddress,
+    TAccountUpgradeAuthority,
     TAccountPayer,
     TAccountBridge,
-    TAccountGuardian,
+    TAccountProgramData,
+    TAccountProgram,
     TAccountSystemProgram
   >);
 }
@@ -277,28 +319,38 @@ export type ParsedInitializeInstruction<
   programAddress: Address<TProgram>;
   accounts: {
     /**
+     * The upgrade authority that is authorized to initialize the bridge.
+     * This ensures only the program deployer can set the initial configuration.
+     */
+    upgradeAuthority: TAccountMetas[0];
+    /**
      * The account that pays for the transaction and bridge account creation.
      * Must be mutable to deduct lamports for account rent.
+     * Can be different from the upgrade_authority.
      */
-    payer: TAccountMetas[0];
+    payer: TAccountMetas[1];
     /**
      * The bridge state account being initialized.
      * - Uses PDA with BRIDGE_SEED for deterministic address
      * - Payer funds the account creation
      * - Space allocated for bridge state (DISCRIMINATOR_LEN + Bridge::INIT_SPACE)
      */
-    bridge: TAccountMetas[1];
+    bridge: TAccountMetas[2];
     /**
-     * The guardian account that will have administrative authority over the bridge.
-     * Must be a signer to prove ownership of the guardian key. The payer and guardian
-     * may be distinct signers.
+     * Program data account containing the upgrade authority.
+     * Validates that the signer is indeed the upgrade authority.
      */
-    guardian: TAccountMetas[2];
+    programData: TAccountMetas[3];
+    /**
+     * The bridge program itself.
+     * Validates that program_data is the correct ProgramData account for this program.
+     */
+    program: TAccountMetas[4];
     /**
      * System program required for creating new accounts.
      * Used internally by Anchor for account initialization.
      */
-    systemProgram: TAccountMetas[3];
+    systemProgram: TAccountMetas[5];
   };
   data: InitializeInstructionData;
 };
@@ -311,7 +363,7 @@ export function parseInitializeInstruction<
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
 ): ParsedInitializeInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 4) {
+  if (instruction.accounts.length < 6) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -324,9 +376,11 @@ export function parseInitializeInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
+      upgradeAuthority: getNextAccount(),
       payer: getNextAccount(),
       bridge: getNextAccount(),
-      guardian: getNextAccount(),
+      programData: getNextAccount(),
+      program: getNextAccount(),
       systemProgram: getNextAccount(),
     },
     data: getInitializeInstructionDataDecoder().decode(instruction.data),
