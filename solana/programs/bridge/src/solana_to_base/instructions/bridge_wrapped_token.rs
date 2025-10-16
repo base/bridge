@@ -57,7 +57,7 @@ pub struct BridgeWrappedToken<'info> {
     /// - Space allocated based on call data size
     /// - Will be read by Base relayers to complete the bridge operation
     #[account(
-        init,       
+        init,
         payer = payer,
         seeds = [OUTGOING_MESSAGE_SEED, outgoing_message_salt.as_ref()],
         bump,
@@ -131,15 +131,20 @@ mod tests {
         instruction::BridgeWrappedToken as BridgeWrappedTokenIx,
         solana_to_base::{Call, CallType},
         test_utils::{
-            create_mock_token_account, create_mock_wrapped_mint, create_outgoing_message, setup_bridge_and_svm,
-            TEST_GAS_FEE_RECEIVER,
+            create_mock_token_account, create_mock_wrapped_mint, create_outgoing_message,
+            setup_bridge, SetupBridgeResult, TEST_GAS_FEE_RECEIVER,
         },
         ID,
     };
 
     #[test]
     fn test_bridge_wrapped_token_success_without_call() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create from account
         let from = Keypair::new();
@@ -169,8 +174,7 @@ mod tests {
         );
 
         // Create outgoing message account
-        let (outgoing_message_salt, outgoing_message) =
-                create_outgoing_message();
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20]; // Base address
@@ -252,7 +256,12 @@ mod tests {
 
     #[test]
     fn test_bridge_wrapped_token_success_with_call() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create from account
         let from = Keypair::new();
@@ -282,8 +291,7 @@ mod tests {
         );
 
         // Create outgoing message account
-        let (outgoing_message_salt, outgoing_message) =
-            create_outgoing_message();
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];
@@ -360,7 +368,12 @@ mod tests {
 
     #[test]
     fn test_bridge_wrapped_token_incorrect_gas_fee_receiver() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create from account
         let from = Keypair::new();
@@ -393,8 +406,7 @@ mod tests {
         );
 
         // Create outgoing message account
-        let (outgoing_message_salt, outgoing_message) =
-            create_outgoing_message();
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];
@@ -452,7 +464,12 @@ mod tests {
 
     #[test]
     fn test_bridge_wrapped_token_fails_when_paused() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Pause the bridge first
         let mut bridge_account = svm.get_account(&bridge_pda).unwrap();
@@ -491,8 +508,7 @@ mod tests {
         );
 
         // Create outgoing message account
-        let (outgoing_message_salt, outgoing_message) =
-            create_outgoing_message();
+        let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Test parameters
         let to = [1u8; 20];

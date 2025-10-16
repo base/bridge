@@ -46,7 +46,7 @@ mod tests {
     use crate::{
         accounts,
         instruction::{CloseProveBuffer as CloseProveBufferIx, InitializeProveBuffer},
-        test_utils::setup_bridge_and_svm,
+        test_utils::{setup_bridge, SetupBridgeResult},
         ID,
     };
 
@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_close_prove_buffer_success() {
-        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult { mut svm, .. } = setup_bridge();
 
         // Create owner account
         let owner = Keypair::new();
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_close_prove_buffer_unauthorized() {
-        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult { mut svm, .. } = setup_bridge();
 
         // Create owner account
         let owner = Keypair::new();

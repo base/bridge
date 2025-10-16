@@ -129,13 +129,20 @@ mod tests {
         common::bridge::Bridge,
         instruction::{BridgeCallBuffered as BridgeCallBufferedIx, InitializeCallBuffer},
         solana_to_base::CallType,
-        test_utils::{create_outgoing_message, setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
+        test_utils::{
+            create_outgoing_message, setup_bridge, SetupBridgeResult, TEST_GAS_FEE_RECEIVER,
+        },
         ID,
     };
 
     #[test]
     fn test_bridge_call_buffered_success() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create owner account (who owns the call buffer)
         let owner = Keypair::new();
@@ -269,7 +276,12 @@ mod tests {
 
     #[test]
     fn test_bridge_call_buffered_unauthorized() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create owner account (who owns the call buffer)
         let owner = Keypair::new();
@@ -368,7 +380,12 @@ mod tests {
 
     #[test]
     fn test_bridge_call_buffered_incorrect_gas_fee_receiver() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create owner account
         let owner = Keypair::new();

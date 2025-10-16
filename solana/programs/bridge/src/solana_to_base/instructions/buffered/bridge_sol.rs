@@ -73,7 +73,7 @@ pub struct BridgeSolWithBufferedCall<'info> {
         init,
         payer = payer,
         seeds = [OUTGOING_MESSAGE_SEED, outgoing_message_salt.as_ref()],
-        bump, 
+        bump,
         space = DISCRIMINATOR_LEN + OutgoingMessage::space::<Transfer>(call_buffer.data.len())
     )]
     pub outgoing_message: Account<'info, OutgoingMessage>,
@@ -148,13 +148,20 @@ mod tests {
             BridgeSolWithBufferedCall as BridgeSolWithBufferedCallIx, InitializeCallBuffer,
         },
         solana_to_base::{CallType, NATIVE_SOL_PUBKEY},
-        test_utils::{create_outgoing_message, setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER},
+        test_utils::{
+            create_outgoing_message, setup_bridge, SetupBridgeResult, TEST_GAS_FEE_RECEIVER,
+        },
         ID,
     };
 
     #[test]
     fn test_bridge_sol_with_buffered_call_success() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create from account
         let from = Keypair::new();
@@ -322,7 +329,12 @@ mod tests {
 
     #[test]
     fn test_bridge_sol_with_buffered_call_unauthorized() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create from account
         let from = Keypair::new();
@@ -434,7 +446,12 @@ mod tests {
 
     #[test]
     fn test_bridge_sol_with_buffered_call_incorrect_gas_fee_receiver() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create from account
         let from = Keypair::new();

@@ -21,6 +21,7 @@ use anchor_spl::{
 };
 use litesvm::LiteSVM;
 use solana_account::Account;
+use solana_feature_set::FeatureSet;
 use solana_keypair::Keypair;
 use solana_message::Message;
 use solana_signer::Signer;
@@ -100,29 +101,94 @@ impl PartnerSigner {
     }
 }
 
-pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
-    let mut svm = LiteSVM::new();
-    svm.add_program_from_file(ID, "../../target/deploy/bridge.so")
-        .unwrap();
+/// Result from deploying the bridge program without initializing it
+pub struct DeployBridgeResult {
+    pub svm: LiteSVM,
+    pub payer: Keypair,
+    pub guardian: Keypair,
+    pub bridge_pda: Pubkey,
+    pub program_data_pda: Pubkey,
+}
+
+/// Deploys the bridge program as upgradeable but does NOT initialize it.
+/// Use this when you want to test the initialize instruction itself.
+pub fn deploy_bridge() -> DeployBridgeResult {
+    let mut feature_set = FeatureSet::all_enabled();
+    feature_set.deactivate(&solana_feature_set::disable_new_loader_v3_deployments::id());
+
+    let mut svm = LiteSVM::default()
+        .with_feature_set(feature_set)
+        .with_builtins()
+        .with_lamports(1_000_000_000_000_000)
+        .with_sysvars()
+        .with_spl_programs();
 
     // Create test accounts
     let payer = Keypair::new();
-    let payer_pk = payer.pubkey();
-    svm.airdrop(&payer_pk, LAMPORTS_PER_SOL * 10).unwrap();
+    svm.airdrop(&payer.pubkey(), LAMPORTS_PER_SOL * 100)
+        .unwrap();
+
+    let guardian = Keypair::new();
+    svm.airdrop(&guardian.pubkey(), LAMPORTS_PER_SOL * 100)
+        .unwrap();
+
+    // Deploy upgradeable program
+    let program_kp_json = include_str!("../../../../keypairs/bridge.devnet.alpha.json");
+    let program_kp_bytes: Vec<u8> = serde_json::from_str(program_kp_json).unwrap();
+    let program_kp = Keypair::from_bytes(&program_kp_bytes).unwrap();
+
+    let program_bytes = include_bytes!("../../../../target/deploy/bridge.so");
+    litesvm_loader::deploy_upgradeable_program(&mut svm, &payer, &program_kp, program_bytes)
+        .unwrap();
 
     // Mock the clock
-    let timestamp = 1747440000; // May 16th, 2025
-    mock_clock(&mut svm, timestamp);
+    mock_clock(&mut svm, 1747440000); // May 16th, 2025
 
-    // Find the Bridge PDA
+    // Find PDAs
     let bridge_pda = Pubkey::find_program_address(&[BRIDGE_SEED], &ID).0;
+    let (program_data_pda, _) = Pubkey::find_program_address(
+        &[ID.as_ref()],
+        &anchor_lang::solana_program::bpf_loader_upgradeable::ID,
+    );
 
-    // Initialize the bridge first
-    let guardian = Keypair::new();
+    DeployBridgeResult {
+        svm,
+        payer,
+        guardian,
+        bridge_pda,
+        program_data_pda,
+    }
+}
+
+/// Result from setting up a fully initialized bridge
+pub struct SetupBridgeResult {
+    pub svm: LiteSVM,
+    pub payer: Keypair,
+    pub guardian: Keypair,
+    pub bridge_pda: Pubkey,
+}
+
+/// Deploys the bridge program AND initializes it with default test config.
+/// Use this for most tests that need a ready-to-use bridge.
+pub fn setup_bridge() -> SetupBridgeResult {
+    let DeployBridgeResult {
+        mut svm,
+        payer,
+        guardian,
+        bridge_pda,
+        program_data_pda,
+    } = deploy_bridge();
+
+    let payer_pk = payer.pubkey();
+    let guardian_pk = guardian.pubkey();
+
+    // Initialize the bridge
     let accounts = accounts::Initialize {
+        upgrade_authority: payer_pk,
         payer: payer_pk,
         bridge: bridge_pda,
-        guardian: guardian.pubkey(),
+        program_data: program_data_pda,
+        program: ID,
         system_program: system_program::ID,
     }
     .to_account_metas(None);
@@ -131,6 +197,7 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
         program_id: ID,
         accounts,
         data: Initialize {
+            guardian: guardian_pk,
             cfg: Config {
                 eip1559_config: Eip1559Config::test_new(),
                 gas_config: GasConfig::test_new(TEST_GAS_FEE_RECEIVER),
@@ -144,14 +211,19 @@ pub fn setup_bridge_and_svm() -> (LiteSVM, solana_keypair::Keypair, Pubkey) {
     };
 
     let tx = Transaction::new(
-        &[&payer, &guardian],
+        &[&payer],
         Message::new(&[ix], Some(&payer_pk)),
         svm.latest_blockhash(),
     );
 
     svm.send_transaction(tx).unwrap();
 
-    (svm, payer, bridge_pda)
+    SetupBridgeResult {
+        svm,
+        payer,
+        guardian,
+        bridge_pda,
+    }
 }
 
 pub fn create_outgoing_message() -> ([u8; 32], Pubkey) {

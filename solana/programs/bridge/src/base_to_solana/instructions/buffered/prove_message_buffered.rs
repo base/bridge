@@ -128,7 +128,7 @@ mod tests {
             AppendToProveBufferData, AppendToProveBufferProof, InitializeProveBuffer,
             ProveMessageBuffered as ProveMessageBufferedIx,
         },
-        test_utils::setup_bridge_and_svm,
+        test_utils::{setup_bridge, SetupBridgeResult},
         ID,
     };
 
@@ -269,7 +269,12 @@ mod tests {
 
     #[test]
     fn test_prove_message_buffered_success_creates_incoming_message_and_closes_buffer() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         let (message_hash, output_root_pk, owner, prove_buffer, nonce, sender, message_bytes) =
             buffered_message_setup(&mut svm, bridge_pda);
@@ -333,7 +338,12 @@ mod tests {
 
     #[test]
     fn test_prove_message_buffered_fails_with_unauthorized_owner() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         let (message_hash, output_root_pk, _, prove_buffer, nonce, sender, _) =
             buffered_message_setup(&mut svm, bridge_pda);
@@ -386,7 +396,12 @@ mod tests {
 
     #[test]
     fn test_prove_message_buffered_fails_with_invalid_message_hash() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         let owner = Keypair::new();
         svm.airdrop(&owner.pubkey(), 1_000_000_000).unwrap();
@@ -487,7 +502,12 @@ mod tests {
 
     #[test]
     fn test_prove_message_buffered_fails_when_bridge_paused() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         let (_, output_root_pk, owner, prove_buffer, _, _, _) =
             buffered_message_setup(&mut svm, bridge_pda);

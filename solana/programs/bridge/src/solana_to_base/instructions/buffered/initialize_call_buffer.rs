@@ -84,13 +84,20 @@ mod tests {
     use solana_transaction::Transaction;
 
     use crate::{
-        accounts, instruction::InitializeCallBuffer as InitializeCallBufferIx,
-        solana_to_base::CallType, test_utils::setup_bridge_and_svm, ID,
+        accounts,
+        instruction::InitializeCallBuffer as InitializeCallBufferIx,
+        solana_to_base::CallType,
+        test_utils::{setup_bridge, SetupBridgeResult},
+        ID,
     };
 
     #[test]
     fn test_initialize_call_buffer_success() {
-        let (mut svm, _payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create payer account
         let payer = Keypair::new();
@@ -157,7 +164,11 @@ mod tests {
 
     #[test]
     fn test_initialize_call_buffer_max_size_exceeded() {
-        let (mut svm, _payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create payer account
         let payer = Keypair::new();

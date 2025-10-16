@@ -1,6 +1,9 @@
 use anchor_lang::prelude::*;
 
-use crate::common::{bridge::Bridge, BRIDGE_SEED};
+use crate::{
+    common::{bridge::Bridge, BRIDGE_SEED},
+    program::Bridge as BridgeProgram,
+};
 
 pub mod eip1559;
 pub use eip1559::*;
@@ -23,10 +26,10 @@ pub use base_oracle_signers::*;
 pub mod partner_config;
 pub use partner_config::*;
 
-/// Accounts struct for bridge configuration setter instructions
+/// Accounts struct for non-sensitive bridge configuration setter instructions
 /// Only the guardian can update these parameters
 #[derive(Accounts)]
-pub struct SetBridgeConfig<'info> {
+pub struct SetBridgeConfigFromGuardian<'info> {
     /// The bridge account containing configuration
     #[account(
         mut,
@@ -40,11 +43,31 @@ pub struct SetBridgeConfig<'info> {
     pub guardian: Signer<'info>,
 }
 
+/// Accounts struct for sensitive bridge configuration setter instructions
+/// Only the upgrade authority can update these parameters
+#[derive(Accounts)]
+pub struct SetBridgeConfigFromUpgradeAuthority<'info> {
+    /// The upgrade authority account
+    pub upgrade_authority: Signer<'info>,
+
+    /// The bridge account containing configuration
+    #[account(mut, seeds = [BRIDGE_SEED], bump)]
+    pub bridge: Account<'info, Bridge>,
+
+    #[account(constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key()) @ ConfigError::UnauthorizedConfigUpdate)]
+    pub program_data: Account<'info, ProgramData>,
+
+    #[account(constraint = program.programdata_address()? == Some(program_data.key()) @ ConfigError::IncorrectBridgeProgram)]
+    pub program: Program<'info, BridgeProgram>,
+}
+
 /// Error codes for configuration updates
 #[error_code]
 pub enum ConfigError {
     #[msg("Unauthorized to update configuration")]
     UnauthorizedConfigUpdate = 6000,
+    #[msg("Incorrect bridge program")]
+    IncorrectBridgeProgram = 6001,
     #[msg("Bridge is currently paused")]
-    BridgePaused = 6001,
+    BridgePaused = 6002,
 }

@@ -66,7 +66,7 @@ pub enum PayForRelayError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{setup_program_and_svm, TEST_GAS_FEE_RECEIVER};
+    use crate::test_utils::{setup_relayer, SetupRelayerResult, TEST_GAS_FEE_RECEIVER};
     use crate::{accounts, state::MessageToRelay};
     use anchor_lang::{
         solana_program::{instruction::Instruction, system_program},
@@ -78,7 +78,12 @@ mod tests {
 
     #[test]
     fn pay_for_relay_initializes_message_and_transfers_gas() {
-        let (mut svm, payer, _guardian, config_pda) = setup_program_and_svm();
+        let SetupRelayerResult {
+            mut svm,
+            payer,
+            guardian: _,
+            cfg_pda,
+        } = setup_relayer();
         let payer_pk = payer.pubkey();
 
         // // Ensure gas fee receiver account exists so system transfer succeeds
@@ -97,7 +102,7 @@ mod tests {
 
         let accounts = accounts::PayForRelay {
             payer: payer_pk,
-            cfg: config_pda,
+            cfg: cfg_pda,
             gas_fee_receiver: TEST_GAS_FEE_RECEIVER,
             message_to_relay,
             system_program: system_program::ID,

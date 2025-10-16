@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::common::{BaseOracleConfig, SetBridgeConfig};
+use crate::common::{BaseOracleConfig, SetBridgeConfigFromUpgradeAuthority};
 
 /// Set or update the oracle signer configuration.
 ///
@@ -8,7 +8,7 @@ use crate::common::{BaseOracleConfig, SetBridgeConfig};
 /// new list of unique EVM signer addresses. This instruction is used to rotate
 /// oracle keys or adjust the required threshold for output root attestations.
 pub fn set_oracle_signers_handler(
-    ctx: Context<SetBridgeConfig>,
+    ctx: Context<SetBridgeConfigFromUpgradeAuthority>,
     cfg: BaseOracleConfig,
 ) -> Result<()> {
     cfg.validate()?;
@@ -18,17 +18,26 @@ pub fn set_oracle_signers_handler(
 
 #[cfg(test)]
 mod tests {
-    use crate::common::{BaseOracleConfig, MAX_SIGNER_COUNT};
+    use super::*;
+    use anchor_lang::{
+        solana_program::{bpf_loader_upgradeable, instruction::Instruction},
+        InstructionData,
+    };
+    use solana_message::Message;
+    use solana_signer::Signer;
+    use solana_transaction::Transaction;
 
-    fn base_cfg(threshold: u8, signer_count: u8, first_two_same: bool) -> BaseOracleConfig {
+    use crate::{
+        accounts, common::bridge::Bridge, instruction::SetOracleSigners, test_utils::*, ID,
+        MAX_SIGNER_COUNT,
+    };
+
+    /// Helper to create a BaseOracleConfig for testing
+    fn base_oracle_config(threshold: u8, signer_count: u8) -> BaseOracleConfig {
         let mut signers = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
-        if signer_count > 0 {
-            signers[0] = [1u8; 20];
+        for i in 0..signer_count {
+            signers[i as usize] = [(i + 1); 20];
         }
-        if signer_count > 1 {
-            signers[1] = if first_two_same { [1u8; 20] } else { [2u8; 20] };
-        }
-
         BaseOracleConfig {
             threshold,
             signer_count,
@@ -37,61 +46,211 @@ mod tests {
     }
 
     #[test]
-    fn validate_ok() {
-        let cfg = base_cfg(1, 2, false);
-        assert!(cfg.validate().is_ok());
-    }
+    fn test_set_oracle_signers_with_upgrade_authority_succeeds() {
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
-    #[test]
-    fn validate_invalid_threshold_zero() {
-        let cfg = base_cfg(0, 1, false);
-        let err = cfg.validate().unwrap_err();
-        let msg = err.to_string();
-        assert!(msg.contains("InvalidThreshold"));
-    }
+        // Find the ProgramData account created by deploy_upgradeable_program
+        let (program_data_pda, _) =
+            Pubkey::find_program_address(&[ID.as_ref()], &bpf_loader_upgradeable::ID);
 
-    #[test]
-    fn validate_invalid_threshold_gt_count() {
-        let cfg = base_cfg(3, 2, false);
-        let err = cfg.validate().unwrap_err();
-        let msg = err.to_string();
-        assert!(msg.contains("InvalidThreshold"));
-    }
+        // Build accounts - payer IS the upgrade authority
+        let accounts = accounts::SetBridgeConfigFromUpgradeAuthority {
+            upgrade_authority: payer.pubkey(),
+            bridge: bridge_pda,
+            program_data: program_data_pda,
+            program: ID,
+        }
+        .to_account_metas(None);
 
-    #[test]
-    fn validate_too_many_signers() {
-        let cfg = base_cfg(1, 17, false);
-        let err = cfg.validate().unwrap_err();
-        let msg = err.to_string();
-        assert!(msg.contains("TooManySigners"));
-    }
+        // New valid config with 2 signers and threshold 2
+        let new_config = base_oracle_config(2, 2);
 
-    #[test]
-    fn validate_duplicate_signer() {
-        let cfg = base_cfg(2, 2, true);
-        let err = cfg.validate().unwrap_err();
-        let msg = err.to_string();
-        assert!(msg.contains("DuplicateSigner"));
-    }
-
-    #[test]
-    fn oracle_signers_helpers() {
-        let oracle = BaseOracleConfig {
-            threshold: 2,
-            signer_count: 2,
-            signers: {
-                let mut a = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
-                a[0] = [1u8; 20];
-                a[1] = [2u8; 20];
-                a
-            },
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: SetOracleSigners { cfg: new_config }.data(),
         };
 
-        assert!(oracle.contains(&[1u8; 20]));
-        assert!(oracle.contains(&[2u8; 20]));
-        assert!(!oracle.contains(&[3u8; 20]));
+        let tx = Transaction::new(
+            &[&payer],
+            Message::new(&[ix], Some(&payer.pubkey())),
+            svm.latest_blockhash(),
+        );
 
-        let approvals = oracle.count_approvals(&[[1u8; 20], [3u8; 20]]);
-        assert_eq!(approvals, 1);
+        // Should succeed
+        svm.send_transaction(tx)
+            .expect("Transaction should succeed with upgrade authority");
+
+        // Verify the config was updated
+        let bridge_account = svm.get_account(&bridge_pda).unwrap();
+        let bridge = Bridge::try_deserialize(&mut &bridge_account.data[..]).unwrap();
+        assert_eq!(bridge.base_oracle_config.threshold, 2);
+        assert_eq!(bridge.base_oracle_config.signer_count, 2);
+    }
+
+    #[test]
+    fn test_set_oracle_signers_with_guardian_fails() {
+        let SetupBridgeResult {
+            mut svm,
+            guardian,
+            bridge_pda,
+            ..
+        } = setup_bridge();
+
+        let (program_data_pda, _) =
+            Pubkey::find_program_address(&[ID.as_ref()], &bpf_loader_upgradeable::ID);
+
+        // Build accounts - trying with GUARDIAN instead of upgrade authority
+        let accounts = accounts::SetBridgeConfigFromUpgradeAuthority {
+            upgrade_authority: guardian.pubkey(),
+            bridge: bridge_pda,
+            program_data: program_data_pda,
+            program: ID,
+        }
+        .to_account_metas(None);
+
+        let new_config = base_oracle_config(2, 2);
+
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: SetOracleSigners { cfg: new_config }.data(),
+        };
+
+        let tx = Transaction::new(
+            &[&guardian],
+            Message::new(&[ix], Some(&guardian.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        // Should fail with UnauthorizedConfigUpdate
+        let result = svm.send_transaction(tx);
+        assert!(
+            result.is_err(),
+            "Expected transaction to fail when guardian tries to update config"
+        );
+
+        // Verify the specific error
+        let error_string = format!("{:?}", result.unwrap_err());
+        assert!(
+            error_string.contains("UnauthorizedConfigUpdate"),
+            "Expected UnauthorizedConfigUpdate error, got: {}",
+            error_string
+        );
+    }
+
+    #[test]
+    fn test_set_oracle_signers_invalid_threshold_fails() {
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
+
+        let (program_data_pda, _) =
+            Pubkey::find_program_address(&[ID.as_ref()], &bpf_loader_upgradeable::ID);
+
+        let accounts = accounts::SetBridgeConfigFromUpgradeAuthority {
+            upgrade_authority: payer.pubkey(),
+            bridge: bridge_pda,
+            program_data: program_data_pda,
+            program: ID,
+        }
+        .to_account_metas(None);
+
+        // Invalid config - threshold = 0
+        let new_config = base_oracle_config(0, 2);
+
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: SetOracleSigners { cfg: new_config }.data(),
+        };
+
+        let tx = Transaction::new(
+            &[&payer],
+            Message::new(&[ix], Some(&payer.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        // Should fail with InvalidThreshold
+        let result = svm.send_transaction(tx);
+        assert!(
+            result.is_err(),
+            "Expected transaction to fail with invalid threshold"
+        );
+
+        // Verify the specific error
+        let error_string = format!("{:?}", result.unwrap_err());
+        assert!(
+            error_string.contains("InvalidThreshold"),
+            "Expected InvalidThreshold error, got: {}",
+            error_string
+        );
+    }
+
+    #[test]
+    fn test_set_oracle_signers_duplicate_signer_fails() {
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
+
+        let (program_data_pda, _) =
+            Pubkey::find_program_address(&[ID.as_ref()], &bpf_loader_upgradeable::ID);
+
+        let accounts = accounts::SetBridgeConfigFromUpgradeAuthority {
+            upgrade_authority: payer.pubkey(),
+            bridge: bridge_pda,
+            program_data: program_data_pda,
+            program: ID,
+        }
+        .to_account_metas(None);
+
+        // Invalid config - duplicate signers
+        let mut signers = [[0u8; 20]; MAX_SIGNER_COUNT as usize];
+        signers[0] = [1u8; 20];
+        signers[1] = [1u8; 20]; // Same as signers[0]
+
+        let new_config = BaseOracleConfig {
+            threshold: 2,
+            signer_count: 2,
+            signers,
+        };
+
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: SetOracleSigners { cfg: new_config }.data(),
+        };
+
+        let tx = Transaction::new(
+            &[&payer],
+            Message::new(&[ix], Some(&payer.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        // Should fail with DuplicateSigner
+        let result = svm.send_transaction(tx);
+        assert!(
+            result.is_err(),
+            "Expected transaction to fail with duplicate signers"
+        );
+
+        // Verify the specific error
+        let error_string = format!("{:?}", result.unwrap_err());
+        assert!(
+            error_string.contains("DuplicateSigner"),
+            "Expected DuplicateSigner error, got: {}",
+            error_string
+        );
     }
 }

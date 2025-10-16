@@ -83,7 +83,7 @@ mod tests {
     use super::*;
     use crate::internal::{Eip1559, Eip1559Config};
     use crate::state::Cfg;
-    use crate::test_utils::{mock_clock, setup_program_and_svm, TEST_GAS_FEE_RECEIVER};
+    use crate::test_utils::{mock_clock, setup_relayer, SetupRelayerResult, TEST_GAS_FEE_RECEIVER};
     use crate::{accounts, instruction};
     use anchor_lang::solana_program::{instruction::Instruction, system_program};
     use anchor_lang::InstructionData;
@@ -134,7 +134,12 @@ mod tests {
 
     #[test]
     fn check_and_pay_transfers_scaled_amount() {
-        let (mut svm, payer, guardian, cfg_pda) = setup_program_and_svm();
+        let SetupRelayerResult {
+            mut svm,
+            payer,
+            guardian,
+            cfg_pda,
+        } = setup_relayer();
         let payer_pk = payer.pubkey();
 
         // Ensure receiver exists for transfer
@@ -210,7 +215,12 @@ mod tests {
 
     #[test]
     fn check_and_pay_uses_refreshed_base_fee_after_window_expiry() {
-        let (mut svm, payer, guardian, cfg_pda) = setup_program_and_svm();
+        let SetupRelayerResult {
+            mut svm,
+            payer,
+            guardian,
+            cfg_pda,
+        } = setup_relayer();
         let payer_pk = payer.pubkey();
 
         // Ensure receiver exists

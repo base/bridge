@@ -49,27 +49,27 @@ pub fn initialize_prove_buffer_handler(
 mod tests {
     use super::*;
 
-    use anchor_lang::{
-        solana_program::{instruction::Instruction, native_token::LAMPORTS_PER_SOL},
-        system_program, InstructionData,
-    };
+    use anchor_lang::{solana_program::instruction::Instruction, system_program, InstructionData};
     use solana_keypair::Keypair;
     use solana_message::Message;
     use solana_signer::Signer as _;
     use solana_transaction::Transaction;
 
     use crate::{
-        accounts, instruction::InitializeProveBuffer as InitializeProveBufferIx,
-        test_utils::setup_bridge_and_svm, ID,
+        accounts,
+        instruction::InitializeProveBuffer as InitializeProveBufferIx,
+        test_utils::{setup_bridge, SetupBridgeResult},
+        ID,
     };
 
     #[test]
     fn test_initialize_prove_buffer_success() {
-        let (mut svm, _payer_setup, bridge_pda) = setup_bridge_and_svm();
-
-        // Create payer and fund
-        let payer = Keypair::new();
-        svm.airdrop(&payer.pubkey(), LAMPORTS_PER_SOL).unwrap();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Prove buffer account
         let prove_buffer = Keypair::new();
@@ -120,11 +120,12 @@ mod tests {
 
     #[test]
     fn test_initialize_prove_buffer_allocates_expected_space() {
-        let (mut svm, _payer_setup, bridge_pda) = setup_bridge_and_svm();
-
-        // Create payer and fund
-        let payer = Keypair::new();
-        svm.airdrop(&payer.pubkey(), LAMPORTS_PER_SOL).unwrap();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Prove buffer account
         let prove_buffer = Keypair::new();

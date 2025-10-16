@@ -149,15 +149,20 @@ mod tests {
         instruction::BridgeSpl as BridgeSplIx,
         solana_to_base::{Call, CallType},
         test_utils::{
-            create_mock_mint, create_mock_token_account, create_outgoing_message,
-            setup_bridge_and_svm, TEST_GAS_FEE_RECEIVER,
+            create_mock_mint, create_mock_token_account, create_outgoing_message, setup_bridge,
+            SetupBridgeResult, TEST_GAS_FEE_RECEIVER,
         },
         ID,
     };
 
     #[test]
     fn test_bridge_spl_success_without_call() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create from account
         let from = Keypair::new();
@@ -282,7 +287,12 @@ mod tests {
 
     #[test]
     fn test_bridge_spl_success_with_call() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create from account
         let from = Keypair::new();
@@ -396,7 +406,12 @@ mod tests {
 
     #[test]
     fn test_bridge_spl_incorrect_gas_fee_receiver() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Create from account
         let from = Keypair::new();
@@ -494,7 +509,12 @@ mod tests {
 
     #[test]
     fn test_bridge_spl_fails_when_paused() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Pause the bridge first
         let mut bridge_account = svm.get_account(&bridge_pda).unwrap();

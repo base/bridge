@@ -50,7 +50,7 @@ mod tests {
         instruction::{
             AppendToProveBufferData as AppendToProveBufferDataIx, InitializeProveBuffer,
         },
-        test_utils::setup_bridge_and_svm,
+        test_utils::{setup_bridge, SetupBridgeResult},
         ID,
     };
 
@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_append_to_prove_buffer_data_success() {
-        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult { mut svm, .. } = setup_bridge();
 
         let owner = Keypair::new();
         svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();
@@ -134,7 +134,7 @@ mod tests {
 
     #[test]
     fn test_append_to_prove_buffer_data_unauthorized() {
-        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult { mut svm, .. } = setup_bridge();
 
         let owner = Keypair::new();
         svm.airdrop(&owner.pubkey(), LAMPORTS_PER_SOL).unwrap();

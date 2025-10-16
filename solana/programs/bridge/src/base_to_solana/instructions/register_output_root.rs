@@ -159,7 +159,7 @@ mod tests {
         },
         common::{bridge::Bridge, MAX_SIGNER_COUNT},
         instruction::RegisterOutputRoot as RegisterOutputRootIx,
-        test_utils::setup_bridge_and_svm,
+        test_utils::{setup_bridge, SetupBridgeResult},
         ID,
     };
 
@@ -309,7 +309,12 @@ mod tests {
 
     #[test]
     fn test_register_output_root_success_sets_root() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
         let output_root = [1u8; 32];
@@ -347,7 +352,12 @@ mod tests {
 
     #[test]
     fn test_register_output_root_success_sets_total_leaf_count() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
         let output_root = [2u8; 32];
@@ -385,7 +395,12 @@ mod tests {
 
     #[test]
     fn test_register_output_root_success_updates_bridge_block_number() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
         let output_root = [9u8; 32];
@@ -421,7 +436,12 @@ mod tests {
 
     #[test]
     fn test_register_output_root_fails_when_paused() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
         // Pause the bridge
@@ -450,7 +470,12 @@ mod tests {
 
     #[test]
     fn test_register_output_root_fails_incorrect_block_interval() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
         // Interval is 300 in tests; 150 is not aligned
@@ -488,7 +513,12 @@ mod tests {
 
     #[test]
     fn test_register_output_root_fails_when_not_monotonic() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
         // Set current base_block_number high
@@ -535,7 +565,12 @@ mod tests {
 
     #[test]
     fn test_register_output_root_fails_with_insufficient_base_signatures() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
         // Raise base oracle threshold to 1 and set a dummy signer on the bridge config
@@ -572,7 +607,12 @@ mod tests {
 
     #[test]
     fn test_register_output_root_fails_with_insufficient_partner_signatures() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
         // Provide a partner signer, but require threshold 1 and no signatures submitted
         let partner_cfg = write_partner_config_account(&mut svm, &[[9u8; 20]]);
 
@@ -618,7 +658,12 @@ mod tests {
 
     #[test]
     fn test_signature_verification_success_with_thresholds() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Configure base oracle signers threshold = 2 with 2 authorized addrs on the bridge config
         let mut bridge_acc = svm.get_account(&bridge_pda).unwrap();
@@ -672,7 +717,12 @@ mod tests {
 
     #[test]
     fn test_signature_verification_deduplicates_signers() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
 
         // Base oracle requires 2 unique approvals, but we will submit the same signer twice
         let mut bridge_acc = svm.get_account(&bridge_pda).unwrap();
@@ -718,7 +768,12 @@ mod tests {
 
     #[test]
     fn test_signature_verification_invalid_recovery_id() {
-        let (mut svm, payer, bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult {
+            mut svm,
+            payer,
+            bridge_pda,
+            ..
+        } = setup_bridge();
         let partner_cfg = write_partner_config_account(&mut svm, &[]);
 
         // Base oracle requires 1 signer but we'll submit an invalid signature (bad v)

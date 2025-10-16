@@ -47,7 +47,7 @@ pub enum AppendToCallBufferError {
 mod tests {
     use super::*;
 
-    use crate::common::BRIDGE_SEED;
+    use crate::{common::BRIDGE_SEED, test_utils::SetupBridgeResult};
     use anchor_lang::{
         solana_program::{instruction::Instruction, native_token::LAMPORTS_PER_SOL},
         system_program, InstructionData,
@@ -61,7 +61,7 @@ mod tests {
         accounts,
         instruction::{AppendToCallBuffer as AppendToCallBufferIx, InitializeCallBuffer},
         solana_to_base::CallType,
-        test_utils::setup_bridge_and_svm,
+        test_utils::setup_bridge,
         ID,
     };
 
@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn test_append_to_call_buffer_success() {
-        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult { mut svm, .. } = setup_bridge();
 
         // Create owner account
         let owner = Keypair::new();
@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_append_to_call_buffer_unauthorized() {
-        let (mut svm, _payer, _bridge_pda) = setup_bridge_and_svm();
+        let SetupBridgeResult { mut svm, .. } = setup_bridge();
 
         // Create owner account
         let owner = Keypair::new();

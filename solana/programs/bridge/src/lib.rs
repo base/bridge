@@ -24,7 +24,7 @@ use solana_to_base::*;
 #[cfg(test)]
 mod test_utils;
 
-declare_id!("524hRwZBKP3wN4r34jcqv7yRv3RJ53DagdbUtHkbCFWE");
+declare_id!("GaxAZQ3BSYjfG65e8mGnBnNpmhqRHDJ33aKEASHh3A3P");
 
 #[program]
 pub mod bridge {
@@ -37,10 +37,11 @@ pub mod bridge {
     /// This function sets up the initial bridge configuration and must be called once during deployment.
     ///
     /// # Arguments
-    /// * `ctx` - The context containing all accounts needed for initialization, including the guardian signer
-    /// * `cfg` - All the configuration parameters needed to initialize the bridge
-    pub fn initialize(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
-        initialize_handler(ctx, cfg)
+    /// * `ctx`      - The context containing all accounts needed for initialization, including the guardian signer
+    /// * `guardian` - The guardian account that will have administrative authority over the bridge
+    /// * `cfg`      - All the configuration parameters needed to initialize the bridge
+    pub fn initialize(ctx: Context<Initialize>, guardian: Pubkey, cfg: Config) -> Result<()> {
+        initialize_handler(ctx, guardian, cfg)
     }
 
     // Base -> Solana
@@ -399,7 +400,10 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and current guardian
     /// * `new_guardian` - The pubkey of the new guardian
-    pub fn transfer_guardian(ctx: Context<SetBridgeConfig>, new_guardian: Pubkey) -> Result<()> {
+    pub fn transfer_guardian(
+        ctx: Context<SetBridgeConfigFromGuardian>,
+        new_guardian: Pubkey,
+    ) -> Result<()> {
         transfer_guardian_handler(ctx, new_guardian)
     }
 
@@ -410,7 +414,10 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge, guardian signer, and oracle signers accounts
     /// * `cfg` - Configuration parameters for Base oracle signers
-    pub fn set_oracle_signers(ctx: Context<SetBridgeConfig>, cfg: BaseOracleConfig) -> Result<()> {
+    pub fn set_oracle_signers(
+        ctx: Context<SetBridgeConfigFromUpgradeAuthority>,
+        cfg: BaseOracleConfig,
+    ) -> Result<()> {
         set_oracle_signers_handler(ctx, cfg)
     }
 
@@ -422,7 +429,10 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_fee` - The new minimum base fee value
-    pub fn set_minimum_base_fee(ctx: Context<SetBridgeConfig>, new_fee: u64) -> Result<()> {
+    pub fn set_minimum_base_fee(
+        ctx: Context<SetBridgeConfigFromGuardian>,
+        new_fee: u64,
+    ) -> Result<()> {
         set_minimum_base_fee_handler(ctx, new_fee)
     }
 
@@ -432,7 +442,10 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_duration` - The new window duration in seconds
-    pub fn set_window_duration(ctx: Context<SetBridgeConfig>, new_duration: u64) -> Result<()> {
+    pub fn set_window_duration(
+        ctx: Context<SetBridgeConfigFromGuardian>,
+        new_duration: u64,
+    ) -> Result<()> {
         set_window_duration_handler(ctx, new_duration)
     }
 
@@ -442,7 +455,10 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_target` - The new gas target value
-    pub fn set_gas_target(ctx: Context<SetBridgeConfig>, new_target: u64) -> Result<()> {
+    pub fn set_gas_target(
+        ctx: Context<SetBridgeConfigFromGuardian>,
+        new_target: u64,
+    ) -> Result<()> {
         set_gas_target_handler(ctx, new_target)
     }
 
@@ -453,7 +469,7 @@ pub mod bridge {
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_denominator` - The new adjustment denominator
     pub fn set_adjustment_denominator(
-        ctx: Context<SetBridgeConfig>,
+        ctx: Context<SetBridgeConfigFromGuardian>,
         new_denominator: u64,
     ) -> Result<()> {
         set_adjustment_denominator_handler(ctx, new_denominator)
@@ -465,7 +481,10 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_scaler` - The new gas cost scaler value
-    pub fn set_gas_cost_scaler(ctx: Context<SetBridgeConfig>, new_scaler: u64) -> Result<()> {
+    pub fn set_gas_cost_scaler(
+        ctx: Context<SetBridgeConfigFromGuardian>,
+        new_scaler: u64,
+    ) -> Result<()> {
         set_gas_cost_scaler_handler(ctx, new_scaler)
     }
 
@@ -475,7 +494,10 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_dp` - The new gas cost scaler DP value
-    pub fn set_gas_cost_scaler_dp(ctx: Context<SetBridgeConfig>, new_dp: u64) -> Result<()> {
+    pub fn set_gas_cost_scaler_dp(
+        ctx: Context<SetBridgeConfigFromGuardian>,
+        new_dp: u64,
+    ) -> Result<()> {
         set_gas_cost_scaler_dp_handler(ctx, new_dp)
     }
 
@@ -485,7 +507,10 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_receiver` - The new gas fee receiver
-    pub fn set_gas_fee_receiver(ctx: Context<SetBridgeConfig>, new_receiver: Pubkey) -> Result<()> {
+    pub fn set_gas_fee_receiver(
+        ctx: Context<SetBridgeConfigFromGuardian>,
+        new_receiver: Pubkey,
+    ) -> Result<()> {
         set_gas_fee_receiver_handler(ctx, new_receiver)
     }
 
@@ -495,7 +520,7 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_val` - The new gas amount per call value
-    pub fn set_gas_per_call(ctx: Context<SetBridgeConfig>, new_val: u64) -> Result<()> {
+    pub fn set_gas_per_call(ctx: Context<SetBridgeConfigFromGuardian>, new_val: u64) -> Result<()> {
         set_gas_per_call_handler(ctx, new_val)
     }
 
@@ -506,7 +531,7 @@ pub mod bridge {
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_interval` - The new block interval requirement value
     pub fn set_block_interval_requirement(
-        ctx: Context<SetBridgeConfig>,
+        ctx: Context<SetBridgeConfigFromGuardian>,
         new_interval: u64,
     ) -> Result<()> {
         set_block_interval_requirement_handler(ctx, new_interval)
@@ -518,7 +543,10 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_size` - The new max call buffer size value
-    pub fn set_max_call_buffer_size(ctx: Context<SetBridgeConfig>, new_size: u64) -> Result<()> {
+    pub fn set_max_call_buffer_size(
+        ctx: Context<SetBridgeConfigFromGuardian>,
+        new_size: u64,
+    ) -> Result<()> {
         set_max_call_buffer_size_handler(ctx, new_size)
     }
 
@@ -528,7 +556,10 @@ pub mod bridge {
     /// # Arguments
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_paused` - The new pause status (true for paused, false for unpaused)
-    pub fn set_pause_status(ctx: Context<SetBridgeConfig>, new_paused: bool) -> Result<()> {
+    pub fn set_pause_status(
+        ctx: Context<SetBridgeConfigFromGuardian>,
+        new_paused: bool,
+    ) -> Result<()> {
         set_pause_status_handler(ctx, new_paused)
     }
 
@@ -538,7 +569,7 @@ pub mod bridge {
     /// * `ctx` - The context containing the bridge account and guardian
     /// * `new_config` - The new partner oracle config
     pub fn set_partner_oracle_config(
-        ctx: Context<SetBridgeConfig>,
+        ctx: Context<SetBridgeConfigFromUpgradeAuthority>,
         new_config: PartnerOracleConfig,
     ) -> Result<()> {
         set_partner_config_handler(ctx, new_config)

@@ -1,17 +1,26 @@
 use anchor_lang::prelude::*;
 
-use crate::common::{
-    bridge::{Bridge, Eip1559},
-    Config, BRIDGE_SEED, DISCRIMINATOR_LEN,
+use crate::{
+    common::{
+        bridge::{Bridge, Eip1559},
+        Config, BRIDGE_SEED, DISCRIMINATOR_LEN,
+    },
+    program::Bridge as BridgeProgram,
 };
 
 /// Accounts for the initialize instruction that sets up the bridge program's initial state.
 /// This instruction creates the main bridge account for cross-chain operations between Base and
 /// Solana, using the provided configuration values and initializing counters/state to zero.
+/// Only the upgrade authority can initialize the bridge for security.
 #[derive(Accounts)]
 pub struct Initialize<'info> {
+    /// The upgrade authority that is authorized to initialize the bridge.
+    /// This ensures only the program deployer can set the initial configuration.
+    pub upgrade_authority: Signer<'info>,
+
     /// The account that pays for the transaction and bridge account creation.
     /// Must be mutable to deduct lamports for account rent.
+    /// Can be different from the upgrade_authority.
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -28,20 +37,31 @@ pub struct Initialize<'info> {
     )]
     pub bridge: Account<'info, Bridge>,
 
-    /// The guardian account that will have administrative authority over the bridge.
-    /// Must be a signer to prove ownership of the guardian key. The payer and guardian
-    /// may be distinct signers.
-    pub guardian: Signer<'info>,
+    /// Program data account containing the upgrade authority.
+    /// Validates that the signer is indeed the upgrade authority.
+    #[account(
+        constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key())
+            @ InitializeError::UnauthorizedInitialization
+    )]
+    pub program_data: Account<'info, ProgramData>,
+
+    /// The bridge program itself.
+    /// Validates that program_data is the correct ProgramData account for this program.
+    #[account(
+        constraint = program.programdata_address()? == Some(program_data.key())
+            @ InitializeError::IncorrectBridgeProgram
+    )]
+    pub program: Program<'info, BridgeProgram>,
 
     /// System program required for creating new accounts.
     /// Used internally by Anchor for account initialization.
     pub system_program: Program<'info, System>,
 }
 
-/// Initializes the `Bridge` state account with the provided configs, sets the guardian to the
-/// provided signer, starts unpaused, zeros counters, sets the EIP-1559 base fee to
-/// `eip1559_config.minimum_base_fee`, and records the current timestamp as the window start.
-pub fn initialize_handler(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
+/// Initializes the `Bridge` state account with the provided configs, sets the guardian,
+/// starts unpaused, zeros counters, sets the EIP-1559 base fee to `eip1559_config.minimum_base_fee`,
+/// and records the current timestamp as the window start.
+pub fn initialize_handler(ctx: Context<Initialize>, guardian: Pubkey, cfg: Config) -> Result<()> {
     let current_timestamp = Clock::get()?.unix_timestamp;
     let minimum_base_fee = cfg.eip1559_config.minimum_base_fee;
 
@@ -50,7 +70,7 @@ pub fn initialize_handler(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
     *ctx.accounts.bridge = Bridge {
         base_block_number: 0,
         nonce: 0,
-        guardian: ctx.accounts.guardian.key(),
+        guardian,
         paused: false, // Initialize bridge as unpaused
         eip1559: Eip1559 {
             config: cfg.eip1559_config,
@@ -68,19 +88,23 @@ pub fn initialize_handler(ctx: Context<Initialize>, cfg: Config) -> Result<()> {
     Ok(())
 }
 
+/// Error codes for initialization
+#[error_code]
+pub enum InitializeError {
+    #[msg("Only the upgrade authority can initialize the bridge")]
+    UnauthorizedInitialization = 7000,
+    #[msg("Incorrect bridge program")]
+    IncorrectBridgeProgram = 7001,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use anchor_lang::{
-        solana_program::{
-            example_mocks::solana_sdk::system_program, instruction::Instruction,
-            native_token::LAMPORTS_PER_SOL,
-        },
+        solana_program::{example_mocks::solana_sdk::system_program, instruction::Instruction},
         InstructionData,
     };
-    use litesvm::LiteSVM;
-    use solana_keypair::Keypair;
     use solana_message::Message;
     use solana_signer::Signer;
     use solana_transaction::Transaction;
@@ -92,56 +116,45 @@ mod tests {
             BaseOracleConfig,
         },
         instruction::Initialize,
-        test_utils::mock_clock,
+        test_utils::{deploy_bridge, mock_clock, DeployBridgeResult},
         ID,
     };
 
     const TEST_TIMESTAMP: i64 = 1747440000; // May 16th, 2025
 
-    fn setup_env() -> (LiteSVM, Keypair, Keypair, Pubkey, Vec<AccountMeta>) {
-        let mut svm = LiteSVM::new();
-        svm.add_program_from_file(ID, "../../target/deploy/bridge.so")
-            .unwrap();
-
-        // Create test accounts
-        let payer = Keypair::new();
+    #[test]
+    fn test_initialize_handler() {
+        let DeployBridgeResult {
+            mut svm,
+            payer,
+            guardian,
+            bridge_pda,
+            program_data_pda,
+        } = deploy_bridge();
         let payer_pk = payer.pubkey();
-        svm.airdrop(&payer_pk, LAMPORTS_PER_SOL).unwrap();
-
-        // Create guardian keypair
-        let guardian = Keypair::new();
         let guardian_pk = guardian.pubkey();
 
         // Mock the clock to ensure we get a proper timestamp
         mock_clock(&mut svm, TEST_TIMESTAMP);
 
-        // Find the PDAs
-        let bridge_pda = Pubkey::find_program_address(&[BRIDGE_SEED], &ID).0;
-
         // Build the Initialize instruction accounts
         let accounts = accounts::Initialize {
+            upgrade_authority: payer_pk,
             payer: payer_pk,
             bridge: bridge_pda,
-            guardian: guardian_pk,
+            program_data: program_data_pda,
+            program: ID,
             system_program: system_program::ID,
         }
         .to_account_metas(None);
 
-        (svm, payer, guardian, bridge_pda, accounts)
-    }
-
-    #[test]
-    fn test_initialize_handler() {
-        let (mut svm, payer, guardian, bridge_pda, accounts) = setup_env();
-        let payer_pk = payer.pubkey();
-        let guardian_pk = guardian.pubkey();
-
-        // Build the Initialize instruction (no guardian parameter needed)
+        // Build the Initialize instruction
         let gas_fee_receiver = Pubkey::new_unique();
         let ix = Instruction {
             program_id: ID,
             accounts,
             data: Initialize {
+                guardian: guardian_pk,
                 cfg: Config {
                     eip1559_config: Eip1559Config::test_new(),
                     gas_config: GasConfig::test_new(gas_fee_receiver),
@@ -154,9 +167,9 @@ mod tests {
             .data(),
         };
 
-        // Build the transaction with both payer and guardian as signers
+        // Build the transaction with payer as upgrade authority
         let tx = Transaction::new(
-            &[&payer, &guardian],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
@@ -195,8 +208,26 @@ mod tests {
 
     #[test]
     fn test_initialize_partner_threshold_too_high_fails() {
-        let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
+        let DeployBridgeResult {
+            mut svm,
+            payer,
+            guardian,
+            bridge_pda,
+            program_data_pda,
+        } = deploy_bridge();
         let payer_pk = payer.pubkey();
+        let guardian_pk = guardian.pubkey();
+
+        // Build the Initialize instruction accounts
+        let accounts = accounts::Initialize {
+            upgrade_authority: payer_pk,
+            payer: payer_pk,
+            bridge: bridge_pda,
+            program_data: program_data_pda,
+            program: ID,
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
 
         // Build the Initialize instruction with an invalid partner threshold (> 5)
         let gas_fee_receiver = Pubkey::new_unique();
@@ -204,6 +235,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: Initialize {
+                guardian: guardian_pk,
                 cfg: Config {
                     eip1559_config: Eip1559Config::test_new(),
                     gas_config: GasConfig::test_new(gas_fee_receiver),
@@ -218,9 +250,9 @@ mod tests {
             .data(),
         };
 
-        // Build the transaction with both payer and guardian as signers
+        // Build the transaction with payer as upgrade authority
         let tx = Transaction::new(
-            &[&payer, &guardian],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
@@ -232,8 +264,26 @@ mod tests {
 
     #[test]
     fn test_initialize_base_oracle_threshold_zero_fails() {
-        let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
+        let DeployBridgeResult {
+            mut svm,
+            payer,
+            guardian,
+            bridge_pda,
+            program_data_pda,
+        } = deploy_bridge();
         let payer_pk = payer.pubkey();
+        let guardian_pk = guardian.pubkey();
+
+        // Build the Initialize instruction accounts
+        let accounts = accounts::Initialize {
+            upgrade_authority: payer_pk,
+            payer: payer_pk,
+            bridge: bridge_pda,
+            program_data: program_data_pda,
+            program: ID,
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
 
         // Build the Initialize instruction with an invalid base oracle threshold (== 0)
         let gas_fee_receiver = Pubkey::new_unique();
@@ -244,6 +294,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: Initialize {
+                guardian: guardian_pk,
                 cfg: Config {
                     eip1559_config: Eip1559Config::test_new(),
                     gas_config: GasConfig::test_new(gas_fee_receiver),
@@ -256,9 +307,9 @@ mod tests {
             .data(),
         };
 
-        // Build the transaction with both payer and guardian as signers
+        // Build the transaction with payer as upgrade authority
         let tx = Transaction::new(
-            &[&payer, &guardian],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
@@ -270,8 +321,26 @@ mod tests {
 
     #[test]
     fn test_initialize_base_oracle_threshold_gt_signer_count_fails() {
-        let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
+        let DeployBridgeResult {
+            mut svm,
+            payer,
+            guardian,
+            bridge_pda,
+            program_data_pda,
+        } = deploy_bridge();
         let payer_pk = payer.pubkey();
+        let guardian_pk = guardian.pubkey();
+
+        // Build the Initialize instruction accounts
+        let accounts = accounts::Initialize {
+            upgrade_authority: payer_pk,
+            payer: payer_pk,
+            bridge: bridge_pda,
+            program_data: program_data_pda,
+            program: ID,
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
 
         // Build the Initialize instruction with threshold > signer_count
         let gas_fee_receiver = Pubkey::new_unique();
@@ -282,6 +351,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: Initialize {
+                guardian: guardian_pk,
                 cfg: Config {
                     eip1559_config: Eip1559Config::test_new(),
                     gas_config: GasConfig::test_new(gas_fee_receiver),
@@ -294,9 +364,9 @@ mod tests {
             .data(),
         };
 
-        // Build the transaction with both payer and guardian as signers
+        // Build the transaction with payer as upgrade authority
         let tx = Transaction::new(
-            &[&payer, &guardian],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
@@ -308,8 +378,26 @@ mod tests {
 
     #[test]
     fn test_initialize_base_oracle_signer_count_exceeds_array_len_fails() {
-        let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
+        let DeployBridgeResult {
+            mut svm,
+            payer,
+            guardian,
+            bridge_pda,
+            program_data_pda,
+        } = deploy_bridge();
         let payer_pk = payer.pubkey();
+        let guardian_pk = guardian.pubkey();
+
+        // Build the Initialize instruction accounts
+        let accounts = accounts::Initialize {
+            upgrade_authority: payer_pk,
+            payer: payer_pk,
+            bridge: bridge_pda,
+            program_data: program_data_pda,
+            program: ID,
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
 
         // Build the Initialize instruction with signer_count > signers.len()
         let gas_fee_receiver = Pubkey::new_unique();
@@ -321,6 +409,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: Initialize {
+                guardian: guardian_pk,
                 cfg: Config {
                     eip1559_config: Eip1559Config::test_new(),
                     gas_config: GasConfig::test_new(gas_fee_receiver),
@@ -333,9 +422,9 @@ mod tests {
             .data(),
         };
 
-        // Build the transaction with both payer and guardian as signers
+        // Build the transaction with payer as upgrade authority
         let tx = Transaction::new(
-            &[&payer, &guardian],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
@@ -347,8 +436,26 @@ mod tests {
 
     #[test]
     fn test_initialize_base_oracle_duplicate_signers_fails() {
-        let (mut svm, payer, guardian, _bridge_pda, accounts) = setup_env();
+        let DeployBridgeResult {
+            mut svm,
+            payer,
+            guardian,
+            bridge_pda,
+            program_data_pda,
+        } = deploy_bridge();
         let payer_pk = payer.pubkey();
+        let guardian_pk = guardian.pubkey();
+
+        // Build the Initialize instruction accounts
+        let accounts = accounts::Initialize {
+            upgrade_authority: payer_pk,
+            payer: payer_pk,
+            bridge: bridge_pda,
+            program_data: program_data_pda,
+            program: ID,
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
 
         // Build the Initialize instruction with duplicate signer addresses among the provided entries
         let gas_fee_receiver = Pubkey::new_unique();
@@ -363,6 +470,7 @@ mod tests {
             program_id: ID,
             accounts,
             data: Initialize {
+                guardian: guardian_pk,
                 cfg: Config {
                     eip1559_config: Eip1559Config::test_new(),
                     gas_config: GasConfig::test_new(gas_fee_receiver),
@@ -375,9 +483,9 @@ mod tests {
             .data(),
         };
 
-        // Build the transaction with both payer and guardian as signers
+        // Build the transaction with payer as upgrade authority
         let tx = Transaction::new(
-            &[&payer, &guardian],
+            &[&payer],
             Message::new(&[ix], Some(&payer_pk)),
             svm.latest_blockhash(),
         );
@@ -385,5 +493,74 @@ mod tests {
         // Send the transaction and expect failure due to duplicate signer detection
         let result = svm.send_transaction(tx);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_initialize_unauthorized_caller_fails() {
+        let DeployBridgeResult {
+            mut svm,
+            guardian,
+            bridge_pda,
+            program_data_pda,
+            ..
+        } = deploy_bridge();
+        let guardian_pk = guardian.pubkey();
+
+        // Create an unauthorized user (not the upgrade authority)
+        let unauthorized = solana_keypair::Keypair::new();
+        svm.airdrop(&unauthorized.pubkey(), 10_000_000_000)
+            .expect("Failed to airdrop to unauthorized user");
+
+        // Build the Initialize instruction accounts with unauthorized user
+        let accounts = accounts::Initialize {
+            upgrade_authority: unauthorized.pubkey(), // Wrong upgrade authority
+            payer: unauthorized.pubkey(),
+            bridge: bridge_pda,
+            program_data: program_data_pda,
+            program: ID,
+            system_program: system_program::ID,
+        }
+        .to_account_metas(None);
+
+        // Build the Initialize instruction
+        let gas_fee_receiver = Pubkey::new_unique();
+        let ix = Instruction {
+            program_id: ID,
+            accounts,
+            data: Initialize {
+                guardian: guardian_pk,
+                cfg: Config {
+                    eip1559_config: Eip1559Config::test_new(),
+                    gas_config: GasConfig::test_new(gas_fee_receiver),
+                    protocol_config: ProtocolConfig::test_new(),
+                    buffer_config: BufferConfig::test_new(),
+                    partner_oracle_config: PartnerOracleConfig::default(),
+                    base_oracle_config: BaseOracleConfig::test_new(),
+                },
+            }
+            .data(),
+        };
+
+        // Build the transaction with unauthorized user
+        let tx = Transaction::new(
+            &[&unauthorized],
+            Message::new(&[ix], Some(&unauthorized.pubkey())),
+            svm.latest_blockhash(),
+        );
+
+        // Send the transaction and expect failure with UnauthorizedInitialization error
+        let result = svm.send_transaction(tx);
+        assert!(
+            result.is_err(),
+            "Expected transaction to fail with unauthorized caller"
+        );
+
+        // Verify the error message contains "UnauthorizedInitialization"
+        let error_string = format!("{:?}", result.unwrap_err());
+        assert!(
+            error_string.contains("UnauthorizedInitialization") || error_string.contains("7000"), // Error code for UnauthorizedInitialization
+            "Expected UnauthorizedInitialization error, got: {}",
+            error_string
+        );
     }
 }
