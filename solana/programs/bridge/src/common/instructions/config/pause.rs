@@ -52,10 +52,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: SetPauseStatusIx {
-                new_paused: new_paused,
-            }
-            .data(),
+            data: SetPauseStatusIx { new_paused }.data(),
         };
 
         // Build and send the transaction
@@ -105,10 +102,7 @@ mod tests {
         let ix = Instruction {
             program_id: ID,
             accounts,
-            data: SetPauseStatusIx {
-                new_paused: new_paused,
-            }
-            .data(),
+            data: SetPauseStatusIx { new_paused }.data(),
         };
 
         // Build and send the transaction with fake guardian
