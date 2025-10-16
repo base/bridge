@@ -163,10 +163,7 @@ library TokenLib {
                 // NOTE: This is needed to support tokens with transfer fees.
                 uint256 balanceBefore = SafeTransferLib.balanceOf({token: transfer.localToken, account: address(this)});
                 SafeTransferLib.safeTransferFrom({
-                    token: transfer.localToken,
-                    from: msg.sender,
-                    to: address(this),
-                    amount: transferLocalAmount
+                    token: transfer.localToken, from: msg.sender, to: address(this), amount: transferLocalAmount
                 });
                 uint256 balanceAfter = SafeTransferLib.balanceOf({token: transfer.localToken, account: address(this)});
                 uint256 receivedLocalAmount = balanceAfter - balanceBefore;
@@ -237,10 +234,7 @@ library TokenLib {
         }
 
         emit TransferFinalized({
-            localToken: transfer.localToken,
-            remoteToken: transfer.remoteToken,
-            to: to,
-            amount: localAmount
+            localToken: transfer.localToken, remoteToken: transfer.remoteToken, to: to, amount: localAmount
         });
     }
 

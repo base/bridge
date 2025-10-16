@@ -71,8 +71,7 @@ contract BridgeValidatorTest is CommonTest {
 
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
 
         bytes memory sigs = _getValidatorSigs(signedMessages);
@@ -90,12 +89,10 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_success() public {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](2);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
         signedMessages[1] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_2
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_2
         });
 
         bytes32[] memory expectedFinalHashes = _calculateFinalHashes(signedMessages);
@@ -113,8 +110,7 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_singleMessage() public {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
 
         bytes32[] memory expectedFinalHashes = _calculateFinalHashes(signedMessages);
@@ -152,16 +148,14 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_duplicateMessageHashes() public {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](3);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
         signedMessages[1] = BridgeValidator.SignedMessage({
             outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
             innerMessageHash: TEST_MESSAGE_HASH_1 // Duplicate
         });
         signedMessages[2] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_2
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_2
         });
 
         bytes32[] memory expectedFinalHashes = _calculateFinalHashes(signedMessages);
@@ -181,8 +175,7 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_revertsOnInvalidSignatureLength() public {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
 
         // Create signature with invalid length (64 bytes instead of 65)
@@ -195,8 +188,7 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_revertsWhenPartnerThresholdNotMet() public {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
 
         address testOracle = vm.addr(77);
@@ -220,8 +212,7 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_revertsOnEmptySignature() public {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
 
         vm.expectRevert(BridgeValidator.BaseThresholdNotMet.selector);
@@ -231,8 +222,7 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_anyoneCanCallWithValidSigs() public {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
 
         bytes32[] memory expectedFinalHashes = _calculateFinalHashes(signedMessages);
@@ -247,8 +237,7 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_revertsOnDuplicateSigners() public {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
 
         bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
@@ -266,8 +255,7 @@ contract BridgeValidatorTest is CommonTest {
     function test_registerMessages_revertsOnUnsortedSigners() public {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
 
         bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
@@ -307,8 +295,7 @@ contract BridgeValidatorTest is CommonTest {
         // Prepare a single message
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
         bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
         bytes memory signedHash = abi.encode(finalHashes);
@@ -362,8 +349,7 @@ contract BridgeValidatorTest is CommonTest {
 
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
 
         // Calculate final hashes with the validator's current nonce
@@ -391,8 +377,7 @@ contract BridgeValidatorTest is CommonTest {
         // Prepare a single message
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
 
         // Compute final hash using the proxy's current nonce
@@ -497,8 +482,7 @@ contract BridgeValidatorTest is CommonTest {
 
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
         bytes32[] memory expectedFinalHashes = _calculateFinalHashes(signedMessages);
 
@@ -558,8 +542,7 @@ contract BridgeValidatorTest is CommonTest {
         // Registering with single base validator (key 1) still works
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
         bytes32[] memory expectedFinalHashes = _calculateFinalHashes(signedMessages);
         bridgeValidator.registerMessages(signedMessages, _getValidatorSigs(signedMessages));
@@ -592,16 +575,13 @@ contract BridgeValidatorTest is CommonTest {
         assertEq(bridgeValidator.nextNonce(), 0);
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](3);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
         signedMessages[1] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_2
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_2
         });
         signedMessages[2] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_3
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_3
         });
         bridgeValidator.registerMessages(signedMessages, _getValidatorSigs(signedMessages));
         assertEq(bridgeValidator.nextNonce(), 3);
@@ -620,12 +600,10 @@ contract BridgeValidatorTest is CommonTest {
     function test_validMessages_afterRegistration() public {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](2);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_1
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
         signedMessages[1] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: TEST_MESSAGE_HASH_2
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_2
         });
 
         bytes32[] memory expectedFinalHashes = _calculateFinalHashes(signedMessages);
@@ -649,8 +627,7 @@ contract BridgeValidatorTest is CommonTest {
             new BridgeValidator.SignedMessage[](innerMessageHashes.length);
         for (uint256 i; i < innerMessageHashes.length; i++) {
             signedMessages[i] = BridgeValidator.SignedMessage({
-                outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-                innerMessageHash: innerMessageHashes[i]
+                outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: innerMessageHashes[i]
             });
         }
 

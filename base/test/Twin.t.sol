@@ -97,10 +97,7 @@ contract TwinTest is Test {
 
         // Create a call to execute the above call (recursive call)
         Call memory selfCall = Call({
-            ty: CallType.Call,
-            to: address(twin),
-            value: 0,
-            data: abi.encodeWithSelector(Twin.execute.selector, call)
+            ty: CallType.Call, to: address(twin), value: 0, data: abi.encodeWithSelector(Twin.execute.selector, call)
         });
 
         vm.prank(bridge);

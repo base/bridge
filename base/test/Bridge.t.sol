@@ -21,7 +21,8 @@ import {TestTarget} from "./mocks/TestTarget.sol";
 contract BridgeTest is CommonTest {
     address public user = makeAddr("user");
 
-    Pubkey public constant TEST_SENDER = Pubkey.wrap(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
+    Pubkey public constant TEST_SENDER =
+        Pubkey.wrap(0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef);
     Pubkey public constant TEST_REMOTE_TOKEN =
         Pubkey.wrap(0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890);
 

@@ -221,9 +221,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
                 abi.decode(call.data, (address, Pubkey, uint8));
 
             TokenLib.registerRemoteToken({
-                localToken: localToken,
-                remoteToken: remoteToken,
-                scalarExponent: scalarExponent
+                localToken: localToken, remoteToken: remoteToken, scalarExponent: scalarExponent
             });
             return;
         }
@@ -240,8 +238,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         address twinAddress = twins[message.sender];
         if (twinAddress == address(0)) {
             twinAddress = LibClone.deployDeterministicERC1967BeaconProxy({
-                beacon: TWIN_BEACON,
-                salt: Pubkey.unwrap(message.sender)
+                beacon: TWIN_BEACON, salt: Pubkey.unwrap(message.sender)
             });
             twins[message.sender] = twinAddress;
         }
@@ -298,9 +295,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @return The predicted address of the Twin contract for the given Solana sender pubkey.
     function getPredictedTwinAddress(Pubkey sender) external view returns (address) {
         return LibClone.predictDeterministicAddressERC1967BeaconProxy({
-            beacon: TWIN_BEACON,
-            salt: Pubkey.unwrap(sender),
-            deployer: address(this)
+            beacon: TWIN_BEACON, salt: Pubkey.unwrap(sender), deployer: address(this)
         });
     }
 

@@ -42,8 +42,7 @@ contract CommonTest is Test {
     {
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE,
-            innerMessageHash: MessageLib.getInnerMessageHash(message)
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: MessageLib.getInnerMessageHash(message)
         });
         return signedMessages;
     }

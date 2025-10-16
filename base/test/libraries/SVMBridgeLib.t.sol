@@ -209,10 +209,7 @@ contract SVMBridgeLibTest is Test {
 
     function test_serializeTransfer_wrappedToken_withInstructions() public pure {
         Transfer memory transfer = Transfer({
-            localToken: TEST_LOCAL_TOKEN,
-            remoteToken: TEST_REMOTE_TOKEN,
-            to: TEST_TO,
-            remoteAmount: 123456789
+            localToken: TEST_LOCAL_TOKEN, remoteToken: TEST_REMOTE_TOKEN, to: TEST_TO, remoteAmount: 123456789
         });
 
         Ix[] memory ixs = new Ix[](3);
@@ -250,10 +247,7 @@ contract SVMBridgeLibTest is Test {
 
     function test_serializeTransfer_maxAmount() public pure {
         Transfer memory transfer = Transfer({
-            localToken: TEST_LOCAL_TOKEN,
-            remoteToken: TEST_REMOTE_TOKEN,
-            to: TEST_TO,
-            remoteAmount: type(uint64).max
+            localToken: TEST_LOCAL_TOKEN, remoteToken: TEST_REMOTE_TOKEN, to: TEST_TO, remoteAmount: type(uint64).max
         });
 
         Ix[] memory ixs = new Ix[](0);
@@ -301,10 +295,7 @@ contract SVMBridgeLibTest is Test {
 
         for (uint256 i = 0; i < tokenAddresses.length; i++) {
             Transfer memory transfer = Transfer({
-                localToken: tokenAddresses[i],
-                remoteToken: TEST_REMOTE_TOKEN,
-                to: TEST_TO,
-                remoteAmount: 1000
+                localToken: tokenAddresses[i], remoteToken: TEST_REMOTE_TOKEN, to: TEST_TO, remoteAmount: 1000
             });
 
             Ix[] memory ixs = new Ix[](0);
