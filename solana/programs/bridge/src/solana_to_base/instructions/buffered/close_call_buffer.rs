@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::solana_to_base::CallBuffer;
+use crate::{solana_to_base::CallBuffer, BridgeError};
 
 /// Accounts struct for closing a call buffer account.
 #[derive(Accounts)]
@@ -13,7 +13,7 @@ pub struct CloseCallBuffer<'info> {
     #[account(
         mut,
         close = owner,
-        has_one = owner @ CloseCallBufferError::Unauthorized,
+        has_one = owner @ BridgeError::BufferUnauthorizedClose,
     )]
     pub call_buffer: Account<'info, CallBuffer>,
 }
@@ -21,12 +21,6 @@ pub struct CloseCallBuffer<'info> {
 pub fn close_call_buffer_handler(_ctx: Context<CloseCallBuffer>) -> Result<()> {
     // The account will be closed automatically by Anchor due to the `close = owner` constraint
     Ok(())
-}
-
-#[error_code]
-pub enum CloseCallBufferError {
-    #[msg("Only the owner can close this call buffer")]
-    Unauthorized,
 }
 
 #[cfg(test)]

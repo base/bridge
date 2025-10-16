@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{
     common::{bridge::Bridge, BRIDGE_SEED},
     program::Bridge as BridgeProgram,
+    BridgeError,
 };
 
 pub mod eip1559;
@@ -33,7 +34,7 @@ pub struct SetBridgeConfigFromGuardian<'info> {
     /// The bridge account containing configuration
     #[account(
         mut,
-        has_one = guardian @ ConfigError::UnauthorizedConfigUpdate,
+        has_one = guardian @ BridgeError::UnauthorizedConfigUpdate,
         seeds = [BRIDGE_SEED],
         bump
     )]
@@ -54,20 +55,11 @@ pub struct SetBridgeConfigFromUpgradeAuthority<'info> {
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, Bridge>,
 
-    #[account(constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key()) @ ConfigError::UnauthorizedConfigUpdate)]
+    #[account(constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key()) @ BridgeError::UnauthorizedConfigUpdate)]
     pub program_data: Account<'info, ProgramData>,
 
-    #[account(constraint = program.programdata_address()? == Some(program_data.key()) @ ConfigError::IncorrectBridgeProgram)]
+    #[account(constraint = program.programdata_address()? == Some(program_data.key()) @ BridgeError::IncorrectBridgeProgram)]
     pub program: Program<'info, BridgeProgram>,
 }
 
-/// Error codes for configuration updates
-#[error_code]
-pub enum ConfigError {
-    #[msg("Unauthorized to update configuration")]
-    UnauthorizedConfigUpdate = 6000,
-    #[msg("Incorrect bridge program")]
-    IncorrectBridgeProgram = 6001,
-    #[msg("Bridge is currently paused")]
-    BridgePaused = 6002,
-}
+// ConfigError enum is now defined in the errors module

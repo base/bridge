@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::solana_to_base::CallBuffer;
+use crate::{solana_to_base::CallBuffer, BridgeError};
 
 /// Accounts struct for appending data to an existing call buffer account.
 /// This allows building up large call data over multiple transactions.
@@ -17,7 +17,7 @@ pub struct AppendToCallBuffer<'info> {
     /// serialization would exceed the account's allocated size.
     #[account(
         mut,
-        has_one = owner @ AppendToCallBufferError::Unauthorized,
+        has_one = owner @ BridgeError::BufferUnauthorizedAppend,
     )]
     pub call_buffer: Account<'info, CallBuffer>,
 }
@@ -35,12 +35,6 @@ pub fn append_to_call_buffer_handler(
     call_buffer.data.extend_from_slice(&data);
 
     Ok(())
-}
-
-#[error_code]
-pub enum AppendToCallBufferError {
-    #[msg("Only the owner can append to this call buffer")]
-    Unauthorized,
 }
 
 #[cfg(test)]

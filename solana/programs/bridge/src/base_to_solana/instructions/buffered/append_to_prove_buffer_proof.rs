@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::base_to_solana::ProveBuffer;
+use crate::BridgeError;
 
 /// Append chunk of MMR proof nodes to the `ProveBuffer`.
 #[derive(Accounts)]
@@ -11,7 +12,7 @@ pub struct AppendToProveBufferProof<'info> {
     /// Prove buffer account to append proof nodes to
     #[account(
         mut,
-        has_one = owner @ AppendToProveBufferProofError::Unauthorized,
+        has_one = owner @ BridgeError::BufferUnauthorizedAppend,
     )]
     pub prove_buffer: Account<'info, ProveBuffer>,
 }
@@ -23,12 +24,6 @@ pub fn append_to_prove_buffer_proof_handler(
     let buf = &mut ctx.accounts.prove_buffer;
     buf.proof.extend_from_slice(&proof_chunk);
     Ok(())
-}
-
-#[error_code]
-pub enum AppendToProveBufferProofError {
-    #[msg("Only the owner can modify this prove buffer")]
-    Unauthorized,
 }
 
 #[cfg(test)]

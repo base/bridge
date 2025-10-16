@@ -6,6 +6,7 @@ use crate::{
         internal::bridge_call::bridge_call_internal, Call, CallBuffer, OutgoingMessage,
         OUTGOING_MESSAGE_SEED,
     },
+    BridgeError,
 };
 
 /// Accounts for the buffered variant of `bridge_call` that enables arbitrary function calls
@@ -26,7 +27,7 @@ pub struct BridgeCallBuffered<'info> {
 
     /// The account that receives payment for the gas costs of bridging the call to Base.
     /// CHECK: This account is validated to be the same as bridge.gas_config.gas_fee_receiver
-    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeCallBufferedError::IncorrectGasFeeReceiver)]
+    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The main bridge state account containing global configuration and runtime state.
@@ -46,7 +47,7 @@ pub struct BridgeCallBuffered<'info> {
     #[account(
         mut,
         close = owner,
-        has_one = owner @ BridgeCallBufferedError::Unauthorized,
+        has_one = owner @ BridgeError::BufferUnauthorizedClose,
     )]
     pub call_buffer: Account<'info, CallBuffer>,
 
@@ -79,7 +80,7 @@ pub fn bridge_call_buffered_handler<'a, 'b, 'c, 'info>(
     // Check if bridge is paused
     require!(
         !ctx.accounts.bridge.paused,
-        BridgeCallBufferedError::BridgePaused
+        BridgeError::BridgePaused
     );
 
     let call_buffer = &ctx.accounts.call_buffer;
@@ -99,16 +100,6 @@ pub fn bridge_call_buffered_handler<'a, 'b, 'c, 'info>(
         &ctx.accounts.system_program,
         call,
     )
-}
-
-#[error_code]
-pub enum BridgeCallBufferedError {
-    #[msg("Incorrect gas fee receiver")]
-    IncorrectGasFeeReceiver,
-    #[msg("Only the owner can close this call buffer")]
-    Unauthorized,
-    #[msg("Bridge is currently paused")]
-    BridgePaused,
 }
 
 #[cfg(test)]

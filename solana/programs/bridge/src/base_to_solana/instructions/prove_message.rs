@@ -1,6 +1,7 @@
 use anchor_lang::{prelude::*, solana_program::keccak};
 
 use crate::common::{bridge::Bridge, BRIDGE_SEED};
+use crate::BridgeError;
 use crate::{
     base_to_solana::{
         constants::INCOMING_MESSAGE_SEED,
@@ -60,13 +61,13 @@ pub fn prove_message_handler(
     message_hash: [u8; 32],
 ) -> Result<()> {
     // Check if bridge is paused
-    require!(!ctx.accounts.bridge.paused, ProveMessageError::BridgePaused);
+    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
 
     // Verify that the provided message hash matches the computed hash
     let computed_hash = hash_message(&nonce.to_be_bytes(), &sender, &data);
     require!(
         message_hash == computed_hash,
-        ProveMessageError::InvalidMessageHash
+        BridgeError::InvalidMessageHash
     );
 
     // Verify the MMR proof to ensure the message was included on the source chain
@@ -99,12 +100,4 @@ fn hash_message(nonce: &[u8], sender: &[u8; 20], data: &[u8]) -> [u8; 32] {
     data_to_hash.extend_from_slice(data);
 
     keccak::hash(&data_to_hash).0
-}
-
-#[error_code]
-pub enum ProveMessageError {
-    #[msg("Invalid message hash")]
-    InvalidMessageHash,
-    #[msg("Bridge is currently paused")]
-    BridgePaused,
 }

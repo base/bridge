@@ -18,6 +18,7 @@ use crate::common::DISCRIMINATOR_LEN;
 use crate::common::{bridge::Bridge, PartialTokenMetadata, BRIDGE_SEED, WRAPPED_TOKEN_SEED};
 use crate::solana_to_base::{pay_for_gas, Call, CallType, OutgoingMessage, OUTGOING_MESSAGE_SEED};
 use crate::solana_to_base::{REMOTE_TOKEN_METADATA_KEY, SCALER_EXPONENT_METADATA_KEY};
+use crate::BridgeError;
 use crate::ID;
 
 const REGISTER_REMOTE_TOKEN_DATA_LEN: usize = {
@@ -38,7 +39,7 @@ pub struct WrapToken<'info> {
 
     /// The account that receives payment for the gas costs of registering the token on Base.
     /// CHECK: This account is validated to be the same as bridge.gas_config.gas_fee_receiver
-    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ WrapTokenError::IncorrectGasFeeReceiver)]
+    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The new SPL Token-2022 mint being created for the wrapped token.
@@ -95,7 +96,7 @@ pub fn wrap_token_handler(
     partial_token_metadata: PartialTokenMetadata,
 ) -> Result<()> {
     // Check if bridge is paused
-    require!(!ctx.accounts.bridge.paused, WrapTokenError::BridgePaused);
+    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
 
     initialize_metadata(&ctx, decimals, &partial_token_metadata)?;
 
@@ -232,12 +233,4 @@ const fn add_type_and_length_to_len(value_len: usize) -> usize {
     value_len
         .saturating_add(std::mem::size_of::<ExtensionType>())
         .saturating_add(pod_get_packed_len::<Length>())
-}
-
-#[error_code]
-pub enum WrapTokenError {
-    #[msg("Incorrect gas fee receiver")]
-    IncorrectGasFeeReceiver,
-    #[msg("Bridge is paused")]
-    BridgePaused,
 }

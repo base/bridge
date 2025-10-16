@@ -6,6 +6,7 @@ use crate::{
         Config, BRIDGE_SEED, DISCRIMINATOR_LEN,
     },
     program::Bridge as BridgeProgram,
+    BridgeError,
 };
 
 /// Accounts for the initialize instruction that sets up the bridge program's initial state.
@@ -41,7 +42,7 @@ pub struct Initialize<'info> {
     /// Validates that the signer is indeed the upgrade authority.
     #[account(
         constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key())
-            @ InitializeError::UnauthorizedInitialization
+            @ BridgeError::UnauthorizedInitialization
     )]
     pub program_data: Account<'info, ProgramData>,
 
@@ -49,7 +50,7 @@ pub struct Initialize<'info> {
     /// Validates that program_data is the correct ProgramData account for this program.
     #[account(
         constraint = program.programdata_address()? == Some(program_data.key())
-            @ InitializeError::IncorrectBridgeProgram
+            @ BridgeError::IncorrectBridgeProgram
     )]
     pub program: Program<'info, BridgeProgram>,
 
@@ -89,13 +90,7 @@ pub fn initialize_handler(ctx: Context<Initialize>, guardian: Pubkey, cfg: Confi
 }
 
 /// Error codes for initialization
-#[error_code]
-pub enum InitializeError {
-    #[msg("Only the upgrade authority can initialize the bridge")]
-    UnauthorizedInitialization = 7000,
-    #[msg("Incorrect bridge program")]
-    IncorrectBridgeProgram = 7001,
-}
+// InitializeError enum is now defined in the errors module
 
 #[cfg(test)]
 mod tests {

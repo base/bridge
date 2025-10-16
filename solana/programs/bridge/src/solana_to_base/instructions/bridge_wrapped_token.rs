@@ -10,6 +10,7 @@ use crate::{
         internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, OutgoingMessage,
         Transfer, OUTGOING_MESSAGE_SEED,
     },
+    BridgeError,
 };
 
 /// Accounts struct for the bridge wrapped token instruction that transfers wrapped tokens from Solana to Base
@@ -31,7 +32,7 @@ pub struct BridgeWrappedToken<'info> {
 
     /// The account that receives payment for the gas costs of bridging the token on Base.
     /// CHECK: This account is validated to be the same as bridge.gas_config.gas_fee_receiver
-    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeWrappedTokenError::IncorrectGasFeeReceiver)]
+    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The wrapped token mint account representing the original Base token.
@@ -84,7 +85,7 @@ pub fn bridge_wrapped_token_handler(
     // Check if bridge is paused
     require!(
         !ctx.accounts.bridge.paused,
-        BridgeWrappedTokenError::BridgePaused
+        BridgeError::BridgePaused
     );
 
     bridge_wrapped_token_internal(
@@ -101,14 +102,6 @@ pub fn bridge_wrapped_token_handler(
         amount,
         call,
     )
-}
-
-#[error_code]
-pub enum BridgeWrappedTokenError {
-    #[msg("Incorrect gas fee receiver")]
-    IncorrectGasFeeReceiver,
-    #[msg("Bridge is paused")]
-    BridgePaused,
 }
 
 #[cfg(test)]

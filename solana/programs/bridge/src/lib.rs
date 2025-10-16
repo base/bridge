@@ -4,10 +4,12 @@ use anchor_lang::prelude::*;
 
 mod base_to_solana;
 mod common;
+mod errors;
 mod solana_to_base;
 
 use base_to_solana::*;
 use common::*;
+pub use errors::*;
 
 use common::{
     config::{

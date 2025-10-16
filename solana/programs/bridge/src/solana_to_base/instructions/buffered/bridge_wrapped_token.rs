@@ -10,6 +10,7 @@ use crate::{
         internal::bridge_wrapped_token::bridge_wrapped_token_internal, Call, CallBuffer,
         OutgoingMessage, Transfer, OUTGOING_MESSAGE_SEED,
     },
+    BridgeError,
 };
 
 /// Accounts for bridging wrapped tokens from Solana to Base with a buffered call.
@@ -34,7 +35,7 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     /// CHECK: Enforced to match `bridge.gas_config.gas_fee_receiver` by the account constraint.
     #[account(
         mut,
-        address = bridge.gas_config.gas_fee_receiver @ BridgeWrappedTokenWithBufferedCallError::IncorrectGasFeeReceiver
+        address = bridge.gas_config.gas_fee_receiver @ BridgeError::IncorrectGasFeeReceiver
     )]
     pub gas_fee_receiver: AccountInfo<'info>,
 
@@ -66,7 +67,7 @@ pub struct BridgeWrappedTokenWithBufferedCall<'info> {
     #[account(
         mut,
         close = owner,
-        has_one = owner @ BridgeWrappedTokenWithBufferedCallError::Unauthorized,
+        has_one = owner @ BridgeError::BufferUnauthorizedClose,
     )]
     pub call_buffer: Account<'info, CallBuffer>,
 
@@ -97,7 +98,7 @@ pub fn bridge_wrapped_token_with_buffered_call_handler<'a, 'b, 'c, 'info>(
     // Check if bridge is paused
     require!(
         !ctx.accounts.bridge.paused,
-        BridgeWrappedTokenWithBufferedCallError::BridgePaused
+        BridgeError::BridgePaused
     );
 
     let call_buffer = &ctx.accounts.call_buffer;
@@ -122,16 +123,6 @@ pub fn bridge_wrapped_token_with_buffered_call_handler<'a, 'b, 'c, 'info>(
         amount,
         call,
     )
-}
-
-#[error_code]
-pub enum BridgeWrappedTokenWithBufferedCallError {
-    #[msg("Incorrect gas fee receiver")]
-    IncorrectGasFeeReceiver,
-    #[msg("Only the owner can close this call buffer")]
-    Unauthorized,
-    #[msg("Bridge is currently paused")]
-    BridgePaused,
 }
 
 #[cfg(test)]

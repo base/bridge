@@ -4,6 +4,7 @@ use anchor_lang::{
 };
 
 use crate::{common::SOL_VAULT_SEED, ID};
+use crate::BridgeError;
 
 /// Instruction data for finalizing a native SOL transfer from Base to Solana.
 ///
@@ -35,7 +36,7 @@ impl FinalizeBridgeSol {
         let system_program_info = Program::<System>::try_from(next_account_info(&mut iter)?)?;
 
         // Verify the recipient matches the instruction data
-        require_keys_eq!(to_info.key(), self.to, FinalizeBridgeSolError::IncorrectTo);
+        require_keys_eq!(to_info.key(), self.to, BridgeError::IncorrectTo);
 
         // Verify the SOL vault PDA is correct
         let sol_vault_seeds = &[SOL_VAULT_SEED, self.remote_token.as_ref()];
@@ -44,7 +45,7 @@ impl FinalizeBridgeSol {
         require_keys_eq!(
             sol_vault_info.key(),
             sol_vault_pda,
-            FinalizeBridgeSolError::IncorrectSolVault
+            BridgeError::IncorrectSolVault
         );
 
         // Transfer SOL from the SOL vault to the recipient
@@ -63,12 +64,4 @@ impl FinalizeBridgeSol {
         );
         system_program::transfer(cpi_ctx, self.amount)
     }
-}
-
-#[error_code]
-pub enum FinalizeBridgeSolError {
-    #[msg("Incorrect to")]
-    IncorrectTo,
-    #[msg("Incorrect sol vault")]
-    IncorrectSolVault,
 }

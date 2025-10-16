@@ -2,6 +2,7 @@ use anchor_lang::{
     prelude::*,
     solana_program::{keccak, secp256k1_recover::secp256k1_recover},
 };
+use crate::BridgeError;
 
 /// message = keccak256("\x19Ethereum Signed Message:\n" || len || (output_root || base_block_number_be || total_leaf_count_be))
 pub fn compute_output_root_message_hash(
@@ -50,14 +51,14 @@ pub fn recover_eth_address(signature: &[u8; 65], message_hash: &[u8; 32]) -> Res
     let recovery_id = signature[64];
     let recovery_id = recovery_id - 27;
     if recovery_id >= 2 {
-        return err!(SignatureError::InvalidRecoveryId);
+        return err!(BridgeError::InvalidRecoveryId);
     }
 
     let mut sig = [0u8; 64];
     sig.copy_from_slice(&signature[..64]);
 
     let recovered_pubkey = secp256k1_recover(message_hash, recovery_id, &sig)
-        .map_err(|_| error!(SignatureError::SignatureVerificationFailed))?;
+        .map_err(|_| error!(BridgeError::SignatureVerificationFailed))?;
 
     let recovered_bytes = recovered_pubkey.to_bytes();
     let h = keccak::hash(&recovered_bytes).to_bytes();
@@ -65,12 +66,4 @@ pub fn recover_eth_address(signature: &[u8; 65], message_hash: &[u8; 32]) -> Res
     let mut eth_pubkey_bytes = [0u8; 20];
     eth_pubkey_bytes.copy_from_slice(&h[12..]);
     Ok(eth_pubkey_bytes)
-}
-
-#[error_code]
-pub enum SignatureError {
-    #[msg("Invalid recovery ID")]
-    InvalidRecoveryId,
-    #[msg("Signature verification failed")]
-    SignatureVerificationFailed,
 }

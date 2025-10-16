@@ -6,6 +6,7 @@ use crate::common::PartialTokenMetadata;
 use crate::{
     common::bridge::Bridge,
     solana_to_base::{check_call, pay_for_gas, Call, OutgoingMessage, Transfer as TransferOp},
+    BridgeError,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -33,7 +34,7 @@ pub fn bridge_spl_internal<'info>(
     // Wrapped tokens should be handled by the wrapped_token_transfer_operation branch which burns the token from the user.
     require!(
         PartialTokenMetadata::try_from(&mint.to_account_info()).is_err(),
-        crate::solana_to_base::instructions::bridge_spl::BridgeSplError::MintIsWrappedToken
+        BridgeError::MintIsWrappedToken
     );
 
     // Get the token vault balance before the transfer.

@@ -7,6 +7,7 @@ use crate::{
     },
     common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN},
 };
+use crate::BridgeError;
 
 /// Buffered variant of `prove_message` that reads data/proof from a `ProveBuffer` and closes it.
 #[derive(Accounts)]
@@ -41,7 +42,7 @@ pub struct ProveMessageBuffered<'info> {
     #[account(
         mut,
         close = owner,
-        has_one = owner @ ProveMessageBufferedError::Unauthorized,
+        has_one = owner @ BridgeError::BufferUnauthorizedClose,
     )]
     pub prove_buffer: Account<'info, ProveBuffer>,
 
@@ -57,7 +58,7 @@ pub fn prove_message_buffered_handler(
     // Pause
     require!(
         !ctx.accounts.bridge.paused,
-        ProveMessageBufferedError::BridgePaused
+        BridgeError::BridgePaused
     );
 
     // Verify hash
@@ -65,7 +66,7 @@ pub fn prove_message_buffered_handler(
     let computed_hash = hash_message(&nonce.to_be_bytes(), &sender, data);
     require!(
         message_hash == computed_hash,
-        ProveMessageBufferedError::InvalidMessageHash
+        BridgeError::InvalidMessageHash
     );
 
     // Verify proof
@@ -94,16 +95,6 @@ fn hash_message(nonce: &[u8], sender: &[u8; 20], data: &[u8]) -> [u8; 32] {
     data_to_hash.extend_from_slice(sender);
     data_to_hash.extend_from_slice(data);
     keccak::hash(&data_to_hash).0
-}
-
-#[error_code]
-pub enum ProveMessageBufferedError {
-    #[msg("Invalid message hash")]
-    InvalidMessageHash,
-    #[msg("Only the owner can close this prove buffer")]
-    Unauthorized,
-    #[msg("Bridge is currently paused")]
-    BridgePaused,
 }
 
 #[cfg(test)]

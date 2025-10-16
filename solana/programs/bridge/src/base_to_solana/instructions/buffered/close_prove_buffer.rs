@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::base_to_solana::ProveBuffer;
+use crate::BridgeError;
 
 /// Accounts struct for closing a prove buffer account.
 #[derive(Accounts)]
@@ -13,7 +14,7 @@ pub struct CloseProveBuffer<'info> {
     #[account(
         mut,
         close = owner,
-        has_one = owner @ CloseProveBufferError::Unauthorized,
+        has_one = owner @ BridgeError::BufferUnauthorizedClose,
     )]
     pub prove_buffer: Account<'info, ProveBuffer>,
 }
@@ -21,12 +22,6 @@ pub struct CloseProveBuffer<'info> {
 pub fn close_prove_buffer_handler(_ctx: Context<CloseProveBuffer>) -> Result<()> {
     // The account will be closed automatically by Anchor due to the `close = owner` constraint
     Ok(())
-}
-
-#[error_code]
-pub enum CloseProveBufferError {
-    #[msg("Only the owner can close this prove buffer")]
-    Unauthorized,
 }
 
 #[cfg(test)]

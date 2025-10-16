@@ -1,4 +1,4 @@
-use crate::{common::WRAPPED_TOKEN_SEED, ID};
+use crate::{common::WRAPPED_TOKEN_SEED, BridgeError, ID};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::keccak;
 use anchor_spl::{
@@ -70,8 +70,8 @@ impl From<&PartialTokenMetadata> for TokenMetadata {
 /// - Only the first two entries of `additional_metadata` are inspected.
 /// - Those entries are expected to be, in order: (`remote_token`, `scaler_exponent`).
 /// - If the keys are missing, in a different order, or appear after other keys, this
-///   returns `TokenMetadataError::RemoteTokenNotFound` or
-///   `TokenMetadataError::ScalerExponentNotFound`. This reflects the current write
+///   returns `BridgeError::RemoteTokenNotFound` or
+///   `BridgeError::ScalerExponentNotFound`. This reflects the current write
 ///   behavior, which inserts the keys in that order.
 impl TryFrom<TokenMetadata> for PartialTokenMetadata {
     type Error = Error;
@@ -85,30 +85,30 @@ impl TryFrom<TokenMetadata> for PartialTokenMetadata {
 
         let (scaler_exponent_key, scaler_exponent_value) = key_values
             .pop()
-            .ok_or(TokenMetadataError::ScalerExponentNotFound)?;
+            .ok_or(BridgeError::ScalerExponentNotFound)?;
 
         require!(
             scaler_exponent_key == SCALER_EXPONENT_METADATA_KEY,
-            TokenMetadataError::ScalerExponentNotFound
+            BridgeError::ScalerExponentNotFound
         );
 
         let scaler_exponent = scaler_exponent_value
             .parse::<u8>()
-            .map_err(|_| TokenMetadataError::InvalidScalerExponent)?;
+            .map_err(|_| BridgeError::InvalidScalerExponent)?;
 
         let (remote_token_key, remote_token_value) = key_values
             .pop()
-            .ok_or(TokenMetadataError::RemoteTokenNotFound)?;
+            .ok_or(BridgeError::RemoteTokenNotFound)?;
 
         require!(
             remote_token_key == REMOTE_TOKEN_METADATA_KEY,
-            TokenMetadataError::RemoteTokenNotFound
+            BridgeError::RemoteTokenNotFound
         );
 
         let remote_token = <[u8; 20]>::try_from(
-            hex::decode(remote_token_value).map_err(|_| TokenMetadataError::InvalidRemoteToken)?,
+            hex::decode(remote_token_value).map_err(|_| BridgeError::InvalidRemoteToken)?,
         )
-        .map_err(|_| TokenMetadataError::InvalidRemoteToken)?;
+        .map_err(|_| BridgeError::InvalidRemoteToken)?;
 
         Ok(PartialTokenMetadata {
             name: metadata.name,
@@ -138,7 +138,7 @@ impl TryFrom<&AccountInfo<'_>> for PartialTokenMetadata {
         require_keys_eq!(
             mint.key(),
             expected_mint,
-            TokenMetadataError::MintIsNotWrappedTokenPda
+            BridgeError::MintIsNotWrappedTokenPda
         );
 
         Ok(partial)
@@ -169,7 +169,7 @@ fn mint_info_to_token_metadata(mint: &AccountInfo<'_>) -> Result<(TokenMetadata,
     require_keys_eq!(
         *mint.owner,
         anchor_spl::token_2022::ID,
-        TokenMetadataError::MintIsNotFromToken2022
+        BridgeError::MintIsNotFromToken2022
     );
 
     let mint_data = mint.data.borrow();
@@ -179,18 +179,4 @@ fn mint_info_to_token_metadata(mint: &AccountInfo<'_>) -> Result<(TokenMetadata,
     Ok((token_metadata, decimals))
 }
 
-#[error_code]
-pub enum TokenMetadataError {
-    #[msg("Remote token not found")]
-    RemoteTokenNotFound,
-    #[msg("Scaler exponent not found")]
-    ScalerExponentNotFound,
-    #[msg("Invalid remote token")]
-    InvalidRemoteToken,
-    #[msg("Invalid scaler exponent")]
-    InvalidScalerExponent,
-    #[msg("Mint is not a token 2022 mint")]
-    MintIsNotFromToken2022,
-    #[msg("Mint is not a valid wrapped token PDA")]
-    MintIsNotWrappedTokenPda,
-}
+// TokenMetadataError enum is now defined in the errors module and imported above

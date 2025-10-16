@@ -1,4 +1,5 @@
 use anchor_lang::{prelude::*, solana_program::keccak};
+use crate::BridgeError;
 
 /// Verifies an MMR proof.
 ///
@@ -25,18 +26,18 @@ pub fn verify_proof(
     total_leaf_count: u64,
 ) -> Result<()> {
     if total_leaf_count == 0 {
-        require!(proof.is_empty(), MmrError::MmrShouldBeEmpty);
-        require!(*expected_root == [0u8; 32], MmrError::InvalidProof);
-        require!(*leaf_hash == [0u8; 32], MmrError::InvalidProof);
+        require!(proof.is_empty(), BridgeError::MmrShouldBeEmpty);
+        require!(*expected_root == [0u8; 32], BridgeError::InvalidProof);
+        require!(*leaf_hash == [0u8; 32], BridgeError::InvalidProof);
         return Ok(());
     }
 
-    require!(*leaf_index < total_leaf_count, MmrError::InvalidProof);
+    require!(*leaf_index < total_leaf_count, BridgeError::InvalidProof);
 
     let calculated_root =
         calculate_root_from_proof(proof, leaf_hash, *leaf_index, total_leaf_count)?;
 
-    require!(calculated_root == *expected_root, MmrError::InvalidProof);
+    require!(calculated_root == *expected_root, BridgeError::InvalidProof);
 
     Ok(())
 }
@@ -51,7 +52,7 @@ fn calculate_root_from_proof(
     leaf_idx: u64, // 0-indexed leaf position
     total_leaf_count: u64,
 ) -> Result<[u8; 32]> {
-    require!(total_leaf_count > 0, MmrError::EmptyMmr);
+    require!(total_leaf_count > 0, BridgeError::EmptyMmr);
 
     // 1. Determine the mountain structure and the leaf's mountain details.
     let mut mountains: Vec<(u32, u64, bool)> = Vec::new(); // (height, num_leaves_in_mountain, is_leafs_mountain)
@@ -86,7 +87,7 @@ fn calculate_root_from_proof(
     }
 
     let (leaf_mountain_height, _leaf_idx_in_mountain) =
-        leaf_s_mountain_details.ok_or(error!(MmrError::LeafMountainNotFound))?;
+        leaf_s_mountain_details.ok_or(error!(BridgeError::LeafMountainNotFound))?;
 
     // 2. Calculate the peak of the leaf's mountain.
     let mut current_computed_hash = *leaf_hash;
@@ -94,7 +95,7 @@ fn calculate_root_from_proof(
 
     require!(
         leaf_mountain_height as usize <= proof.len() || leaf_mountain_height == 0,
-        MmrError::InsufficientProofElementsForIntraMountainPath
+        BridgeError::InsufficientProofElementsForIntraMountainPath
     );
 
     for _h_climb in 0..leaf_mountain_height {
@@ -116,7 +117,7 @@ fn calculate_root_from_proof(
         } else {
             require!(
                 remaining_proof_idx < proof.len(),
-                MmrError::InsufficientProofElementsForOtherMountainPeaks
+                BridgeError::InsufficientProofElementsForOtherMountainPeaks
             );
 
             all_peak_hashes.push(proof[remaining_proof_idx]);
@@ -126,14 +127,14 @@ fn calculate_root_from_proof(
 
     require!(
         remaining_proof_idx == proof.len(),
-        MmrError::UnusedProofElementsRemaining
+        BridgeError::UnusedProofElementsRemaining
     );
 
     // 4. Bag the peaks (left-to-right).
     // `all_peak_hashes` is already in left-to-right mountain order.
     if all_peak_hashes.is_empty() {
         // Unreachable due to precondition `total_leaf_count > 0`; retained as a safeguard.
-        require!(total_leaf_count == 0, MmrError::NoPeaksFoundForNonEmptyMmr);
+        require!(total_leaf_count == 0, BridgeError::NoPeaksFoundForNonEmptyMmr);
 
         // For an empty MMR, the empty root is defined as `[0u8; 32]`.
         return Ok([0u8; 32]);
@@ -172,24 +173,4 @@ fn efficient_keccak256(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
     data_to_hash.extend_from_slice(a);
     data_to_hash.extend_from_slice(b);
     keccak::hash(&data_to_hash).to_bytes()
-}
-
-#[error_code]
-pub enum MmrError {
-    #[msg("Invalid proof")]
-    InvalidProof,
-    #[msg("MMR should be empty")]
-    MmrShouldBeEmpty,
-    #[msg("MMR is empty")]
-    EmptyMmr,
-    #[msg("Leaf's mountain not found")]
-    LeafMountainNotFound,
-    #[msg("Insufficient proof elements for intra-mountain path")]
-    InsufficientProofElementsForIntraMountainPath,
-    #[msg("Insufficient proof elements for other mountain peaks")]
-    InsufficientProofElementsForOtherMountainPeaks,
-    #[msg("Unused proof elements remaining")]
-    UnusedProofElementsRemaining,
-    #[msg("No peaks found for non-empty MMR")]
-    NoPeaksFoundForNonEmptyMmr,
 }

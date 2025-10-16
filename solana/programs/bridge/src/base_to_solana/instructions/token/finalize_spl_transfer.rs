@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 
 use crate::{common::TOKEN_VAULT_SEED, ID};
+use crate::BridgeError;
 
 /// Instruction data for finalizing a bridged SPL token transfer from Base to Solana.
 ///
@@ -44,14 +45,14 @@ impl FinalizeBridgeSpl {
         require_keys_eq!(
             mint.key(),
             self.local_token,
-            FinalizeBridgeSplError::MintDoesNotMatchLocalToken
+            BridgeError::MintDoesNotMatchLocalToken
         );
 
         // Check that the token account is correct given the to address
         require_keys_eq!(
             to_token_account.key(),
             self.to,
-            FinalizeBridgeSplError::TokenAccountDoesNotMatchTo
+            BridgeError::TokenAccountDoesNotMatchTo
         );
 
         // Check that the token vault is the expected PDA
@@ -67,7 +68,7 @@ impl FinalizeBridgeSpl {
         require_keys_eq!(
             token_vault.key(),
             token_vault_pda,
-            FinalizeBridgeSplError::IncorrectTokenVault
+            BridgeError::IncorrectTokenVault
         );
 
         let seeds: &[&[&[u8]]] = &[&[
@@ -92,14 +93,4 @@ impl FinalizeBridgeSpl {
 
         Ok(())
     }
-}
-
-#[error_code]
-pub enum FinalizeBridgeSplError {
-    #[msg("Mint does not match local token")]
-    MintDoesNotMatchLocalToken,
-    #[msg("Token account does not match to address")]
-    TokenAccountDoesNotMatchTo,
-    #[msg("Incorrect token vault")]
-    IncorrectTokenVault,
 }

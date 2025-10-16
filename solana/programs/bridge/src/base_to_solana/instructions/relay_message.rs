@@ -7,6 +7,7 @@ use crate::base_to_solana::{
     constants::BRIDGE_CPI_AUTHORITY_SEED, state::IncomingMessage, Message, Transfer,
 };
 use crate::common::{bridge::Bridge, BRIDGE_SEED};
+use crate::BridgeError;
 
 /// Accounts struct for the relay message instruction that executes cross-chain messages from Base to Solana.
 /// This instruction processes incoming messages that contain either pure instruction calls or token transfers
@@ -30,11 +31,11 @@ pub fn relay_message_handler<'a, 'info>(
     ctx: Context<'a, '_, 'info, 'info, RelayMessage<'info>>,
 ) -> Result<()> {
     // Check if bridge is paused
-    require!(!ctx.accounts.bridge.paused, RelayMessageError::BridgePaused);
+    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
 
     require!(
         !ctx.accounts.message.executed,
-        RelayMessageError::AlreadyExecuted
+        BridgeError::AlreadyExecuted
     );
 
     let message = ctx.accounts.message.message.clone();
@@ -80,12 +81,4 @@ pub fn relay_message_handler<'a, 'info>(
     }
 
     Ok(())
-}
-
-#[error_code]
-pub enum RelayMessageError {
-    #[msg("Message already executed")]
-    AlreadyExecuted,
-    #[msg("Bridge is currently paused")]
-    BridgePaused,
 }

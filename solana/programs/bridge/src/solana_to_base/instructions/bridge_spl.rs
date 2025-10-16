@@ -7,6 +7,7 @@ use crate::{
         internal::bridge_spl::bridge_spl_internal, Call, OutgoingMessage, Transfer,
         OUTGOING_MESSAGE_SEED,
     },
+    BridgeError,
 };
 
 /// Accounts struct for the bridge_spl instruction that transfers SPL tokens from Solana to Base along
@@ -30,7 +31,7 @@ pub struct BridgeSpl<'info> {
 
     /// The account that receives payment for the gas costs of bridging the SPL token to Base.
     /// CHECK: This account is validated to be the same as bridge.gas_config.gas_fee_receiver
-    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeSplError::IncorrectGasFeeReceiver)]
+    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SPL token mint account for the token being bridged.
@@ -99,7 +100,7 @@ pub fn bridge_spl_handler(
     call: Option<Call>,
 ) -> Result<()> {
     // Check if bridge is paused
-    require!(!ctx.accounts.bridge.paused, BridgeSplError::BridgePaused);
+    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
 
     bridge_spl_internal(
         &ctx.accounts.payer,
@@ -117,16 +118,6 @@ pub fn bridge_spl_handler(
         amount,
         call,
     )
-}
-
-#[error_code]
-pub enum BridgeSplError {
-    #[msg("Incorrect gas fee receiver")]
-    IncorrectGasFeeReceiver,
-    #[msg("Mint is a wrapped token")]
-    MintIsWrappedToken,
-    #[msg("Bridge is paused")]
-    BridgePaused,
 }
 
 #[cfg(test)]

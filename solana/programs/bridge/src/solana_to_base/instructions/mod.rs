@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{
     common::bridge::Bridge,
     solana_to_base::{Call, CallType},
+    BridgeError,
 };
 
 pub mod wrap_token;
@@ -23,7 +24,7 @@ pub use buffered::*;
 pub fn check_call(call: &Call) -> Result<()> {
     require!(
         matches!(call.ty, CallType::Call | CallType::DelegateCall) || call.to == [0; 20],
-        SolanaToBaseError::CreationWithNonZeroTarget
+        BridgeError::CreationWithNonZeroTarget
     );
     Ok(())
 }
@@ -55,10 +56,4 @@ pub fn pay_for_gas<'info>(
     anchor_lang::system_program::transfer(cpi_ctx, gas_cost)?;
 
     Ok(())
-}
-
-#[error_code]
-pub enum SolanaToBaseError {
-    #[msg("Creation with non-zero target")]
-    CreationWithNonZeroTarget,
 }

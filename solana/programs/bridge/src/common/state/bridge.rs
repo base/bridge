@@ -4,6 +4,7 @@ use crate::common::{
     internal::math::{fixed_pow, SCALE},
     MAX_PARTNER_VALIDATOR_THRESHOLD, MAX_SIGNER_COUNT,
 };
+use crate::BridgeError;
 
 #[account]
 #[derive(Debug, PartialEq, Eq, InitSpace)]
@@ -274,25 +275,7 @@ impl BaseOracleConfig {
     }
 }
 
-#[error_code]
-pub enum BridgeError {
-    #[msg("Threshold must be <= number of signers")]
-    InvalidThreshold,
-    #[msg("Too many signers (max 32)")]
-    TooManySigners,
-    #[msg("Duplicate signer found")]
-    DuplicateSigner,
-    #[msg("Invalid partner threshold")]
-    InvalidPartnerThreshold,
-    #[msg("Invalid denominator")]
-    InvalidDenominator,
-    #[msg("Invalid window duration seconds")]
-    InvalidWindowDurationSeconds,
-    #[msg("Invalid gas cost scaler dp")]
-    InvalidGasCostScalerDp,
-    #[msg("Invalid block interval requirement")]
-    InvalidBlockIntervalRequirement,
-}
+// BridgeError enum is now defined in the errors module and imported above
 
 #[cfg(test)]
 mod tests {

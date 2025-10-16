@@ -6,6 +6,7 @@ use crate::{
         internal::bridge_sol::bridge_sol_internal, Call, CallBuffer, OutgoingMessage, Transfer,
         OUTGOING_MESSAGE_SEED,
     },
+    BridgeError,
 };
 
 /// Accounts for `bridge_sol_with_buffered_call`, which transfers native SOL from Solana to Base
@@ -29,7 +30,7 @@ pub struct BridgeSolWithBufferedCall<'info> {
 
     /// The account that receives payment for the gas costs of bridging the SOL to Base.
     /// CHECK: This account is validated to be the same as bridge.gas_config.gas_fee_receiver
-    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeSolWithBufferedCallError::IncorrectGasFeeReceiver)]
+    #[account(mut, address = bridge.gas_config.gas_fee_receiver @ BridgeError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SOL vault account that holds locked tokens for the specific remote token.
@@ -61,7 +62,7 @@ pub struct BridgeSolWithBufferedCall<'info> {
     #[account(
         mut,
         close = owner,
-        has_one = owner @ BridgeSolWithBufferedCallError::Unauthorized,
+        has_one = owner @ BridgeError::BufferUnauthorizedClose,
     )]
     pub call_buffer: Account<'info, CallBuffer>,
 
@@ -92,7 +93,7 @@ pub fn bridge_sol_with_buffered_call_handler<'a, 'b, 'c, 'info>(
     // Check if bridge is paused
     require!(
         !ctx.accounts.bridge.paused,
-        BridgeSolWithBufferedCallError::BridgePaused
+        BridgeError::BridgePaused
     );
 
     let call_buffer = &ctx.accounts.call_buffer;
@@ -116,16 +117,6 @@ pub fn bridge_sol_with_buffered_call_handler<'a, 'b, 'c, 'info>(
         amount,
         call,
     )
-}
-
-#[error_code]
-pub enum BridgeSolWithBufferedCallError {
-    #[msg("Incorrect gas fee receiver")]
-    IncorrectGasFeeReceiver,
-    #[msg("Only the owner can close this call buffer")]
-    Unauthorized,
-    #[msg("Bridge is currently paused")]
-    BridgePaused,
 }
 
 #[cfg(test)]

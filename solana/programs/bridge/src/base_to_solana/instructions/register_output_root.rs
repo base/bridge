@@ -7,6 +7,7 @@ use crate::{
     base_to_solana::{constants::OUTPUT_ROOT_SEED, state::OutputRoot},
     common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN},
 };
+use crate::BridgeError;
 
 /// Accounts struct for the `register_output_root` instruction that stores Base MMR roots
 /// on Solana for cross-chain message verification. This instruction allows a trusted oracle to
@@ -61,7 +62,7 @@ pub fn register_output_root_handler(
     // Check if bridge is paused
     require!(
         !ctx.accounts.bridge.paused,
-        RegisterOutputRootError::BridgePaused
+        BridgeError::BridgePaused
     );
 
     // Build message hash for signatures
@@ -80,7 +81,7 @@ pub fn register_output_root_handler(
 
     require!(
         base_approved_count as u8 >= ctx.accounts.bridge.base_oracle_config.threshold,
-        RegisterOutputRootError::InsufficientBaseSignatures
+        BridgeError::InsufficientBaseSignatures
     );
 
     if ctx.accounts.bridge.partner_oracle_config.required_threshold > 0 {
@@ -100,7 +101,7 @@ pub fn register_output_root_handler(
         let partner_approved_count = partner_config.count_approvals(&unique_signers);
         require!(
             partner_approved_count as u8 >= partner_oracle_config.required_threshold,
-            RegisterOutputRootError::InsufficientPartnerSignatures
+            BridgeError::InsufficientPartnerSignatures
         );
     }
 
@@ -113,7 +114,7 @@ pub fn register_output_root_handler(
                     .protocol_config
                     .block_interval_requirement
                 == 0,
-        RegisterOutputRootError::IncorrectBlockNumber
+        BridgeError::IncorrectBlockNumber
     );
 
     ctx.accounts.root.root = output_root;
@@ -121,18 +122,6 @@ pub fn register_output_root_handler(
     ctx.accounts.bridge.base_block_number = base_block_number;
 
     Ok(())
-}
-
-#[error_code]
-pub enum RegisterOutputRootError {
-    #[msg("IncorrectBlockNumber")]
-    IncorrectBlockNumber,
-    #[msg("BridgePaused")]
-    BridgePaused,
-    #[msg("Insufficient base oracle signatures to meet threshold")]
-    InsufficientBaseSignatures,
-    #[msg("Insufficient partner oracle signatures to meet threshold")]
-    InsufficientPartnerSignatures,
 }
 
 #[cfg(test)]

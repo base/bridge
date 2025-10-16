@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::common::SetBridgeConfigFromGuardian;
+use crate::common::config::SetBridgeConfigFromGuardian;
 
 /// Transfer guardian authority to a new pubkey.
 /// Only the current guardian can call this function.
@@ -15,13 +15,7 @@ pub fn transfer_guardian_handler(
     Ok(())
 }
 
-/// Error codes for guardian operations.
-/// Used by the `has_one = guardian` constraint on `TransferGuardian`.
-#[error_code]
-pub enum GuardianError {
-    #[msg("Unauthorized to transfer guardian authority")]
-    UnauthorizedGuardianTransfer = 7000,
-}
+// GuardianError enum is now defined in the errors module
 
 #[cfg(test)]
 mod tests {
