@@ -89,9 +89,6 @@ pub fn initialize_handler(ctx: Context<Initialize>, guardian: Pubkey, cfg: Confi
     Ok(())
 }
 
-/// Error codes for initialization
-// InitializeError enum is now defined in the errors module
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -61,5 +61,3 @@ pub struct SetBridgeConfigFromUpgradeAuthority<'info> {
     #[account(constraint = program.programdata_address()? == Some(program_data.key()) @ BridgeError::IncorrectBridgeProgram)]
     pub program: Program<'info, BridgeProgram>,
 }
-
-// ConfigError enum is now defined in the errors module

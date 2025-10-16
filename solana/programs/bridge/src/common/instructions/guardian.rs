@@ -15,8 +15,6 @@ pub fn transfer_guardian_handler(
     Ok(())
 }
 
-// GuardianError enum is now defined in the errors module
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -275,8 +275,6 @@ impl BaseOracleConfig {
     }
 }
 
-// BridgeError enum is now defined in the errors module and imported above
-
 #[cfg(test)]
 mod tests {
     use super::*;

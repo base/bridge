@@ -177,5 +177,3 @@ fn mint_info_to_token_metadata(mint: &AccountInfo<'_>) -> Result<(TokenMetadata,
     let decimals = mint_with_extension.base.decimals;
     Ok((token_metadata, decimals))
 }
-
-// TokenMetadataError enum is now defined in the errors module and imported above
