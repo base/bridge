@@ -195,8 +195,7 @@ contract BridgeValidatorTest is CommonTest {
 
         // Set base threshold to 0 and partner threshold to 1
         _mockBaseThreshold(0);
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.setPartnerThreshold(1);
+        _mockPartnerThreshold(1);
 
         // Calculate message hash
         bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
@@ -283,8 +282,7 @@ contract BridgeValidatorTest is CommonTest {
     }
 
     function test_registerMessages_revertsOnDuplicatePartnerEntitySigners() public {
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.setPartnerThreshold(1);
+        _mockPartnerThreshold(1);
 
         // Setup a single partner with two keys that map to the same partner index
         MockPartnerValidators pv = MockPartnerValidators(cfg.partnerValidators);
@@ -344,8 +342,7 @@ contract BridgeValidatorTest is CommonTest {
 
         // Initialize the base threshold to 0 and partner validator threshold to 1
         _mockBaseThreshold(0);
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.setPartnerThreshold(1);
+        _mockPartnerThreshold(1);
 
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
         signedMessages[0] = BridgeValidator.SignedMessage({
@@ -371,8 +368,7 @@ contract BridgeValidatorTest is CommonTest {
         pv.addSigner(IPartner.Signer({evmAddress: partnerAddr, newEvmAddress: address(0)}));
 
         // Upgrade existing bridgeValidator proxy to a new implementation requiring 1 partner signature
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.setPartnerThreshold(1);
+        _mockPartnerThreshold(1);
 
         // Prepare a single message
         BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
@@ -399,31 +395,6 @@ contract BridgeValidatorTest is CommonTest {
     }
 
     //////////////////////////////////////////////////////////////
-    ///                 setPartnerThreshold Tests              ///
-    //////////////////////////////////////////////////////////////
-
-    function test_setPartnerThreshold_onlyGuardian_revertsForNonGuardian() public {
-        vm.expectRevert(BridgeValidator.CallerNotGuardian.selector);
-        bridgeValidator.setPartnerThreshold(0);
-    }
-
-    function test_setPartnerThreshold_asGuardian_emitsEvent_andCanReapplySame() public {
-        uint256 current = bridgeValidator.partnerValidatorThreshold();
-        vm.expectEmit(false, false, false, true);
-        emit PartnerThresholdUpdated(current, current);
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.setPartnerThreshold(current);
-        assertEq(bridgeValidator.partnerValidatorThreshold(), current);
-    }
-
-    function test_setPartnerThreshold_revertsWhenAboveMax() public {
-        uint256 tooHigh = bridgeValidator.MAX_PARTNER_VALIDATOR_THRESHOLD() + 1;
-        vm.prank(cfg.guardians[0]);
-        vm.expectRevert(BridgeValidator.ThresholdTooHigh.selector);
-        bridgeValidator.setPartnerThreshold(tooHigh);
-    }
-
-    //////////////////////////////////////////////////////////////
     ///                 Guardian/VerificationLib Tests          ///
     //////////////////////////////////////////////////////////////
 
@@ -442,124 +413,6 @@ contract BridgeValidatorTest is CommonTest {
 
         vm.expectRevert(VerificationLib.BaseSignerCountTooHigh.selector);
         bridgeValidator.initialize(validators, 3, 1);
-    }
-
-    function test_setThreshold_onlyGuardian_revertsForNonGuardian() public {
-        vm.expectRevert(BridgeValidator.CallerNotGuardian.selector);
-        bridgeValidator.setThreshold(1);
-    }
-
-    function test_setThreshold_asGuardian_emitsEvent_andCanReapplySame() public {
-        // Initial validator count is 1; only valid threshold is 1
-        vm.expectEmit(false, false, false, true);
-        emit ThresholdUpdated(1);
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.setThreshold(1);
-    }
-
-    function test_setThreshold_revertsWhenAboveValidatorCount() public {
-        // With 1 validator, threshold 2 should revert
-        vm.prank(cfg.guardians[0]);
-        vm.expectRevert(VerificationLib.InvalidThreshold.selector);
-        bridgeValidator.setThreshold(2);
-    }
-
-    function test_addValidator_onlyGuardian_revertsForNonGuardian() public {
-        vm.expectRevert(BridgeValidator.CallerNotGuardian.selector);
-        bridgeValidator.addValidator(vm.addr(2));
-    }
-
-    function test_addValidator_asGuardian_emitsEvent_andEnablesThreshold2() public {
-        address newValidator = vm.addr(2);
-        vm.expectEmit(false, false, false, true);
-        emit ValidatorAdded(newValidator);
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.addValidator(newValidator);
-
-        // Now set threshold to 2 and verify a message with 2 base signatures succeeds
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.setThreshold(2);
-
-        BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
-        signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
-        });
-        bytes32[] memory expectedFinalHashes = _calculateFinalHashes(signedMessages);
-
-        // Create signatures from base validators (key 1 and key 2) in ascending address order
-        address addr1 = vm.addr(1);
-        address addr2 = newValidator;
-        uint256 key1 = 1;
-        uint256 key2 = 2;
-        bytes memory msgBytes = abi.encode(expectedFinalHashes);
-        bytes memory sigA = _createSignature(msgBytes, key1);
-        bytes memory sigB = _createSignature(msgBytes, key2);
-        bytes memory sigs = addr1 < addr2 ? abi.encodePacked(sigA, sigB) : abi.encodePacked(sigB, sigA);
-
-        bridgeValidator.registerMessages(signedMessages, sigs);
-        assertTrue(bridgeValidator.validMessages(expectedFinalHashes[0]));
-    }
-
-    function test_addValidator_revertsWhenZeroAddress() public {
-        vm.prank(cfg.guardians[0]);
-        vm.expectRevert(VerificationLib.InvalidValidatorAddress.selector);
-        bridgeValidator.addValidator(address(0));
-    }
-
-    function test_addValidator_revertsWhenAlreadyAdded() public {
-        vm.prank(cfg.guardians[0]);
-        vm.expectRevert(VerificationLib.ValidatorAlreadyAdded.selector);
-        bridgeValidator.addValidator(vm.addr(1));
-    }
-
-    function test_removeValidator_onlyGuardian_revertsForNonGuardian() public {
-        vm.expectRevert(BridgeValidator.CallerNotGuardian.selector);
-        bridgeValidator.removeValidator(vm.addr(1));
-    }
-
-    function test_addValidator_revertsWhenAboveMaxBaseSignerCount() public {
-        vm.startPrank(cfg.guardians[0]);
-
-        for (uint256 i; i < VerificationLib.MAX_BASE_SIGNER_COUNT - 1; i++) {
-            bridgeValidator.addValidator(vm.addr(i + 2));
-        }
-
-        vm.expectRevert(VerificationLib.BaseSignerCountTooHigh.selector);
-        bridgeValidator.addValidator(vm.addr(0x42));
-    }
-
-    function test_removeValidator_asGuardian_emitsEvent_andKeepsRegistering() public {
-        // Add a second validator, keep threshold at 1, then remove it
-        address newValidator = vm.addr(2);
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.addValidator(newValidator);
-
-        vm.expectEmit(false, false, false, true);
-        emit ValidatorRemoved(newValidator);
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.removeValidator(newValidator);
-
-        // Registering with single base validator (key 1) still works
-        BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
-        signedMessages[0] = BridgeValidator.SignedMessage({
-            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
-        });
-        bytes32[] memory expectedFinalHashes = _calculateFinalHashes(signedMessages);
-        bridgeValidator.registerMessages(signedMessages, _getValidatorSigs(signedMessages));
-        assertTrue(bridgeValidator.validMessages(expectedFinalHashes[0]));
-    }
-
-    function test_removeValidator_revertsWhenWouldFallBelowThreshold() public {
-        // Add a validator, set threshold to 2, then attempt to remove → revert
-        address newValidator = vm.addr(2);
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.addValidator(newValidator);
-        vm.prank(cfg.guardians[0]);
-        bridgeValidator.setThreshold(2);
-
-        vm.prank(cfg.guardians[0]);
-        vm.expectRevert(VerificationLib.ValidatorCountLessThanThreshold.selector);
-        bridgeValidator.removeValidator(newValidator);
     }
 
     //////////////////////////////////////////////////////////////
@@ -652,5 +505,10 @@ contract BridgeValidatorTest is CommonTest {
         value = (value >> 128) << 128 | bytes32(uint256(threshold));
 
         vm.store(address(bridgeValidator), baseThresholdSlot, value);
+    }
+
+    function _mockPartnerThreshold(uint256 threshold) public {
+        bytes32 partnerThresholdSlot = bytes32(0);
+        vm.store(address(bridgeValidator), partnerThresholdSlot, bytes32(uint256(threshold)));
     }
 }

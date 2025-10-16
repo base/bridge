@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {OwnableRoles} from "solady/auth/OwnableRoles.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 
@@ -115,12 +114,6 @@ contract BridgeValidator is Initializable {
     ///                       Modifiers                        ///
     //////////////////////////////////////////////////////////////
 
-    /// @dev Restricts function to `Bridge` guardians (as defined by `GUARDIAN_ROLE`).
-    modifier isGuardian() {
-        require(OwnableRoles(BRIDGE).hasAnyRole(msg.sender, GUARDIAN_ROLE), CallerNotGuardian());
-        _;
-    }
-
     /// @dev Restricts function to when the Bridge is not paused
     modifier whenNotPaused() {
         require(!Bridge(BRIDGE).paused(), Paused());
@@ -200,45 +193,6 @@ contract BridgeValidator is Initializable {
         }
 
         nextNonce = currentNonce;
-    }
-
-    /// @notice Updates the Base signature threshold.
-    ///
-    /// @dev Only callable by a Bridge guardian.
-    ///
-    /// @param newThreshold The new threshold value.
-    function setThreshold(uint256 newThreshold) external isGuardian {
-        VerificationLib.setThreshold(newThreshold);
-    }
-
-    /// @notice Updates the partner signature threshold.
-    ///
-    /// @dev Only callable by a Bridge guardian.
-    ///
-    /// @param newThreshold The new partner validator threshold value.
-    function setPartnerThreshold(uint256 newThreshold) external isGuardian {
-        require(newThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
-        uint256 oldThreshold = partnerValidatorThreshold;
-        partnerValidatorThreshold = newThreshold;
-        emit PartnerThresholdUpdated(oldThreshold, newThreshold);
-    }
-
-    /// @notice Adds a Base validator.
-    ///
-    /// @dev Only callable by a Bridge guardian.
-    ///
-    /// @param validator The validator address to add.
-    function addValidator(address validator) external isGuardian {
-        VerificationLib.addValidator(validator);
-    }
-
-    /// @notice Removes a Base validator.
-    ///
-    /// @dev Only callable by a Bridge guardian.
-    ///
-    /// @param validator The validator address to remove.
-    function removeValidator(address validator) external isGuardian {
-        VerificationLib.removeValidator(validator);
     }
 
     /// @notice Gets the current Base signature threshold.
