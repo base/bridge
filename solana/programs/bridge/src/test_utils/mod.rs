@@ -113,8 +113,6 @@ pub struct DeployBridgeResult {
 }
 
 /// Deploys the bridge program as upgradeable but does NOT initialize it.
-/// Uses direct account mocking to bypass the buffer deployment flow.
-/// Use this when you want to test the initialize instruction itself.
 pub fn deploy_bridge() -> DeployBridgeResult {
     let mut svm = LiteSVM::new();
 
@@ -218,7 +216,6 @@ pub struct SetupBridgeResult {
 }
 
 /// Deploys the bridge program AND initializes it with default test config.
-/// Use this for most tests that need a ready-to-use bridge.
 pub fn setup_bridge() -> SetupBridgeResult {
     let DeployBridgeResult {
         mut svm,

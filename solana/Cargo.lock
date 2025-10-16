@@ -721,12 +721,12 @@ name = "base_relayer"
 version = "0.3.0"
 dependencies = [
  "anchor-lang",
+ "bincode",
  "litesvm",
- "litesvm-loader",
  "serde_json",
  "solana-account",
- "solana-feature-set",
  "solana-keypair",
+ "solana-loader-v3-interface",
  "solana-message",
  "solana-signer",
  "solana-transaction",
@@ -2322,22 +2322,6 @@ dependencies = [
  "solana-transaction-error",
  "solana-vote-program",
  "thiserror 2.0.17",
-]
-
-[[package]]
-name = "litesvm-loader"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17fa6273d45539fc9434dff84a7599285e9af5323a7929429e8566711266ac4a"
-dependencies = [
- "litesvm",
- "solana-feature-set",
- "solana-instruction",
- "solana-keypair",
- "solana-loader-v3-interface",
- "solana-pubkey",
- "solana-signer",
- "solana-transaction",
 ]
 
 [[package]]

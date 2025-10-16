@@ -1,11 +1,14 @@
 use anchor_lang::{
     prelude::*,
-    solana_program::{instruction::Instruction, native_token::LAMPORTS_PER_SOL},
+    solana_program::{
+        bpf_loader_upgradeable, instruction::Instruction, native_token::LAMPORTS_PER_SOL,
+    },
     system_program, InstructionData,
 };
 use litesvm::LiteSVM;
-use solana_feature_set::FeatureSet;
+use solana_account::Account;
 use solana_keypair::Keypair;
+use solana_loader_v3_interface::state::UpgradeableLoaderState;
 use solana_message::Message;
 use solana_signer::Signer;
 use solana_transaction::Transaction;
@@ -53,16 +56,8 @@ pub struct DeployRelayerResult {
 }
 
 /// Deploys the base_relayer program as upgradeable but does NOT initialize it.
-/// Use this when you want to test the initialize instruction itself.
 pub fn deploy_relayer() -> DeployRelayerResult {
-    let mut feature_set = FeatureSet::all_enabled();
-    feature_set.deactivate(&solana_feature_set::disable_new_loader_v3_deployments::id());
-
-    let mut svm = LiteSVM::default()
-        .with_feature_set(feature_set)
-        .with_builtins()
-        .with_lamports(1_000_000_000_000_000)
-        .with_sysvars();
+    let mut svm = LiteSVM::new();
 
     // Create test accounts
     let payer = Keypair::new();
@@ -73,24 +68,78 @@ pub fn deploy_relayer() -> DeployRelayerResult {
     svm.airdrop(&guardian.pubkey(), LAMPORTS_PER_SOL * 100)
         .unwrap();
 
-    // Deploy upgradeable program
-    let program_kp_json = include_str!("../../../../keypairs/base-relayer.devnet.alpha.json");
-    let program_kp_bytes: Vec<u8> = serde_json::from_str(program_kp_json).unwrap();
-    let program_kp = Keypair::from_bytes(&program_kp_bytes).unwrap();
-
     let program_bytes = include_bytes!("../../../../target/deploy/base_relayer.so");
-    litesvm_loader::deploy_upgradeable_program(&mut svm, &payer, &program_kp, program_bytes)
-        .unwrap();
 
     // Mock the clock
     mock_clock(&mut svm, 1747440000); // May 16th, 2025
 
     // Find PDAs
     let cfg_pda = Pubkey::find_program_address(&[CFG_SEED], &ID).0;
-    let (program_data_pda, _) = Pubkey::find_program_address(
-        &[ID.as_ref()],
-        &anchor_lang::solana_program::bpf_loader_upgradeable::ID,
-    );
+    let (program_data_pda, _) =
+        Pubkey::find_program_address(&[ID.as_ref()], &bpf_loader_upgradeable::ID);
+
+    // Mock ProgramData account
+    {
+        let programdata_state = UpgradeableLoaderState::ProgramData {
+            slot: 1747440000,
+            upgrade_authority_address: Some(payer.pubkey()),
+        };
+
+        // Serialize metadata
+        let metadata = bincode::serialize(&programdata_state).unwrap();
+        assert_eq!(
+            metadata.len(),
+            UpgradeableLoaderState::size_of_programdata_metadata()
+        );
+
+        // Allocate buffer: [metadata][program bytes]
+        let mut programdata_data = Vec::with_capacity(metadata.len() + program_bytes.len());
+        programdata_data.extend_from_slice(&metadata);
+        programdata_data.extend_from_slice(program_bytes);
+
+        // Calculate rent
+        let rent = svm.minimum_balance_for_rent_exemption(programdata_data.len());
+
+        svm.set_account(
+            program_data_pda,
+            Account {
+                lamports: rent,
+                data: programdata_data,
+                owner: bpf_loader_upgradeable::ID,
+                executable: false,
+                rent_epoch: 0,
+            },
+        )
+        .unwrap();
+    }
+
+    // Mock Program account
+    {
+        let program_state = UpgradeableLoaderState::Program {
+            programdata_address: program_data_pda,
+        };
+
+        let program_data = bincode::serialize(&program_state).unwrap();
+        assert_eq!(
+            program_data.len(),
+            UpgradeableLoaderState::size_of_program()
+        );
+
+        // Calculate rent
+        let rent = svm.minimum_balance_for_rent_exemption(program_data.len());
+
+        svm.set_account(
+            ID,
+            Account {
+                lamports: rent,
+                data: program_data,
+                owner: bpf_loader_upgradeable::ID,
+                executable: true,
+                rent_epoch: 0,
+            },
+        )
+        .unwrap();
+    }
 
     DeployRelayerResult {
         svm,
@@ -110,7 +159,6 @@ pub struct SetupRelayerResult {
 }
 
 /// Deploys the base_relayer program AND initializes it with default test config.
-/// Use this for most tests that need a ready-to-use relayer.
 pub fn setup_relayer() -> SetupRelayerResult {
     let DeployRelayerResult {
         mut svm,
