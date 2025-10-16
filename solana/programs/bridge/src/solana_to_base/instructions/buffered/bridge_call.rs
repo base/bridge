@@ -78,10 +78,7 @@ pub fn bridge_call_buffered_handler<'a, 'b, 'c, 'info>(
     _outgoing_message_salt: [u8; 32],
 ) -> Result<()> {
     // Check if bridge is paused
-    require!(
-        !ctx.accounts.bridge.paused,
-        BridgeError::BridgePaused
-    );
+    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
 
     let call_buffer = &ctx.accounts.call_buffer;
     let call = Call {

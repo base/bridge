@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::state::Cfg;
+use crate::{state::Cfg, RelayerError};
 
 #[derive(Debug, Clone, PartialEq, Eq, InitSpace, AnchorSerialize, AnchorDeserialize)]
 pub struct GasConfig {
@@ -30,11 +30,11 @@ pub fn check_and_pay_for_gas<'info>(
 fn check_gas_limit(gas_limit: u64, cfg: &Cfg) -> Result<()> {
     require!(
         gas_limit >= cfg.gas_config.min_gas_limit_per_message,
-        GasConfigError::GasLimitTooLow
+        RelayerError::GasLimitTooLow
     );
     require!(
         gas_limit <= cfg.gas_config.max_gas_limit_per_message,
-        GasConfigError::GasLimitExceeded
+        RelayerError::GasLimitExceeded
     );
 
     Ok(())
@@ -68,14 +68,6 @@ fn pay_for_gas<'info>(
     anchor_lang::system_program::transfer(cpi_ctx, gas_cost)?;
 
     Ok(())
-}
-
-#[error_code]
-pub enum GasConfigError {
-    #[msg("Gas limit too low")]
-    GasLimitTooLow,
-    #[msg("Gas limit exceeded")]
-    GasLimitExceeded,
 }
 
 #[cfg(test)]

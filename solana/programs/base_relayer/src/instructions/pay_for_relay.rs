@@ -4,6 +4,7 @@ use crate::{
     constants::{CFG_SEED, DISCRIMINATOR_LEN, MTR_SEED},
     internal::check_and_pay_for_gas,
     state::{Cfg, MessageToRelay},
+    RelayerError,
 };
 
 #[derive(Accounts)]
@@ -22,7 +23,7 @@ pub struct PayForRelay<'info> {
 
     /// The account that receives payment for the gas costs of bridging SOL to Base.
     /// CHECK: This account is validated to be the same as cfg.gas_config.gas_fee_receiver
-    #[account(mut, address = cfg.gas_config.gas_fee_receiver @ PayForRelayError::IncorrectGasFeeReceiver)]
+    #[account(mut, address = cfg.gas_config.gas_fee_receiver @ RelayerError::IncorrectGasFeeReceiver)]
     pub gas_fee_receiver: AccountInfo<'info>,
 
     #[account(init, payer = payer, seeds = [MTR_SEED, mtr_salt.as_ref()], bump, space = DISCRIMINATOR_LEN + MessageToRelay::INIT_SPACE)]
@@ -55,12 +56,6 @@ pub fn pay_for_relay_handler(
     ctx.accounts.cfg.nonce += 1;
 
     Ok(())
-}
-
-#[error_code]
-pub enum PayForRelayError {
-    #[msg("Incorrect gas fee receiver")]
-    IncorrectGasFeeReceiver,
 }
 
 #[cfg(test)]

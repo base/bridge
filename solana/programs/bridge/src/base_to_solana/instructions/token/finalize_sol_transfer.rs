@@ -3,8 +3,8 @@ use anchor_lang::{
     system_program::{self, Transfer},
 };
 
-use crate::{common::SOL_VAULT_SEED, ID};
 use crate::BridgeError;
+use crate::{common::SOL_VAULT_SEED, ID};
 
 /// Instruction data for finalizing a native SOL transfer from Base to Solana.
 ///

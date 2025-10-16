@@ -4,11 +4,11 @@ use anchor_spl::{
     token_interface::{self, Mint, TokenAccount},
 };
 
+use crate::BridgeError;
 use crate::{
     common::{PartialTokenMetadata, WRAPPED_TOKEN_SEED},
     ID,
 };
-use crate::BridgeError;
 
 /// Instruction data for finalizing a wrapped token transfer from Base to Solana.
 ///

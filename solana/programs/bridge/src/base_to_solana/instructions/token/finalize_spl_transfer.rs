@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 
-use crate::{common::TOKEN_VAULT_SEED, ID};
 use crate::BridgeError;
+use crate::{common::TOKEN_VAULT_SEED, ID};
 
 /// Instruction data for finalizing a bridged SPL token transfer from Base to Solana.
 ///

@@ -1,5 +1,6 @@
 use anchor_lang::{prelude::*, solana_program::keccak};
 
+use crate::BridgeError;
 use crate::{
     base_to_solana::{
         constants::INCOMING_MESSAGE_SEED, internal::mmr, state::IncomingMessage, Message,
@@ -7,7 +8,6 @@ use crate::{
     },
     common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN},
 };
-use crate::BridgeError;
 
 /// Buffered variant of `prove_message` that reads data/proof from a `ProveBuffer` and closes it.
 #[derive(Accounts)]
@@ -56,10 +56,7 @@ pub fn prove_message_buffered_handler(
     message_hash: [u8; 32],
 ) -> Result<()> {
     // Pause
-    require!(
-        !ctx.accounts.bridge.paused,
-        BridgeError::BridgePaused
-    );
+    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
 
     // Verify hash
     let data = &ctx.accounts.prove_buffer.data;

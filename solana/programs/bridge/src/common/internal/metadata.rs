@@ -96,9 +96,8 @@ impl TryFrom<TokenMetadata> for PartialTokenMetadata {
             .parse::<u8>()
             .map_err(|_| BridgeError::InvalidScalerExponent)?;
 
-        let (remote_token_key, remote_token_value) = key_values
-            .pop()
-            .ok_or(BridgeError::RemoteTokenNotFound)?;
+        let (remote_token_key, remote_token_value) =
+            key_values.pop().ok_or(BridgeError::RemoteTokenNotFound)?;
 
         require!(
             remote_token_key == REMOTE_TOKEN_METADATA_KEY,

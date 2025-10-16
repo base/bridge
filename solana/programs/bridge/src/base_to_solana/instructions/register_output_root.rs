@@ -3,11 +3,11 @@ use anchor_lang::prelude::*;
 use crate::base_to_solana::constants::{PARTNER_PROGRAM_ID, PARTNER_SIGNERS_ACCOUNT_SEED};
 use crate::base_to_solana::state::Signers;
 use crate::base_to_solana::{compute_output_root_message_hash, recover_unique_evm_addresses};
+use crate::BridgeError;
 use crate::{
     base_to_solana::{constants::OUTPUT_ROOT_SEED, state::OutputRoot},
     common::{bridge::Bridge, BRIDGE_SEED, DISCRIMINATOR_LEN},
 };
-use crate::BridgeError;
 
 /// Accounts struct for the `register_output_root` instruction that stores Base MMR roots
 /// on Solana for cross-chain message verification. This instruction allows a trusted oracle to
@@ -60,10 +60,7 @@ pub fn register_output_root_handler(
     signatures: Vec<[u8; 65]>,
 ) -> Result<()> {
     // Check if bridge is paused
-    require!(
-        !ctx.accounts.bridge.paused,
-        BridgeError::BridgePaused
-    );
+    require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
 
     // Build message hash for signatures
     let message_hash =

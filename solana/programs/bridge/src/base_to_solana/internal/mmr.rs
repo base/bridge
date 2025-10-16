@@ -1,5 +1,5 @@
-use anchor_lang::{prelude::*, solana_program::keccak};
 use crate::BridgeError;
+use anchor_lang::{prelude::*, solana_program::keccak};
 
 /// Verifies an MMR proof.
 ///
@@ -134,7 +134,10 @@ fn calculate_root_from_proof(
     // `all_peak_hashes` is already in left-to-right mountain order.
     if all_peak_hashes.is_empty() {
         // Unreachable due to precondition `total_leaf_count > 0`; retained as a safeguard.
-        require!(total_leaf_count == 0, BridgeError::NoPeaksFoundForNonEmptyMmr);
+        require!(
+            total_leaf_count == 0,
+            BridgeError::NoPeaksFoundForNonEmptyMmr
+        );
 
         // For an empty MMR, the empty root is defined as `[0u8; 32]`.
         return Ok([0u8; 32]);

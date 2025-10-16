@@ -33,10 +33,7 @@ pub fn relay_message_handler<'a, 'info>(
     // Check if bridge is paused
     require!(!ctx.accounts.bridge.paused, BridgeError::BridgePaused);
 
-    require!(
-        !ctx.accounts.message.executed,
-        BridgeError::AlreadyExecuted
-    );
+    require!(!ctx.accounts.message.executed, BridgeError::AlreadyExecuted);
 
     let message = ctx.accounts.message.message.clone();
     let (transfer, ixs) = match message {

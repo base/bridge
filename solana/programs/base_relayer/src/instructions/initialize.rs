@@ -4,7 +4,7 @@ use crate::{
     constants::{CFG_SEED, DISCRIMINATOR_LEN},
     internal::{Eip1559, Eip1559Config, GasConfig},
     program::BaseRelayer as BaseRelayerProgram,
-    Cfg,
+    Cfg, RelayerError,
 };
 
 /// Accounts for the initialize instruction that sets up the base relayer's initial state.
@@ -33,7 +33,7 @@ pub struct Initialize<'info> {
     /// Validates that the signer is indeed the upgrade authority.
     #[account(
         constraint = program_data.upgrade_authority_address == Some(upgrade_authority.key())
-            @ InitializeError::UnauthorizedInitialization
+            @ RelayerError::UnauthorizedInitialization
     )]
     pub program_data: Account<'info, ProgramData>,
 
@@ -41,7 +41,7 @@ pub struct Initialize<'info> {
     /// Validates that program_data is the correct ProgramData account for this program.
     #[account(
         constraint = program.programdata_address()? == Some(program_data.key())
-            @ InitializeError::IncorrectRelayerProgram
+            @ RelayerError::IncorrectRelayerProgram
     )]
     pub program: Program<'info, BaseRelayerProgram>,
 
@@ -74,20 +74,11 @@ pub fn initialize_handler(
     Ok(())
 }
 
-/// Error codes for initialization
-#[error_code]
-pub enum InitializeError {
-    #[msg("Only the upgrade authority can initialize the relayer")]
-    UnauthorizedInitialization = 8000,
-    #[msg("Incorrect relayer program")]
-    IncorrectRelayerProgram = 8001,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use anchor_lang::{
-        solana_program::{bpf_loader_upgradeable, instruction::Instruction, system_program},
+        solana_program::{instruction::Instruction, system_program},
         InstructionData,
     };
     use solana_message::Message;
@@ -217,7 +208,7 @@ mod tests {
         // Verify the error message contains "UnauthorizedInitialization"
         let error_string = format!("{:?}", result.unwrap_err());
         assert!(
-            error_string.contains("UnauthorizedInitialization") || error_string.contains("8000"), // Error code for UnauthorizedInitialization
+            error_string.contains("UnauthorizedInitialization") || error_string.contains("6000"), // Error code for UnauthorizedInitialization
             "Expected UnauthorizedInitialization error, got: {}",
             error_string
         );

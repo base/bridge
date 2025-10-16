@@ -1,8 +1,8 @@
+use crate::BridgeError;
 use anchor_lang::{
     prelude::*,
     solana_program::{keccak, secp256k1_recover::secp256k1_recover},
 };
-use crate::BridgeError;
 
 /// message = keccak256("\x19Ethereum Signed Message:\n" || len || (output_root || base_block_number_be || total_leaf_count_be))
 pub fn compute_output_root_message_hash(
