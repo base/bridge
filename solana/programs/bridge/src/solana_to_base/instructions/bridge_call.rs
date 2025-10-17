@@ -38,7 +38,7 @@ pub struct BridgeCall<'info> {
     pub bridge: Account<'info, Bridge>,
 
     /// The outgoing message account that stores the cross-chain call data.
-    /// - Created fresh for each bridge call at a client-provided address (not a PDA)
+    /// - Created fresh for each bridge call seeded by a client-provided salt
     /// - Payer funds the account creation
     /// - Space is DISCRIMINATOR_LEN + OutgoingMessage::space(...)` and is sized using
     ///   the worst-case message variant to ensure sufficient capacity even for large payloads
