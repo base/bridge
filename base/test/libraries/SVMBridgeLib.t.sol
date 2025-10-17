@@ -331,13 +331,8 @@ contract SVMBridgeLibTest is Test {
             Transfer({localToken: TEST_LOCAL_TOKEN, remoteToken: TEST_REMOTE_TOKEN, to: TEST_TO, remoteAmount: 1000});
 
         bytes memory transferResult = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.Sol, ixs);
-        bytes memory expectedTransfer = abi.encodePacked(
-            uint8(1),
-            uint8(0),
-            transfer.to,
-            SVMLib.toU64LittleEndian(1000),
-            SVMLib.serializeIxs(ixs)
-        );
+        bytes memory expectedTransfer =
+            abi.encodePacked(uint8(1), uint8(0), transfer.to, SVMLib.toU64LittleEndian(1000), SVMLib.serializeIxs(ixs));
         assertEq(transferResult, expectedTransfer, "Empty instruction data in transfer failed");
     }
 
