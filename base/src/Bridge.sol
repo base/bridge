@@ -51,9 +51,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @notice Guardian Role to pause the bridge.
     uint256 public constant GUARDIAN_ROLE = 1 << 0;
 
-    /// @notice The ERC20 address of Base's canonical SOL representation
-    address public immutable LOCAL_SOL;
-
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
@@ -137,24 +134,15 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     /// @param twinBeacon             The address of the Twin beacon.
     /// @param crossChainErc20Factory The address of the CrossChainERC20Factory.
     /// @param bridgeValidator        The address of the contract used to validate Bridge messages
-    /// @param localSol               The address of the local SOL ERC20
-    constructor(
-        Pubkey remoteBridge,
-        address twinBeacon,
-        address crossChainErc20Factory,
-        address bridgeValidator,
-        address localSol
-    ) {
+    constructor(Pubkey remoteBridge, address twinBeacon, address crossChainErc20Factory, address bridgeValidator) {
         require(twinBeacon != address(0), ZeroAddress());
         require(crossChainErc20Factory != address(0), ZeroAddress());
         require(bridgeValidator != address(0), ZeroAddress());
-        require(localSol != address(0), ZeroAddress());
 
         REMOTE_BRIDGE = remoteBridge;
         TWIN_BEACON = twinBeacon;
         CROSS_CHAIN_ERC20_FACTORY = crossChainErc20Factory;
         BRIDGE_VALIDATOR = bridgeValidator;
-        LOCAL_SOL = localSol;
 
         _disableInitializers();
     }
@@ -185,23 +173,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         MessageStorageLib.sendMessage({sender: msg.sender, data: data});
     }
 
-    /// @notice Bridges SOL to Solana with an optional list of instructions
-    ///
-    /// @param to     The Solana recipient pubkey
-    /// @param amount The amount of SOL to bridge
-    /// @param ixs    The optional Solana instructions
-    function bridgeSol(bytes32 to, uint64 amount, Ix[] calldata ixs)
-        external
-        nonReentrant
-        whenNotPaused
-        isValidIxs(ixs)
-    {
-        Transfer memory transfer = Transfer({
-            localToken: LOCAL_SOL, remoteToken: TokenLib.NATIVE_SOL_PUBKEY, to: to, remoteAmount: amount
-        });
-        _bridgeToken(transfer, ixs);
-    }
-
     /// @notice Bridges a transfer with an optional list of instructions to the Solana bridge.
     ///
     /// @param transfer The token transfer to execute.
@@ -213,7 +184,14 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         whenNotPaused
         isValidIxs(ixs)
     {
-        _bridgeToken(transfer, ixs);
+        // IMPORTANT: The `TokenLib.initializeTransfer` function might modify the `transfer.remoteAmount` field to
+        //            account for potential transfer fees.
+        SolanaTokenType transferType =
+            TokenLib.initializeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
+
+        bytes memory data = SVMBridgeLib.serializeTransfer({transfer: transfer, tokenType: transferType, ixs: ixs});
+        require(data.length <= SVMLib.MAX_SOLANA_DATA_LENGTH, SerializedMessageTooBig());
+        MessageStorageLib.sendMessage({sender: msg.sender, data: data});
     }
 
     /// @notice Relays messages sent from Solana to Base.
@@ -252,9 +230,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         // This avoids the need to deploy a Twin contract for users that only want to transfer tokens.
         if (message.ty == MessageType.Transfer) {
             Transfer memory transfer = abi.decode(message.data, (Transfer));
-            TokenLib.finalizeTransfer({
-                transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY, localSol: LOCAL_SOL
-            });
+            TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
             return;
         }
 
@@ -272,9 +248,7 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
             Twin(payable(twinAddress)).execute(call);
         } else if (message.ty == MessageType.TransferAndCall) {
             (Transfer memory transfer, Call memory call) = abi.decode(message.data, (Transfer, Call));
-            TokenLib.finalizeTransfer({
-                transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY, localSol: LOCAL_SOL
-            });
+            TokenLib.finalizeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
             Twin(payable(twinAddress)).execute(call);
         }
     }
@@ -366,17 +340,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     //////////////////////////////////////////////////////////////
     ///                    Private Functions                   ///
     //////////////////////////////////////////////////////////////
-
-    function _bridgeToken(Transfer memory transfer, Ix[] calldata ixs) private {
-        // IMPORTANT: The `TokenLib.initializeTransfer` function might modify the `transfer.remoteAmount` field to
-        //            account for potential transfer fees.
-        SolanaTokenType transferType =
-            TokenLib.initializeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
-
-        bytes memory data = SVMBridgeLib.serializeTransfer({transfer: transfer, tokenType: transferType, ixs: ixs});
-        require(data.length <= SVMLib.MAX_SOLANA_DATA_LENGTH, SerializedMessageTooBig());
-        MessageStorageLib.sendMessage({sender: msg.sender, data: data});
-    }
 
     function _validateAndRelay(IncomingMessage calldata message) private {
         bytes32 messageHash = getMessageHash(message);

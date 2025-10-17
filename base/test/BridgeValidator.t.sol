@@ -32,7 +32,7 @@ contract BridgeValidatorTest is CommonTest {
 
     function setUp() public {
         DeployScript deployer = new DeployScript();
-        (, bridgeValidator, bridge,,, helperConfig) = deployer.run();
+        (, bridgeValidator, bridge,,, helperConfig,) = deployer.run();
         cfg = helperConfig.getConfig();
     }
 

@@ -30,18 +30,11 @@ contract UpgradeScript is DevOps {
     address twinBeaconAddress;
     address crossChainErc20BeaconAddress;
     address relayerOrchestratorAddress;
-    address localSol;
 
     function setUp() external {
         // Read existing deployment addresses
-        (
-                bridgeAddress,
-                erc20FactoryAddress,
-                twinBeaconAddress,
-                bridgeValidatorAddress,
-                relayerOrchestratorAddress,
-                localSol
-            ) = _readAndParseDeploymentFile();
+        (bridgeAddress, erc20FactoryAddress, twinBeaconAddress, bridgeValidatorAddress, relayerOrchestratorAddress) =
+            _readAndParseDeploymentFile();
 
         // Upgrade CrossChainERC20Beacon and CrossChainERC20Factory
         crossChainErc20BeaconAddress = CrossChainERC20Factory(erc20FactoryAddress).BEACON();
@@ -80,14 +73,13 @@ contract UpgradeScript is DevOps {
         vm.stopBroadcast();
     }
 
-    function _readAndParseDeploymentFile() internal returns (address, address, address, address, address, address) {
+    function _readAndParseDeploymentFile() internal returns (address, address, address, address, address) {
         return (
             _getAddress("Bridge"),
             _getAddress("CrossChainERC20Factory"),
             _getAddress("Twin"),
             _getAddress("BridgeValidator"),
-            _getAddress("RelayerOrchestrator"),
-            _getAddress("WrappedSOL")
+            _getAddress("RelayerOrchestrator")
         );
     }
 
@@ -139,8 +131,7 @@ contract UpgradeScript is DevOps {
                 remoteBridge: cfg.remoteBridge,
                 twinBeacon: twinBeaconAddress,
                 crossChainErc20Factory: erc20FactoryAddress,
-                bridgeValidator: bridgeValidatorAddress,
-                localSol: localSol
+                bridgeValidator: bridgeValidatorAddress
             })
         );
 

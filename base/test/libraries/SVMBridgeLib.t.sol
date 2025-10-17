@@ -87,6 +87,7 @@ contract SVMBridgeLibTest is Test {
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(0), // Sol token type
+            transfer.localToken, // remote_token (20 bytes)
             transfer.to, // to (32 bytes)
             SVMLib.toU64LittleEndian(transfer.remoteAmount), // amount (8 bytes)
             SVMLib.serializeIxs(ixs) // instructions
@@ -113,6 +114,7 @@ contract SVMBridgeLibTest is Test {
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(0), // Sol token type
+            transfer.localToken, // remote_token (20 bytes)
             transfer.to,
             SVMLib.toU64LittleEndian(transfer.remoteAmount),
             SVMLib.serializeIxs(ixs)
@@ -255,6 +257,7 @@ contract SVMBridgeLibTest is Test {
         bytes memory expected = abi.encodePacked(
             uint8(1), // Transfer variant
             uint8(0), // Sol token type
+            transfer.localToken, // remote_token (20 bytes)
             transfer.to,
             SVMLib.toU64LittleEndian(type(uint64).max),
             SVMLib.serializeIxs(ixs)
@@ -331,8 +334,14 @@ contract SVMBridgeLibTest is Test {
             Transfer({localToken: TEST_LOCAL_TOKEN, remoteToken: TEST_REMOTE_TOKEN, to: TEST_TO, remoteAmount: 1000});
 
         bytes memory transferResult = SVMBridgeLib.serializeTransfer(transfer, SolanaTokenType.Sol, ixs);
-        bytes memory expectedTransfer =
-            abi.encodePacked(uint8(1), uint8(0), transfer.to, SVMLib.toU64LittleEndian(1000), SVMLib.serializeIxs(ixs));
+        bytes memory expectedTransfer = abi.encodePacked(
+            uint8(1),
+            uint8(0),
+            transfer.localToken,
+            transfer.to,
+            SVMLib.toU64LittleEndian(1000),
+            SVMLib.serializeIxs(ixs)
+        );
         assertEq(transferResult, expectedTransfer, "Empty instruction data in transfer failed");
     }
 

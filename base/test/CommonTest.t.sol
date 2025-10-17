@@ -28,6 +28,7 @@ contract CommonTest is Test {
     RelayerOrchestrator public relayerOrchestrator;
     HelperConfig public helperConfig;
     HelperConfig.NetworkConfig public cfg;
+    address localSol;
 
     function _registerMessage(IncomingMessage memory message) internal {
         BridgeValidator.SignedMessage[] memory signedMessages = _messageToSignedMessages(message);

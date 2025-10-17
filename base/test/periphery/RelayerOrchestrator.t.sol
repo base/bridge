@@ -14,7 +14,7 @@ import {TestTarget} from "../mocks/TestTarget.sol";
 contract RelayerOrchestratorTest is CommonTest {
     function setUp() public {
         DeployScript deployer = new DeployScript();
-        (twinBeacon, bridgeValidator, bridge, factory, relayerOrchestrator, helperConfig) = deployer.run();
+        (twinBeacon, bridgeValidator, bridge, factory, relayerOrchestrator, helperConfig,) = deployer.run();
 
         cfg = helperConfig.getConfig();
     }

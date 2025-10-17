@@ -41,7 +41,7 @@ contract TokenLibTest is CommonTest {
     function setUp() public {
         // Use the DeployScript normally - now it uses deterministic validator keys
         DeployScript deployer = new DeployScript();
-        (, bridgeValidator, bridge, factory, relayerOrchestrator, helperConfig) = deployer.run();
+        (, bridgeValidator, bridge, factory, relayerOrchestrator, helperConfig, localSol) = deployer.run();
 
         cfg = helperConfig.getConfig();
 
@@ -49,7 +49,7 @@ contract TokenLibTest is CommonTest {
         crossChainToken = CrossChainERC20(factory.deploy(Pubkey.unwrap(TEST_SPL_TOKEN), "Cross Chain Token", "CCT", 9));
 
         // Deploy CrossChainERC20 for testing SOL tokens
-        crossChainSolToken = CrossChainERC20(bridge.LOCAL_SOL());
+        crossChainSolToken = CrossChainERC20(localSol);
 
         // Deploy mock tokens
         mockToken = new MockERC20("Mock Token", "MOCK", 18);
@@ -236,7 +236,7 @@ contract TokenLibTest is CommonTest {
     function test_initializeTransfer_crossChainSPL_success() public {
         Transfer memory transfer = Transfer({
             localToken: address(crossChainToken),
-            remoteToken: TEST_SPL_TOKEN, // Use the correct remote token that crossChainToken was deployed with
+            remoteToken: Pubkey.wrap(bytes32(0)),
             to: bytes32(uint256(uint160(alice))),
             remoteAmount: 100e9 // 100 SPL tokens
         });
@@ -257,7 +257,7 @@ contract TokenLibTest is CommonTest {
     function test_initializeTransfer_crossChainSPL_original() public {
         Transfer memory transfer = Transfer({
             localToken: address(crossChainToken),
-            remoteToken: TEST_SPL_TOKEN,
+            remoteToken: Pubkey.wrap(bytes32(0)),
             to: bytes32(uint256(uint160(alice))),
             remoteAmount: 100e9 // 100 SPL tokens
         });
@@ -689,7 +689,7 @@ contract TokenLibTest is CommonTest {
         // Initialize transfer (Base -> Solana) - burning cross-chain tokens
         Transfer memory outgoingTransfer = Transfer({
             localToken: address(crossChainToken),
-            remoteToken: TEST_SPL_TOKEN,
+            remoteToken: Pubkey.wrap(bytes32(0)),
             to: bytes32(bytes20(alice)),
             remoteAmount: 150e9
         });
