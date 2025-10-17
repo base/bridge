@@ -88,7 +88,7 @@ const baseOracleFlatSchema = z.object({
 });
 
 const partnerOracleFlatSchema = z.object({
-  partnerOracleRequiredThreshold: integerSchema(1),
+  partnerOracleRequiredThreshold: integerSchema(0),
 });
 
 export const argsSchema = baseArgsSchema
