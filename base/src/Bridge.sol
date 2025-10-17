@@ -175,6 +175,9 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
 
     /// @notice Bridges a transfer with an optional list of instructions to the Solana bridge.
     ///
+    /// @dev If `localToken` is a wrapped version of a Solana asset, `remoteToken` must be unset.
+    ///      The bridge will fill in `remoteToken` automatically
+    ///
     /// @param transfer The token transfer to execute.
     /// @param ixs      The optional Solana instructions.
     function bridgeToken(Transfer memory transfer, Ix[] calldata ixs)
