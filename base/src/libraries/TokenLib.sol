@@ -145,10 +145,14 @@ library TokenLib {
 
             if (CrossChainERC20Factory(crossChainErc20Factory).isCrossChainErc20(transfer.localToken)) {
                 // Case: Bridging back native SOL or SPL token to Solana
-                require(Pubkey.unwrap(transfer.remoteToken) == bytes32(0), IncorrectRemoteToken());
+                Pubkey expectedRemoteToken = Pubkey.wrap(CrossChainERC20(transfer.localToken).remoteToken());
+                require(
+                    Pubkey.unwrap(transfer.remoteToken) == bytes32(0) || transfer.remoteToken == expectedRemoteToken,
+                    IncorrectRemoteToken()
+                );
 
                 // IMPORTANT: Update the transfer struct IN MEMORY to reflect the remote token to use for bridging.
-                transfer.remoteToken = Pubkey.wrap(CrossChainERC20(transfer.localToken).remoteToken());
+                transfer.remoteToken = expectedRemoteToken;
 
                 localAmount = transfer.remoteAmount;
                 CrossChainERC20(transfer.localToken).burn({from: msg.sender, amount: localAmount});
