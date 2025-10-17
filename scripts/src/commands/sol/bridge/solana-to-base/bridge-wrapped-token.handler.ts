@@ -176,9 +176,7 @@ export async function handleBridgeWrappedToken(args: Args): Promise<void> {
       payer
     );
     logger.success("Bridge Wrapped Token operation completed!");
-    logger.info(
-      `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
-    );
+    logger.success(`Signature: ${signature}`);
 
     if (args.payForRelay) {
       await monitorMessageExecution(args.deployEnv, outgoingMessage);

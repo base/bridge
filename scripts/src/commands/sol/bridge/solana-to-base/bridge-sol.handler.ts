@@ -134,9 +134,7 @@ export async function handleBridgeSol(args: Args): Promise<void> {
       payer
     );
     logger.success("Bridge SOL operation completed!");
-    logger.info(
-      `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
-    );
+    logger.success(`Signature: ${signature}`);
 
     if (args.payForRelay) {
       await monitorMessageExecution(args.deployEnv, outgoingMessage);

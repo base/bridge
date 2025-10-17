@@ -124,9 +124,7 @@ export async function handleInitialize(args: Args): Promise<void> {
       payer
     );
     logger.success("Base Relayer initialization completed!");
-    logger.info(
-      `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
-    );
+    logger.success(`Signature: ${signature}`);
 
     await assertInitialized(
       createSolanaRpc(rpcUrl),

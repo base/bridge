@@ -185,9 +185,7 @@ export async function handleWrapToken(args: Args): Promise<void> {
       payer
     );
     logger.success("Token wrap completed!");
-    logger.info(
-      `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
-    );
+    logger.success(`Signature: ${signature}`);
 
     if (args.payForRelay) {
       await monitorMessageExecution(args.deployEnv, outgoingMessage);

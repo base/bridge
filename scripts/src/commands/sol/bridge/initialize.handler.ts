@@ -210,9 +210,7 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
       payer
     );
     logger.success("Bridge initialization completed!");
-    logger.info(
-      `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
-    );
+    logger.success(`Signature: ${signature}`);
 
     await assertInitialized(
       createSolanaRpc(rpcUrl),

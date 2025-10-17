@@ -132,9 +132,7 @@ export async function handleProveMessage(args: Args) {
       payer
     );
     logger.success("Message proof completed");
-    logger.info(
-      `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
-    );
+    logger.success(`Signature: ${signature}`);
 
     // Return message hash for potential relay
     return event.messageHash;

@@ -100,9 +100,7 @@ export async function handleCreateAta(args: Args): Promise<void> {
 
     logger.success("ATA created!");
     logger.info(`ATA address: ${maybeAta.address}`);
-    logger.info(
-      `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
-    );
+    logger.success(`Signature: ${signature}`);
   } catch (error) {
     logger.error("Failed to create ATA:", error);
     throw error;

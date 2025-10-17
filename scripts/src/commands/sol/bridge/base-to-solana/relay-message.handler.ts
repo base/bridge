@@ -147,9 +147,7 @@ export async function handleRelayMessage(args: Args): Promise<void> {
       [relayMessageIxWithRemainingAccounts],
       payer
     );
-    logger.info(
-      `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
-    );
+    logger.success(`Signature: ${signature}`);
   } catch (error) {
     logger.error("Failed to relay message:", error);
     throw error;

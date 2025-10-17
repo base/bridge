@@ -105,9 +105,7 @@ export async function handleCreateMint(args: Args): Promise<void> {
 
     logger.success("SPL token mint created");
     logger.info(`Mint address: ${mint.address}`);
-    logger.info(
-      `Transaction: https://explorer.solana.com/tx/${signature}?cluster=devnet`
-    );
+    logger.success(`Signature: ${signature}`);
   } catch (error) {
     logger.error("Failed to create mint:", error);
     throw error;
