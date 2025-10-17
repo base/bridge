@@ -21,6 +21,7 @@ use anchor_spl::{
         spl_token_metadata_interface::state::TokenMetadata,
     },
 };
+use hex_literal::hex;
 use litesvm::LiteSVM;
 use solana_account::Account;
 use solana_keypair::Keypair;
@@ -69,6 +70,7 @@ impl ProtocolConfig {
     pub fn test_new() -> Self {
         Self {
             block_interval_requirement: 300,
+            sol_base_address: hex!("C5b9112382f3c87AFE8e1A28fa52452aF81085AD"),
         }
     }
 }

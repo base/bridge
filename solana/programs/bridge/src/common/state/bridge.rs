@@ -187,6 +187,9 @@ pub struct ProtocolConfig {
     /// Block interval requirement for output root registration. Every Base block associated with a
     /// submitted output root must be a multiple of this number.
     pub block_interval_requirement: u64,
+
+    /// The Base evm address of SOL
+    pub sol_base_address: [u8; 20],
 }
 
 impl ProtocolConfig {
@@ -200,6 +203,8 @@ impl ProtocolConfig {
             self.block_interval_requirement <= 1000,
             BridgeError::InvalidBlockIntervalRequirement
         );
+
+        require!(self.sol_base_address != [0u8; 20], BridgeError::ZeroAddress);
         Ok(())
     }
 }

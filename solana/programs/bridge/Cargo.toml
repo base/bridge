@@ -37,3 +37,4 @@ solana-loader-v3-interface = { version = "3.0.0", features = ["serde"] }
 solana-message = "2.2.1"
 solana-signer = "2.2.1"
 solana-transaction = "2.2.1"
+hex-literal = "0.4.1"

@@ -143,4 +143,7 @@ pub enum BridgeError {
     // Call Type Validation (6900-6999)
     #[msg("Creation with non-zero target")]
     CreationWithNonZeroTarget = 6900,
+
+    #[msg("Zero address")]
+    ZeroAddress,
 }

@@ -37,7 +37,6 @@ library SVMBridgeLib {
             result = abi.encodePacked(
                 result,
                 uint8(0), // Sol
-                transfer.localToken, // remote_token
                 transfer.to, // to
                 SVMLib.toU64LittleEndian(transfer.remoteAmount) // amount
             );

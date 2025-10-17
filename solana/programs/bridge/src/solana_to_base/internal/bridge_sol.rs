@@ -33,7 +33,7 @@ pub fn bridge_sol_internal<'info>(
         TransferOp {
             to,
             local_token: NATIVE_SOL_PUBKEY,
-            remote_token: [0u8; 20],
+            remote_token: bridge.protocol_config.sol_base_address,
             amount,
             call,
         },

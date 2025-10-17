@@ -890,6 +890,7 @@ dependencies = [
  "anchor-spl",
  "bincode",
  "hex",
+ "hex-literal",
  "litesvm",
  "secp256k1",
  "serde_json",

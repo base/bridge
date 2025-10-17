@@ -190,12 +190,18 @@ mod tests {
         assert_eq!(outgoing_message_data.nonce, 0);
         assert_eq!(outgoing_message_data.sender, from.pubkey());
 
+        let bridge = svm.get_account(&bridge_pda).unwrap();
+        let bridge = Bridge::try_deserialize(&mut &bridge.data[..]).unwrap();
+
         // Verify the message content
         match outgoing_message_data.message {
             crate::solana_to_base::Message::Transfer(transfer) => {
                 assert_eq!(transfer.to, to);
                 assert_eq!(transfer.local_token, NATIVE_SOL_PUBKEY);
-                assert_eq!(transfer.remote_token, [0u8; 20]);
+                assert_eq!(
+                    transfer.remote_token,
+                    bridge.protocol_config.sol_base_address
+                );
                 assert_eq!(transfer.amount, amount);
                 assert!(transfer.call.is_none());
             }
@@ -287,12 +293,18 @@ mod tests {
         let outgoing_message_data =
             OutgoingMessage::try_deserialize(&mut &outgoing_message_account.data[..]).unwrap();
 
+        let bridge = svm.get_account(&bridge_pda).unwrap();
+        let bridge = Bridge::try_deserialize(&mut &bridge.data[..]).unwrap();
+
         // Verify the message content including call
         match outgoing_message_data.message {
             crate::solana_to_base::Message::Transfer(transfer) => {
                 assert_eq!(transfer.to, to);
                 assert_eq!(transfer.local_token, NATIVE_SOL_PUBKEY);
-                assert_eq!(transfer.remote_token, [0u8; 20]);
+                assert_eq!(
+                    transfer.remote_token,
+                    bridge.protocol_config.sol_base_address
+                );
                 assert_eq!(transfer.amount, amount);
 
                 let transfer_call = transfer.call.expect("Expected call to be present");
