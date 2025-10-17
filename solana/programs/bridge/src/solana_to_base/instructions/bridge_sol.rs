@@ -15,7 +15,7 @@ use crate::{
 /// The bridged SOLs are locked in a vault on Solana and an outgoing message is created to mint
 /// the corresponding tokens and execute the optional call on Base.
 #[derive(Accounts)]
-#[instruction(outgoing_message_salt: [u8; 32],_to: [u8; 20], remote_token: [u8; 20], _amount: u64, call: Option<Call>)]
+#[instruction(outgoing_message_salt: [u8; 32], _to: [u8; 20], _amount: u64, call: Option<Call>)]
 pub struct BridgeSol<'info> {
     /// The account that pays for transaction fees and account creation.
     /// Must be mutable to deduct lamports for account rent and gas fees.
@@ -33,16 +33,12 @@ pub struct BridgeSol<'info> {
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SOL vault account that holds locked tokens for the specific remote token.
-    /// - Uses PDA with SOL_VAULT_SEED and remote_token for deterministic address
+    /// - Uses PDA with SOL_VAULT_SEED for deterministic address
     /// - Mutable to receive the locked SOL tokens
     /// - Each remote token has its own dedicated vault
     ///
     /// CHECK: This is the SOL vault account.
-    #[account(
-        mut,
-        seeds = [SOL_VAULT_SEED, remote_token.as_ref()],
-        bump,
-    )]
+    #[account(mut, seeds = [SOL_VAULT_SEED], bump)]
     pub sol_vault: AccountInfo<'info>,
 
     /// The main bridge state account that tracks nonces and fee parameters.
@@ -73,7 +69,6 @@ pub fn bridge_sol_handler(
     ctx: Context<BridgeSol>,
     _outgoing_message_salt: [u8; 32],
     to: [u8; 20],
-    remote_token: [u8; 20],
     amount: u64,
     call: Option<Call>,
 ) -> Result<()> {
@@ -89,7 +84,6 @@ pub fn bridge_sol_handler(
         &mut ctx.accounts.outgoing_message,
         &ctx.accounts.system_program,
         to,
-        remote_token,
         amount,
         call,
     )
@@ -137,12 +131,10 @@ mod tests {
 
         // Test parameters
         let to = [1u8; 20]; // Base address
-        let remote_token = [2u8; 20]; // Remote token address
         let amount = LAMPORTS_PER_SOL; // 1 SOL
 
         // Find SOL vault PDA
-        let sol_vault =
-            Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
+        let sol_vault = Pubkey::find_program_address(&[SOL_VAULT_SEED], &ID).0;
 
         // Build the BridgeSol instruction accounts
         let accounts = accounts::BridgeSol {
@@ -163,7 +155,6 @@ mod tests {
             data: BridgeSolIx {
                 outgoing_message_salt,
                 to,
-                remote_token,
                 amount,
                 call: None,
             }
@@ -204,7 +195,7 @@ mod tests {
             crate::solana_to_base::Message::Transfer(transfer) => {
                 assert_eq!(transfer.to, to);
                 assert_eq!(transfer.local_token, NATIVE_SOL_PUBKEY);
-                assert_eq!(transfer.remote_token, remote_token);
+                assert_eq!(transfer.remote_token, [0u8; 20]);
                 assert_eq!(transfer.amount, amount);
                 assert!(transfer.call.is_none());
             }
@@ -242,7 +233,6 @@ mod tests {
 
         // Test parameters
         let to = [1u8; 20];
-        let remote_token = [2u8; 20];
         let amount = LAMPORTS_PER_SOL / 2; // 0.5 SOL
 
         // Create test call data
@@ -254,8 +244,7 @@ mod tests {
         };
 
         // Find SOL vault PDA
-        let sol_vault =
-            Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
+        let sol_vault = Pubkey::find_program_address(&[SOL_VAULT_SEED], &ID).0;
 
         // Build the BridgeSol instruction accounts
         let accounts = accounts::BridgeSol {
@@ -276,7 +265,6 @@ mod tests {
             data: BridgeSolIx {
                 outgoing_message_salt,
                 to,
-                remote_token,
                 amount,
                 call: Some(call.clone()),
             }
@@ -304,7 +292,7 @@ mod tests {
             crate::solana_to_base::Message::Transfer(transfer) => {
                 assert_eq!(transfer.to, to);
                 assert_eq!(transfer.local_token, NATIVE_SOL_PUBKEY);
-                assert_eq!(transfer.remote_token, remote_token);
+                assert_eq!(transfer.remote_token, [0u8; 20]);
                 assert_eq!(transfer.amount, amount);
 
                 let transfer_call = transfer.call.expect("Expected call to be present");
@@ -364,7 +352,6 @@ mod tests {
             data: BridgeSolIx {
                 outgoing_message_salt,
                 to,
-                remote_token,
                 amount,
                 call: None,
             }
@@ -421,12 +408,10 @@ mod tests {
 
         // Test parameters
         let to = [1u8; 20];
-        let remote_token = [2u8; 20];
         let amount = LAMPORTS_PER_SOL;
 
         // Find SOL vault PDA
-        let sol_vault =
-            Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
+        let sol_vault = Pubkey::find_program_address(&[SOL_VAULT_SEED], &ID).0;
 
         // Build the BridgeSol instruction accounts
         let accounts = accounts::BridgeSol {
@@ -447,7 +432,6 @@ mod tests {
             data: BridgeSolIx {
                 outgoing_message_salt,
                 to,
-                remote_token,
                 amount,
                 call: None,
             }

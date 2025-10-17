@@ -241,7 +241,8 @@ contract BridgeTest is CommonTest {
             remoteBridge: TEST_SENDER,
             twinBeacon: address(0xBEEF),
             crossChainErc20Factory: address(0xCAFE),
-            bridgeValidator: address(0xF00D)
+            bridgeValidator: address(0xF00D),
+            localSol: address(0xF00D)
         });
 
         address[] memory guardians = new address[](0);
@@ -536,7 +537,8 @@ contract BridgeTest is CommonTest {
             remoteBridge: TEST_SENDER,
             twinBeacon: address(0),
             crossChainErc20Factory: address(0xBEEF),
-            bridgeValidator: address(0xCAFE)
+            bridgeValidator: address(0xCAFE),
+            localSol: address(0xCAFE)
         });
     }
 
@@ -546,7 +548,8 @@ contract BridgeTest is CommonTest {
             remoteBridge: TEST_SENDER,
             twinBeacon: address(0xBEEF),
             crossChainErc20Factory: address(0),
-            bridgeValidator: address(0xCAFE)
+            bridgeValidator: address(0xCAFE),
+            localSol: address(0xCAFE)
         });
     }
 
@@ -556,7 +559,8 @@ contract BridgeTest is CommonTest {
             remoteBridge: TEST_SENDER,
             twinBeacon: address(0xBEEF),
             crossChainErc20Factory: address(0xCAFE),
-            bridgeValidator: address(0)
+            bridgeValidator: address(0),
+            localSol: address(0xCAFE)
         });
     }
 

@@ -20,7 +20,6 @@ pub fn bridge_sol_internal<'info>(
     outgoing_message: &mut Account<'info, OutgoingMessage>,
     system_program: &Program<'info, System>,
     to: [u8; 20],
-    remote_token: [u8; 20],
     amount: u64,
     call: Option<Call>,
 ) -> Result<()> {
@@ -34,7 +33,7 @@ pub fn bridge_sol_internal<'info>(
         TransferOp {
             to,
             local_token: NATIVE_SOL_PUBKEY,
-            remote_token,
+            remote_token: [0u8; 20],
             amount,
             call,
         },

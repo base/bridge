@@ -199,7 +199,7 @@ library TokenLib {
     ///
     /// @param transfer The token transfer to finalize.
     /// @param crossChainErc20Factory The address of the CrossChainERC20Factory.
-    function finalizeTransfer(Transfer memory transfer, address crossChainErc20Factory) internal {
+    function finalizeTransfer(Transfer memory transfer, address crossChainErc20Factory, address localSol) internal {
         TokenLibStorage storage $ = getTokenLibStorage();
 
         address to = address(bytes20(transfer.to));
@@ -214,13 +214,12 @@ library TokenLib {
 
             SafeTransferLib.safeTransferETH({to: to, amount: localAmount});
         } else {
-            if (CrossChainERC20Factory(crossChainErc20Factory).isCrossChainErc20(transfer.localToken)) {
-                // Case: Bridging native SOL or SPL token to EVM
-                bytes32 remoteToken = CrossChainERC20(transfer.localToken).remoteToken();
-                require(Pubkey.wrap(remoteToken) == transfer.remoteToken, IncorrectRemoteToken());
-
-                localAmount = transfer.remoteAmount;
-                CrossChainERC20(transfer.localToken).mint({to: to, amount: localAmount});
+            // Not going to have localToken if a SOL transfer. Need to check remoteToken
+            if (transfer.remoteToken == NATIVE_SOL_PUBKEY) {
+                transfer.localToken = localSol;
+                localAmount = _handleLocalTokenOwnedByBridge(transfer, crossChainErc20Factory, to);
+            } else if (CrossChainERC20Factory(crossChainErc20Factory).isCrossChainErc20(transfer.localToken)) {
+                localAmount = _handleLocalTokenOwnedByBridge(transfer, crossChainErc20Factory, to);
             } else {
                 // Case: Bridging back native ERC20 to EVM
                 uint256 scalar = $.scalars[transfer.localToken][transfer.remoteToken];
@@ -247,5 +246,17 @@ library TokenLib {
     function registerRemoteToken(address localToken, Pubkey remoteToken, uint8 scalarExponent) internal {
         TokenLibStorage storage $ = getTokenLibStorage();
         $.scalars[localToken][remoteToken] = 10 ** scalarExponent;
+    }
+
+    function _handleLocalTokenOwnedByBridge(Transfer memory transfer, address crossChainErc20Factory, address to)
+        private
+        returns (uint256)
+    {
+        // Case: Bridging native SOL or SPL token to EVM
+        bytes32 remoteToken = CrossChainERC20(transfer.localToken).remoteToken();
+        require(Pubkey.wrap(remoteToken) == transfer.remoteToken, IncorrectRemoteToken());
+
+        CrossChainERC20(transfer.localToken).mint({to: to, amount: transfer.remoteAmount});
+        return transfer.remoteAmount;
     }
 }

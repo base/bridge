@@ -7,6 +7,8 @@ import {DeployScript} from "../script/Deploy.s.sol";
 
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
+import {Pubkey} from "../src/libraries/SVMLib.sol";
+import {TokenLib} from "../src/libraries/TokenLib.sol";
 import {CommonTest} from "./CommonTest.t.sol";
 
 contract CrossChainERC20FactoryTest is CommonTest {
@@ -190,7 +192,7 @@ contract CrossChainERC20FactoryTest is CommonTest {
         string memory symbol,
         uint8 decimals
     ) public {
-        vm.assume(remoteToken != bytes32(0) && remoteToken != factory.SOL_PUBKEY());
+        vm.assume(remoteToken != bytes32(0) && remoteToken != Pubkey.unwrap(TokenLib.NATIVE_SOL_PUBKEY));
 
         vm.prank(deployer);
 

@@ -2,6 +2,7 @@
 pragma solidity 0.8.28;
 
 import {ERC1967Factory} from "solady/utils/ERC1967Factory.sol";
+import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 
 import {Bridge} from "../src/Bridge.sol";
@@ -9,6 +10,7 @@ import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {Twin} from "../src/Twin.sol";
+import {TokenLib} from "../src/libraries/TokenLib.sol";
 import {RelayerOrchestrator} from "../src/periphery/RelayerOrchestrator.sol";
 import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
@@ -28,15 +30,28 @@ contract DeployScript is DevOps {
         vm.startBroadcast(msg.sender);
         address twinBeacon = _deployTwinBeacon({cfg: cfg, precomputedBridgeAddress: precomputedBridgeAddress});
         address factory = _deployFactory({cfg: cfg, precomputedBridgeAddress: precomputedBridgeAddress});
+
+        address precomputedSolAddress = LibClone.predictDeterministicAddressERC1967BeaconProxy({
+            beacon: CrossChainERC20Factory(factory).BEACON(),
+            salt: keccak256(abi.encode(TokenLib.NATIVE_SOL_PUBKEY, "Solana", "SOL", 9)),
+            deployer: factory
+        });
+
         address bridgeValidator = _deployBridgeValidator({cfg: cfg, bridge: precomputedBridgeAddress});
         address bridge = _deployBridge({
-            cfg: cfg, twinBeacon: twinBeacon, crossChainErc20Factory: factory, bridgeValidator: bridgeValidator
+            cfg: cfg,
+            twinBeacon: twinBeacon,
+            crossChainErc20Factory: factory,
+            bridgeValidator: bridgeValidator,
+            localSol: precomputedSolAddress
         });
         address relayerOrchestrator =
             _deployRelayerOrchestrator({cfg: cfg, bridge: bridge, bridgeValidator: bridgeValidator});
+        address localSol = CrossChainERC20Factory(factory).deploySolWrapper();
         vm.stopBroadcast();
 
         require(address(bridge) == precomputedBridgeAddress, "Bridge address mismatch");
+        require(localSol == precomputedSolAddress, "SOL address mismatch");
 
         _serializeAddress({key: "Bridge", value: bridge});
         _serializeAddress({key: "BridgeValidator", value: bridgeValidator});
@@ -94,13 +109,15 @@ contract DeployScript is DevOps {
         HelperConfig.NetworkConfig memory cfg,
         address twinBeacon,
         address crossChainErc20Factory,
-        address bridgeValidator
+        address bridgeValidator,
+        address localSol
     ) private returns (address) {
         Bridge bridgeImpl = new Bridge({
             remoteBridge: cfg.remoteBridge,
             twinBeacon: twinBeacon,
             crossChainErc20Factory: crossChainErc20Factory,
-            bridgeValidator: bridgeValidator
+            bridgeValidator: bridgeValidator,
+            localSol: localSol
         });
 
         return ERC1967Factory(cfg.erc1967Factory)

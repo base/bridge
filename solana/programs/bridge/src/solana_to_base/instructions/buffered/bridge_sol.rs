@@ -16,7 +16,7 @@ use crate::{
 /// the corresponding tokens and execute the call on Base. The `CallBuffer` account is consumed and
 /// closed (rent refunded to its `owner`).
 #[derive(Accounts)]
-#[instruction(outgoing_message_salt: [u8; 32], _to: [u8; 20], remote_token: [u8; 20])]
+#[instruction(outgoing_message_salt: [u8; 32], _to: [u8; 20])]
 pub struct BridgeSolWithBufferedCall<'info> {
     /// The account that pays for account creation and the gas fee (EIP-1559 based) on Solana.
     /// Must be mutable to deduct lamports for rent and to transfer the gas fee to `gas_fee_receiver`.
@@ -34,16 +34,12 @@ pub struct BridgeSolWithBufferedCall<'info> {
     pub gas_fee_receiver: AccountInfo<'info>,
 
     /// The SOL vault account that holds locked tokens for the specific remote token.
-    /// - PDA of this program using `[SOL_VAULT_SEED, remote_token]`
+    /// - PDA of this program using `[SOL_VAULT_SEED]`
     /// - Mutable to receive the locked SOL
     /// - Each remote token has its own dedicated vault
     ///
     /// CHECK: This is the SOL vault account.
-    #[account(
-        mut,
-        seeds = [SOL_VAULT_SEED, remote_token.as_ref()],
-        bump,
-    )]
+    #[account(mut, seeds = [SOL_VAULT_SEED], bump)]
     pub sol_vault: AccountInfo<'info>,
 
     /// The main bridge state account that tracks nonces and fee parameters.
@@ -87,7 +83,6 @@ pub fn bridge_sol_with_buffered_call_handler<'a, 'b, 'c, 'info>(
     ctx: Context<'a, 'b, 'c, 'info, BridgeSolWithBufferedCall<'info>>,
     _outgoing_message_salt: [u8; 32],
     to: [u8; 20],
-    remote_token: [u8; 20],
     amount: u64,
 ) -> Result<()> {
     // Check if bridge is paused
@@ -110,7 +105,6 @@ pub fn bridge_sol_with_buffered_call_handler<'a, 'b, 'c, 'info>(
         &mut ctx.accounts.outgoing_message,
         &ctx.accounts.system_program,
         to,
-        remote_token,
         amount,
         call,
     )
@@ -164,7 +158,6 @@ mod tests {
 
         // Test parameters
         let to = [1u8; 20];
-        let remote_token = [2u8; 20];
         let amount = LAMPORTS_PER_SOL;
 
         // Create test call data
@@ -209,8 +202,7 @@ mod tests {
         let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         // Find SOL vault PDA
-        let sol_vault =
-            Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
+        let sol_vault = Pubkey::find_program_address(&[SOL_VAULT_SEED], &ID).0;
 
         // Build the BridgeSolWithBufferedCall instruction accounts
         let accounts = accounts::BridgeSolWithBufferedCall {
@@ -233,7 +225,6 @@ mod tests {
             data: BridgeSolWithBufferedCallIx {
                 outgoing_message_salt,
                 to,
-                remote_token,
                 amount,
             }
             .data(),
@@ -273,7 +264,7 @@ mod tests {
             crate::solana_to_base::Message::Transfer(transfer) => {
                 assert_eq!(transfer.to, to);
                 assert_eq!(transfer.local_token, NATIVE_SOL_PUBKEY);
-                assert_eq!(transfer.remote_token, remote_token);
+                assert_eq!(transfer.remote_token, [0u8; 20]);
                 assert_eq!(transfer.amount, amount);
 
                 let transfer_call = transfer.call.expect("Expected call to be present");
@@ -375,12 +366,10 @@ mod tests {
         let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         let to = [1u8; 20];
-        let remote_token = [2u8; 20];
         let amount = LAMPORTS_PER_SOL;
 
         // Find SOL vault PDA
-        let sol_vault =
-            Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
+        let sol_vault = Pubkey::find_program_address(&[SOL_VAULT_SEED], &ID).0;
 
         // Build the BridgeSolWithBufferedCall instruction accounts with unauthorized owner
         let accounts = accounts::BridgeSolWithBufferedCall {
@@ -403,7 +392,6 @@ mod tests {
             data: BridgeSolWithBufferedCallIx {
                 outgoing_message_salt,
                 to,
-                remote_token,
                 amount,
             }
             .data(),
@@ -490,12 +478,10 @@ mod tests {
         let (outgoing_message_salt, outgoing_message) = create_outgoing_message();
 
         let to = [1u8; 20];
-        let remote_token = [2u8; 20];
         let amount = LAMPORTS_PER_SOL;
 
         // Find SOL vault PDA
-        let sol_vault =
-            Pubkey::find_program_address(&[SOL_VAULT_SEED, remote_token.as_ref()], &ID).0;
+        let sol_vault = Pubkey::find_program_address(&[SOL_VAULT_SEED], &ID).0;
 
         // Build the BridgeSolWithBufferedCall instruction accounts with wrong gas fee receiver
         let accounts = accounts::BridgeSolWithBufferedCall {
@@ -518,7 +504,6 @@ mod tests {
             data: BridgeSolWithBufferedCallIx {
                 outgoing_message_salt,
                 to,
-                remote_token,
                 amount,
             }
             .data(),

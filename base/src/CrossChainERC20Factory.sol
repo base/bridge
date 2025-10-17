@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import {LibClone} from "solady/utils/LibClone.sol";
 
 import {CrossChainERC20} from "./CrossChainERC20.sol";
+import {Pubkey} from "./libraries/SVMLib.sol";
+import {TokenLib} from "./libraries/TokenLib.sol";
 
 /// @title CrossChainERC20Factory
 ///
@@ -15,10 +17,6 @@ contract CrossChainERC20Factory {
 
     /// @notice Address of the ERC-1967 beacon contract used by deployed proxies for CrossChainERC20.
     address public immutable BEACON;
-
-    /// @notice Special pubkey designating remote native SOL
-    /// @dev This corresponds to `SoL1111111111111111111111111111111111111111` in base58
-    bytes32 public constant SOL_PUBKEY = 0x069be72ab836d4eacc02525b7350a78a395da2f1253a40ebafd6630000000000;
 
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
@@ -66,7 +64,7 @@ contract CrossChainERC20Factory {
 
     /// @notice Deploys a native SOL wrapper. Can only be called once.
     function deploySolWrapper() external returns (address) {
-        return _deploy(SOL_PUBKEY, "Solana", "SOL", 9);
+        return _deploy(Pubkey.unwrap(TokenLib.NATIVE_SOL_PUBKEY), "Solana", "SOL", 9);
     }
 
     /// @notice Deploys a new CrossChainERC20 token with deterministic address using CREATE2
@@ -86,7 +84,7 @@ contract CrossChainERC20Factory {
         external
         returns (address)
     {
-        require(remoteToken != SOL_PUBKEY, CannotWrapNativeSOL());
+        require(remoteToken != Pubkey.unwrap(TokenLib.NATIVE_SOL_PUBKEY), CannotWrapNativeSOL());
         return _deploy(remoteToken, name, symbol, decimals);
     }
 

@@ -49,7 +49,7 @@ contract TokenLibTest is CommonTest {
         crossChainToken = CrossChainERC20(factory.deploy(Pubkey.unwrap(TEST_SPL_TOKEN), "Cross Chain Token", "CCT", 9));
 
         // Deploy CrossChainERC20 for testing SOL tokens
-        crossChainSolToken = CrossChainERC20(factory.deploySolWrapper());
+        crossChainSolToken = CrossChainERC20(bridge.LOCAL_SOL());
 
         // Deploy mock tokens
         mockToken = new MockERC20("Mock Token", "MOCK", 18);

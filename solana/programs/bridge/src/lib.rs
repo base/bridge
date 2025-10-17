@@ -240,18 +240,16 @@ pub mod bridge {
     /// * `ctx`                   - The context containing accounts for the SOL bridge operation
     /// * `outgoing_message_salt` - The salt for the outgoing message account
     /// * `to`                    - The 20-byte Ethereum address that will receive tokens on Base
-    /// * `remote_token`          - The 20-byte address of the token contract on Base
     /// * `amount`                - Amount of SOL to bridge (in lamports)
     /// * `call`                  - Optional additional contract call to execute with the token transfer
     pub fn bridge_sol(
         ctx: Context<BridgeSol>,
         outgoing_message_salt: [u8; 32],
         to: [u8; 20],
-        remote_token: [u8; 20],
         amount: u64,
         call: Option<Call>,
     ) -> Result<()> {
-        bridge_sol_handler(ctx, outgoing_message_salt, to, remote_token, amount, call)
+        bridge_sol_handler(ctx, outgoing_message_salt, to, amount, call)
     }
 
     /// Bridges native SOL tokens from Solana to Base with a call using buffered data.
@@ -262,16 +260,14 @@ pub mod bridge {
     /// * `ctx`                   - The context containing accounts for the SOL bridge operation
     /// * `outgoing_message_salt` - The salt for the outgoing message account
     /// * `to`                    - The 20-byte Ethereum address that will receive tokens on Base
-    /// * `remote_token`          - The 20-byte address of the token contract on Base
     /// * `amount`                - Amount of SOL to bridge (in lamports)
     pub fn bridge_sol_with_buffered_call<'a, 'b, 'c, 'info>(
         ctx: Context<'a, 'b, 'c, 'info, BridgeSolWithBufferedCall<'info>>,
         outgoing_message_salt: [u8; 32],
         to: [u8; 20],
-        remote_token: [u8; 20],
         amount: u64,
     ) -> Result<()> {
-        bridge_sol_with_buffered_call_handler(ctx, outgoing_message_salt, to, remote_token, amount)
+        bridge_sol_with_buffered_call_handler(ctx, outgoing_message_salt, to, amount)
     }
 
     /// Bridges SPL tokens from Solana to Base.
