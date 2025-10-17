@@ -185,6 +185,11 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         MessageStorageLib.sendMessage({sender: msg.sender, data: data});
     }
 
+    /// @notice Bridges SOL to Solana with an optional list of instructions
+    ///
+    /// @param to     The Solana recipient pubkey
+    /// @param amount The amount of SOL to bridge
+    /// @param ixs    The optional Solana instructions
     function bridgeSol(bytes32 to, uint64 amount, Ix[] calldata ixs)
         external
         nonReentrant
@@ -209,17 +214,6 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
         isValidIxs(ixs)
     {
         _bridgeToken(transfer, ixs);
-    }
-
-    function _bridgeToken(Transfer memory transfer, Ix[] calldata ixs) private {
-        // IMPORTANT: The `TokenLib.initializeTransfer` function might modify the `transfer.remoteAmount` field to
-        //            account for potential transfer fees.
-        SolanaTokenType transferType =
-            TokenLib.initializeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
-
-        bytes memory data = SVMBridgeLib.serializeTransfer({transfer: transfer, tokenType: transferType, ixs: ixs});
-        require(data.length <= SVMLib.MAX_SOLANA_DATA_LENGTH, SerializedMessageTooBig());
-        MessageStorageLib.sendMessage({sender: msg.sender, data: data});
     }
 
     /// @notice Relays messages sent from Solana to Base.
@@ -372,6 +366,17 @@ contract Bridge is ReentrancyGuardTransient, Initializable, OwnableRoles {
     //////////////////////////////////////////////////////////////
     ///                    Private Functions                   ///
     //////////////////////////////////////////////////////////////
+
+    function _bridgeToken(Transfer memory transfer, Ix[] calldata ixs) private {
+        // IMPORTANT: The `TokenLib.initializeTransfer` function might modify the `transfer.remoteAmount` field to
+        //            account for potential transfer fees.
+        SolanaTokenType transferType =
+            TokenLib.initializeTransfer({transfer: transfer, crossChainErc20Factory: CROSS_CHAIN_ERC20_FACTORY});
+
+        bytes memory data = SVMBridgeLib.serializeTransfer({transfer: transfer, tokenType: transferType, ixs: ixs});
+        require(data.length <= SVMLib.MAX_SOLANA_DATA_LENGTH, SerializedMessageTooBig());
+        MessageStorageLib.sendMessage({sender: msg.sender, data: data});
+    }
 
     function _validateAndRelay(IncomingMessage calldata message) private {
         bytes32 messageHash = getMessageHash(message);
