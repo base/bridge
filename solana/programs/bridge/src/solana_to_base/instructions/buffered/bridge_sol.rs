@@ -269,7 +269,7 @@ mod tests {
                 assert_eq!(transfer.local_token, NATIVE_SOL_PUBKEY);
                 assert_eq!(
                     transfer.remote_token,
-                    bridge.protocol_config.sol_base_address
+                    bridge.protocol_config.remote_sol_address
                 );
                 assert_eq!(transfer.amount, amount);
 

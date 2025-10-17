@@ -70,7 +70,7 @@ impl ProtocolConfig {
     pub fn test_new() -> Self {
         Self {
             block_interval_requirement: 300,
-            sol_base_address: hex!("C5b9112382f3c87AFE8e1A28fa52452aF81085AD"),
+            remote_sol_address: hex!("C5b9112382f3c87AFE8e1A28fa52452aF81085AD"),
         }
     }
 }

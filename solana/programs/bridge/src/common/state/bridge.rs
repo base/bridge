@@ -189,7 +189,7 @@ pub struct ProtocolConfig {
     pub block_interval_requirement: u64,
 
     /// The Base evm address of SOL
-    pub sol_base_address: [u8; 20],
+    pub remote_sol_address: [u8; 20],
 }
 
 impl ProtocolConfig {
@@ -204,7 +204,10 @@ impl ProtocolConfig {
             BridgeError::InvalidBlockIntervalRequirement
         );
 
-        require!(self.sol_base_address != [0u8; 20], BridgeError::ZeroAddress);
+        require!(
+            self.remote_sol_address != [0u8; 20],
+            BridgeError::ZeroAddress
+        );
         Ok(())
     }
 }
