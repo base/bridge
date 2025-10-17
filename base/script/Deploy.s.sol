@@ -9,7 +9,6 @@ import {BridgeValidator} from "../src/BridgeValidator.sol";
 import {CrossChainERC20} from "../src/CrossChainERC20.sol";
 import {CrossChainERC20Factory} from "../src/CrossChainERC20Factory.sol";
 import {Twin} from "../src/Twin.sol";
-import {TokenLib} from "../src/libraries/TokenLib.sol";
 import {RelayerOrchestrator} from "../src/periphery/RelayerOrchestrator.sol";
 import {DevOps} from "./DevOps.s.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
