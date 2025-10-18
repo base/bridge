@@ -6,12 +6,9 @@ import {
   createSolanaRpc,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
-import { toBytes, isAddress as isEvmAddress } from "viem";
+import { toBytes, isAddress as isEvmAddress, toHex } from "viem";
 
-import {
-  fetchBridge,
-  getBridgeSolInstruction,
-} from "@base/bridge/bridge";
+import { fetchBridge, getBridgeSolInstruction } from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -74,12 +71,14 @@ export async function handleBridgeSol(args: Args): Promise<void> {
 
     const bridge = await fetchBridge(rpc, bridgeAccountAddress);
 
-    const remoteToken = toBytes(config.base.wSol);
+    const remoteSolAddress = bridge.data.protocolConfig.remoteSolAddress;
+    logger.info(`Remote SOL address: ${toHex(remoteSolAddress as Uint8Array)}`);
+
     const [solVaultAddress] = await getProgramDerivedAddress({
       programAddress: config.solana.bridgeProgram,
       seeds: [
         Buffer.from(getIdlConstant("SOL_VAULT_SEED")),
-        Buffer.from(remoteToken),
+        Buffer.from(remoteSolAddress),
       ],
     });
     logger.info(`Sol Vault: ${solVaultAddress}`);
@@ -109,7 +108,6 @@ export async function handleBridgeSol(args: Args): Promise<void> {
           // Arguments
           outgoingMessageSalt: salt,
           to: toBytes(args.to),
-          remoteToken,
           amount: scaledAmount,
           call: null,
         },

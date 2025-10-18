@@ -8,12 +8,8 @@
 
 import {
   combineCodec,
-  fixDecoderSize,
-  fixEncoderSize,
   getAddressDecoder,
   getAddressEncoder,
-  getBytesDecoder,
-  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -22,7 +18,6 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
-  type ReadonlyUint8Array,
 } from '@solana/kit';
 
 /**
@@ -33,12 +28,6 @@ import {
  * the recipient when finalized.
  */
 export type FinalizeBridgeSol = {
-  /**
-   * The 20-byte EVM address on Base of the ERC-20 token that represents SOL for this bridge.
-   * Used as a seed to derive the SOL vault PDA that escrows SOL for this mapping.
-   * This identifier names the vault even though the asset released here is native SOL.
-   */
-  remoteToken: ReadonlyUint8Array;
   /**
    * The Solana public key of the recipient who will receive the SOL.
    * This must match the intended recipient specified in the original bridge message.
@@ -53,12 +42,6 @@ export type FinalizeBridgeSol = {
 
 export type FinalizeBridgeSolArgs = {
   /**
-   * The 20-byte EVM address on Base of the ERC-20 token that represents SOL for this bridge.
-   * Used as a seed to derive the SOL vault PDA that escrows SOL for this mapping.
-   * This identifier names the vault even though the asset released here is native SOL.
-   */
-  remoteToken: ReadonlyUint8Array;
-  /**
    * The Solana public key of the recipient who will receive the SOL.
    * This must match the intended recipient specified in the original bridge message.
    */
@@ -72,7 +55,6 @@ export type FinalizeBridgeSolArgs = {
 
 export function getFinalizeBridgeSolEncoder(): FixedSizeEncoder<FinalizeBridgeSolArgs> {
   return getStructEncoder([
-    ['remoteToken', fixEncoderSize(getBytesEncoder(), 20)],
     ['to', getAddressEncoder()],
     ['amount', getU64Encoder()],
   ]);
@@ -80,7 +62,6 @@ export function getFinalizeBridgeSolEncoder(): FixedSizeEncoder<FinalizeBridgeSo
 
 export function getFinalizeBridgeSolDecoder(): FixedSizeDecoder<FinalizeBridgeSol> {
   return getStructDecoder([
-    ['remoteToken', fixDecoderSize(getBytesDecoder(), 20)],
     ['to', getAddressDecoder()],
     ['amount', getU64Decoder()],
   ]);

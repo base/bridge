@@ -4,6 +4,7 @@ import { text, isCancel, cancel } from "@clack/prompts";
 import {
   getOrPromptBigint,
   getOrPromptSolanaAddress,
+  getOrPromptEvmAddress,
   getOrPromptEvmAddressList,
   getOrPromptFilePath,
   validateAndExecute,
@@ -15,6 +16,7 @@ type CommanderOptions = {
   rpcUrl?: string;
   payerKp?: string;
   guardian?: string;
+  remoteSolAddress?: string;
   eip1559Target?: string;
   eip1559Denominator?: string;
   eip1559WindowDurationSeconds?: string;
@@ -75,6 +77,11 @@ async function collectInteractiveOptions(
     opts.guardian,
     "Enter guardian address (or 'payer' to use payer address)",
     ["payer"]
+  );
+
+  opts.remoteSolAddress = await getOrPromptEvmAddress(
+    opts.remoteSolAddress,
+    "Enter remote SOL address (EVM address)"
   );
 
   opts.eip1559Target = await getOrPromptBigint(
@@ -156,6 +163,10 @@ export const initializeCommand = new Command("initialize")
   .option(
     "--guardian <address>",
     "Guardian address: 'payer' or Solana public key"
+  )
+  .option(
+    "--remote-sol-address <address>",
+    "Remote SOL address (EVM address)"
   )
   .option("--eip1559-target <uint>", "EIP-1559 target (bigint)")
   .option("--eip1559-denominator <uint>", "EIP-1559 denominator (bigint)")

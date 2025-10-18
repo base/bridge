@@ -8,6 +8,10 @@
 
 import {
   combineCodec,
+  fixDecoderSize,
+  fixEncoderSize,
+  getBytesDecoder,
+  getBytesEncoder,
   getStructDecoder,
   getStructEncoder,
   getU64Decoder,
@@ -15,6 +19,7 @@ import {
   type FixedSizeCodec,
   type FixedSizeDecoder,
   type FixedSizeEncoder,
+  type ReadonlyUint8Array,
 } from '@solana/kit';
 
 export type ProtocolConfig = {
@@ -23,6 +28,8 @@ export type ProtocolConfig = {
    * submitted output root must be a multiple of this number.
    */
   blockIntervalRequirement: bigint;
+  /** The Base evm address of SOL */
+  remoteSolAddress: ReadonlyUint8Array;
 };
 
 export type ProtocolConfigArgs = {
@@ -31,14 +38,22 @@ export type ProtocolConfigArgs = {
    * submitted output root must be a multiple of this number.
    */
   blockIntervalRequirement: number | bigint;
+  /** The Base evm address of SOL */
+  remoteSolAddress: ReadonlyUint8Array;
 };
 
 export function getProtocolConfigEncoder(): FixedSizeEncoder<ProtocolConfigArgs> {
-  return getStructEncoder([['blockIntervalRequirement', getU64Encoder()]]);
+  return getStructEncoder([
+    ['blockIntervalRequirement', getU64Encoder()],
+    ['remoteSolAddress', fixEncoderSize(getBytesEncoder(), 20)],
+  ]);
 }
 
 export function getProtocolConfigDecoder(): FixedSizeDecoder<ProtocolConfig> {
-  return getStructDecoder([['blockIntervalRequirement', getU64Decoder()]]);
+  return getStructDecoder([
+    ['blockIntervalRequirement', getU64Decoder()],
+    ['remoteSolAddress', fixDecoderSize(getBytesDecoder(), 20)],
+  ]);
 }
 
 export function getProtocolConfigCodec(): FixedSizeCodec<

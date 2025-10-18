@@ -213,5 +213,5 @@ export async function fetchAllMaybeBridge(
 }
 
 export function getBridgeSize(): number {
-  return 508;
+  return 528;
 }

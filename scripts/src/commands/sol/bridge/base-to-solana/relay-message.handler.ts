@@ -14,6 +14,7 @@ import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 import { toBytes, toHex } from "viem";
 
 import {
+  fetchBridge,
   fetchIncomingMessage,
   getRelayMessageInstruction,
   type BridgeBaseToSolanaStateIncomingMessageMessage,
@@ -224,7 +225,7 @@ async function messageTransferAccounts(
 
   const remainingAccounts: Array<AccountMeta> =
     message.transfer.__kind === "Sol"
-      ? await messageTransferSolAccounts(message.transfer, solanaBridge)
+      ? await messageTransferSolAccounts(rpc, message.transfer, solanaBridge)
       : message.transfer.__kind === "Spl"
         ? await messageTransferSplAccounts(rpc, message.transfer, solanaBridge)
         : await messageTransferWrappedTokenAccounts(message.transfer);
@@ -249,15 +250,19 @@ type MessageTransferSol = Extract<
   { __kind: "Sol" }
 >;
 async function messageTransferSolAccounts(
+  rpc: Rpc,
   message: MessageTransferSol,
   solanaBridge: SolanaAddress
 ) {
   logger.info("SOL transfer detected");
 
-  const { remoteToken, to, amount } = message.fields[0];
+  const bridge = await fetchBridge(rpc, solanaBridge);
+  const remoteSolAddress = bridge.data.protocolConfig.remoteSolAddress;
+
+  const { to, amount } = message.fields[0];
 
   logger.info(`SOL transfer:`);
-  logger.info(`  Remote token: 0x${remoteToken.toHex()}`);
+  logger.info(`  Remote token: 0x${toHex(remoteSolAddress as Uint8Array)}`);
   logger.info(`  To: ${to}`);
   logger.info(`  Amount: ${amount}`);
 
@@ -265,7 +270,7 @@ async function messageTransferSolAccounts(
     programAddress: solanaBridge,
     seeds: [
       Buffer.from(getIdlConstant("SOL_VAULT_SEED")),
-      Buffer.from(remoteToken),
+      Buffer.from(remoteSolAddress),
     ],
   });
   logger.info(`SOL vault PDA: ${solVaultPda}`);

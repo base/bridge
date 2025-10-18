@@ -100,14 +100,12 @@ export type BridgeSolWithBufferedCallInstructionData = {
   discriminator: ReadonlyUint8Array;
   outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
-  remoteToken: ReadonlyUint8Array;
   amount: bigint;
 };
 
 export type BridgeSolWithBufferedCallInstructionDataArgs = {
   outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
-  remoteToken: ReadonlyUint8Array;
   amount: number | bigint;
 };
 
@@ -117,7 +115,6 @@ export function getBridgeSolWithBufferedCallInstructionDataEncoder(): FixedSizeE
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['to', fixEncoderSize(getBytesEncoder(), 20)],
-      ['remoteToken', fixEncoderSize(getBytesEncoder(), 20)],
       ['amount', getU64Encoder()],
     ]),
     (value) => ({
@@ -132,7 +129,6 @@ export function getBridgeSolWithBufferedCallInstructionDataDecoder(): FixedSizeD
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['to', fixDecoderSize(getBytesDecoder(), 20)],
-    ['remoteToken', fixDecoderSize(getBytesDecoder(), 20)],
     ['amount', getU64Decoder()],
   ]);
 }
@@ -172,7 +168,7 @@ export type BridgeSolWithBufferedCallInput<
   gasFeeReceiver: Address<TAccountGasFeeReceiver>;
   /**
    * The SOL vault account that holds locked tokens for the specific remote token.
-   * - PDA of this program using `[SOL_VAULT_SEED, remote_token]`
+   * - PDA of this program using `[SOL_VAULT_SEED]`
    * - Mutable to receive the locked SOL
    * - Each remote token has its own dedicated vault
    *
@@ -203,7 +199,6 @@ export type BridgeSolWithBufferedCallInput<
   systemProgram?: Address<TAccountSystemProgram>;
   outgoingMessageSalt: BridgeSolWithBufferedCallInstructionDataArgs['outgoingMessageSalt'];
   to: BridgeSolWithBufferedCallInstructionDataArgs['to'];
-  remoteToken: BridgeSolWithBufferedCallInstructionDataArgs['remoteToken'];
   amount: BridgeSolWithBufferedCallInstructionDataArgs['amount'];
 };
 
@@ -323,7 +318,7 @@ export type ParsedBridgeSolWithBufferedCallInstruction<
     gasFeeReceiver: TAccountMetas[2];
     /**
      * The SOL vault account that holds locked tokens for the specific remote token.
-     * - PDA of this program using `[SOL_VAULT_SEED, remote_token]`
+     * - PDA of this program using `[SOL_VAULT_SEED]`
      * - Mutable to receive the locked SOL
      * - Each remote token has its own dedicated vault
      *
