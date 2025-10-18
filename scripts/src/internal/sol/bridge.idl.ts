@@ -210,7 +210,7 @@ export const IDL = {
           "name": "outgoing_message",
           "docs": [
             "The outgoing message account that stores the cross-chain call data.",
-            "- Created fresh for each bridge call at a client-provided address (not a PDA)",
+            "- Created fresh for each bridge call seeded by a client-provided salt",
             "- Payer funds the account creation",
             "- Space is DISCRIMINATOR_LEN + OutgoingMessage::space(...)` and is sized using",
             "the worst-case message variant to ensure sufficient capacity even for large payloads",
@@ -364,7 +364,6 @@ export const IDL = {
         "* `ctx`                   - The context containing accounts for the SOL bridge operation",
         "* `outgoing_message_salt` - The salt for the outgoing message account",
         "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `remote_token`          - The 20-byte address of the token contract on Base",
         "* `amount`                - Amount of SOL to bridge (in lamports)",
         "* `call`                  - Optional additional contract call to execute with the token transfer"
       ],
@@ -408,7 +407,7 @@ export const IDL = {
           "name": "sol_vault",
           "docs": [
             "The SOL vault account that holds locked tokens for the specific remote token.",
-            "- Uses PDA with SOL_VAULT_SEED and remote_token for deterministic address",
+            "- Uses PDA with SOL_VAULT_SEED for deterministic address",
             "- Mutable to receive the locked SOL tokens",
             "- Each remote token has its own dedicated vault",
             ""
@@ -462,15 +461,6 @@ export const IDL = {
           }
         },
         {
-          "name": "remote_token",
-          "type": {
-            "array": [
-              "u8",
-              20
-            ]
-          }
-        },
-        {
           "name": "amount",
           "type": "u64"
         },
@@ -497,7 +487,6 @@ export const IDL = {
         "* `ctx`                   - The context containing accounts for the SOL bridge operation",
         "* `outgoing_message_salt` - The salt for the outgoing message account",
         "* `to`                    - The 20-byte Ethereum address that will receive tokens on Base",
-        "* `remote_token`          - The 20-byte address of the token contract on Base",
         "* `amount`                - Amount of SOL to bridge (in lamports)"
       ],
       "discriminator": [
@@ -540,7 +529,7 @@ export const IDL = {
           "name": "sol_vault",
           "docs": [
             "The SOL vault account that holds locked tokens for the specific remote token.",
-            "- PDA of this program using `[SOL_VAULT_SEED, remote_token]`",
+            "- PDA of this program using `[SOL_VAULT_SEED]`",
             "- Mutable to receive the locked SOL",
             "- Each remote token has its own dedicated vault",
             ""
@@ -602,15 +591,6 @@ export const IDL = {
         },
         {
           "name": "to",
-          "type": {
-            "array": [
-              "u8",
-              20
-            ]
-          }
-        },
-        {
-          "name": "remote_token",
           "type": {
             "array": [
               "u8",
@@ -2914,6 +2894,11 @@ export const IDL = {
       "code": 12900,
       "name": "CreationWithNonZeroTarget",
       "msg": "Creation with non-zero target"
+    },
+    {
+      "code": 12901,
+      "name": "ZeroAddress",
+      "msg": "Zero address"
     }
   ],
   "types": [
@@ -3375,20 +3360,6 @@ export const IDL = {
         "kind": "struct",
         "fields": [
           {
-            "name": "remote_token",
-            "docs": [
-              "The 20-byte EVM address on Base of the ERC-20 token that represents SOL for this bridge.",
-              "Used as a seed to derive the SOL vault PDA that escrows SOL for this mapping.",
-              "This identifier names the vault even though the asset released here is native SOL."
-            ],
-            "type": {
-              "array": [
-                "u8",
-                20
-              ]
-            }
-          },
-          {
             "name": "to",
             "docs": [
               "The Solana public key of the recipient who will receive the SOL.",
@@ -3840,6 +3811,18 @@ export const IDL = {
               "submitted output root must be a multiple of this number."
             ],
             "type": "u64"
+          },
+          {
+            "name": "remote_sol_address",
+            "docs": [
+              "The Base evm address of SOL"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
           }
         ]
       }

@@ -99,7 +99,6 @@ export type BridgeSolInstructionData = {
   discriminator: ReadonlyUint8Array;
   outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
-  remoteToken: ReadonlyUint8Array;
   amount: bigint;
   call: Option<Call>;
 };
@@ -107,7 +106,6 @@ export type BridgeSolInstructionData = {
 export type BridgeSolInstructionDataArgs = {
   outgoingMessageSalt: ReadonlyUint8Array;
   to: ReadonlyUint8Array;
-  remoteToken: ReadonlyUint8Array;
   amount: number | bigint;
   call: OptionOrNullable<CallArgs>;
 };
@@ -118,7 +116,6 @@ export function getBridgeSolInstructionDataEncoder(): Encoder<BridgeSolInstructi
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
       ['outgoingMessageSalt', fixEncoderSize(getBytesEncoder(), 32)],
       ['to', fixEncoderSize(getBytesEncoder(), 20)],
-      ['remoteToken', fixEncoderSize(getBytesEncoder(), 20)],
       ['amount', getU64Encoder()],
       ['call', getOptionEncoder(getCallEncoder())],
     ]),
@@ -131,7 +128,6 @@ export function getBridgeSolInstructionDataDecoder(): Decoder<BridgeSolInstructi
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['to', fixDecoderSize(getBytesDecoder(), 20)],
-    ['remoteToken', fixDecoderSize(getBytesDecoder(), 20)],
     ['amount', getU64Decoder()],
     ['call', getOptionDecoder(getCallDecoder())],
   ]);
@@ -170,7 +166,7 @@ export type BridgeSolInput<
   gasFeeReceiver: Address<TAccountGasFeeReceiver>;
   /**
    * The SOL vault account that holds locked tokens for the specific remote token.
-   * - Uses PDA with SOL_VAULT_SEED and remote_token for deterministic address
+   * - Uses PDA with SOL_VAULT_SEED for deterministic address
    * - Mutable to receive the locked SOL tokens
    * - Each remote token has its own dedicated vault
    *
@@ -196,7 +192,6 @@ export type BridgeSolInput<
   systemProgram?: Address<TAccountSystemProgram>;
   outgoingMessageSalt: BridgeSolInstructionDataArgs['outgoingMessageSalt'];
   to: BridgeSolInstructionDataArgs['to'];
-  remoteToken: BridgeSolInstructionDataArgs['remoteToken'];
   amount: BridgeSolInstructionDataArgs['amount'];
   call: BridgeSolInstructionDataArgs['call'];
 };
@@ -305,7 +300,7 @@ export type ParsedBridgeSolInstruction<
     gasFeeReceiver: TAccountMetas[2];
     /**
      * The SOL vault account that holds locked tokens for the specific remote token.
-     * - Uses PDA with SOL_VAULT_SEED and remote_token for deterministic address
+     * - Uses PDA with SOL_VAULT_SEED for deterministic address
      * - Mutable to receive the locked SOL tokens
      * - Each remote token has its own dedicated vault
      *

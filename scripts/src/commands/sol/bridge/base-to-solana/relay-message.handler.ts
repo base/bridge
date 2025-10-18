@@ -14,6 +14,7 @@ import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 import { toBytes, toHex } from "viem";
 
 import {
+  fetchBridge,
   fetchIncomingMessage,
   getRelayMessageInstruction,
   type BridgeBaseToSolanaStateIncomingMessageMessage,
@@ -254,19 +255,15 @@ async function messageTransferSolAccounts(
 ) {
   logger.info("SOL transfer detected");
 
-  const { remoteToken, to, amount } = message.fields[0];
+  const { to, amount } = message.fields[0];
 
   logger.info(`SOL transfer:`);
-  logger.info(`  Remote token: 0x${remoteToken.toHex()}`);
   logger.info(`  To: ${to}`);
   logger.info(`  Amount: ${amount}`);
 
   const [solVaultPda] = await getProgramDerivedAddress({
     programAddress: solanaBridge,
-    seeds: [
-      Buffer.from(getIdlConstant("SOL_VAULT_SEED")),
-      Buffer.from(remoteToken),
-    ],
+    seeds: [Buffer.from(getIdlConstant("SOL_VAULT_SEED"))],
   });
   logger.info(`SOL vault PDA: ${solVaultPda}`);
 

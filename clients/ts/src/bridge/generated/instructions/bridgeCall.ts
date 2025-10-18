@@ -155,7 +155,7 @@ export type BridgeCallInput<
   bridge: Address<TAccountBridge>;
   /**
    * The outgoing message account that stores the cross-chain call data.
-   * - Created fresh for each bridge call at a client-provided address (not a PDA)
+   * - Created fresh for each bridge call seeded by a client-provided salt
    * - Payer funds the account creation
    * - Space is DISCRIMINATOR_LEN + OutgoingMessage::space(...)` and is sized using
    * the worst-case message variant to ensure sufficient capacity even for large payloads
@@ -276,7 +276,7 @@ export type ParsedBridgeCallInstruction<
     bridge: TAccountMetas[3];
     /**
      * The outgoing message account that stores the cross-chain call data.
-     * - Created fresh for each bridge call at a client-provided address (not a PDA)
+     * - Created fresh for each bridge call seeded by a client-provided salt
      * - Payer funds the account creation
      * - Space is DISCRIMINATOR_LEN + OutgoingMessage::space(...)` and is sized using
      * the worst-case message variant to ensure sufficient capacity even for large payloads

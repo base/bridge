@@ -102,6 +102,8 @@ export const BRIDGE_ERROR__INVALID_GAS_COST_SCALER_DP = 0x3206; // 12806
 export const BRIDGE_ERROR__INVALID_BLOCK_INTERVAL_REQUIREMENT = 0x3207; // 12807
 /** CreationWithNonZeroTarget: Creation with non-zero target */
 export const BRIDGE_ERROR__CREATION_WITH_NON_ZERO_TARGET = 0x3264; // 12900
+/** ZeroAddress: Zero address */
+export const BRIDGE_ERROR__ZERO_ADDRESS = 0x3265; // 12901
 
 export type BridgeError =
   | typeof BRIDGE_ERROR__ALREADY_EXECUTED
@@ -147,7 +149,8 @@ export type BridgeError =
   | typeof BRIDGE_ERROR__TOO_MANY_SIGNERS
   | typeof BRIDGE_ERROR__UNAUTHORIZED_CONFIG_UPDATE
   | typeof BRIDGE_ERROR__UNAUTHORIZED_INITIALIZATION
-  | typeof BRIDGE_ERROR__UNUSED_PROOF_ELEMENTS_REMAINING;
+  | typeof BRIDGE_ERROR__UNUSED_PROOF_ELEMENTS_REMAINING
+  | typeof BRIDGE_ERROR__ZERO_ADDRESS;
 
 let bridgeErrorMessages: Record<BridgeError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
@@ -196,6 +199,7 @@ if (process.env.NODE_ENV !== 'production') {
     [BRIDGE_ERROR__UNAUTHORIZED_CONFIG_UPDATE]: `Unauthorized to update configuration`,
     [BRIDGE_ERROR__UNAUTHORIZED_INITIALIZATION]: `Only the upgrade authority can initialize the bridge`,
     [BRIDGE_ERROR__UNUSED_PROOF_ELEMENTS_REMAINING]: `Unused proof elements remaining`,
+    [BRIDGE_ERROR__ZERO_ADDRESS]: `Zero address`,
   };
 }
 

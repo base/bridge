@@ -63,6 +63,7 @@ const gasFlatSchema = z.object({
 
 const protocolFlatSchema = z.object({
   protocolBlockIntervalRequirement: bigintSchema,
+  remoteSolAddress: evmAddressSchema,
 });
 
 const bufferFlatSchema = z.object({
@@ -142,6 +143,7 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
 
     const protocolConfig: ProtocolConfig = {
       blockIntervalRequirement: args.protocolBlockIntervalRequirement,
+      remoteSolAddress: toBytes(args.remoteSolAddress),
     };
 
     const bufferConfig: BufferConfig = {
@@ -297,6 +299,12 @@ async function assertInitialized(
     protocolConfig.blockIntervalRequirement
   ) {
     throw new Error("Protocol config blockIntervalRequirement mismatch!");
+  }
+  if (
+    toHex(new Uint8Array(bridgeData.data.protocolConfig.remoteSolAddress)) !==
+    toHex(new Uint8Array(protocolConfig.remoteSolAddress))
+  ) {
+    throw new Error("Protocol config remoteSolAddress mismatch!");
   }
 
   // Buffer config confirmation
