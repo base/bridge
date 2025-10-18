@@ -210,7 +210,7 @@ contract CrossChainERC20FactoryTest is CommonTest {
         string memory symbol,
         uint8 decimals
     ) public {
-        vm.assume(remoteToken != bytes32(0));
+        vm.assume(remoteToken != bytes32(0) && remoteToken != factory.SOL_PUBKEY());
 
         // Generate 2 random deployer addresses.
         address randomDeployer1 = makeAddr(string.concat("deployer1", vm.toString(remoteToken)));
