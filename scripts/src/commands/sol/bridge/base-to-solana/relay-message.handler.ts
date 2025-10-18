@@ -225,7 +225,7 @@ async function messageTransferAccounts(
 
   const remainingAccounts: Array<AccountMeta> =
     message.transfer.__kind === "Sol"
-      ? await messageTransferSolAccounts(rpc, message.transfer, solanaBridge)
+      ? await messageTransferSolAccounts(message.transfer, solanaBridge)
       : message.transfer.__kind === "Spl"
         ? await messageTransferSplAccounts(rpc, message.transfer, solanaBridge)
         : await messageTransferWrappedTokenAccounts(message.transfer);
@@ -250,28 +250,20 @@ type MessageTransferSol = Extract<
   { __kind: "Sol" }
 >;
 async function messageTransferSolAccounts(
-  rpc: Rpc,
   message: MessageTransferSol,
   solanaBridge: SolanaAddress
 ) {
   logger.info("SOL transfer detected");
 
-  const bridge = await fetchBridge(rpc, solanaBridge);
-  const remoteSolAddress = bridge.data.protocolConfig.remoteSolAddress;
-
   const { to, amount } = message.fields[0];
 
   logger.info(`SOL transfer:`);
-  logger.info(`  Remote token: 0x${toHex(remoteSolAddress as Uint8Array)}`);
   logger.info(`  To: ${to}`);
   logger.info(`  Amount: ${amount}`);
 
   const [solVaultPda] = await getProgramDerivedAddress({
     programAddress: solanaBridge,
-    seeds: [
-      Buffer.from(getIdlConstant("SOL_VAULT_SEED")),
-      Buffer.from(remoteSolAddress),
-    ],
+    seeds: [Buffer.from(getIdlConstant("SOL_VAULT_SEED"))],
   });
   logger.info(`SOL vault PDA: ${solVaultPda}`);
 

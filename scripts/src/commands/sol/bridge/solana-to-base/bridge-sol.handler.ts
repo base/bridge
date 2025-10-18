@@ -71,15 +71,9 @@ export async function handleBridgeSol(args: Args): Promise<void> {
 
     const bridge = await fetchBridge(rpc, bridgeAccountAddress);
 
-    const remoteSolAddress = bridge.data.protocolConfig.remoteSolAddress;
-    logger.info(`Remote SOL address: ${toHex(remoteSolAddress as Uint8Array)}`);
-
     const [solVaultAddress] = await getProgramDerivedAddress({
       programAddress: config.solana.bridgeProgram,
-      seeds: [
-        Buffer.from(getIdlConstant("SOL_VAULT_SEED")),
-        Buffer.from(remoteSolAddress),
-      ],
+      seeds: [Buffer.from(getIdlConstant("SOL_VAULT_SEED"))],
     });
     logger.info(`Sol Vault: ${solVaultAddress}`);
 
