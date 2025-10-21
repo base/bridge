@@ -20,6 +20,7 @@ import {
   monitorMessageExecution,
   buildPayForRelayInstruction,
   outgoingMessagePubkey,
+  solVaultPubkey,
 } from "@internal/sol";
 import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
@@ -71,10 +72,7 @@ export async function handleBridgeSol(args: Args): Promise<void> {
 
     const bridge = await fetchBridge(rpc, bridgeAccountAddress);
 
-    const [solVaultAddress] = await getProgramDerivedAddress({
-      programAddress: config.solana.bridgeProgram,
-      seeds: [Buffer.from(getIdlConstant("SOL_VAULT_SEED"))],
-    });
+    const solVaultAddress = await solVaultPubkey(config.solana.bridgeProgram);
     logger.info(`Sol Vault: ${solVaultAddress}`);
 
     // Calculate scaled amount (amount * 10^decimals)

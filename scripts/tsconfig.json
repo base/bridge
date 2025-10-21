@@ -29,7 +29,9 @@
     // Path mapping
     "baseUrl": ".",
     "paths": {
-      "@internal/*": ["src/internal/*"]
+      "@internal/*": ["src/internal/*"],
+      "@base/bridge": ["../clients/ts/src/index.ts"],
+      "@base/bridge/*": ["../clients/ts/src/*"]
     }
   }
 }

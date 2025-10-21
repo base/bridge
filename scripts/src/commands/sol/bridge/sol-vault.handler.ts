@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { isAddress as isEvmAddress, type Address as EvmAddress } from "viem";
 import {
   address as solanaAddress,
   isAddress as isSolanaAddress,
@@ -15,12 +14,6 @@ export const argsSchema = z.object({
       message: "Value must be a valid Solana address",
     })
     .transform((value) => solanaAddress(value)),
-  remoteToken: z
-    .string()
-    .refine((value) => isEvmAddress(value), {
-      message: "Invalid Base/Ethereum address format",
-    })
-    .transform((value) => value as EvmAddress),
 });
 
 type Args = z.infer<typeof argsSchema>;
@@ -30,12 +23,8 @@ export async function handleSolVault(args: Args): Promise<void> {
     logger.info("--- SOL Vault PDA Lookup ---");
 
     logger.info(`Bridge Program: ${args.bridgeProgram}`);
-    logger.info(`Remote token: ${args.remoteToken}`);
 
-    const vaultPubkey = await solVaultPubkey(
-      args.bridgeProgram,
-      args.remoteToken
-    );
+    const vaultPubkey = await solVaultPubkey(args.bridgeProgram);
 
     logger.success(`SOL Vault PDA: ${vaultPubkey}`);
   } catch (error) {

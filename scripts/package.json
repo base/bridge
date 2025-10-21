@@ -4,7 +4,8 @@
     "type": "module",
     "private": true,
     "scripts": {
-        "cli": "bun run src/bin.ts"
+        "cli": "bun run src/bin.ts",
+        "postinstall": "cd ../clients/ts && bun install && bun run build"
     },
     "devDependencies": {
         "@codama/nodes-from-anchor": "1.2.9",
@@ -20,8 +21,7 @@
         "@types/bun": "latest",
         "viem": "2.38.0",
         "zod": "4.1.12",
-        "@clack/prompts": "0.11.0",
-        "@base/bridge": "file:../clients/ts"
+        "@clack/prompts": "0.11.0"
     },
     "peerDependencies": {
         "typescript": "5.9.3"
