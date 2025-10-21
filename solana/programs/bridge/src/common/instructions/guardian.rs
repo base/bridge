@@ -10,9 +10,23 @@ pub fn transfer_guardian_handler(
     ctx: Context<SetBridgeConfigFromGuardian>,
     new_guardian: Pubkey,
 ) -> Result<()> {
+    let bridge = &mut ctx.accounts.bridge;
+    let guardian_account = &ctx.accounts.guardian;
+
+    require_keys_eq!(
+        bridge.guardian,
+        guardian_account.key(),
+        BridgeError::UnauthorizedConfigUpdate
+    );
+
     ctx.accounts.bridge.guardian = new_guardian;
 
     Ok(())
+}
+
+#[error_code]
+pub enum BridgeError {
+    UnauthorizedConfigUpdate,
 }
 
 #[cfg(test)]
