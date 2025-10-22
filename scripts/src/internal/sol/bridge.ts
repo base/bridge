@@ -2,7 +2,6 @@ import {
   getProgramDerivedAddress,
   type Address as SolanaAddress,
 } from "@solana/kit";
-import { toBytes, type Address as EvmAddress } from "viem";
 
 import { getIdlConstant } from "./bridge-idl.constants";
 
@@ -24,18 +23,10 @@ export async function outgoingMessagePubkey(
   return { salt: s, pubkey };
 }
 
-export async function solVaultPubkey(
-  bridgeProgram: SolanaAddress,
-  remoteToken: EvmAddress
-) {
-  const remoteTokenBytes = toBytes(remoteToken);
-
+export async function solVaultPubkey(bridgeProgram: SolanaAddress) {
   const [pubkey] = await getProgramDerivedAddress({
     programAddress: bridgeProgram,
-    seeds: [
-      Buffer.from(getIdlConstant("SOL_VAULT_SEED")),
-      Buffer.from(remoteTokenBytes),
-    ],
+    seeds: [Buffer.from(getIdlConstant("SOL_VAULT_SEED"))],
   });
 
   return pubkey;
