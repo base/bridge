@@ -99,9 +99,9 @@ export const CONFIGS = {
       evmKeychainKey: "0x7f7a481926dc754f5768691a17022c3fa548ed8b",
 
       // Programs
-      bridgeProgram: address("HSvNvzehozUpYhRBuCKq3Fq8udpRocTmGMUYXmCSiCCc"),
+      bridgeProgram: address("7c6mteAcTXaQ1MFBCrnuzoZVTTAEfZwa6wgy4bqX3KXC"),
       baseRelayerProgram: address(
-        "ExS1gcALmaA983oiVpvFSVohi1zCtAUTgsLj5xiFPPgL"
+        "56MBBEYAtQAdjT4e1NzHD8XaoyRSTvfgbSVVcEcHj51H"
       ),
 
       // SPLs
@@ -113,12 +113,12 @@ export const CONFIGS = {
       chain: baseSepolia,
 
       // Contracts
-      bridgeContract: "0xB2068ECCDb908902C76E3f965c1712a9cF64171E",
+      bridgeContract: "0x01824a90d32A69022DdAEcC6C5C14Ed08dB4EB9B",
       counterContract: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
 
       // ERC20s
       erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
-      wSol: "0xC5b9112382f3c87AFE8e1A28fa52452aF81085AD",
+      wSol: "0xCace0c896714DaF7098FFD8CC54aFCFe0338b4BC",
       wSpl: "0x955C7356776F9304feD38ed5AeC5699436C7C614",
     },
   },
