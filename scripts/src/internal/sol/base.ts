@@ -39,7 +39,7 @@ export async function relayMessageToBase(
 ) {
   logger.info("Relaying message to Base...");
   const config = CONFIGS[deployEnv];
-  const solRpc = createSolanaRpc(devnet(config.solana.rpcUrl));
+  const solRpc = createSolanaRpc(config.solana.rpcUrl);
 
   const outgoing = await fetchOutgoingMessage(solRpc, outgoingMessagePubkey);
 
@@ -104,7 +104,7 @@ export async function monitorMessageExecution(
   logger.info("Monitoring message execution...");
 
   const config = CONFIGS[deployEnv];
-  const solRpc = createSolanaRpc(devnet(config.solana.rpcUrl));
+  const solRpc = createSolanaRpc(config.solana.rpcUrl);
 
   const publicClient = createPublicClient({
     chain: config.base.chain,

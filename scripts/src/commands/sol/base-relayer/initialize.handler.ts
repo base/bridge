@@ -65,8 +65,7 @@ export async function handleInitialize(args: Args): Promise<void> {
   try {
     logger.info("--- Initialize base-relayer script ---");
 
-    const rpcUrl = devnet(args.rpcUrl);
-    logger.info(`RPC URL: ${rpcUrl}`);
+    logger.info(`RPC URL: ${args.rpcUrl}`);
     logger.info(`Program ID: ${args.programId}`);
 
     const payer = await resolvePayerKeypair(args.payerKp);
@@ -127,7 +126,7 @@ export async function handleInitialize(args: Args): Promise<void> {
     logger.success(`Signature: ${signature}`);
 
     await assertInitialized(
-      createSolanaRpc(rpcUrl),
+      createSolanaRpc(args.rpcUrl),
       cfgAddress,
       guardianAddress,
       eip1559Config,

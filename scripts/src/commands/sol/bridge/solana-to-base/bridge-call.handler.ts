@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   getProgramDerivedAddress,
   createSolanaRpc,
-  devnet,
   type Instruction,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
@@ -31,9 +30,9 @@ export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
       message:
-        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
+        "Deploy environment must be 'testnet-alpha', 'testnet-prod', or 'mainnet'",
     })
-    .default("testnet-alpha"),
+    .default("testnet-prod"),
   payerKp: z
     .union([z.literal("config"), z.string().brand<"payerKp">()])
     .default("config"),
@@ -66,9 +65,8 @@ export async function handleBridgeCall(args: Args): Promise<void> {
     logger.info("--- Bridge call script ---");
 
     const config = CONFIGS[args.deployEnv];
-    const rpcUrl = devnet(config.solana.rpcUrl);
-    const rpc = createSolanaRpc(rpcUrl);
-    logger.info(`RPC URL: ${rpcUrl}`);
+    const rpc = createSolanaRpc(config.solana.rpcUrl);
+    logger.info(`RPC URL: ${config.solana.rpcUrl}`);
 
     const payer = await resolvePayerKeypair(args.payerKp);
     logger.info(`Payer: ${payer.address}`);

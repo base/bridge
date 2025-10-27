@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   getBase58Encoder,
   getProgramDerivedAddress,
-  devnet,
   address,
   createSolanaRpc,
   type Account,
@@ -40,9 +39,9 @@ export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
       message:
-        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
+        "Deploy environment must be 'testnet-alpha', 'testnet-prod', or 'mainnet'",
     })
-    .default("testnet-alpha"),
+    .default("testnet-prod"),
   mint: z.union([z.literal("constant"), z.string().brand<"solanaAddress">()]),
   remoteToken: z.union([
     z.literal("constant"),
@@ -83,9 +82,8 @@ export async function handleBridgeSpl(args: Args): Promise<void> {
     logger.info("--- Bridge SPL script ---");
 
     const config = CONFIGS[args.deployEnv];
-    const rpcUrl = devnet(config.solana.rpcUrl);
-    const rpc = createSolanaRpc(rpcUrl);
-    logger.info(`RPC URL: ${rpcUrl}`);
+    const rpc = createSolanaRpc(config.solana.rpcUrl);
+    logger.info(`RPC URL: ${config.solana.rpcUrl}`);
 
     const payer = await resolvePayerKeypair(args.payerKp);
     logger.info(`Payer: ${payer.address}`);
