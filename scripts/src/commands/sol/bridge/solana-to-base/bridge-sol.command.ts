@@ -1,11 +1,11 @@
 import { Command } from "commander";
 
 import {
-  getInteractiveSelect,
   getInteractiveConfirm,
   getOrPromptEvmAddress,
   getOrPromptDecimal,
   getOrPromptFilePath,
+  getOrPromptDeployEnv,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleBridgeSol } from "./bridge-sol.handler";
@@ -24,14 +24,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    opts.deployEnv = await getInteractiveSelect({
-      message: "Select target deploy environment:",
-      options: [
-        { value: "testnet-alpha", label: "Testnet Alpha" },
-        { value: "testnet-prod", label: "Testnet Prod" },
-      ],
-      initialValue: "testnet-alpha",
-    });
+    opts.deployEnv = await getOrPromptDeployEnv();
   }
 
   opts.to = await getOrPromptEvmAddress(
@@ -65,7 +58,7 @@ export const bridgeSolCommand = new Command("bridge-sol")
   .description("Bridge SOL from Solana to Base")
   .option(
     "--deploy-env <deployEnv>",
-    "Target deploy environment (testnet-alpha | testnet-prod)"
+    "Target deploy environment (testnet-alpha | testnet-prod | mainnet)"
   )
   .option("--to <address>", "Recipient address on Base")
   .option("--amount <amount>", "Amount to bridge in SOL")

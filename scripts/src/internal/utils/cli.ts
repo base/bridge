@@ -22,6 +22,7 @@ import { isAddress as isEvmAddress, isHash } from "viem";
 import { z } from "zod";
 
 import { logger } from "@internal/logger";
+import { DEPLOY_ENVS, type DeployEnv } from "@internal/constants";
 
 export const bigintSchema = z
   .string()
@@ -365,4 +366,19 @@ async function getOrPromptWithZod<T>(
   }
 
   return getInteractiveInput(label, placeholder, validate);
+}
+
+/**
+ * Prompts the user to select a deploy environment
+ */
+export async function getOrPromptDeployEnv(): Promise<DeployEnv> {
+  return await getInteractiveSelect({
+    message: "Select target deploy environment:",
+    options: [
+      { value: "testnet-alpha", label: "Testnet Alpha" },
+      { value: "testnet-prod", label: "Testnet Prod" },
+      { value: "mainnet", label: "Mainnet" },
+    ],
+    initialValue: "testnet-prod",
+  });
 }

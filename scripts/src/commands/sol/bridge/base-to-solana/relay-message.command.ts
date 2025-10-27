@@ -1,9 +1,9 @@
 import { Command } from "commander";
 
 import {
-  getInteractiveSelect,
   getOrPromptHash,
   getOrPromptFilePath,
+  getOrPromptDeployEnv,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleRelayMessage } from "./relay-message.handler";
@@ -20,14 +20,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    opts.deployEnv = await getInteractiveSelect({
-      message: "Select target deploy environment:",
-      options: [
-        { value: "testnet-alpha", label: "Testnet Alpha" },
-        { value: "testnet-prod", label: "Testnet Prod" },
-      ],
-      initialValue: "testnet-alpha",
-    });
+    opts.deployEnv = await getOrPromptDeployEnv();
   }
 
   opts.messageHash = await getOrPromptHash(
@@ -48,7 +41,7 @@ export const relayMessageCommand = new Command("relay-message")
   .description("Relay a message from Base to Solana")
   .option(
     "--deploy-env <deployEnv>",
-    "Target deploy environment (testnet-alpha | testnet-prod)"
+    "Target deploy environment (testnet-alpha | testnet-prod | mainnet)"
   )
   .option("--message-hash <hash>", "Message hash to relay (0x...)")
   .option(

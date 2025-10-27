@@ -1,10 +1,14 @@
 import { address, type Address as SolanaAddress } from "@solana/kit";
 import type { Chain, Address as EvmAddress } from "viem";
-import { baseSepolia } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 
 export const ETH = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
 
-export const DEPLOY_ENVS = ["testnet-alpha", "testnet-prod"] as const;
+export const DEPLOY_ENVS = [
+  "testnet-alpha",
+  "testnet-prod",
+  "mainnet",
+] as const;
 
 export type DeployEnv = (typeof DEPLOY_ENVS)[number];
 
@@ -120,6 +124,42 @@ export const CONFIGS = {
       erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
       wSol: "0xCace0c896714DaF7098FFD8CC54aFCFe0338b4BC",
       wSpl: "0x955C7356776F9304feD38ed5AeC5699436C7C614",
+    },
+  },
+  mainnet: {
+    solana: {
+      cluster: "mainnet",
+      rpcUrl: "https://api.mainnet-beta.solana.com",
+
+      // Keypairs
+      deployerKpPath: "keypairs/deployer.mainnet.json",
+      bridgeKpPath: "keypairs/bridge.mainnet.json",
+      baseRelayerKpPath: "keypairs/base-relayer.mainnet.json",
+
+      // Base oracle signers
+      evmLocalKey: "0x",
+      evmKeychainKey: "0x",
+
+      // Programs
+      bridgeProgram: address(""),
+      baseRelayerProgram: address(""),
+
+      // SPLs
+      spl: address(""),
+      wEth: address(""),
+      wErc20: address(""),
+    },
+    base: {
+      chain: base,
+
+      // Contracts
+      bridgeContract: "0x",
+      counterContract: "0x",
+
+      // ERC20s
+      erc20: "0x",
+      wSol: "0x",
+      wSpl: "0x",
     },
   },
 } as const satisfies Record<DeployEnv, Config>;
