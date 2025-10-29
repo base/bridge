@@ -1,4 +1,8 @@
-import { address, type Address as SolanaAddress } from "@solana/kit";
+import {
+  address,
+  type Address,
+  type Address as SolanaAddress,
+} from "@solana/kit";
 import type { Chain, Address as EvmAddress } from "viem";
 import { base, baseSepolia } from "viem/chains";
 
@@ -141,13 +145,13 @@ export const CONFIGS = {
       evmKeychainKey: "0x",
 
       // Programs
-      bridgeProgram: address(""),
-      baseRelayerProgram: address(""),
+      bridgeProgram: "" as Address,
+      baseRelayerProgram: "" as Address,
 
       // SPLs
-      spl: address(""),
-      wEth: address(""),
-      wErc20: address(""),
+      spl: "" as Address,
+      wEth: "" as Address,
+      wErc20: "" as Address,
     },
     base: {
       chain: base,
