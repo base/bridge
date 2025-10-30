@@ -215,7 +215,8 @@ contract MessageStorageLibTest is Test {
         // Arrange & Act
         for (uint256 i = 1; i <= 3; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("leaf", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("leaf", i)))
             });
         }
 
@@ -229,7 +230,8 @@ contract MessageStorageLibTest is Test {
         // Arrange & Act
         for (uint256 i = 1; i <= 4; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("leaf", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("leaf", i)))
             });
         }
 
@@ -243,7 +245,8 @@ contract MessageStorageLibTest is Test {
         // Arrange & Act
         for (uint256 i = 1; i <= 8; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("leaf", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("leaf", i)))
             });
         }
 
@@ -261,7 +264,8 @@ contract MessageStorageLibTest is Test {
         // Arrange
         for (uint256 i = 1; i <= 3; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("data", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("data", i)))
             });
         }
 
@@ -350,7 +354,8 @@ contract MessageStorageLibTest is Test {
         // Act & Assert
         for (uint256 i = 0; i < numLeaves; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("data", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("data", i)))
             });
             bytes32 currentRoot = _getRoot();
 
@@ -375,7 +380,8 @@ contract MessageStorageLibTest is Test {
         // Act & Assert
         for (uint256 i = 0; i < 5; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("data", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("data", i)))
             });
 
             uint256 currentNodeCount = _getNodeCount();
@@ -450,7 +456,8 @@ contract MessageStorageLibTest is Test {
         // Act
         for (uint256 i = 0; i < messageCount; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("message", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("message", i)))
             });
         }
 
@@ -466,7 +473,8 @@ contract MessageStorageLibTest is Test {
 
         for (uint256 i = 0; i < numLeaves; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("leaf", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("leaf", i)))
             });
         }
 
@@ -527,7 +535,8 @@ contract MessageStorageLibTest is Test {
         // Arrange
         for (uint256 i = 0; i < 4; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("leaf", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("leaf", i)))
             });
         }
 
@@ -554,7 +563,8 @@ contract MessageStorageLibTest is Test {
         // Add 5 leaves to create multiple peaks
         for (uint256 i = 0; i < 5; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("leaf", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("leaf", i)))
             });
         }
 
@@ -570,7 +580,8 @@ contract MessageStorageLibTest is Test {
         // Add 4 leaves to create a complete binary tree
         for (uint256 i = 0; i < 4; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("leaf", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("leaf", i)))
             });
         }
 
@@ -587,7 +598,8 @@ contract MessageStorageLibTest is Test {
         // Add 7 leaves to create multiple mountains of different heights
         for (uint256 i = 0; i < 7; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("mountain", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("mountain", i)))
             });
         }
 
@@ -605,7 +617,8 @@ contract MessageStorageLibTest is Test {
         // Create MMR with 6 leaves to have multiple peaks
         for (uint256 i = 0; i < 6; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("peak", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("peak", i)))
             });
         }
 
@@ -646,7 +659,8 @@ contract MessageStorageLibTest is Test {
         // Add leaves to create multiple peaks
         for (uint256 i = 0; i < 3; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("peak_test", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("peak_test", i)))
             });
         }
 
@@ -661,7 +675,8 @@ contract MessageStorageLibTest is Test {
         // Create MMR with 15 leaves (complex structure with multiple mountains)
         for (uint256 i = 0; i < 15; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("complex", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("complex", i)))
             });
         }
 
@@ -722,7 +737,8 @@ contract MessageStorageLibTest is Test {
         // Act & Assert
         for (uint256 i = 0; i < iterations; i++) {
             MessageStorageLib.sendMessage({
-                sender: address(this), data: _createTestData(string(abi.encodePacked("iteration", i)))
+                sender: address(this),
+                data: _createTestData(string(abi.encodePacked("iteration", i)))
             });
             assertEq(_getLeafCount(), i + 1, "Leaf count should increment correctly");
         }

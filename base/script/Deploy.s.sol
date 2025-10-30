@@ -31,7 +31,10 @@ contract DeployScript is DevOps {
 
         address bridgeValidator = _deployBridgeValidator({cfg: cfg, bridge: precomputedBridgeAddress});
         address bridge = _deployBridge({
-            cfg: cfg, twinBeacon: twinBeacon, crossChainErc20Factory: factory, bridgeValidator: bridgeValidator
+            cfg: cfg,
+            twinBeacon: twinBeacon,
+            crossChainErc20Factory: factory,
+            bridgeValidator: bridgeValidator
         });
         address relayerOrchestrator =
             _deployRelayerOrchestrator({cfg: cfg, bridge: bridge, bridgeValidator: bridgeValidator});
@@ -82,15 +85,13 @@ contract DeployScript is DevOps {
         address bridgeValidatorImpl =
             address(new BridgeValidator({bridgeAddress: bridge, partnerValidators: cfg.partnerValidators}));
 
-        return ERC1967Factory(cfg.erc1967Factory)
-            .deployAndCall({
-                implementation: bridgeValidatorImpl,
-                admin: cfg.initialOwner,
-                data: abi.encodeCall(
-                    BridgeValidator.initialize,
-                    (cfg.baseValidators, cfg.baseSignatureThreshold, cfg.partnerValidatorThreshold)
-                )
-            });
+        return ERC1967Factory(cfg.erc1967Factory).deployAndCall({
+            implementation: bridgeValidatorImpl,
+            admin: cfg.initialOwner,
+            data: abi.encodeCall(
+                BridgeValidator.initialize, (cfg.baseValidators, cfg.baseSignatureThreshold, cfg.partnerValidatorThreshold)
+            )
+        });
     }
 
     function _deployBridge(
@@ -106,13 +107,12 @@ contract DeployScript is DevOps {
             bridgeValidator: bridgeValidator
         });
 
-        return ERC1967Factory(cfg.erc1967Factory)
-            .deployDeterministicAndCall({
-                implementation: address(bridgeImpl),
-                admin: cfg.initialOwner,
-                salt: _salt(salt),
-                data: abi.encodeCall(Bridge.initialize, (cfg.initialOwner, cfg.guardians))
-            });
+        return ERC1967Factory(cfg.erc1967Factory).deployDeterministicAndCall({
+            implementation: address(bridgeImpl),
+            admin: cfg.initialOwner,
+            salt: _salt(salt),
+            data: abi.encodeCall(Bridge.initialize, (cfg.initialOwner, cfg.guardians))
+        });
     }
 
     function _deployRelayerOrchestrator(HelperConfig.NetworkConfig memory cfg, address bridge, address bridgeValidator)
@@ -122,9 +122,10 @@ contract DeployScript is DevOps {
         address relayerOrchestratorImpl =
             address(new RelayerOrchestrator({bridge: bridge, bridgeValidator: bridgeValidator}));
 
-        return
-            ERC1967Factory(cfg.erc1967Factory)
-                .deploy({implementation: relayerOrchestratorImpl, admin: cfg.initialOwner});
+        return ERC1967Factory(cfg.erc1967Factory).deploy({
+            implementation: relayerOrchestratorImpl,
+            admin: cfg.initialOwner
+        });
     }
 
     function _salt(bytes12 salt_) private view returns (bytes32) {

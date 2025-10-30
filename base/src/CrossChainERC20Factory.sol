@@ -98,8 +98,12 @@ contract CrossChainERC20Factory {
         isCrossChainErc20[localToken] = true;
 
         // Initialize the deployed proxy with the token parameters
-        CrossChainERC20(localToken)
-            .initialize({remoteToken_: remoteToken, name_: name, symbol_: symbol, decimals_: decimals});
+        CrossChainERC20(localToken).initialize({
+            remoteToken_: remoteToken,
+            name_: name,
+            symbol_: symbol,
+            decimals_: decimals
+        });
 
         emit CrossChainERC20Created({localToken: localToken, remoteToken: remoteToken, deployer: msg.sender});
     }

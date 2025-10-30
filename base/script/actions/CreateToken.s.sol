@@ -25,7 +25,10 @@ contract CreateTokenScript is DevOps {
     function run() public {
         vm.startBroadcast();
         address token = crossChainErc20Factory.deploy({
-            remoteToken: REMOTE_TOKEN, name: tokenName, symbol: tokenSymbol, decimals: 9
+            remoteToken: REMOTE_TOKEN,
+            name: tokenName,
+            symbol: tokenSymbol,
+            decimals: 9
         });
         console.log("Deployed Token at: %s", token);
         vm.stopBroadcast();
