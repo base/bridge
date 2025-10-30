@@ -17,9 +17,9 @@ export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
       message:
-        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
+        "Deploy environment must be 'testnet-alpha', 'testnet-prod', or 'mainnet'",
     })
-    .default("testnet-alpha"),
+    .default("testnet-prod"),
   bridgeProgramKp: programKeypairSchema.default("protocol"),
   baseRelayerProgramKp: programKeypairSchema.default("protocol"),
 });

@@ -1,10 +1,10 @@
 import { Command } from "commander";
 
 import {
-  getInteractiveSelect,
   getInteractiveConfirm,
   getOrPromptHash,
   getOrPromptFilePath,
+  getOrPromptDeployEnv,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { logger } from "@internal/logger";
@@ -24,14 +24,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    opts.deployEnv = await getInteractiveSelect({
-      message: "Select target deploy environment:",
-      options: [
-        { value: "testnet-alpha", label: "Testnet Alpha" },
-        { value: "testnet-prod", label: "Testnet Prod" },
-      ],
-      initialValue: "testnet-alpha",
-    });
+    opts.deployEnv = await getOrPromptDeployEnv();
   }
 
   opts.transactionHash = await getOrPromptHash(
@@ -60,7 +53,7 @@ export const proveMessageCommand = new Command("prove-message")
   .description("Prove a message from Base transaction on Solana")
   .option(
     "--deploy-env <deployEnv>",
-    "Target deploy environment (testnet-alpha | testnet-prod)"
+    "Target deploy environment (testnet-alpha | testnet-prod | mainnet)"
   )
   .option("--transaction-hash <hash>", "Base transaction hash to prove (0x...)")
   .option(

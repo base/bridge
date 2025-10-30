@@ -1,12 +1,12 @@
 import { Command } from "commander";
 
 import {
-  getInteractiveSelect,
   getInteractiveConfirm,
   getOrPromptInteger,
   getOrPromptString,
   getOrPromptEvmAddress,
   getOrPromptFilePath,
+  getOrPromptDeployEnv,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleWrapToken } from "./wrap-token.handler";
@@ -28,14 +28,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    opts.deployEnv = await getInteractiveSelect({
-      message: "Select target deploy environment:",
-      options: [
-        { value: "testnet-alpha", label: "Testnet Alpha" },
-        { value: "testnet-prod", label: "Testnet Prod" },
-      ],
-      initialValue: "testnet-alpha",
-    });
+    opts.deployEnv = await getOrPromptDeployEnv();
   }
 
   opts.decimals = await getOrPromptInteger(
@@ -103,7 +96,7 @@ export const wrapTokenCommand = new Command("wrap-token")
   .description("Wrap an ERC20 token from Base to Solana")
   .option(
     "--deploy-env <deployEnv>",
-    "Target deploy environment (testnet-alpha | testnet-prod)"
+    "Target deploy environment (testnet-alpha | testnet-prod | mainnet)"
   )
   .option("--decimals <decimals>", "Token decimals")
   .option("--name <name>", "Token name")

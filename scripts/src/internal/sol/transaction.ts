@@ -33,9 +33,7 @@ export async function buildAndSendTransaction(
 
   const rpcHostName = rpcUrl.replace("https://", "");
   const rpc = createSolanaRpc(`https://${rpcHostName}`);
-  const rpcSubscriptions = createSolanaRpcSubscriptions(
-    devnet(`wss://${rpcHostName}`)
-  );
+  const rpcSubscriptions = createSolanaRpcSubscriptions(`wss://${rpcHostName}`);
 
   const sendAndConfirmTx = sendAndConfirmTransactionFactory({
     rpc,

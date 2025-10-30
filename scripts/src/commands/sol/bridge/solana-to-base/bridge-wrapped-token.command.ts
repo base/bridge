@@ -7,6 +7,7 @@ import {
   getOrPromptSolanaAddress,
   getOrPromptDecimal,
   getOrPromptFilePath,
+  getOrPromptDeployEnv,
   validateAndExecute,
 } from "@internal/utils/cli";
 import {
@@ -30,14 +31,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    opts.deployEnv = await getInteractiveSelect({
-      message: "Select target deploy environment:",
-      options: [
-        { value: "testnet-alpha", label: "Testnet Alpha" },
-        { value: "testnet-prod", label: "Testnet Prod" },
-      ],
-      initialValue: "testnet-alpha",
-    });
+    opts.deployEnv = await getOrPromptDeployEnv();
   }
 
   if (!opts.mint) {
@@ -113,7 +107,7 @@ export const bridgeWrappedTokenCommand = new Command("bridge-wrapped-token")
   .description("Bridge wrapped ERC20 tokens from Solana to Base")
   .option(
     "--deploy-env <deployEnv>",
-    "Target deploy environment (testnet-alpha | testnet-prod)"
+    "Target deploy environment (testnet-alpha | testnet-prod | mainnet)"
   )
   .option(
     "--mint <address>",

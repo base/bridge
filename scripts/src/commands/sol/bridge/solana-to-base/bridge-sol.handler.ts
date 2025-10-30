@@ -1,7 +1,6 @@
 import { z } from "zod";
 import {
   getProgramDerivedAddress,
-  devnet,
   type Instruction,
   createSolanaRpc,
 } from "@solana/kit";
@@ -28,9 +27,9 @@ export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
       message:
-        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
+        "Deploy environment must be 'testnet-alpha', 'testnet-prod', or 'mainnet'",
     })
-    .default("testnet-alpha"),
+    .default("testnet-prod"),
   to: z
     .string()
     .refine((value) => isEvmAddress(value), {
@@ -57,9 +56,8 @@ export async function handleBridgeSol(args: Args): Promise<void> {
     logger.info("--- Bridge SOL script ---");
 
     const config = CONFIGS[args.deployEnv];
-    const rpcUrl = devnet(config.solana.rpcUrl);
-    const rpc = createSolanaRpc(rpcUrl);
-    logger.info(`RPC URL: ${rpcUrl}`);
+    const rpc = createSolanaRpc(config.solana.rpcUrl);
+    logger.info(`RPC URL: ${config.solana.rpcUrl}`);
 
     const payer = await resolvePayerKeypair(args.payerKp);
     logger.info(`Payer: ${payer.address}`);
