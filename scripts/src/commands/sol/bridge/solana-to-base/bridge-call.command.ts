@@ -7,6 +7,7 @@ import {
   getOrPromptHex,
   getOrPromptEvmAddress,
   getOrPromptFilePath,
+  getOrPromptDeployEnv,
   validateAndExecute,
 } from "@internal/utils/cli";
 import { argsSchema, handleBridgeCall } from "./bridge-call.handler";
@@ -26,14 +27,7 @@ async function collectInteractiveOptions(
   let opts = { ...options };
 
   if (!opts.deployEnv) {
-    opts.deployEnv = await getInteractiveSelect({
-      message: "Select target deploy environment:",
-      options: [
-        { value: "testnet-alpha", label: "Testnet Alpha" },
-        { value: "testnet-prod", label: "Testnet Prod" },
-      ],
-      initialValue: "testnet-alpha",
-    });
+    opts.deployEnv = await getOrPromptDeployEnv();
   }
 
   opts.payerKp = await getOrPromptFilePath(
@@ -103,7 +97,7 @@ export const bridgeCallCommand = new Command("bridge-call")
   .description("Execute a bridge call from Solana to Base")
   .option(
     "--deploy-env <deployEnv>",
-    "Target deploy environment (testnet-alpha | testnet-prod)"
+    "Target deploy environment (testnet-alpha | testnet-prod | mainnet)"
   )
   .option(
     "--payer-kp <path>",

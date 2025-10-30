@@ -22,9 +22,9 @@ export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
       message:
-        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
+        "Deploy environment must be 'testnet-alpha', 'testnet-prod', or 'mainnet'",
     })
-    .default("testnet-alpha"),
+    .default("testnet-prod"),
   mint: z.string().nonempty("Mint address cannot be empty"),
   to: z
     .union([z.literal("config"), z.string().brand<"to">()])
@@ -55,9 +55,8 @@ export async function handleMint(args: Args): Promise<void> {
 
     const config = CONFIGS[args.deployEnv];
 
-    const rpcUrl = devnet(config.solana.rpcUrl);
-    const rpc = createSolanaRpc(rpcUrl);
-    logger.info(`RPC URL: ${rpcUrl}`);
+    const rpc = createSolanaRpc(config.solana.rpcUrl);
+    logger.info(`RPC URL: ${config.solana.rpcUrl}`);
 
     // Resolve mint address
     const mintAddress = address(args.mint);

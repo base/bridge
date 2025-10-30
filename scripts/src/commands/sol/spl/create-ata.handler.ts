@@ -20,9 +20,9 @@ export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
       message:
-        "Deploy environment must be either 'testnet-alpha' or 'testnet-prod'",
+        "Deploy environment must be 'testnet-alpha', 'testnet-prod', or 'mainnet'",
     })
-    .default("testnet-alpha"),
+    .default("testnet-prod"),
   mint: z.string().nonempty("Mint address cannot be empty"),
   owner: z
     .union([z.literal("payer"), z.string().brand<"owner">()])
@@ -41,9 +41,8 @@ export async function handleCreateAta(args: Args): Promise<void> {
 
     const config = CONFIGS[args.deployEnv];
 
-    const rpcUrl = devnet(config.solana.rpcUrl);
-    const rpc = createSolanaRpc(rpcUrl);
-    logger.info(`RPC URL: ${rpcUrl}`);
+    const rpc = createSolanaRpc(config.solana.rpcUrl);
+    logger.info(`RPC URL: ${config.solana.rpcUrl}`);
 
     // Resolve payer keypair
     const payer = await resolvePayerKeypair(args.payerKp);

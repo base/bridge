@@ -108,8 +108,7 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
   try {
     logger.info("--- Initialize bridge script ---");
 
-    const rpcUrl = devnet(args.rpcUrl);
-    logger.info(`RPC URL: ${rpcUrl}`);
+    logger.info(`RPC URL: ${args.rpcUrl}`);
     logger.info(`Program ID: ${args.programId}`);
 
     // Resolve payer keypair
@@ -215,7 +214,7 @@ export async function handleInitialize(args: InitializeArgs): Promise<void> {
     logger.success(`Signature: ${signature}`);
 
     await assertInitialized(
-      createSolanaRpc(rpcUrl),
+      createSolanaRpc(args.rpcUrl),
       bridgeAccountAddress,
       guardianAddress,
       eip1559Config,
