@@ -317,6 +317,59 @@ contract TokenLibTest is CommonTest {
         bridge.bridgeToken(transfer, emptyIxs);
     }
 
+    function test_initializeTransfer_revertsOnCumulativeU64Overflow() public {
+        // Step 1: Create a local ERC20 token with 18 decimals
+        MockERC20 localToken = new MockERC20("Test Token", "TEST", 18);
+
+        // Give alice a large balance
+        localToken.mint(alice, 10000e18);
+
+        // Step 2: Register a remote token with a scalar exponent of 2
+        // This means: localAmount = remoteAmount * 10^2 (scalar = 100)
+        // Or: remoteAmount = localAmount / 100
+        Pubkey remoteToken = Pubkey.wrap(0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef);
+        uint8 scalarExponent = 2;
+
+        _registerTokenPair(address(localToken), remoteToken, scalarExponent, 0);
+
+        // Verify the scalar is correctly set
+        uint256 expectedScalar = 10 ** scalarExponent; // 100
+        assertEq(bridge.scalars(address(localToken), remoteToken), expectedScalar, "Scalar should be 100");
+
+        // Step 3: Calculate the remote amount for each bridge operation
+        // When we bridge 1000 tokens (1000 * 10^18 in smallest units):
+        // remoteAmount = localAmount / scalar = (1000 * 10^18) / 100 = 10^19
+        uint256 bridgeAmount = 1000e18;
+        uint256 expectedRemoteAmountPerBridge = bridgeAmount / expectedScalar;
+
+        // Step 4: Bridge 1000 units twice
+        Transfer memory transfer = Transfer({
+            localToken: address(localToken),
+            remoteToken: remoteToken,
+            to: bytes32(uint256(uint160(alice))),
+            remoteAmount: uint64(expectedRemoteAmountPerBridge) // This will be 10^19
+        });
+
+        Ix[] memory emptyIxs;
+
+        // First bridge - should succeed
+        vm.startPrank(alice);
+        localToken.approve(address(bridge), bridgeAmount);
+        bridge.bridgeToken(transfer, emptyIxs);
+        vm.stopPrank();
+
+        uint256 depositsAfterFirst = bridge.deposits(address(localToken), remoteToken);
+        assertEq(depositsAfterFirst, bridgeAmount, "Deposits after first bridge should equal bridge amount");
+
+        // Second bridge - should revert with CumulativeDepositExceedsU64
+        // because total would be 2 * 10^19 which exceeds uint64.max (18,446,744,073.709551615)
+        vm.startPrank(alice);
+        localToken.approve(address(bridge), bridgeAmount);
+        vm.expectRevert(TokenLib.CumulativeDepositExceedsU64.selector);
+        bridge.bridgeToken(transfer, emptyIxs);
+        vm.stopPrank();
+    }
+
     //////////////////////////////////////////////////////////////
     ///               Finalize Transfer Tests                  ///
     //////////////////////////////////////////////////////////////
