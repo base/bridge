@@ -58,6 +58,9 @@ library TokenLib {
     /// @notice Thrown when the transfer amount is zero.
     error ZeroAmount();
 
+    /// @notice Thrown when cumulative deposits exceed uint64 max when scaled to remote amount.
+    error CumulativeDepositExceedsU64();
+
     //////////////////////////////////////////////////////////////
     ///                       Events                           ///
     //////////////////////////////////////////////////////////////
@@ -137,8 +140,15 @@ library TokenLib {
             localAmount = transfer.remoteAmount * scalar;
             require(msg.value == localAmount, InvalidMsgValue());
 
+            _addToDeposits({
+                $: $,
+                localToken: transfer.localToken,
+                remoteToken: transfer.remoteToken,
+                scalar: scalar,
+                additionalLocalAmount: localAmount
+            });
+
             tokenType = SolanaTokenType.WrappedToken;
-            $.deposits[transfer.localToken][transfer.remoteToken] += localAmount;
         } else {
             // Prevent sending ETH when bridging ERC20 tokens
             require(msg.value == 0, InvalidMsgValue());
@@ -187,7 +197,13 @@ library TokenLib {
                 // IMPORTANT: Update the transfer struct IN MEMORY to reflect the remote amount to use for bridging.
                 transfer.remoteAmount = SafeCastLib.toUint64(receivedRemoteAmount);
 
-                $.deposits[transfer.localToken][transfer.remoteToken] += localAmount;
+                _addToDeposits({
+                    $: $,
+                    localToken: transfer.localToken,
+                    remoteToken: transfer.remoteToken,
+                    scalar: scalar,
+                    additionalLocalAmount: localAmount
+                });
 
                 tokenType = SolanaTokenType.WrappedToken;
             }
@@ -253,5 +269,28 @@ library TokenLib {
     function registerRemoteToken(address localToken, Pubkey remoteToken, uint8 scalarExponent) internal {
         TokenLibStorage storage $ = getTokenLibStorage();
         $.scalars[localToken][remoteToken] = 10 ** scalarExponent;
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                       Private Functions                ///
+    //////////////////////////////////////////////////////////////
+
+    /// @notice Validates and updates cumulative deposits, ensuring they don't exceed uint64 max when scaled.
+    ///
+    /// @param $ Storage reference to the TokenLibStorage struct.
+    /// @param localToken Address of the local token.
+    /// @param remoteToken Pubkey of the remote token.
+    /// @param scalar Conversion scalar for the token pair.
+    /// @param additionalLocalAmount Amount to add to deposits (in local units).
+    function _addToDeposits(
+        TokenLibStorage storage $,
+        address localToken,
+        Pubkey remoteToken,
+        uint256 scalar,
+        uint256 additionalLocalAmount
+    ) private {
+        uint256 newDeposits = $.deposits[localToken][remoteToken] + additionalLocalAmount;
+        require(newDeposits / scalar <= type(uint64).max, CumulativeDepositExceedsU64());
+        $.deposits[localToken][remoteToken] = newDeposits;
     }
 }
