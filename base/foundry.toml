@@ -5,6 +5,9 @@ libs = ["lib"]
 fs_permissions = [{ access = "read-write", path = "./" }]
 extra_output_files = ['abi']
 optimizer = true
+optimizer_runs = 999999
+solc_version = "0.8.28"
+via-ir = false
 remappings = ["forge-std/=lib/forge-std/src/", "solady/=lib/solady/src/"]
 gas_limit = "18446744073709551615"
 
