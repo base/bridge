@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { address, devnet, createSolanaRpc, type Account } from "@solana/kit";
+import { address, createSolanaRpc, type Account } from "@solana/kit";
 import {
   getMintToInstruction,
   fetchMaybeMint,

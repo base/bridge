@@ -1,7 +1,6 @@
 import { sleep } from "bun";
 import {
   createSolanaRpc,
-  devnet,
   getBase58Codec,
   getBase58Encoder,
   type Address as SolAddress,

@@ -4,7 +4,6 @@ import {
   getProgramDerivedAddress,
   getU64Encoder,
   createSolanaRpc,
-  devnet,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
 import {
@@ -17,10 +16,7 @@ import {
 import { baseSepolia } from "viem/chains";
 import { decodeEventLog } from "viem/utils";
 
-import {
-  fetchBridge,
-  getProveMessageInstruction,
-} from "@base/bridge/bridge";
+import { fetchBridge, getProveMessageInstruction } from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
 import {
@@ -171,7 +167,7 @@ async function generateProof(
           topics: log.topics,
         });
 
-        return decodedLog.eventName === "MessageRegistered"
+        return decodedLog.eventName === "MessageInitiated"
           ? {
               messageHash: decodedLog.args.messageHash,
               mmrRoot: decodedLog.args.mmrRoot,

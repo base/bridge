@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { address, createSolanaRpc, devnet } from "@solana/kit";
+import { address, createSolanaRpc } from "@solana/kit";
 import {
   fetchMaybeToken,
   getCreateAssociatedTokenIdempotentInstruction,

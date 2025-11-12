@@ -8,6 +8,7 @@ import {
   getOrPromptFilePath,
   getOrPromptDeployEnv,
   validateAndExecute,
+  getInteractiveSelect,
 } from "@internal/utils/cli";
 import { argsSchema, handleWrapToken } from "./wrap-token.handler";
 

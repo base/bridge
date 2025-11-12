@@ -1,7 +1,6 @@
 import { z } from "zod";
 import {
   createSolanaRpc,
-  devnet,
   getProgramDerivedAddress,
   type AccountMeta,
   type Address as SolanaAddress,
@@ -14,7 +13,6 @@ import { TOKEN_2022_PROGRAM_ADDRESS } from "@solana-program/token-2022";
 import { toBytes, toHex } from "viem";
 
 import {
-  fetchBridge,
   fetchIncomingMessage,
   getRelayMessageInstruction,
   type BridgeBaseToSolanaStateIncomingMessageMessage,

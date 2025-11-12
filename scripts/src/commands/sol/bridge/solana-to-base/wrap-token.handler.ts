@@ -3,7 +3,6 @@ import {
   getProgramDerivedAddress,
   getU8Codec,
   createSolanaRpc,
-  devnet,
   type Instruction,
   getU64Encoder,
   Endian,

@@ -1,9 +1,7 @@
 import { z } from "zod";
 import {
   getProgramDerivedAddress,
-  devnet,
   type Address as SolanaAddress,
-  type KeyPairSigner,
   createSolanaRpc,
   address as solanaAddress,
 } from "@solana/kit";

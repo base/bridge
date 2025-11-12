@@ -8,6 +8,7 @@ import {
   getOrPromptFilePath,
   getOrPromptDeployEnv,
   validateAndExecute,
+  getInteractiveSelect,
 } from "@internal/utils/cli";
 import { argsSchema, handleBridgeSpl } from "./bridge-spl.handler";
 
