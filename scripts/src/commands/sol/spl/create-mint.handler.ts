@@ -4,7 +4,6 @@ import {
   generateKeyPair,
   address,
   createSolanaRpc,
-  devnet,
 } from "@solana/kit";
 import { getCreateAccountInstruction } from "@solana-program/system";
 import {

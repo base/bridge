@@ -5,7 +5,7 @@ import {
   createSolanaRpc,
 } from "@solana/kit";
 import { SYSTEM_PROGRAM_ADDRESS } from "@solana-program/system";
-import { toBytes, isAddress as isEvmAddress, toHex } from "viem";
+import { toBytes, isAddress as isEvmAddress } from "viem";
 
 import { fetchBridge, getBridgeSolInstruction } from "@base/bridge/bridge";
 

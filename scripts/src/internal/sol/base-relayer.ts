@@ -1,6 +1,5 @@
 import {
   createSolanaRpc,
-  devnet,
   getProgramDerivedAddress,
   type Address,
   type KeyPairSigner,

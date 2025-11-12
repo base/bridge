@@ -69,19 +69,6 @@ export const BRIDGE_VALIDATOR_ABI = [
   },
   {
     type: "function",
-    name: "addValidator",
-    inputs: [
-      {
-        name: "validator",
-        type: "address",
-        internalType: "address",
-      },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
     name: "getBaseThreshold",
     inputs: [],
     outputs: [
@@ -89,6 +76,19 @@ export const BRIDGE_VALIDATOR_ABI = [
         name: "",
         type: "uint128",
         internalType: "uint128",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getBaseValidatorCount",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
       },
     ],
     stateMutability: "view",
@@ -115,6 +115,25 @@ export const BRIDGE_VALIDATOR_ABI = [
     ],
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "isBaseValidator",
+    inputs: [
+      {
+        name: "validator",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
   },
   {
     type: "function",
@@ -167,45 +186,6 @@ export const BRIDGE_VALIDATOR_ABI = [
         name: "validatorSigs",
         type: "bytes",
         internalType: "bytes",
-      },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "removeValidator",
-    inputs: [
-      {
-        name: "validator",
-        type: "address",
-        internalType: "address",
-      },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "setPartnerThreshold",
-    inputs: [
-      {
-        name: "newThreshold",
-        type: "uint256",
-        internalType: "uint256",
-      },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "setThreshold",
-    inputs: [
-      {
-        name: "newThreshold",
-        type: "uint256",
-        internalType: "uint256",
       },
     ],
     outputs: [],
@@ -277,45 +257,6 @@ export const BRIDGE_VALIDATOR_ABI = [
         type: "uint256",
         indexed: false,
         internalType: "uint256",
-      },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "ThresholdUpdated",
-    inputs: [
-      {
-        name: "newThreshold",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "ValidatorAdded",
-    inputs: [
-      {
-        name: "validator",
-        type: "address",
-        indexed: false,
-        internalType: "address",
-      },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "ValidatorRemoved",
-    inputs: [
-      {
-        name: "validator",
-        type: "address",
-        indexed: false,
-        internalType: "address",
       },
     ],
     anonymous: false,
@@ -393,16 +334,6 @@ export const BRIDGE_VALIDATOR_ABI = [
   {
     type: "error",
     name: "ValidatorAlreadyAdded",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "ValidatorCountLessThanThreshold",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "ValidatorNotExisted",
     inputs: [],
   },
   {

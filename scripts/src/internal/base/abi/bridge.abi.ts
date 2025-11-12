@@ -760,7 +760,7 @@ export const BRIDGE_ABI = [
   },
   {
     type: "event",
-    name: "MessageRegistered",
+    name: "MessageInitiated",
     inputs: [
       {
         name: "messageHash",
@@ -961,6 +961,11 @@ export const BRIDGE_ABI = [
   {
     type: "error",
     name: "AlreadyInitialized",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "CumulativeDepositExceedsU64",
     inputs: [],
   },
   {

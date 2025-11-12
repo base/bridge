@@ -5,7 +5,6 @@ import {
   createSolanaRpc,
   createSolanaRpcSubscriptions,
   createTransactionMessage,
-  devnet,
   getSignatureFromTransaction,
   pipe,
   sendAndConfirmTransactionFactory,

@@ -22,7 +22,7 @@ import { isAddress as isEvmAddress, isHash } from "viem";
 import { z } from "zod";
 
 import { logger } from "@internal/logger";
-import { DEPLOY_ENVS, type DeployEnv } from "@internal/constants";
+import { type DeployEnv } from "@internal/constants";
 
 export const bigintSchema = z
   .string()

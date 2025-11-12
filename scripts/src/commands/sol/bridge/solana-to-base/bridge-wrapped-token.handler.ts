@@ -1,7 +1,6 @@
 import { z } from "zod";
 import {
   getProgramDerivedAddress,
-  devnet,
   address,
   createSolanaRpc,
   type Account,
