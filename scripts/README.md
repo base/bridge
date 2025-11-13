@@ -8,6 +8,18 @@ Interactive command-line interface for managing the Base-Solana bridge operation
 bun install
 ```
 
+### Generate a Local Solana Keypair
+
+Many commands require a Solana keypair for signing transactions. You can generate one using the Solana CLI:
+
+```bash
+solana-keygen new
+```
+
+This will create a keypair at `~/.config/solana/id.json` (or prompt you for a location). This is the default keypair location that the scripts will use when you specify `--payer-kp config` or similar options.
+
+**Important:** The generated keypair needs to be funded with SOL in order to send transactions. For devnet testing, you can request SOL from the [Solana Devnet Faucet](https://faucet.solana.com/).
+
 ## Available Commands
 
 ### Bridge Operations
