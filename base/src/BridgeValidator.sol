@@ -42,6 +42,9 @@ contract BridgeValidator is Initializable {
     /// @notice Address of the contract holding the partner validator set
     address public immutable PARTNER_VALIDATORS;
 
+    /// @notice Required number of partner signatures for validation
+    uint256 public immutable PARTNER_THRESHOLD;
+
     /// @notice A bit to be used in bitshift operations
     uint256 private constant _BIT = 1;
 
@@ -49,8 +52,7 @@ contract BridgeValidator is Initializable {
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
 
-    /// @notice Required number of partner signatures
-    uint256 public partnerValidatorThreshold;
+    uint256 private _spacer_00;
 
     /// @notice The next expected nonce to be received in `registerMessages`
     uint256 public nextNonce;
@@ -130,15 +132,18 @@ contract BridgeValidator is Initializable {
     ///
     /// @param bridgeAddress     The address of the `Bridge` contract used to check guardian roles.
     /// @param partnerValidators Address of the contract holding the partner validator set
-    constructor(address bridgeAddress, address partnerValidators) {
+    /// @param partnerThreshold  The minimum number of partner validator signatures required.
+    constructor(address bridgeAddress, address partnerValidators, uint256 partnerThreshold) {
         require(bridgeAddress != address(0), ZeroAddress());
         require(partnerValidators != address(0), ZeroAddress());
+        require(partnerThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
 
-        partnerValidatorThreshold = type(uint256).max;
         VerificationLib.getVerificationLibStorage().threshold = type(uint128).max;
 
         BRIDGE = bridgeAddress;
         PARTNER_VALIDATORS = partnerValidators;
+        PARTNER_THRESHOLD = partnerThreshold;
+
         _disableInitializers();
     }
 
@@ -148,15 +153,8 @@ contract BridgeValidator is Initializable {
     ///
     /// @param baseValidators The initial list of Base validators.
     /// @param baseThreshold  The minimum number of Base validator signatures required.
-    /// @param partnerThreshold The minimum number of partner validator signatures required.
-    function initialize(address[] calldata baseValidators, uint128 baseThreshold, uint256 partnerThreshold)
-        external
-        initializer
-    {
+    function initialize(address[] calldata baseValidators, uint128 baseThreshold) external initializer {
         VerificationLib.initialize(baseValidators, baseThreshold);
-
-        require(partnerThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
-        partnerValidatorThreshold = partnerThreshold;
     }
 
     /// @notice Pre-validates a batch of Solana → Base messages.
@@ -224,7 +222,7 @@ contract BridgeValidator is Initializable {
         address[] memory recoveredSigners = _getSignersFromSigs(messageHashes, sigData);
         require(_countBaseSigners(recoveredSigners) >= VerificationLib.getBaseThreshold(), BaseThresholdNotMet());
 
-        uint256 partnerValidatorThreshold_ = partnerValidatorThreshold;
+        uint256 partnerValidatorThreshold_ = PARTNER_THRESHOLD;
         if (partnerValidatorThreshold_ > 0) {
             IPartner.Signer[] memory partnerValidators = IPartner(PARTNER_VALIDATORS).getSigners();
             require(

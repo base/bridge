@@ -116,8 +116,13 @@ contract UpgradeScript is DevOps {
     }
 
     function _upgradeBridgeValidator(HelperConfig.NetworkConfig memory cfg) internal {
-        address bridgeValidatorImpl =
-            address(new BridgeValidator({bridgeAddress: bridgeAddress, partnerValidators: cfg.partnerValidators}));
+        address bridgeValidatorImpl = address(
+            new BridgeValidator({
+                bridgeAddress: bridgeAddress,
+                partnerValidators: cfg.partnerValidators,
+                partnerThreshold: cfg.partnerValidatorThreshold
+            })
+        );
 
         console.log("Deployed new BridgeValidator implementation: %s", bridgeValidatorImpl);
         // Use ERC1967Factory to upgrade the proxy
