@@ -167,6 +167,20 @@ contract BridgeValidator is Initializable, Ownable {
         _initializeOwner(owner);
     }
 
+    /// @notice Reinitializes Base validator.
+    ///
+    /// @param partnerThreshold The minimum number of partner validator signatures required.
+    /// @param newOwner         The owner of the bridge validator contract. Has permission to add / remove validators
+    ///                         and update threshold values
+    function reinitialize(uint256 partnerThreshold, address newOwner) external reinitializer(2) {
+        require(partnerThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
+        require(newOwner != address(0), ZeroAddress());
+
+        partnerValidatorThreshold = partnerThreshold;
+
+        _initializeOwner(newOwner);
+    }
+
     /// @notice Updates the Base signature threshold.
     ///
     /// @dev Only callable by the BridgeValidator owner.

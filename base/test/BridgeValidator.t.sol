@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {Ownable} from "solady/auth/Ownable.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 
 import {DeployScript} from "../script/Deploy.s.sol";
@@ -443,6 +444,237 @@ contract BridgeValidatorTest is CommonTest {
     }
 
     //////////////////////////////////////////////////////////////
+    ///                  reinitialize Tests                    ///
+    //////////////////////////////////////////////////////////////
+
+    function test_reinitialize_success() public {
+        address newOwner = vm.addr(999);
+        uint256 newPartnerThreshold = 2;
+
+        bridgeValidator.reinitialize(newPartnerThreshold, newOwner);
+
+        assertEq(bridgeValidator.partnerValidatorThreshold(), newPartnerThreshold);
+        assertEq(bridgeValidator.owner(), newOwner);
+    }
+
+    function test_reinitialize_revertsWhenThresholdTooHigh() public {
+        address newOwner = vm.addr(999);
+        uint256 invalidThreshold = 6; // MAX_PARTNER_VALIDATOR_THRESHOLD is 5
+
+        vm.expectRevert(BridgeValidator.ThresholdTooHigh.selector);
+        bridgeValidator.reinitialize(invalidThreshold, newOwner);
+    }
+
+    function test_reinitialize_revertsWhenZeroOwner() public {
+        uint256 newPartnerThreshold = 2;
+
+        vm.expectRevert(BridgeValidator.ZeroAddress.selector);
+        bridgeValidator.reinitialize(newPartnerThreshold, address(0));
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                  setThreshold Tests                    ///
+    //////////////////////////////////////////////////////////////
+
+    function test_setThreshold_success() public {
+        uint256 newThreshold = 1;
+
+        vm.prank(cfg.initialOwner);
+        vm.expectEmit(false, false, false, true);
+        emit ThresholdUpdated(newThreshold);
+        bridgeValidator.setThreshold(newThreshold);
+
+        assertEq(bridgeValidator.getBaseThreshold(), newThreshold);
+    }
+
+    function test_setThreshold_revertsWhenNotOwner() public {
+        vm.expectRevert(abi.encodeWithSelector(Ownable.Unauthorized.selector));
+        vm.prank(vm.addr(999));
+        bridgeValidator.setThreshold(1);
+    }
+
+    function test_setThreshold_revertsWhenZero() public {
+        vm.prank(cfg.initialOwner);
+        vm.expectRevert(VerificationLib.InvalidThreshold.selector);
+        bridgeValidator.setThreshold(0);
+    }
+
+    function test_setThreshold_revertsWhenExceedsValidatorCount() public {
+        uint256 validatorCount = bridgeValidator.getBaseValidatorCount();
+        uint256 invalidThreshold = validatorCount + 1;
+
+        vm.prank(cfg.initialOwner);
+        vm.expectRevert(VerificationLib.InvalidThreshold.selector);
+        bridgeValidator.setThreshold(invalidThreshold);
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///              setPartnerThreshold Tests                 ///
+    //////////////////////////////////////////////////////////////
+
+    function test_setPartnerThreshold_success() public {
+        uint256 newThreshold = 2;
+        uint256 oldThreshold = bridgeValidator.partnerValidatorThreshold();
+
+        vm.prank(cfg.initialOwner);
+        vm.expectEmit(false, false, false, true);
+        emit PartnerThresholdUpdated(oldThreshold, newThreshold);
+        bridgeValidator.setPartnerThreshold(newThreshold);
+
+        assertEq(bridgeValidator.partnerValidatorThreshold(), newThreshold);
+    }
+
+    function test_setPartnerThreshold_revertsWhenNotOwner() public {
+        vm.expectRevert(abi.encodeWithSelector(Ownable.Unauthorized.selector));
+        vm.prank(vm.addr(999));
+        bridgeValidator.setPartnerThreshold(1);
+    }
+
+    function test_setPartnerThreshold_revertsWhenThresholdTooHigh() public {
+        uint256 invalidThreshold = 6; // MAX_PARTNER_VALIDATOR_THRESHOLD is 5
+
+        vm.prank(cfg.initialOwner);
+        vm.expectRevert(BridgeValidator.ThresholdTooHigh.selector);
+        bridgeValidator.setPartnerThreshold(invalidThreshold);
+    }
+
+    function test_setPartnerThreshold_allowsMaxThreshold() public {
+        uint256 maxThreshold = 5; // MAX_PARTNER_VALIDATOR_THRESHOLD
+        uint256 oldThreshold = bridgeValidator.partnerValidatorThreshold();
+
+        vm.prank(cfg.initialOwner);
+        vm.expectEmit(false, false, false, true);
+        emit PartnerThresholdUpdated(oldThreshold, maxThreshold);
+        bridgeValidator.setPartnerThreshold(maxThreshold);
+
+        assertEq(bridgeValidator.partnerValidatorThreshold(), maxThreshold);
+    }
+
+    function test_setPartnerThreshold_allowsZero() public {
+        uint256 oldThreshold = bridgeValidator.partnerValidatorThreshold();
+
+        vm.prank(cfg.initialOwner);
+        vm.expectEmit(false, false, false, true);
+        emit PartnerThresholdUpdated(oldThreshold, 0);
+        bridgeValidator.setPartnerThreshold(0);
+
+        assertEq(bridgeValidator.partnerValidatorThreshold(), 0);
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                  addValidator Tests                     ///
+    //////////////////////////////////////////////////////////////
+
+    function test_addValidator_success() public {
+        address newValidator = vm.addr(100);
+        uint256 oldCount = bridgeValidator.getBaseValidatorCount();
+
+        vm.prank(cfg.initialOwner);
+        vm.expectEmit(false, false, false, true);
+        emit ValidatorAdded(newValidator);
+        bridgeValidator.addValidator(newValidator);
+
+        assertTrue(bridgeValidator.isBaseValidator(newValidator));
+        assertEq(bridgeValidator.getBaseValidatorCount(), oldCount + 1);
+    }
+
+    function test_addValidator_revertsWhenNotOwner() public {
+        address newValidator = vm.addr(100);
+
+        vm.expectRevert(abi.encodeWithSelector(Ownable.Unauthorized.selector));
+        vm.prank(vm.addr(999));
+        bridgeValidator.addValidator(newValidator);
+    }
+
+    function test_addValidator_revertsWhenZeroAddress() public {
+        vm.prank(cfg.initialOwner);
+        vm.expectRevert(VerificationLib.InvalidValidatorAddress.selector);
+        bridgeValidator.addValidator(address(0));
+    }
+
+    function test_addValidator_revertsWhenAlreadyAdded() public {
+        address existingValidator = cfg.baseValidators[0];
+
+        vm.prank(cfg.initialOwner);
+        vm.expectRevert(VerificationLib.ValidatorAlreadyAdded.selector);
+        bridgeValidator.addValidator(existingValidator);
+    }
+
+    function test_addValidator_revertsWhenMaxCountReached() public {
+        // Add validators until we reach MAX_BASE_SIGNER_COUNT
+        uint256 currentCount = bridgeValidator.getBaseValidatorCount();
+        uint256 validatorsToAdd = VerificationLib.MAX_BASE_SIGNER_COUNT - currentCount;
+
+        vm.startPrank(cfg.initialOwner);
+        for (uint256 i = 0; i < validatorsToAdd; i++) {
+            bridgeValidator.addValidator(vm.addr(200 + i));
+        }
+
+        // Now adding one more should fail
+        vm.expectRevert(VerificationLib.BaseSignerCountTooHigh.selector);
+        bridgeValidator.addValidator(vm.addr(300));
+        vm.stopPrank();
+    }
+
+    //////////////////////////////////////////////////////////////
+    ///                 removeValidator Tests                   ///
+    //////////////////////////////////////////////////////////////
+
+    function test_removeValidator_success() public {
+        address validatorToRemove = cfg.baseValidators[0];
+        uint256 oldCount = bridgeValidator.getBaseValidatorCount();
+
+        // Ensure we have enough validators to maintain threshold
+        // If threshold is 2 and we have 2 validators, we need to add one first
+        uint256 currentThreshold = bridgeValidator.getBaseThreshold();
+        if (oldCount - 1 < currentThreshold) {
+            // Add a validator first so we can remove one
+            vm.prank(cfg.initialOwner);
+            bridgeValidator.addValidator(vm.addr(150));
+            oldCount = bridgeValidator.getBaseValidatorCount();
+        }
+
+        vm.prank(cfg.initialOwner);
+        vm.expectEmit(false, false, false, true);
+        emit ValidatorRemoved(validatorToRemove);
+        bridgeValidator.removeValidator(validatorToRemove);
+
+        assertFalse(bridgeValidator.isBaseValidator(validatorToRemove));
+        assertEq(bridgeValidator.getBaseValidatorCount(), oldCount - 1);
+    }
+
+    function test_removeValidator_revertsWhenNotOwner() public {
+        address validatorToRemove = cfg.baseValidators[0];
+
+        vm.expectRevert(abi.encodeWithSelector(Ownable.Unauthorized.selector));
+        vm.prank(vm.addr(999));
+        bridgeValidator.removeValidator(validatorToRemove);
+    }
+
+    function test_removeValidator_revertsWhenNotAValidator() public {
+        address nonValidator = vm.addr(200);
+
+        vm.prank(cfg.initialOwner);
+        vm.expectRevert(VerificationLib.ValidatorNotExisted.selector);
+        bridgeValidator.removeValidator(nonValidator);
+    }
+
+    function test_removeValidator_revertsWhenWouldViolateThreshold() public {
+        // If we have exactly threshold validators, removing one should fail
+        uint256 currentCount = bridgeValidator.getBaseValidatorCount();
+        uint256 currentThreshold = bridgeValidator.getBaseThreshold();
+
+        // If count equals threshold, removing one would violate threshold
+        if (currentCount == currentThreshold) {
+            address validatorToRemove = cfg.baseValidators[0];
+
+            vm.prank(cfg.initialOwner);
+            vm.expectRevert(VerificationLib.ValidatorCountLessThanThreshold.selector);
+            bridgeValidator.removeValidator(validatorToRemove);
+        }
+    }
+
+    //////////////////////////////////////////////////////////////
     ///                     View Function Tests                ///
     //////////////////////////////////////////////////////////////
 
@@ -450,6 +682,30 @@ contract BridgeValidatorTest is CommonTest {
         assertFalse(bridgeValidator.validMessages(TEST_MESSAGE_HASH_1));
         assertFalse(bridgeValidator.validMessages(TEST_MESSAGE_HASH_2));
         assertFalse(bridgeValidator.validMessages(bytes32(0)));
+    }
+
+    function test_getBaseThreshold_returnsCurrentThreshold() public view {
+        uint256 threshold = bridgeValidator.getBaseThreshold();
+        assertGt(threshold, 0);
+        assertLe(threshold, bridgeValidator.getBaseValidatorCount());
+    }
+
+    function test_getBaseValidatorCount_returnsCurrentCount() public view {
+        uint256 count = bridgeValidator.getBaseValidatorCount();
+        assertGt(count, 0);
+        assertLe(count, VerificationLib.MAX_BASE_SIGNER_COUNT);
+    }
+
+    function test_isBaseValidator_returnsTrueForValidators() public view {
+        for (uint256 i = 0; i < cfg.baseValidators.length; i++) {
+            assertTrue(bridgeValidator.isBaseValidator(cfg.baseValidators[i]));
+        }
+    }
+
+    function test_isBaseValidator_returnsFalseForNonValidators() public view {
+        assertFalse(bridgeValidator.isBaseValidator(vm.addr(999)));
+        assertFalse(bridgeValidator.isBaseValidator(address(0)));
+        assertFalse(bridgeValidator.isBaseValidator(address(this)));
     }
 
     function test_validMessages_afterRegistration() public {
