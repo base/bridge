@@ -88,7 +88,7 @@ contract DeployScript is DevOps {
                 admin: cfg.initialOwner,
                 data: abi.encodeCall(
                     BridgeValidator.initialize,
-                    (cfg.baseValidators, cfg.baseSignatureThreshold, cfg.partnerValidatorThreshold)
+                    (cfg.baseValidators, cfg.baseSignatureThreshold, cfg.partnerValidatorThreshold, cfg.initialOwner)
                 )
             });
     }

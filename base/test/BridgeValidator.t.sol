@@ -412,7 +412,7 @@ contract BridgeValidatorTest is CommonTest {
         }
 
         vm.expectRevert(VerificationLib.BaseSignerCountTooHigh.selector);
-        bridgeValidator.initialize(validators, 3, 1);
+        bridgeValidator.initialize(validators, 3, 1, cfg.initialOwner);
     }
 
     //////////////////////////////////////////////////////////////
@@ -421,7 +421,9 @@ contract BridgeValidatorTest is CommonTest {
 
     function test_initialize_revertsWhenCalledTwice() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        bridgeValidator.initialize(cfg.baseValidators, cfg.baseSignatureThreshold, cfg.partnerValidatorThreshold);
+        bridgeValidator.initialize(
+            cfg.baseValidators, cfg.baseSignatureThreshold, cfg.partnerValidatorThreshold, cfg.initialOwner
+        );
     }
 
     function test_nextNonce_incrementsByBatchLength() public {

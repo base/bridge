@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import {Ownable} from "solady/auth/Ownable.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {Initializable} from "solady/utils/Initializable.sol";
 
@@ -15,7 +16,7 @@ import {Bridge} from "./Bridge.sol";
 ///
 /// @notice A validator contract to be used during the Stage 0 phase of Base Bridge. This will likely later be replaced
 ///         by `CrossL2Inbox` from the OP Stack.
-contract BridgeValidator is Initializable {
+contract BridgeValidator is Initializable, Ownable {
     using ECDSA for bytes32;
 
     /// @notice Container for data used to derive a unique `messageHash` for registration.
@@ -146,17 +147,63 @@ contract BridgeValidator is Initializable {
     ///
     /// @dev Callable only once due to `initializer` modifier.
     ///
-    /// @param baseValidators The initial list of Base validators.
-    /// @param baseThreshold  The minimum number of Base validator signatures required.
+    /// @param baseValidators   The initial list of Base validators.
+    /// @param baseThreshold    The minimum number of Base validator signatures required.
     /// @param partnerThreshold The minimum number of partner validator signatures required.
-    function initialize(address[] calldata baseValidators, uint128 baseThreshold, uint256 partnerThreshold)
-        external
-        initializer
-    {
+    /// @param owner            The owner of the bridge validator contract. Has permission to add / remove validators
+    ///                         and update threshold values
+    function initialize(
+        address[] calldata baseValidators,
+        uint128 baseThreshold,
+        uint256 partnerThreshold,
+        address owner
+    ) external initializer {
         VerificationLib.initialize(baseValidators, baseThreshold);
 
         require(partnerThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
+        require(owner != address(0), ZeroAddress());
         partnerValidatorThreshold = partnerThreshold;
+
+        _initializeOwner(owner);
+    }
+
+    /// @notice Updates the Base signature threshold.
+    ///
+    /// @dev Only callable by the BridgeValidator owner.
+    ///
+    /// @param newThreshold The new threshold value.
+    function setThreshold(uint256 newThreshold) external onlyOwner {
+        VerificationLib.setThreshold(newThreshold);
+    }
+
+    /// @notice Updates the partner signature threshold.
+    ///
+    /// @dev Only callable by the BridgeValidator owner.
+    ///
+    /// @param newThreshold The new partner validator threshold value.
+    function setPartnerThreshold(uint256 newThreshold) external onlyOwner {
+        require(newThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
+        uint256 oldThreshold = partnerValidatorThreshold;
+        partnerValidatorThreshold = newThreshold;
+        emit PartnerThresholdUpdated(oldThreshold, newThreshold);
+    }
+
+    /// @notice Adds a Base validator.
+    ///
+    /// @dev Only callable by the BridgeValidator owner.
+    ///
+    /// @param validator The validator address to add.
+    function addValidator(address validator) external onlyOwner {
+        VerificationLib.addValidator(validator);
+    }
+
+    /// @notice Removes a Base validator.
+    ///
+    /// @dev Only callable by the BridgeValidator owner.
+    ///
+    /// @param validator The validator address to remove.
+    function removeValidator(address validator) external onlyOwner {
+        VerificationLib.removeValidator(validator);
     }
 
     /// @notice Pre-validates a batch of Solana → Base messages.
