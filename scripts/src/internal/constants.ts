@@ -141,12 +141,14 @@ export const CONFIGS = {
       baseRelayerKpPath: "keypairs/base-relayer.mainnet.json",
 
       // Base oracle signers
-      evmLocalKey: "0x",
-      evmKeychainKey: "0x",
+      evmLocalKey: "0x68fb9f14256fb52944c65f4afd207c2153ec18f1",
+      evmKeychainKey: "0x9B1494C2d4c0dedbd8DA203054ee7de08c138836",
 
       // Programs
-      bridgeProgram: "" as Address,
-      baseRelayerProgram: "" as Address,
+      bridgeProgram: address("HNCne2FkVaNghhjKXapxJzPaBvAKDG1Ge3gqhZyfVWLM"),
+      baseRelayerProgram: address(
+        "g1et5VenhfJHJwsdJsDbxWZuotD5H4iELNG61kS4fb9"
+      ),
 
       // SPLs
       spl: "" as Address,
@@ -157,7 +159,7 @@ export const CONFIGS = {
       chain: base,
 
       // Contracts
-      bridgeContract: "0x",
+      bridgeContract: "0x3eff766C76a1be2Ce1aCF2B69c78bCae257D5188",
       counterContract: "0x",
 
       // ERC20s
