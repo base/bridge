@@ -25,6 +25,7 @@ import {
   outgoingMessagePubkey,
 } from "@internal/sol";
 import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
+import { validateDecimalString } from "@internal/utils";
 
 export const argsSchema = z.object({
   deployEnv: z
@@ -42,6 +43,10 @@ export const argsSchema = z.object({
   ]),
   value: z
     .string()
+    .refine((val) => {
+      validateDecimalString(val);
+      return true;
+    })
     .transform((val) => parseFloat(val))
     .refine((val) => !isNaN(val) && val >= 0, {
       message: "Value must be a non-negative number",

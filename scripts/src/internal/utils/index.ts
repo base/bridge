@@ -10,3 +10,4 @@ export async function findGitRoot(): Promise<string> {
 }
 
 export * from "./cli";
+export * from "./validation";
