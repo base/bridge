@@ -164,7 +164,7 @@ export const CONFIGS = {
 
       // ERC20s
       erc20: "0x",
-      wSol: "0x",
+      wSol: "0x311935Cd80B76769bF2ecC9D8Ab7635b2139cf82",
       wSpl: "0x",
     },
   },
