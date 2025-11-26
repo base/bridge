@@ -80,7 +80,7 @@ export async function handleDeploy(args: Args): Promise<void> {
 
     // Deploy program
     logger.info("Deploying program...");
-    await $`solana program deploy --url ${config.solana.cluster} --keypair ${deployerKpPath} --program-id ${programKpPath} ${programBinaryPath}`;
+    await $`solana program deploy --url ${config.solana.rpcUrl} --keypair ${deployerKpPath} --program-id ${programKpPath} ${programBinaryPath}`;
 
     logger.success("Program deployment completed!");
   } catch (error) {
