@@ -84,7 +84,7 @@ async function collectInteractiveOptions(
   opts.amount = await getOrPromptDecimal(
     opts.amount,
     "Enter amount to bridge (in token units)",
-    0.001
+    0.000000001
   );
 
   opts.payerKp = await getOrPromptFilePath(
