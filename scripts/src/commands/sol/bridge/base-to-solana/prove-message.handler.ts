@@ -13,7 +13,7 @@ import {
   type Address,
   type Hash,
 } from "viem";
-import { baseSepolia } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 import { decodeEventLog } from "viem/utils";
 
 import { fetchBridge, getProveMessageInstruction } from "@base/bridge/bridge";
@@ -25,7 +25,7 @@ import {
   getKeypairSignerFromPath,
   getIdlConstant,
 } from "@internal/sol";
-import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
+import { CONFIGS, DEPLOY_ENVS, type Config } from "@internal/constants";
 import { BRIDGE_ABI } from "@internal/base/abi";
 
 export const argsSchema = z.object({
@@ -82,6 +82,7 @@ export async function handleProveMessage(args: Args) {
     logger.info(`Output Root: ${outputRootAddress}`);
 
     const { event, rawProof } = await generateProof(
+      config,
       args.transactionHash as Hash,
       baseBlockNumber,
       config.base.bridgeContract
@@ -138,12 +139,13 @@ export async function handleProveMessage(args: Args) {
 }
 
 async function generateProof(
+  cfg: Config,
   transactionHash: Hash,
   bridgeBaseBlockNumber: bigint,
   baseBridgeAddress: Address
 ) {
   const publicClient = createPublicClient({
-    chain: baseSepolia,
+    chain: cfg.base.chain,
     transport: http(),
   });
 
