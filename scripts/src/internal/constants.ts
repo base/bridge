@@ -151,9 +151,9 @@ export const CONFIGS = {
       ),
 
       // SPLs
-      spl: "" as Address,
-      wEth: "" as Address,
-      wErc20: "" as Address,
+      spl: address("9YEGpFKedz7i8hMB7gDWQGuAfCRHUKBMCbTjnMi8vtUc"),
+      wEth: address("2ZCFyWM6WthDLBo41zJsMQmjJ4Kvb6yumvrbLpVh9LMX"),
+      wErc20: address("7qxnUBBmW8oiuz9skKkGQFvY1qRUP6zF3emA5bneyGaJ"),
     },
     base: {
       chain: base,
@@ -163,9 +163,9 @@ export const CONFIGS = {
       counterContract: "0x",
 
       // ERC20s
-      erc20: "0x",
+      erc20: "0x4870D23984Dd663005EB8E2b616e4Ef62630183c",
       wSol: "0x311935Cd80B76769bF2ecC9D8Ab7635b2139cf82",
-      wSpl: "0x",
+      wSpl: "0xcd9E97cf45BC53acC35A5aFb70458c47c214E7C7",
     },
   },
 } as const satisfies Record<DeployEnv, Config>;
