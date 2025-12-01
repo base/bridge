@@ -33,10 +33,6 @@ import {
 } from "@internal/sol";
 import { CONFIGS, DEPLOY_ENVS } from "@internal/constants";
 
-const FLYWHEEL_ADDRESS = "0x00000f14ad09382841db481403d1775adee1179f" as const;
-const BRIDGE_CAMPAIGN_ADDRESS =
-  "0x7626f7F9A574f526066acE9073518DaB1Bee038C" as const;
-
 export const argsSchema = z.object({
   deployEnv: z
     .enum(DEPLOY_ENVS, {
@@ -129,13 +125,13 @@ export async function handleBridgeSolWithBc(args: Args): Promise<void> {
     // 2. Build call data for Flywheel.send(campaign, token, hookData)
     const wSolAddress = config.base.wSol;
     logger.info(`wSOL address: ${wSolAddress}`);
-    logger.info(`Flywheel address: ${FLYWHEEL_ADDRESS}`);
-    logger.info(`Bridge campaign address: ${BRIDGE_CAMPAIGN_ADDRESS}`);
+    logger.info(`Flywheel address: ${config.base.flywheelContract}`);
+    logger.info(`Bridge campaign address: ${config.base.flywheelCampaign}`);
 
     const flywheelCallData = encodeFunctionData({
       abi: FLYWHEEL_ABI,
       functionName: "send",
-      args: [BRIDGE_CAMPAIGN_ADDRESS, wSolAddress, hookData],
+      args: [config.base.flywheelCampaign, wSolAddress, hookData],
     });
     logger.info(`Flywheel call data: ${flywheelCallData}`);
 
@@ -154,11 +150,11 @@ export async function handleBridgeSolWithBc(args: Args): Promise<void> {
 
           // Arguments
           outgoingMessageSalt: salt,
-          to: toBytes(BRIDGE_CAMPAIGN_ADDRESS), // Send to campaign, not user
+          to: toBytes(config.base.flywheelCampaign), // Send to campaign, not user
           amount: scaledAmount,
           call: {
             ty: CallType.Call,
-            to: toBytes(FLYWHEEL_ADDRESS),
+            to: toBytes(config.base.flywheelContract),
             value: 0n,
             data: Buffer.from(flywheelCallData.slice(2), "hex"),
           },
