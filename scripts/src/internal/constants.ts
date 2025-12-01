@@ -45,6 +45,8 @@ export type Config = {
     // Contracts
     bridgeContract: EvmAddress;
     counterContract: EvmAddress;
+    flywheelContract: EvmAddress;
+    flywheelCampaign: EvmAddress;
 
     // ERC20s
     erc20: EvmAddress;
@@ -85,6 +87,8 @@ export const CONFIGS = {
       // Contracts
       bridgeContract: "0x64567a9147fa89B1edc987e36Eb6f4b6db71656b",
       counterContract: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
+      flywheelContract: "0x00000f14ad09382841db481403d1775adee1179f",
+      flywheelCampaign: "0x7626f7F9A574f526066acE9073518DaB1Bee038C",
 
       // ERC20s
       erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
@@ -123,6 +127,8 @@ export const CONFIGS = {
       // Contracts
       bridgeContract: "0x01824a90d32A69022DdAEcC6C5C14Ed08dB4EB9B",
       counterContract: "0x5d3eB988Daa06151b68369cf957e917B4371d35d",
+      flywheelContract: "0x00000f14ad09382841db481403d1775adee1179f",
+      flywheelCampaign: "0x7626f7F9A574f526066acE9073518DaB1Bee038C",
 
       // ERC20s
       erc20: "0x62C1332822983B8412A6Ffda0fd77cd7d5733Ee9",
@@ -161,6 +167,8 @@ export const CONFIGS = {
       // Contracts
       bridgeContract: "0x3eff766C76a1be2Ce1aCF2B69c78bCae257D5188",
       counterContract: "0x",
+      flywheelContract: "0x",
+      flywheelCampaign: "0x",
 
       // ERC20s
       erc20: "0x",
