@@ -4,10 +4,6 @@
 
 A bridge between Base and blockchains outside the Ethereum ecosystem. Currently has support for Solana.
 
-> [!WARNING]
->
-> The bridge is only live on testnet between Solana Devnet <> Base Sepolia. The code is a WIP and has not yet been audited. Do not use in production!!
-
 <!-- Badge row 1 - status -->
 
 [![GitHub contributors](https://img.shields.io/github/contributors/base/bridge)](https://github.com/base/bridge/graphs/contributors)

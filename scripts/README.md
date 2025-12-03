@@ -2,6 +2,10 @@
 
 Interactive command-line interface for managing the Base-Solana bridge operations.
 
+> [!WARNING]
+>
+> The scripts in this directory are for example purposes only and have not been audited. Use at your own risk.
+
 ## Setup
 
 ```bash
