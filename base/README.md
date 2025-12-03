@@ -4,6 +4,7 @@ A cross-chain bridge implementation that enables seamless message passing and to
 
 ## Contract Addresses
 
+- **Base Mainnet Bridge**: `0x3eff766C76a1be2Ce1aCF2B69c78bCae257D5188`
 - **Base Sepolia Bridge**: `0x01824a90d32A69022DdAEcC6C5C14Ed08dB4EB9B`
 
 ## Overview

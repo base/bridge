@@ -4,6 +4,9 @@ A cross-chain bridge program that enables seamless message passing between Solan
 
 ## Program IDs
 
+- **Mainnet Bridge**: `HNCne2FkVaNghhjKXapxJzPaBvAKDG1Ge3gqhZyfVWLM`
+- **Mainnet Base Relayer**: `g1et5VenhfJHJwsdJsDbxWZuotD5H4iELNG61kS4fb9`
+
 - **Devnet Bridge**: `7c6mteAcTXaQ1MFBCrnuzoZVTTAEfZwa6wgy4bqX3KXC`
 - **Devnet Base Relayer**: `56MBBEYAtQAdjT4e1NzHD8XaoyRSTvfgbSVVcEcHj51H`
 
