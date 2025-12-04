@@ -5,6 +5,7 @@ import { solVaultCommand } from "./sol-vault.command";
 import {
   bridgeCallCommand,
   bridgeSolCommand,
+  bridgeSolWithBcCommand,
   bridgeSplCommand,
   bridgeWrappedTokenCommand,
   wrapTokenCommand,
@@ -20,6 +21,7 @@ bridgeCommand.addCommand(solVaultCommand);
 
 bridgeCommand.addCommand(bridgeCallCommand);
 bridgeCommand.addCommand(bridgeSolCommand);
+bridgeCommand.addCommand(bridgeSolWithBcCommand);
 bridgeCommand.addCommand(bridgeSplCommand);
 bridgeCommand.addCommand(bridgeWrappedTokenCommand);
 bridgeCommand.addCommand(wrapTokenCommand);

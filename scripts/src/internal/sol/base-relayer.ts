@@ -48,7 +48,7 @@ export async function buildPayForRelayInstruction(
 
       // Arguments
       outgoingMessage: outgoingMessage,
-      gasLimit: 200_000n,
+      gasLimit: 2_000_000n,
     },
     { programAddress: config.solana.baseRelayerProgram }
   );
