@@ -71,13 +71,9 @@ deploy:
 upgrade:
 	BRIDGE_ENVIRONMENT=$(ENV_NAME) forge script UpgradeScript --account testnet-upgrade --rpc-url $(BASE_RPC) --broadcast -vvvv
 
-.PHONY: create-wrapped-sol
-create-wrapped-sol:
-	BRIDGE_ENVIRONMENT=$(ENV_NAME) TOKEN_NAME=WrappedSOL TOKEN_SYMBOL=wSOL REMOTE_TOKEN=$(REMOTE_SOL) forge script CreateTokenScript --account testnet-admin --rpc-url $(BASE_RPC) --broadcast -vvvv
-
 .PHONY: create-wrapped-spl
 create-wrapped-spl:
-	BRIDGE_ENVIRONMENT=$(ENV_NAME) TOKEN_NAME=WrappedSPL TOKEN_SYMBOL=wSPL REMOTE_TOKEN=$(REMOTE_SPL) forge script CreateTokenScript --ledger --hd-paths "m/44'/60'/$(LEDGER_ACCOUNT)'/0/0" --rpc-url $(BASE_RPC) --broadcast -vvvv
+	BRIDGE_ENVIRONMENT=$(ENV_NAME) TOKEN_NAME=WrappedSPL TOKEN_SYMBOL=wSPL REMOTE_TOKEN=$(REMOTE_SPL) TOKEN_DECIMALS=9 forge script CreateTokenScript --ledger --hd-paths "m/44'/60'/$(LEDGER_ACCOUNT)'/0/0" --rpc-url $(BASE_RPC) --broadcast -vvvv
 
 .PHONY: create-mock-token
 create-mock-token:
