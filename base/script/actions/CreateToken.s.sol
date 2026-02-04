@@ -13,6 +13,7 @@ contract CreateTokenScript is DevOps {
     using LibString for string;
 
     bytes32 public immutable REMOTE_TOKEN = vm.envBytes32("REMOTE_TOKEN");
+    uint8 public immutable TOKEN_DECIMALS = uint8(vm.envUint("TOKEN_DECIMALS"));
     string public tokenName = vm.envString("TOKEN_NAME");
     string public tokenSymbol = vm.envString("TOKEN_SYMBOL");
 
@@ -25,7 +26,7 @@ contract CreateTokenScript is DevOps {
     function run() public {
         vm.startBroadcast();
         address token = crossChainErc20Factory.deploy({
-            remoteToken: REMOTE_TOKEN, name: tokenName, symbol: tokenSymbol, decimals: 9
+            remoteToken: REMOTE_TOKEN, name: tokenName, symbol: tokenSymbol, decimals: TOKEN_DECIMALS
         });
         console.log("Deployed Token at: %s", token);
         vm.stopBroadcast();
