@@ -89,9 +89,6 @@ help:
 	@echo "  SOLANA_SOL_RECEIVER     SOL recipient address"
 	@echo "  LEDGER_ACCOUNT          Ledger HD account index (default: 0)"
 
-check: validate-env
-	@echo $(REMOTE_ERC20)
-
 .PHONY: deps
 deps: clean-lib forge-deps
 
