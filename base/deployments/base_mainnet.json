@@ -9,5 +9,6 @@
   "RemoteERC20": "",
   "RemoteETH": "",
   "WrappedSOL": "0x311935Cd80B76769bF2ecC9D8Ab7635b2139cf82",
-  "WrappedSPL": ""
+  "WrappedSPL": "",
+  "LocalERC20": "0x4870D23984Dd663005EB8E2b616e4Ef62630183c"
 }

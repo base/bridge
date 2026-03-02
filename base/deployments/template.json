@@ -9,5 +9,6 @@
   "WrappedSOL": "",
   "WrappedSPL": "",
   "RemoteERC20": "",
-  "RemoteETH": ""
+  "RemoteETH": "",
+  "LocalERC20": ""
 }

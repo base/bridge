@@ -30,7 +30,10 @@ USER_REMOTE_ETH_ATA ?= 0x3e506b04e88dab39a3687fc5eb822c18f8301fc09cfe945c3394fc6
 
 AMOUNT ?= 1000000000
 
-# Contract addresses (read from deployment file)
+# Contract addresses (read from deployment file, only when ENV is set)
+LOCAL_ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
+
+ifdef DEPLOYMENT_FILE
 BRIDGE = $(shell jq -r '.Bridge' $(DEPLOYMENT_FILE))
 LOCAL_SOL = $(shell jq -r '.WrappedSOL' $(DEPLOYMENT_FILE))
 REMOTE_SOL = $(shell jq -r '.RemoteSOL' $(DEPLOYMENT_FILE))
@@ -38,9 +41,8 @@ LOCAL_SPL = $(shell jq -r '.WrappedSPL' $(DEPLOYMENT_FILE))
 REMOTE_SPL = $(shell jq -r '.RemoteSPL' $(DEPLOYMENT_FILE))
 REMOTE_ERC20 = $(shell jq -r '.RemoteERC20' $(DEPLOYMENT_FILE))
 REMOTE_ETH = $(shell jq -r '.RemoteETH' $(DEPLOYMENT_FILE))
-
-LOCAL_ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE
-LOCAL_ERC20 = 0x4870D23984Dd663005EB8E2b616e4Ef62630183c
+LOCAL_ERC20 = $(shell jq -r '.LocalERC20' $(DEPLOYMENT_FILE))
+endif
 
 # Environment validation
 .PHONY: validate-env
@@ -70,7 +72,6 @@ help:
 	@echo "Deployment targets (require ENV):"
 	@echo "  deploy                  Deploy bridge contracts"
 	@echo "  upgrade                 Upgrade bridge contracts"
-	@echo "  dev-deploy              Deploy + create wrapped tokens"
 	@echo "  create-wrapped-spl      Create wrapped SPL token"
 	@echo "  create-mock-token       Deploy a mock ERC20"
 	@echo ""
@@ -88,7 +89,7 @@ help:
 	@echo "  SOLANA_SOL_RECEIVER     SOL recipient address"
 	@echo "  LEDGER_ACCOUNT          Ledger HD account index (default: 0)"
 
-check:
+check: validate-env
 	@echo $(REMOTE_ERC20)
 
 .PHONY: deps
@@ -115,9 +116,6 @@ bindings:
 .PHONY: coverage
 coverage:
 	@ forge coverage --no-match-coverage "(script|test)"
-
-.PHONY: dev-deploy
-dev-deploy: deploy create-wrapped-sol create-wrapped-spl
 
 .PHONY: deploy
 deploy: validate-env
