@@ -63,6 +63,16 @@ Send tokens or messages from Solana to Base:
 cd solana
 # See solana/README.md for detailed instructions
 ```
+## Gas Fee Receiver Address
+
+Some cross-chain operations performed by the Base Bridge require gas fees.
+These fees are sent to a designated gas fee receiver address, which is used
+to cover relaying and execution costs during the bridging process.
+
+> [!NOTE]
+> The gas fee receiver address is network-specific and may differ between
+> devnet, testnet, and mainnet environments.
+
 
 ## License
 
