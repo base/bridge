@@ -39,6 +39,7 @@ enum SolanaTokenType {
 struct TokenLibStorage {
     mapping(address localToken => mapping(Pubkey remoteToken => uint256 amount)) deposits;
     mapping(address localToken => mapping(Pubkey remoteToken => uint256 scalar)) scalars;
+    mapping(Pubkey remoteToken => address localToken) canonicalLocalByRemoteToken;
 }
 
 library TokenLib {
@@ -61,6 +62,15 @@ library TokenLib {
     /// @notice Thrown when cumulative deposits exceed uint64 max when scaled to remote amount.
     error CumulativeDepositExceedsU64();
 
+    /// @notice Thrown when scalar exponent would overflow `10 ** scalarExponent`.
+    error InvalidScalarExponent();
+
+    /// @notice Thrown when a remote token is already mapped to a different local token.
+    error RemoteTokenAlreadyMapped();
+
+    /// @notice Thrown when an existing route is re-registered with a different scalar.
+    error RouteScalarMismatch();
+
     //////////////////////////////////////////////////////////////
     ///                       Events                           ///
     //////////////////////////////////////////////////////////////
@@ -80,6 +90,9 @@ library TokenLib {
     /// @param to Address of the recipient on Base.
     /// @param amount Amount of tokens bridged to the recipient (expressed in local units).
     event TransferFinalized(address localToken, Pubkey remoteToken, address to, uint256 amount);
+
+    /// @notice Emitted when a new remote token route scalar is registered.
+    event RemoteTokenRouteRegistered(address localToken, Pubkey remoteToken, uint256 scalar);
 
     //////////////////////////////////////////////////////////////
     ///                       Constants                        ///
@@ -268,7 +281,24 @@ library TokenLib {
     ///        (localAmount = remoteAmount * 10^scalarExponent).
     function registerRemoteToken(address localToken, Pubkey remoteToken, uint8 scalarExponent) internal {
         TokenLibStorage storage $ = getTokenLibStorage();
-        $.scalars[localToken][remoteToken] = 10 ** scalarExponent;
+        require(scalarExponent <= 77, InvalidScalarExponent());
+        uint256 scalar = 10 ** scalarExponent;
+
+        address canonicalLocal = $.canonicalLocalByRemoteToken[remoteToken];
+        if (canonicalLocal == address(0)) {
+            $.canonicalLocalByRemoteToken[remoteToken] = localToken;
+        } else {
+            require(canonicalLocal == localToken, RemoteTokenAlreadyMapped());
+        }
+
+        uint256 existingScalar = $.scalars[localToken][remoteToken];
+        if (existingScalar == 0) {
+            $.scalars[localToken][remoteToken] = scalar;
+            emit RemoteTokenRouteRegistered(localToken, remoteToken, scalar);
+            return;
+        }
+
+        require(existingScalar == scalar, RouteScalarMismatch());
     }
 
     //////////////////////////////////////////////////////////////

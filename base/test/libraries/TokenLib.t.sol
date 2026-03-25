@@ -95,6 +95,29 @@ contract TokenLibTest is CommonTest {
         }
     }
 
+    function test_registerRemoteToken_rejectsExponentOverflowsScalar() public {
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 78, 0);
+        assertEq(bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN), 0);
+    }
+
+    function test_registerRemoteToken_rejectsRemoteTokenRemapped() public {
+        address tokenA = makeAddr("tokenA");
+        address tokenB = makeAddr("tokenB");
+
+        _registerTokenPair(tokenA, TEST_REMOTE_TOKEN, 12, 0);
+        _registerTokenPair(tokenB, TEST_REMOTE_TOKEN, 12, 1);
+
+        assertEq(bridge.scalars(tokenA, TEST_REMOTE_TOKEN), 1e12);
+        assertEq(bridge.scalars(tokenB, TEST_REMOTE_TOKEN), 0);
+    }
+
+    function test_registerRemoteToken_isIdempotentForSameRoute() public {
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 0);
+        _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 12, 1);
+
+        assertEq(bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN), 1e12);
+    }
+
     //////////////////////////////////////////////////////////////
     ///               Initialize Transfer Tests                ///
     //////////////////////////////////////////////////////////////

@@ -1096,12 +1096,12 @@ contract BridgeTest is CommonTest {
             "Scalars for unregistered token pair should be 0"
         );
 
-        // Test updating scalar by re-registering
+        // Re-registration with a different exponent must not mutate an existing route scalar.
         _registerTokenPair(address(mockToken), TEST_REMOTE_TOKEN, 6, 4);
         assertEq(
             bridge.scalars(address(mockToken), TEST_REMOTE_TOKEN),
-            1e6,
-            "Scalar should be updated when re-registering token pair"
+            1e12,
+            "Scalar should remain unchanged for conflicting re-registration"
         );
 
         // Test large scalar exponent
