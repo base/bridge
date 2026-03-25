@@ -35,6 +35,9 @@ pub fn pay_for_gas<'info>(
     gas_fee_receiver: &AccountInfo<'info>,
     bridge: &mut Bridge,
 ) -> Result<()> {
+    bridge.eip1559.config.validate()?;
+    bridge.gas_config.validate()?;
+
     // Get the base fee for the current window
     let current_timestamp = Clock::get()?.unix_timestamp;
     let base_fee = bridge.eip1559.refresh_base_fee(current_timestamp);
@@ -42,8 +45,14 @@ pub fn pay_for_gas<'info>(
     // Record gas usage for this transaction
     bridge.eip1559.add_gas_usage(bridge.gas_config.gas_per_call);
 
-    let gas_cost = bridge.gas_config.gas_per_call * base_fee * bridge.gas_config.gas_cost_scaler
-        / bridge.gas_config.gas_cost_scaler_dp;
+    let numerator = (bridge.gas_config.gas_per_call as u128)
+        .checked_mul(base_fee as u128)
+        .and_then(|v| v.checked_mul(bridge.gas_config.gas_cost_scaler as u128))
+        .ok_or_else(|| error!(BridgeError::GasCostOverflow))?;
+    let gas_cost = numerator
+        .checked_div(bridge.gas_config.gas_cost_scaler_dp as u128)
+        .ok_or_else(|| error!(BridgeError::InvalidGasCostScalerDp))?;
+    let gas_cost = u64::try_from(gas_cost).map_err(|_| error!(BridgeError::GasCostOverflow))?;
 
     let cpi_ctx = CpiContext::new(
         system_program.to_account_info(),

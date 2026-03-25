@@ -16,6 +16,20 @@ pub struct GasConfig {
     pub gas_fee_receiver: Pubkey,
 }
 
+impl GasConfig {
+    pub fn validate(&self) -> Result<()> {
+        require!(
+            self.gas_cost_scaler_dp > 0,
+            RelayerError::InvalidGasCostScalerDp
+        );
+        require!(
+            self.min_gas_limit_per_message <= self.max_gas_limit_per_message,
+            RelayerError::InvalidGasConfigRange
+        );
+        Ok(())
+    }
+}
+
 pub fn check_and_pay_for_gas<'info>(
     system_program: &Program<'info, System>,
     payer: &Signer<'info>,
@@ -23,6 +37,8 @@ pub fn check_and_pay_for_gas<'info>(
     cfg: &mut Cfg,
     gas_limit: u64,
 ) -> Result<()> {
+    cfg.eip1559.config.validate()?;
+    cfg.gas_config.validate()?;
     check_gas_limit(gas_limit, cfg)?;
     pay_for_gas(system_program, payer, gas_fee_receiver, cfg, gas_limit)
 }
@@ -54,8 +70,14 @@ fn pay_for_gas<'info>(
     // Record gas usage for this transaction
     cfg.eip1559.add_gas_usage(gas_limit);
 
-    let gas_cost =
-        gas_limit * base_fee * cfg.gas_config.gas_cost_scaler / cfg.gas_config.gas_cost_scaler_dp;
+    let numerator = (gas_limit as u128)
+        .checked_mul(base_fee as u128)
+        .and_then(|v| v.checked_mul(cfg.gas_config.gas_cost_scaler as u128))
+        .ok_or_else(|| error!(RelayerError::GasCostOverflow))?;
+    let gas_cost = numerator
+        .checked_div(cfg.gas_config.gas_cost_scaler_dp as u128)
+        .ok_or_else(|| error!(RelayerError::InvalidGasCostScalerDp))?;
+    let gas_cost = u64::try_from(gas_cost).map_err(|_| error!(RelayerError::GasCostOverflow))?;
 
     let cpi_ctx = CpiContext::new(
         system_program.to_account_info(),

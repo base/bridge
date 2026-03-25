@@ -20,6 +20,24 @@ pub enum RelayerError {
     #[msg("Gas limit exceeded")]
     GasLimitExceeded,
 
+    #[msg("Invalid gas target")]
+    InvalidGasTarget,
+
+    #[msg("Invalid denominator")]
+    InvalidDenominator,
+
+    #[msg("Invalid window duration seconds")]
+    InvalidWindowDurationSeconds,
+
+    #[msg("Invalid gas cost scaler dp")]
+    InvalidGasCostScalerDp,
+
+    #[msg("Invalid gas config range")]
+    InvalidGasConfigRange,
+
+    #[msg("Gas cost overflow")]
+    GasCostOverflow,
+
     // Payment (6300-6399)
     #[msg("Incorrect gas fee receiver")]
     IncorrectGasFeeReceiver = 6300,

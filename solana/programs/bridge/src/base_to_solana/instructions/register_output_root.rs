@@ -95,6 +95,15 @@ pub fn register_output_root_handler(
         let partner_oracle_config = &ctx.accounts.bridge.partner_oracle_config;
         let partner_config =
             Signers::try_deserialize(&mut &ctx.accounts.partner_config.data.borrow()[..])?;
+
+        for signer in unique_signers.iter() {
+            if ctx.accounts.bridge.base_oracle_config.contains(signer)
+                && partner_config.contains(signer)
+            {
+                return err!(BridgeError::OverlappingOracleSignerSets);
+            }
+        }
+
         let partner_approved_count = partner_config.count_approvals(&unique_signers);
         require!(
             partner_approved_count as u8 >= partner_oracle_config.required_threshold,

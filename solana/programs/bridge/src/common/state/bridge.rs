@@ -60,6 +60,7 @@ pub struct Eip1559Config {
 
 impl Eip1559Config {
     pub fn validate(&self) -> Result<()> {
+        require!(self.target > 0, BridgeError::InvalidGasTarget);
         require!(self.denominator > 0, BridgeError::InvalidDenominator);
         require!(
             self.window_duration_seconds > 0,

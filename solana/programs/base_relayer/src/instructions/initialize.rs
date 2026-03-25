@@ -56,6 +56,9 @@ pub fn initialize_handler(
     eip1559_config: Eip1559Config,
     gas_config: GasConfig,
 ) -> Result<()> {
+    eip1559_config.validate()?;
+    gas_config.validate()?;
+
     let current_timestamp = Clock::get()?.unix_timestamp;
     let minimum_base_fee = eip1559_config.minimum_base_fee;
 

@@ -27,6 +27,7 @@ pub fn set_gas_target_handler(
     new_target: u64,
 ) -> Result<()> {
     ctx.accounts.bridge.eip1559.config.target = new_target;
+    ctx.accounts.bridge.eip1559.config.validate()?;
     Ok(())
 }
 

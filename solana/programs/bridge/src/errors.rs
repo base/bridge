@@ -128,6 +128,9 @@ pub enum BridgeError {
     #[msg("Invalid partner threshold")]
     InvalidPartnerThreshold,
 
+    #[msg("Invalid gas target")]
+    InvalidGasTarget,
+
     #[msg("Invalid denominator")]
     InvalidDenominator,
 
@@ -136,6 +139,9 @@ pub enum BridgeError {
 
     #[msg("Invalid gas cost scaler dp")]
     InvalidGasCostScalerDp,
+
+    #[msg("Gas cost overflow")]
+    GasCostOverflow,
 
     #[msg("Invalid block interval requirement")]
     InvalidBlockIntervalRequirement,
@@ -146,4 +152,7 @@ pub enum BridgeError {
 
     #[msg("Zero address")]
     ZeroAddress,
+
+    #[msg("Overlapping oracle signer sets")]
+    OverlappingOracleSignerSets,
 }

@@ -8,6 +8,7 @@ pub fn set_gas_cost_scaler_handler(
     new_scaler: u64,
 ) -> Result<()> {
     ctx.accounts.bridge.gas_config.gas_cost_scaler = new_scaler;
+    ctx.accounts.bridge.gas_config.validate()?;
     Ok(())
 }
 
@@ -36,5 +37,6 @@ pub fn set_gas_per_call_handler(
     new_val: u64,
 ) -> Result<()> {
     ctx.accounts.bridge.gas_config.gas_per_call = new_val;
+    ctx.accounts.bridge.gas_config.validate()?;
     Ok(())
 }

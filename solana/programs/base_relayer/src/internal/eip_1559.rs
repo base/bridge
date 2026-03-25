@@ -25,6 +25,18 @@ pub struct Eip1559Config {
     pub minimum_base_fee: u64,
 }
 
+impl Eip1559Config {
+    pub fn validate(&self) -> Result<()> {
+        require!(self.target > 0, crate::RelayerError::InvalidGasTarget);
+        require!(self.denominator > 0, crate::RelayerError::InvalidDenominator);
+        require!(
+            self.window_duration_seconds > 0,
+            crate::RelayerError::InvalidWindowDurationSeconds
+        );
+        Ok(())
+    }
+}
+
 impl Eip1559 {
     /// Refresh the base fee if window has expired, reset window tracking
     /// Handles multiple expired windows by processing each empty window

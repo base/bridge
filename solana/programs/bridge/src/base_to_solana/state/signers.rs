@@ -47,6 +47,17 @@ pub struct PartnerSigner {
 }
 
 impl Signers {
+    /// Returns true if the given EVM signer exists in this partner signer set.
+    pub fn contains(&self, signer: &[u8; 20]) -> bool {
+        self.signers.iter().any(|configured| {
+            configured.evm_address == *signer
+                || configured
+                    .new_evm_address
+                    .as_ref()
+                    .is_some_and(|new_addr| new_addr == signer)
+        })
+    }
+
     /// Count how many of the provided EVM addresses are authorized partner signers.
     ///
     /// - `signers` should contain unique 20-byte addresses. The caller (e.g.
