@@ -109,4 +109,12 @@ pub mod base_relayer {
     ) -> Result<()> {
         pay_for_relay_handler(ctx, mtr_salt, outgoing_message, gas_limit)
     }
+
+    /// Closes a `MessageToRelay` account and returns rent to `recipient`.
+    pub fn close_message_to_relay(
+        ctx: Context<CloseMessageToRelay>,
+        mtr_salt: [u8; 32],
+    ) -> Result<()> {
+        close_message_to_relay_handler(ctx, mtr_salt)
+    }
 }

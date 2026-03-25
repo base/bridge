@@ -5,6 +5,7 @@
     "private": true,
     "scripts": {
         "cli": "bun run src/bin.ts",
+        "verify:program-identity": "bun run src/verifyProgramIdentity.ts",
         "postinstall": "cd ../clients/ts && bun install && bun run build"
     },
     "devDependencies": {
