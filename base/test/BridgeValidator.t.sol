@@ -29,6 +29,7 @@ contract BridgeValidatorTest is CommonTest {
     event ValidatorAdded(address validator);
     event ValidatorRemoved(address validator);
     event PartnerThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+    event LegacySignatureValidationStatusUpdated(bool enabled);
 
     function setUp() public {
         DeployScript deployer = new DeployScript();
@@ -199,10 +200,10 @@ contract BridgeValidatorTest is CommonTest {
 
         // Calculate message hash
         bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
-        bytes memory signedHash = abi.encode(finalHashes);
+        bytes32 signedDigest = bridgeValidator.getSignableHash(finalHashes);
 
         // Only oracle signature -> should fail ThresholdNotMet
-        bytes memory oracleSig = _createSignature(signedHash, 77);
+        bytes memory oracleSig = _createDigestSignature(signedDigest, 77);
         vm.expectRevert(BridgeValidator.PartnerThresholdNotMet.selector);
         vm.prank(testOracle);
         bridgeValidator.registerMessages(signedMessages, oracleSig);
@@ -240,11 +241,11 @@ contract BridgeValidatorTest is CommonTest {
         });
 
         bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
-        bytes memory signedHash = abi.encode(finalHashes);
+        bytes32 signedDigest = bridgeValidator.getSignableHash(finalHashes);
 
         // Create duplicate signatures from same signer
-        bytes memory sig1 = _createSignature(signedHash, 1);
-        bytes memory sig2 = _createSignature(signedHash, 1);
+        bytes memory sig1 = _createDigestSignature(signedDigest, 1);
+        bytes memory sig2 = _createDigestSignature(signedDigest, 1);
         bytes memory duplicateSigs = abi.encodePacked(sig1, sig2);
 
         vm.expectRevert(BridgeValidator.UnsortedSigners.selector);
@@ -258,7 +259,7 @@ contract BridgeValidatorTest is CommonTest {
         });
 
         bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
-        bytes memory signedHash = abi.encode(finalHashes);
+        bytes32 signedDigest = bridgeValidator.getSignableHash(finalHashes);
 
         // Create signatures in wrong order (addresses should be sorted)
         uint256 key1 = 1;
@@ -273,8 +274,8 @@ contract BridgeValidatorTest is CommonTest {
         }
 
         // Now create signatures in reverse order
-        bytes memory sig1 = _createSignature(signedHash, key2); // Higher address first
-        bytes memory sig2 = _createSignature(signedHash, key1); // Lower address second
+        bytes memory sig1 = _createDigestSignature(signedDigest, key2); // Higher address first
+        bytes memory sig2 = _createDigestSignature(signedDigest, key1); // Lower address second
         bytes memory unsortedSigs = abi.encodePacked(sig1, sig2);
 
         vm.expectRevert(BridgeValidator.UnsortedSigners.selector);
@@ -296,13 +297,13 @@ contract BridgeValidatorTest is CommonTest {
             outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
         });
         bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
-        bytes memory signedHash = abi.encode(finalHashes);
+        bytes32 signedDigest = bridgeValidator.getSignableHash(finalHashes);
 
         // Create signatures from: base validator and both partner keys
         address baseAddr = vm.addr(1);
-        bytes memory sigBase = _createSignature(signedHash, 1);
-        bytes memory sigP1 = _createSignature(signedHash, 100);
-        bytes memory sigP2 = _createSignature(signedHash, 101);
+        bytes memory sigBase = _createDigestSignature(signedDigest, 1);
+        bytes memory sigP1 = _createDigestSignature(signedDigest, 100);
+        bytes memory sigP2 = _createDigestSignature(signedDigest, 101);
 
         // Concatenate in strictly ascending address order to satisfy UnsortedSigners check
         address a0 = baseAddr;
@@ -351,10 +352,10 @@ contract BridgeValidatorTest is CommonTest {
 
         // Calculate final hashes with the validator's current nonce
         bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
-        bytes memory signedHash = abi.encode(finalHashes);
+        bytes32 signedDigest = bridgeValidator.getSignableHash(finalHashes);
 
         // Only BASE_ORACLE signature should fail threshold check
-        bytes memory oracleSig = _createSignature(signedHash, 100);
+        bytes memory oracleSig = _createDigestSignature(signedDigest, 100);
 
         vm.expectRevert(BridgeValidator.PartnerThresholdNotMet.selector);
         vm.prank(testOracle);
@@ -378,12 +379,12 @@ contract BridgeValidatorTest is CommonTest {
 
         // Compute final hash using the proxy's current nonce
         bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
-        bytes memory signedHash = abi.encode(finalHashes);
+        bytes32 signedDigest = bridgeValidator.getSignableHash(finalHashes);
 
         // Create Base and partner signatures and order them by ascending signer address
         address baseAddr = vm.addr(1);
-        bytes memory sigBase = _createSignature(signedHash, 1);
-        bytes memory sigPartner = _createSignature(signedHash, 100);
+        bytes memory sigBase = _createDigestSignature(signedDigest, 1);
+        bytes memory sigPartner = _createDigestSignature(signedDigest, 100);
         bytes memory orderedSigs =
             baseAddr < partnerAddr ? abi.encodePacked(sigBase, sigPartner) : abi.encodePacked(sigPartner, sigBase);
 
@@ -392,6 +393,51 @@ contract BridgeValidatorTest is CommonTest {
 
         // Verify the message is registered
         assertTrue(bridgeValidator.validMessages(finalHashes[0]));
+    }
+
+    function test_registerMessages_revertsWhenBaseAndPartnerSetsOverlap() public {
+        _mockPartnerThreshold(1);
+        MockPartnerValidators(cfg.partnerValidators).addSigner(
+            IPartner.Signer({evmAddress: vm.addr(1), newEvmAddress: address(0)})
+        );
+
+        BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
+        signedMessages[0] = BridgeValidator.SignedMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
+        });
+
+        bytes memory sigs = _getValidatorSigs(signedMessages);
+        vm.expectRevert(BridgeValidator.OverlappingSignerSets.selector);
+        bridgeValidator.registerMessages(signedMessages, sigs);
+    }
+
+    function test_registerMessages_acceptsLegacySigsWhenCompatibilityEnabled() public {
+        BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
+        signedMessages[0] = BridgeValidator.SignedMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
+        });
+
+        bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
+        bytes memory legacySigs = _createSignature(abi.encode(finalHashes), 1);
+
+        bridgeValidator.registerMessages(signedMessages, legacySigs);
+        assertTrue(bridgeValidator.validMessages(finalHashes[0]));
+    }
+
+    function test_registerMessages_rejectsLegacySigsAfterCompatibilityDisabled() public {
+        vm.prank(cfg.guardians[0]);
+        bridgeValidator.setLegacySignatureValidationEnabled(false);
+
+        BridgeValidator.SignedMessage[] memory signedMessages = new BridgeValidator.SignedMessage[](1);
+        signedMessages[0] = BridgeValidator.SignedMessage({
+            outgoingMessagePubkey: TEST_OUTGOING_MESSAGE, innerMessageHash: TEST_MESSAGE_HASH_1
+        });
+
+        bytes32[] memory finalHashes = _calculateFinalHashes(signedMessages);
+        bytes memory legacySigs = _createSignature(abi.encode(finalHashes), 1);
+
+        vm.expectRevert(BridgeValidator.BaseThresholdNotMet.selector);
+        bridgeValidator.registerMessages(signedMessages, legacySigs);
     }
 
     //////////////////////////////////////////////////////////////
@@ -422,6 +468,20 @@ contract BridgeValidatorTest is CommonTest {
     function test_initialize_revertsWhenCalledTwice() public {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         bridgeValidator.initialize(cfg.baseValidators, cfg.baseSignatureThreshold, cfg.partnerValidatorThreshold);
+    }
+
+    function test_setLegacySignatureValidationEnabled_revertsForNonGuardian() public {
+        vm.prank(address(0x1234));
+        vm.expectRevert(BridgeValidator.CallerNotGuardian.selector);
+        bridgeValidator.setLegacySignatureValidationEnabled(false);
+    }
+
+    function test_setLegacySignatureValidationEnabled_emitsEvent() public {
+        vm.expectEmit(false, false, false, true);
+        emit LegacySignatureValidationStatusUpdated(false);
+
+        vm.prank(cfg.guardians[0]);
+        bridgeValidator.setLegacySignatureValidationEnabled(false);
     }
 
     function test_nextNonce_incrementsByBatchLength() public {

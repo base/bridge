@@ -45,12 +45,18 @@ contract BridgeValidator is Initializable {
     /// @notice A bit to be used in bitshift operations
     uint256 private constant _BIT = 1;
 
+    /// @notice Domain separator for validator signatures.
+    bytes32 private constant _SIGNATURE_DOMAIN_SEPARATOR = keccak256("BASE_BRIDGE_VALIDATOR_V2");
+
     //////////////////////////////////////////////////////////////
     ///                       Storage                          ///
     //////////////////////////////////////////////////////////////
 
     /// @notice Required number of partner signatures
     uint256 public partnerValidatorThreshold;
+
+    /// @notice Compatibility switch for legacy signatures on `abi.encode(messageHashes)`.
+    bool public legacySignatureValidationEnabled;
 
     /// @notice The next expected nonce to be received in `registerMessages`
     uint256 public nextNonce;
@@ -75,6 +81,9 @@ contract BridgeValidator is Initializable {
     /// @param oldThreshold The previous partner validator threshold.
     /// @param newThreshold The new partner validator threshold.
     event PartnerThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+
+    /// @notice Emitted when legacy signature validation support is toggled.
+    event LegacySignatureValidationStatusUpdated(bool enabled);
 
     //////////////////////////////////////////////////////////////
     ///                       Errors                           ///
@@ -104,6 +113,9 @@ contract BridgeValidator is Initializable {
     /// @notice Thrown when the recovered signers are not sorted
     error UnsortedSigners();
 
+    /// @notice Thrown when a signer is configured in both Base and partner signer sets.
+    error OverlappingSignerSets();
+
     /// @notice Thrown when attempting to register an empty batch of messages
     error NoMessages();
 
@@ -117,6 +129,12 @@ contract BridgeValidator is Initializable {
     /// @dev Restricts function to when the Bridge is not paused
     modifier whenNotPaused() {
         require(!Bridge(BRIDGE).paused(), Paused());
+        _;
+    }
+
+    /// @dev Restricts function calls to guardians from the Bridge contract.
+    modifier onlyGuardian() {
+        require(Bridge(BRIDGE).hasAnyRole(msg.sender, GUARDIAN_ROLE), CallerNotGuardian());
         _;
     }
 
@@ -135,6 +153,7 @@ contract BridgeValidator is Initializable {
         require(partnerValidators != address(0), ZeroAddress());
 
         partnerValidatorThreshold = type(uint256).max;
+        legacySignatureValidationEnabled = true;
         VerificationLib.getVerificationLibStorage().threshold = type(uint128).max;
 
         BRIDGE = bridgeAddress;
@@ -157,6 +176,7 @@ contract BridgeValidator is Initializable {
 
         require(partnerThreshold <= MAX_PARTNER_VALIDATOR_THRESHOLD, ThresholdTooHigh());
         partnerValidatorThreshold = partnerThreshold;
+        legacySignatureValidationEnabled = true;
     }
 
     /// @notice Pre-validates a batch of Solana → Base messages.
@@ -212,6 +232,17 @@ contract BridgeValidator is Initializable {
         return VerificationLib.isBaseValidator(validator);
     }
 
+    /// @notice Returns the domain-aware signable digest for a batch of message hashes.
+    function getSignableHash(bytes32[] memory messageHashes) external view returns (bytes32) {
+        return _getDomainAwareSignableHash(messageHashes);
+    }
+
+    /// @notice Enables or disables legacy signature validation.
+    function setLegacySignatureValidationEnabled(bool enabled) external onlyGuardian {
+        legacySignatureValidationEnabled = enabled;
+        emit LegacySignatureValidationStatusUpdated(enabled);
+    }
+
     //////////////////////////////////////////////////////////////
     ///                    Private Functions                   ///
     //////////////////////////////////////////////////////////////
@@ -221,30 +252,24 @@ contract BridgeValidator is Initializable {
     /// @param messageHashes The derived message hashes (inner hash + nonce) for the batch.
     /// @param sigData       Concatenated signatures over `toEthSignedMessageHash(abi.encode(messageHashes))`.
     function _validateSigs(bytes32[] memory messageHashes, bytes calldata sigData) private view {
-        address[] memory recoveredSigners = _getSignersFromSigs(messageHashes, sigData);
-        require(_countBaseSigners(recoveredSigners) >= VerificationLib.getBaseThreshold(), BaseThresholdNotMet());
-
-        uint256 partnerValidatorThreshold_ = partnerValidatorThreshold;
-        if (partnerValidatorThreshold_ > 0) {
-            IPartner.Signer[] memory partnerValidators = IPartner(PARTNER_VALIDATORS).getSigners();
-            require(
-                _countPartnerSigners(partnerValidators, recoveredSigners) >= partnerValidatorThreshold_,
-                PartnerThresholdNotMet()
-            );
-        }
-    }
-
-    function _getSignersFromSigs(bytes32[] memory messageHashes, bytes calldata sigData)
-        private
-        view
-        returns (address[] memory)
-    {
-        // Check that the provided signature data is a multiple of the valid sig length
         require(sigData.length % VerificationLib.SIGNATURE_LENGTH_THRESHOLD == 0, InvalidSignatureLength());
 
+        // Primary verification path: domain-bound signatures.
+        if (_isSignatureSetValid(_getDomainAwareSignableHash(messageHashes), sigData)) {
+            return;
+        }
+
+        // Backward-compatible fallback for old offchain signers.
+        if (legacySignatureValidationEnabled && _isSignatureSetValid(_getLegacySignableHash(messageHashes), sigData)) {
+            return;
+        }
+
+        // Re-run strict checks on the primary digest so callers get specific errors.
+        _assertSignatureSetValid(_getDomainAwareSignableHash(messageHashes), sigData);
+    }
+
+    function _getSignersFromSigs(bytes32 signedHash, bytes calldata sigData) private view returns (address[] memory) {
         uint256 sigCount = sigData.length / VerificationLib.SIGNATURE_LENGTH_THRESHOLD;
-        bytes32 signedHash = ECDSA.toEthSignedMessageHash(abi.encode(messageHashes));
-        address lastValidator = address(0);
         address[] memory recoveredSigners = new address[](sigCount);
 
         uint256 offset;
@@ -255,12 +280,52 @@ contract BridgeValidator is Initializable {
         for (uint256 i; i < sigCount; i++) {
             (uint8 v, bytes32 r, bytes32 s) = VerificationLib.signatureSplit(offset, i);
             address currentValidator = signedHash.recover(v, r, s);
-            require(currentValidator > lastValidator, UnsortedSigners());
             recoveredSigners[i] = currentValidator;
-            lastValidator = currentValidator;
         }
 
         return recoveredSigners;
+    }
+
+    function _assertSignatureSetValid(bytes32 signedHash, bytes calldata sigData) private view {
+        address[] memory recoveredSigners = _getSignersFromSigs(signedHash, sigData);
+        _assertSortedSigners(recoveredSigners);
+        require(_countBaseSigners(recoveredSigners) >= VerificationLib.getBaseThreshold(), BaseThresholdNotMet());
+
+        uint256 partnerValidatorThreshold_ = partnerValidatorThreshold;
+        if (partnerValidatorThreshold_ > 0) {
+            IPartner.Signer[] memory partnerValidators = IPartner(PARTNER_VALIDATORS).getSigners();
+            if (_hasSignerSetOverlap(partnerValidators, recoveredSigners)) {
+                revert OverlappingSignerSets();
+            }
+            require(
+                _countPartnerSigners(partnerValidators, recoveredSigners) >= partnerValidatorThreshold_,
+                PartnerThresholdNotMet()
+            );
+        }
+    }
+
+    function _isSignatureSetValid(bytes32 signedHash, bytes calldata sigData) private view returns (bool) {
+        address[] memory recoveredSigners = _getSignersFromSigs(signedHash, sigData);
+        if (!_areSignersStrictlySorted(recoveredSigners)) {
+            return false;
+        }
+        if (_countBaseSigners(recoveredSigners) < VerificationLib.getBaseThreshold()) {
+            return false;
+        }
+
+        uint256 partnerValidatorThreshold_ = partnerValidatorThreshold;
+        if (partnerValidatorThreshold_ == 0) {
+            return true;
+        }
+
+        IPartner.Signer[] memory partnerValidators = IPartner(PARTNER_VALIDATORS).getSigners();
+        if (_hasSignerSetOverlap(partnerValidators, recoveredSigners)) {
+            return false;
+        }
+
+        (uint256 partnerSignerCount, bool validPartnerBitmap) =
+            _countPartnerSignersIfValid(partnerValidators, recoveredSigners);
+        return validPartnerBitmap && partnerSignerCount >= partnerValidatorThreshold_;
     }
 
     function _countBaseSigners(address[] memory signers) private view returns (uint256) {
@@ -282,7 +347,18 @@ contract BridgeValidator is Initializable {
         pure
         returns (uint256)
     {
-        uint256 count;
+        (uint256 count, bool validPartnerBitmap) = _countPartnerSignersIfValid(partnerValidators, signers);
+        if (!validPartnerBitmap) {
+            revert DuplicateSigner();
+        }
+        return count;
+    }
+
+    function _countPartnerSignersIfValid(IPartner.Signer[] memory partnerValidators, address[] memory signers)
+        private
+        pure
+        returns (uint256 count, bool validPartnerBitmap)
+    {
         uint256 signedBitMap;
 
         for (uint256 i; i < signers.length; i++) {
@@ -292,7 +368,7 @@ contract BridgeValidator is Initializable {
             }
 
             if (signedBitMap & (_BIT << partnerIndex) != 0) {
-                revert DuplicateSigner();
+                return (0, false);
             }
 
             signedBitMap |= _BIT << partnerIndex;
@@ -301,7 +377,45 @@ contract BridgeValidator is Initializable {
             }
         }
 
-        return count;
+        return (count, true);
+    }
+
+    function _assertSortedSigners(address[] memory signers) private pure {
+        require(_areSignersStrictlySorted(signers), UnsortedSigners());
+    }
+
+    function _areSignersStrictlySorted(address[] memory signers) private pure returns (bool) {
+        address lastSigner = address(0);
+        for (uint256 i; i < signers.length; i++) {
+            if (signers[i] <= lastSigner) {
+                return false;
+            }
+            lastSigner = signers[i];
+        }
+        return true;
+    }
+
+    function _hasSignerSetOverlap(IPartner.Signer[] memory partnerValidators, address[] memory signers)
+        private
+        view
+        returns (bool)
+    {
+        for (uint256 i; i < signers.length; i++) {
+            if (VerificationLib.isBaseValidator(signers[i]) && _indexOf(partnerValidators, signers[i]) != partnerValidators.length) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function _getDomainAwareSignableHash(bytes32[] memory messageHashes) private view returns (bytes32) {
+        return ECDSA.toEthSignedMessageHash(
+            abi.encode(_SIGNATURE_DOMAIN_SEPARATOR, block.chainid, address(this), messageHashes)
+        );
+    }
+
+    function _getLegacySignableHash(bytes32[] memory messageHashes) private pure returns (bytes32) {
+        return ECDSA.toEthSignedMessageHash(abi.encode(messageHashes));
     }
 
     /// @dev Linear search for `addr` in memory array `addrs`.

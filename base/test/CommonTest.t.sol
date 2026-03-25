@@ -54,7 +54,12 @@ contract CommonTest is Test {
         returns (bytes memory)
     {
         bytes32[] memory messageHashes = _calculateFinalHashes(signedMessages);
-        return _createSignature(abi.encode(messageHashes), 1);
+        return _createDigestSignature(bridgeValidator.getSignableHash(messageHashes), 1);
+    }
+
+    function _createDigestSignature(bytes32 digest, uint256 privateKey) internal pure returns (bytes memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        return abi.encodePacked(r, s, v);
     }
 
     function _createSignature(bytes memory message, uint256 privateKey) internal pure returns (bytes memory) {
