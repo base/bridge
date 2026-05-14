@@ -7,5 +7,9 @@ test-ledger
 .yarn
 
 .env
+.env.local
+.env.development
+.env.test
+.env.production
 keypairs/
 /.idea/
