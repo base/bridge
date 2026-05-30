@@ -110,3 +110,49 @@ BRIDGE_ENVIRONMENT=alpha LOCAL_TOKEN=0x123... REMOTE_TOKEN=0x456... TO=0x789... 
 - `REMOTE_TOKEN`: bytes32 representation of SPL mint pubkey on Solana (`0x069be72ab836d4eacc02525b7350a78a395da2f1253a40ebafd6630000000000` for native SOL)
 - `TO`: bytes32 representation of Solana pubkey receiver (this is your Solana wallet address if bridging SOL and it should be your associated token account if bridging into an SPL token)
 - `AMOUNT`: The amount of Base tokens to bridge in wei
+
+## Important: Recipient Address Encoding
+
+When bridging from Solana to Base, the recipient EVM address is extracted from `transfer.to` using:
+
+```solidity
+address to = address(bytes20(transfer.to));
+```
+
+This takes the **first 20 bytes** (left-aligned) of the `bytes32` value. This means:
+
+### Correct Encoding (Left-aligned)
+
+```solidity
+// ✅ Correct: left-aligned bytes20 inside bytes32
+bytes32 recipient = bytes32(bytes20(0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18));
+// Result: 0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18000000000000000000000000
+```
+
+### Incorrect Encoding (Right-aligned)
+
+```solidity
+// ❌ Wrong: right-aligned encoding will decode the wrong address
+bytes32 recipient = bytes32(uint256(uint160(0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18)));
+// Result: 0x000000000000000000000000742d35Cc6634C0532925a3b844Bc9e7595f2bD18
+// This will decode as 0x000000000000000000000000742d35Cc6634 - WRONG!
+```
+
+### Quick Reference
+
+| Direction | Recipient Format |
+|-----------|-----------------|
+| Base → Solana | `bytes32` of Solana pubkey (32 bytes) |
+| Solana → Base (ETH/ERC20) | `bytes32(bytes20(evmAddress))` — left-aligned |
+| Solana → Base (SPL) | Associated token account pubkey as `bytes32` |
+
+### JavaScript/TypeScript Helper
+
+```typescript
+import { pad } from 'viem';
+
+// Convert EVM address to bytes32 for Solana → Base transfers
+function addressToBytes32(address: `0x${string}`): `0x${string}` {
+  return pad(address, { size: 32, dir: 'left' });
+}
+```
