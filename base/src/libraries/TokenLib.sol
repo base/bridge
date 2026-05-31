@@ -61,6 +61,11 @@ library TokenLib {
     /// @notice Thrown when cumulative deposits exceed uint64 max when scaled to remote amount.
     error CumulativeDepositExceedsU64();
 
+    /// @notice Thrown when the `to` field uses wrong (right-aligned) address encoding.
+    /// @dev The `to` field should be encoded as `bytes32(bytes20(addr))` (left-aligned).
+    ///      If encoded as `bytes32(uint256(uint160(addr)))` (right-aligned), this error is thrown.
+    error WrongAddressEncoding();
+
     //////////////////////////////////////////////////////////////
     ///                       Events                           ///
     //////////////////////////////////////////////////////////////
@@ -217,6 +222,18 @@ library TokenLib {
         });
     }
 
+    /// @notice Validates that the `to` field is correctly encoded as left-aligned bytes20.
+    /// @dev Re-encodes the address extracted from `transfer.to` and compares it to the original.
+    ///      This detects the common mistake of using `bytes32(uint256(uint160(addr)))` instead of
+    ///      `bytes32(bytes20(addr))`.
+    /// @param transfer The transfer struct containing the `to` field to validate.
+    function _validateAddressEncoding(Transfer memory transfer) internal pure {
+        address addr = address(bytes20(transfer.to));
+        // Re-encode using the correct left-aligned form and compare.
+        // If the original was right-aligned, this comparison will fail.
+        require(bytes32(bytes20(addr)) == transfer.to, WrongAddressEncoding());
+    }
+
     /// @notice Finalizes a token transfer.
     ///
     /// @param transfer The token transfer to finalize.
@@ -224,6 +241,7 @@ library TokenLib {
     function finalizeTransfer(Transfer memory transfer, address crossChainErc20Factory) internal {
         TokenLibStorage storage $ = getTokenLibStorage();
 
+        _validateAddressEncoding(transfer);
         address to = address(bytes20(transfer.to));
         uint256 localAmount;
 
