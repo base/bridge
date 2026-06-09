@@ -19,6 +19,7 @@ import {
 } from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
+import { parseTokenAmount } from "@internal/amount";
 import { FLYWHEEL_ABI } from "@internal/base/abi";
 import {
   buildAndSendTransaction,
@@ -46,12 +47,15 @@ export const argsSchema = z.object({
       message: "Invalid Base/Ethereum address format",
     })
     .brand<"baseAddress">(),
-  amount: z
-    .string()
-    .transform((val) => parseFloat(val))
-    .refine((val) => !isNaN(val) && val > 0, {
+  amount: z.string().refine(
+    (val) => {
+      const n = Number.parseFloat(val);
+      return !Number.isNaN(n) && n > 0;
+    },
+    {
       message: "Amount must be a positive number",
-    }),
+    },
+  ),
   builderCode: z
     .string()
     .regex(/^0x[a-fA-F0-9]{64}$/, {
@@ -97,7 +101,7 @@ export async function handleBridgeSolWithBc(args: Args): Promise<void> {
     logger.info(`Sol Vault: ${solVaultAddress}`);
 
     // Calculate scaled amount (amount * 10^decimals)
-    const scaledAmount = BigInt(Math.floor(args.amount * Math.pow(10, 9)));
+    const scaledAmount = parseTokenAmount(args.amount, 9);
     logger.info(`Amount: ${args.amount}`);
     logger.info(`Scaled amount: ${scaledAmount}`);
 
