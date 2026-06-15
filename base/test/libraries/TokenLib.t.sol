@@ -647,6 +647,23 @@ contract TokenLibTest is CommonTest {
         );
     }
 
+    function test_evmRecipientEncoding_usesLeftAlignedBytes20() public pure {
+        address recipient = address(uint160(0x1234567890abcdef1234567890abcdef12345678));
+
+        bytes32 encoded = TokenLib.encodeEvmRecipient(recipient);
+        bytes32 rightAligned = bytes32(uint256(uint160(recipient)));
+
+        assertEq(encoded, bytes32(bytes20(recipient)), "EVM recipient should be left-aligned");
+        assertEq(TokenLib.decodeEvmRecipient(encoded), recipient, "Left-aligned recipient should round trip");
+
+        assertNotEq(rightAligned, encoded, "ABI-style right-aligned encoding should differ");
+        assertNotEq(
+            TokenLib.decodeEvmRecipient(rightAligned),
+            recipient,
+            "Right-aligned encoding decodes to the wrong Base recipient"
+        );
+    }
+
     //////////////////////////////////////////////////////////////
     ///                 Integration Tests                      ///
     //////////////////////////////////////////////////////////////

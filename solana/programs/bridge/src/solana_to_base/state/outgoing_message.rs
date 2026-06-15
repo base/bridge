@@ -11,6 +11,8 @@ pub trait MessageSpace {
 #[derive(Debug, Clone, Eq, PartialEq, AnchorSerialize, AnchorDeserialize)]
 pub struct Transfer {
     /// The recipient address on Base that will receive the bridged tokens.
+    /// When relayed into the Solidity `Transfer.to` bytes32 field, these 20 bytes
+    /// occupy the first 20 bytes and are decoded by `TokenLib.decodeEvmRecipient`.
     pub to: [u8; 20],
 
     /// The token mint address on Solana that is being bridged.
