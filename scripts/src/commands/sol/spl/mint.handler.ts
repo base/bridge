@@ -10,7 +10,7 @@ import {
 } from "@solana-program/token";
 
 import { logger } from "@internal/logger";
-import { parseTokenAmount } from "@internal/amount";
+import { parseTokenAmount, positiveAmountSchema } from "@internal/amount";
 import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
@@ -30,18 +30,7 @@ export const argsSchema = z.object({
   to: z
     .union([z.literal("config"), z.string().brand<"to">()])
     .default("config"),
-  amount: z
-    .string()
-    .refine(
-      (val) => {
-        const n = Number.parseFloat(val);
-        return !Number.isNaN(n) && n > 0;
-      },
-      {
-        message: "Amount must be a positive number",
-      },
-    )
-    .default("100"),
+  amount: positiveAmountSchema.default("100"),
   mintAuthorityKp: z
     .union([z.literal("config"), z.string().brand<"mintAuthorityKp">()])
     .default("config"),

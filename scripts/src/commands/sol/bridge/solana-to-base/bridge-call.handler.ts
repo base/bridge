@@ -14,7 +14,7 @@ import {
 } from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
-import { parseTokenAmount } from "@internal/amount";
+import { parseTokenAmount, nonNegativeAmountSchema } from "@internal/amount";
 import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
@@ -41,18 +41,7 @@ export const argsSchema = z.object({
     z.literal("counter"),
     z.string().startsWith("0x", "Address must start with 0x").brand<"to">(),
   ]),
-  value: z
-    .string()
-    .refine(
-      (val) => {
-        const n = Number.parseFloat(val);
-        return !Number.isNaN(n) && n >= 0;
-      },
-      {
-        message: "Value must be a non-negative number",
-      },
-    )
-    .default("0"),
+  value: nonNegativeAmountSchema,
   data: z
     .union([
       z.literal("increment"),

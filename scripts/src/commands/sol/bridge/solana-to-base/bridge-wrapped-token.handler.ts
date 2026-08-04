@@ -23,7 +23,7 @@ import {
 } from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
-import { parseTokenAmount } from "@internal/amount";
+import { parseTokenAmount, positiveAmountSchema } from "@internal/amount";
 import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
@@ -60,15 +60,7 @@ export const argsSchema = z.object({
       message: "Invalid Base/Ethereum address format",
     })
     .brand<"baseAddress">(),
-  amount: z.string().refine(
-    (val) => {
-      const n = Number.parseFloat(val);
-      return !Number.isNaN(n) && n > 0;
-    },
-    {
-      message: "Amount must be a positive number",
-    },
-  ),
+  amount: positiveAmountSchema,
   payerKp: z
     .union([z.literal("config"), z.string().brand<"payerKp">()])
     .default("config"),

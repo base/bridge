@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { parseTokenAmount } from "./amount";
+import {
+  nonNegativeAmountSchema,
+  parseTokenAmount,
+  positiveAmountSchema,
+} from "./amount";
 
 // Documents the precision loss in the previous inline scaling approach that
 // this util replaces: BigInt(Math.floor(parseFloat(value) * 10 ** decimals)).
@@ -24,4 +28,32 @@ test("parseTokenAmount scales decimal strings exactly", () => {
 test("parseTokenAmount matches legacy output for inputs that had no float error", () => {
   expect(parseTokenAmount("0.1", 9)).toBe(legacyInlineScale("0.1", 9));
   expect(parseTokenAmount("2", 9)).toBe(legacyInlineScale("2", 9));
+});
+
+test("parseTokenAmount rounds over-precision half-up (parseUnits, not floor)", () => {
+  // more fractional digits than the token supports: parseUnits rounds half-up,
+  // unlike the previous Math.floor which truncated
+  expect(parseTokenAmount("1.0000000006", 9)).toBe(1_000_000_001n);
+  expect(parseTokenAmount("1.0000000004", 9)).toBe(1_000_000_000n);
+});
+
+test("positiveAmountSchema rejects inputs parseUnits would throw on", () => {
+  // these all pass a lenient parseFloat check but are rejected by parseUnits;
+  // validating with the same grammar surfaces a clear CLI error instead
+  for (const bad of ["1e-3", "1abc", "+1", "1_000", "Infinity", " 1.5 ", "", "0", "-1"]) {
+    expect(positiveAmountSchema.safeParse(bad).success).toBe(false);
+  }
+});
+
+test("positiveAmountSchema accepts plain positive decimal strings", () => {
+  for (const good of ["1", "1.5", "100", "0.001", "0.000000001"]) {
+    expect(positiveAmountSchema.safeParse(good).success).toBe(true);
+  }
+});
+
+test("nonNegativeAmountSchema accepts 0, defaults to \"0\", rejects negatives", () => {
+  expect(nonNegativeAmountSchema.safeParse("0").success).toBe(true);
+  expect(nonNegativeAmountSchema.parse(undefined)).toBe("0");
+  expect(nonNegativeAmountSchema.safeParse("-1").success).toBe(false);
+  expect(nonNegativeAmountSchema.safeParse("1e18").success).toBe(false);
 });
