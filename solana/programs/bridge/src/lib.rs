@@ -183,10 +183,12 @@ pub mod bridge {
 
     // Solana -> Base
 
-    /// Creates a wrapped version of a Base token.
-    /// This function creates a new SPL mint account on Solana that represents the Base token,
-    /// enabling users to bridge the token between the two chains. It will also trigger a message
-    /// to Base to register the wrapped token in the Base Bridge contract.
+    /// Creates a wrapped version of a Base token, without an off-chain metadata uri.
+    ///
+    /// DEPRECATED: use `wrap_token_v2`, which additionally accepts the uri that serves the token's
+    /// icon and description. This instruction is retained only so clients built before that field
+    /// existed keep working. It derives the same mint as `wrap_token_v2`, but leaves the uri empty
+    /// permanently, since a wrapped token's metadata can never be changed after it is created.
     ///
     /// # Arguments
     /// * `ctx`                    - The transaction context
@@ -197,9 +199,28 @@ pub mod bridge {
         ctx: Context<WrapToken>,
         outgoing_message_salt: [u8; 32],
         decimals: u8,
-        partial_token_metadata: PartialTokenMetadata,
+        partial_token_metadata: PartialTokenMetadataV1,
     ) -> Result<()> {
         wrap_token_handler(ctx, outgoing_message_salt, decimals, partial_token_metadata)
+    }
+
+    /// Creates a wrapped version of a Base token.
+    /// This function creates a new SPL mint account on Solana that represents the Base token,
+    /// enabling users to bridge the token between the two chains. It will also trigger a message
+    /// to Base to register the wrapped token in the Base Bridge contract.
+    ///
+    /// # Arguments
+    /// * `ctx`                    - The transaction context
+    /// * `outgoing_message_salt`  - The salt for the outgoing message account
+    /// * `decimals`               - Number of decimal places for the token
+    /// * `partial_token_metadata` - Token name, symbol, off-chain metadata uri, remote Base token address, and scaler exponent
+    pub fn wrap_token_v2(
+        ctx: Context<WrapTokenV2>,
+        outgoing_message_salt: [u8; 32],
+        decimals: u8,
+        partial_token_metadata: PartialTokenMetadata,
+    ) -> Result<()> {
+        wrap_token_v2_handler(ctx, outgoing_message_salt, decimals, partial_token_metadata)
     }
 
     /// Initiates a cross-chain function call from Solana to Base.
