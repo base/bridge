@@ -8,6 +8,7 @@ import {
   getOrPromptFilePath,
   getOrPromptDeployEnv,
   validateAndExecute,
+  getInteractiveInput,
   getInteractiveSelect,
 } from "@internal/utils/cli";
 import { argsSchema, handleWrapToken } from "./wrap-token.handler";
@@ -17,6 +18,7 @@ type CommanderOptions = {
   decimals?: string;
   name?: string;
   symbol?: string;
+  uri?: string;
   remoteToken?: string;
   scalerExponent?: string;
   payerKp?: string;
@@ -49,6 +51,19 @@ async function collectInteractiveOptions(
     "Enter token symbol",
     "wERC20"
   );
+
+  if (opts.uri === undefined) {
+    opts.uri = await getInteractiveInput(
+      "Enter token metadata uri, which serves the icon and description (leave blank for none)",
+      "https://example.com/token.json",
+      (input) => {
+        const result = argsSchema.shape.uri.safeParse(input.trim());
+        return result.success
+          ? undefined
+          : result.error.issues[0]?.message || "Invalid uri";
+      }
+    );
+  }
 
   if (!opts.remoteToken) {
     const remoteToken = await getInteractiveSelect({
@@ -102,6 +117,10 @@ export const wrapTokenCommand = new Command("wrap-token")
   .option("--decimals <decimals>", "Token decimals")
   .option("--name <name>", "Token name")
   .option("--symbol <symbol>", "Token symbol")
+  .option(
+    "--uri <uri>",
+    "Uri of the off-chain JSON metadata serving the token icon and description"
+  )
   .option(
     "--remote-token <remoteToken>",
     "Remote token address: 'constant-erc20', 'constant-eth', or custom address"
