@@ -13,8 +13,8 @@ import { keccak256, toBytes } from "viem";
 
 import {
   fetchBridge,
-  getWrapTokenInstruction,
-  type WrapTokenInstructionDataArgs,
+  getWrapTokenV2Instruction,
+  type WrapTokenV2InstructionDataArgs,
 } from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
@@ -49,6 +49,16 @@ export const argsSchema = z.object({
     .nonempty("Token name cannot be empty")
     .default("Wrapped ERC20"),
   symbol: z.string().nonempty("Token symbol cannot be empty").default("wERC20"),
+  uri: z
+    .string()
+    .refine((val) => val.trim() === "" || URL.canParse(val.trim()), {
+      message: "Token uri must be a valid URL",
+    })
+    .refine(
+      (val) => Buffer.byteLength(val, "utf8") <= getIdlConstant("MAX_URI_LEN"),
+      { message: "Token uri is too long" }
+    )
+    .default(""),
   remoteToken: z.union([
     z.literal("constant-erc20"),
     z.literal("constant-eth"),
@@ -98,11 +108,12 @@ export async function handleWrapToken(args: Args): Promise<void> {
     logger.info(`Outgoing message: ${outgoingMessage}`);
 
     // Instruction arguments
-    const instructionArgs: WrapTokenInstructionDataArgs = {
+    const instructionArgs: WrapTokenV2InstructionDataArgs = {
       outgoingMessageSalt: salt,
       decimals: args.decimals,
       name: args.name,
       symbol: args.symbol,
+      uri: args.uri,
       remoteToken: toBytes(remoteToken),
       scalerExponent: args.scalerExponent,
     };
@@ -115,7 +126,9 @@ export async function handleWrapToken(args: Args): Promise<void> {
       instructionArgs.symbol.length
     );
 
-    // Calculate metadata hash
+    // Calculate metadata hash.
+    // NOTE: `uri` is deliberately absent, mirroring `PartialTokenMetadata::hash` onchain. Adding it
+    // here would derive a mint the program does not recognize.
     const metadataHash = keccak256(
       Buffer.concat([
         Buffer.from(nameLengthLeBytes),
@@ -148,7 +161,7 @@ export async function handleWrapToken(args: Args): Promise<void> {
 
     // Build wrap token instruction
     const ixs: Instruction[] = [
-      getWrapTokenInstruction(
+      getWrapTokenV2Instruction(
         {
           // Accounts
           payer,
