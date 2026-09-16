@@ -2485,10 +2485,12 @@
     {
       "name": "wrap_token",
       "docs": [
-        "Creates a wrapped version of a Base token.",
-        "This function creates a new SPL mint account on Solana that represents the Base token,",
-        "enabling users to bridge the token between the two chains. It will also trigger a message",
-        "to Base to register the wrapped token in the Base Bridge contract.",
+        "Creates a wrapped version of a Base token, without an off-chain metadata uri.",
+        "",
+        "DEPRECATED: use `wrap_token_v2`, which additionally accepts the uri that serves the token's",
+        "icon and description. This instruction is retained only so clients built before that field",
+        "existed keep working. It derives the same mint as `wrap_token_v2`, but leaves the uri empty",
+        "permanently, since a wrapped token's metadata can never be changed after it is created.",
         "",
         "# Arguments",
         "* `ctx`                    - The transaction context",
@@ -2505,6 +2507,114 @@
         109,
         44,
         6
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "The account that pays for the transaction and all account creation costs.",
+            "Must be mutable to deduct lamports for mint creation, metadata storage, and gas fees."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "gas_fee_receiver",
+          "docs": [
+            "The account that receives payment for the gas costs of registering the token on Base."
+          ],
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The new SPL Token-2022 mint being created for the wrapped token.",
+            "- Uses PDA with token metadata hash and decimals for deterministic address",
+            "- Mint authority set to itself (mint account) for controlled minting",
+            "- Includes metadata pointer extension to store token information onchain"
+          ],
+          "writable": true
+        },
+        {
+          "name": "bridge",
+          "docs": [
+            "The main bridge state account that tracks cross-chain operations.",
+            "Used to increment the nonce counter and manage EIP-1559 gas pricing.",
+            "Must be mutable to update the nonce after creating the outgoing message."
+          ],
+          "writable": true
+        },
+        {
+          "name": "outgoing_message",
+          "docs": [
+            "The outgoing message account that stores the cross-chain call to register",
+            "the wrapped token on the Base blockchain. Contains the encoded function call",
+            "with token address, local mint address, and scaling parameters."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "SPL Token-2022 program for creating the mint with metadata extensions.",
+            "Required for initializing tokens with advanced features like metadata pointers."
+          ]
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System program required for creating new accounts and transferring lamports.",
+            "Used internally by Anchor for account initialization and rent payments."
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "outgoing_message_salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "decimals",
+          "type": "u8"
+        },
+        {
+          "name": "partial_token_metadata",
+          "type": {
+            "defined": {
+              "name": "PartialTokenMetadataV1"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrap_token_v2",
+      "docs": [
+        "Creates a wrapped version of a Base token.",
+        "This function creates a new SPL mint account on Solana that represents the Base token,",
+        "enabling users to bridge the token between the two chains. It will also trigger a message",
+        "to Base to register the wrapped token in the Base Bridge contract.",
+        "",
+        "# Arguments",
+        "* `ctx`                    - The transaction context",
+        "* `outgoing_message_salt`  - The salt for the outgoing message account",
+        "* `decimals`               - Number of decimal places for the token",
+        "* `partial_token_metadata` - Token name, symbol, off-chain metadata uri, remote Base token address, and scaler exponent"
+      ],
+      "discriminator": [
+        156,
+        173,
+        188,
+        64,
+        139,
+        131,
+        187,
+        136
       ],
       "accounts": [
         {
@@ -2846,6 +2956,11 @@
       "code": 12705,
       "name": "MintIsNotWrappedTokenPda",
       "msg": "Mint is not a valid wrapped token PDA"
+    },
+    {
+      "code": 12706,
+      "name": "UriTooLong",
+      "msg": "Token metadata uri is too long"
     },
     {
       "code": 12800,
@@ -3754,6 +3869,16 @@
             "type": "string"
           },
           {
+            "name": "uri",
+            "docs": [
+              "URI pointing to off-chain JSON metadata holding the token's image and description.",
+              "Token-2022 has no dedicated fields for either, so both are served from this document.",
+              "",
+              "NOTE: Deliberately excluded from [`PartialTokenMetadata::hash`]. See that method."
+            ],
+            "type": "string"
+          },
+          {
             "name": "remote_token",
             "docs": [
               "The 20-byte address of the corresponding token contract on Base (EVM address bytes).",
@@ -3775,6 +3900,52 @@
               "this value conveys the decimal relationship so bridging logic can scale amounts.",
               "The exact conversion is performed by the EVM-side contract; Solana propagates this",
               "value but does not apply arithmetic with it."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PartialTokenMetadataV1",
+      "docs": [
+        "Deprecated wire format for the `wrap_token` instruction, retained byte-for-byte so clients built",
+        "before `uri` existed keep working. Converts to [`PartialTokenMetadata`] with an empty `uri`,",
+        "which cannot be filled in afterwards. New integrations should use `wrap_token_v2`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "name",
+            "docs": [
+              "The human-readable name of the token (e.g., \"Wrapped Bitcoin\")"
+            ],
+            "type": "string"
+          },
+          {
+            "name": "symbol",
+            "docs": [
+              "The symbol/ticker of the token (e.g., \"WBTC\")"
+            ],
+            "type": "string"
+          },
+          {
+            "name": "remote_token",
+            "docs": [
+              "The 20-byte address of the corresponding token contract on Base (EVM address bytes)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                20
+              ]
+            }
+          },
+          {
+            "name": "scaler_exponent",
+            "docs": [
+              "The scaling exponent used to convert between token amounts on different chains."
             ],
             "type": "u8"
           }
@@ -4092,6 +4263,17 @@
       "name": "MAX_SIGNER_COUNT",
       "type": "u8",
       "value": "16"
+    },
+    {
+      "name": "MAX_URI_LEN",
+      "docs": [
+        "Upper bound on a wrapped token's off-chain metadata uri. Matches the limit Metaplex applies to",
+        "its own uri field. The uri is written once when the token is wrapped and can never be changed,",
+        "so it is bounded to keep the mint small enough that unpacking its metadata during later bridge",
+        "operations stays well within the compute budget."
+      ],
+      "type": "u8",
+      "value": "200"
     },
     {
       "name": "NATIVE_SOL_PUBKEY",

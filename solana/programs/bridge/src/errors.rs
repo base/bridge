@@ -115,6 +115,9 @@ pub enum BridgeError {
     #[msg("Mint is not a valid wrapped token PDA")]
     MintIsNotWrappedTokenPda,
 
+    #[msg("Token metadata uri is too long")]
+    UriTooLong,
+
     // Bridge Configuration (6800-6899)
     #[msg("Threshold must be <= number of signers")]
     InvalidThreshold = 6800,

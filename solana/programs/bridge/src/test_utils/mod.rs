@@ -370,7 +370,13 @@ pub fn create_mock_wrapped_mint(
         ExtensionType::try_calculate_account_len::<Mint>(&[ExtensionType::MetadataPointer])
             .unwrap();
 
-    let token_metadata = TokenMetadata::from(partial_token_metadata);
+    // A mint wrapped by this program is its own metadata update authority and metadata mint, which
+    // `TokenMetadata::from` leaves at their defaults.
+    let token_metadata = TokenMetadata {
+        update_authority: Some(wrapped_mint).try_into().unwrap(),
+        mint: wrapped_mint,
+        ..TokenMetadata::from(partial_token_metadata)
+    };
     account_size += token_metadata.tlv_size_of().unwrap();
 
     let mut mint_data = vec![0u8; account_size];

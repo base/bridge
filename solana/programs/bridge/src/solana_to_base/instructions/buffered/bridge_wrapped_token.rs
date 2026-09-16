@@ -172,6 +172,7 @@ mod tests {
         let partial_token_metadata = PartialTokenMetadata {
             name: "Test Token".to_string(),
             symbol: "TEST".to_string(),
+            uri: "https://example.com/test-token.json".to_string(),
             remote_token: [1u8; 20],
             scaler_exponent: 0,
         };
@@ -361,6 +362,7 @@ mod tests {
         let partial_token_metadata = PartialTokenMetadata {
             name: "Test Token".to_string(),
             symbol: "TEST".to_string(),
+            uri: "https://example.com/test-token.json".to_string(),
             remote_token: [1u8; 20],
             scaler_exponent: 0,
         };
@@ -496,6 +498,7 @@ mod tests {
         let partial_token_metadata = PartialTokenMetadata {
             name: "Test Token".to_string(),
             symbol: "TEST".to_string(),
+            uri: "https://example.com/test-token.json".to_string(),
             remote_token: [1u8; 20],
             scaler_exponent: 0,
         };
