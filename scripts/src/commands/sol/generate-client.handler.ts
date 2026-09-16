@@ -8,6 +8,18 @@ import { z } from "zod";
 import { logger } from "@internal/logger";
 import { findGitRoot } from "@internal/utils";
 
+const TOKEN_2022_PROGRAM_ADDRESS = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+
+// Bridge instructions whose `token_program` is declared `Program<Token2022>` onchain. Codama
+// defaults any account named `tokenProgram` to the legacy SPL Token program, which Anchor rejects
+// for these, so the default has to be pinned. The `bridge_spl` instructions are intentionally
+// absent: they take `Interface<TokenInterface>` and accept either program.
+const TOKEN_2022_ONLY_INSTRUCTIONS = [
+  "wrapToken",
+  "bridgeWrappedToken",
+  "bridgeWrappedTokenWithBufferedCall",
+];
+
 export const argsSchema = z.object({
   program: z
     .enum(["bridge", "base-relayer"], {
@@ -42,6 +54,16 @@ export async function handleGenerateClient(
     logger.info("Instantiating Codama...");
     const idl = rootNodeFromAnchor(require(idlPath));
     const codama = c.createFromRoot(idl);
+
+    codama.update(
+      c.setInstructionAccountDefaultValuesVisitor(
+        TOKEN_2022_ONLY_INSTRUCTIONS.map((instruction) => ({
+          instruction,
+          account: "tokenProgram",
+          defaultValue: c.publicKeyValueNode(TOKEN_2022_PROGRAM_ADDRESS),
+        }))
+      )
+    );
 
     logger.info("Rendering TypeScript client...");
     codama.accept(renderJavaScriptVisitor(clientOutputPath));
