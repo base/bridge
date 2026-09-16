@@ -84,6 +84,8 @@ export const BRIDGE_ERROR__INVALID_SCALER_EXPONENT = 0x319f; // 12703
 export const BRIDGE_ERROR__MINT_IS_NOT_FROM_TOKEN2022 = 0x31a0; // 12704
 /** MintIsNotWrappedTokenPda: Mint is not a valid wrapped token PDA */
 export const BRIDGE_ERROR__MINT_IS_NOT_WRAPPED_TOKEN_PDA = 0x31a1; // 12705
+/** UriTooLong: Token metadata uri is too long */
+export const BRIDGE_ERROR__URI_TOO_LONG = 0x31a2; // 12706
 /** InvalidThreshold: Threshold must be <= number of signers */
 export const BRIDGE_ERROR__INVALID_THRESHOLD = 0x3200; // 12800
 /** TooManySigners: Too many signers (max 32) */
@@ -150,6 +152,7 @@ export type BridgeError =
   | typeof BRIDGE_ERROR__UNAUTHORIZED_CONFIG_UPDATE
   | typeof BRIDGE_ERROR__UNAUTHORIZED_INITIALIZATION
   | typeof BRIDGE_ERROR__UNUSED_PROOF_ELEMENTS_REMAINING
+  | typeof BRIDGE_ERROR__URI_TOO_LONG
   | typeof BRIDGE_ERROR__ZERO_ADDRESS;
 
 let bridgeErrorMessages: Record<BridgeError, string> | undefined;
@@ -199,6 +202,7 @@ if (process.env.NODE_ENV !== 'production') {
     [BRIDGE_ERROR__UNAUTHORIZED_CONFIG_UPDATE]: `Unauthorized to update configuration`,
     [BRIDGE_ERROR__UNAUTHORIZED_INITIALIZATION]: `Only the upgrade authority can initialize the bridge`,
     [BRIDGE_ERROR__UNUSED_PROOF_ELEMENTS_REMAINING]: `Unused proof elements remaining`,
+    [BRIDGE_ERROR__URI_TOO_LONG]: `Token metadata uri is too long`,
     [BRIDGE_ERROR__ZERO_ADDRESS]: `Zero address`,
   };
 }

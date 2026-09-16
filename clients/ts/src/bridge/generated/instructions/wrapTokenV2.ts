@@ -41,15 +41,17 @@ import {
 import { BRIDGE_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
 
-export const WRAP_TOKEN_DISCRIMINATOR = new Uint8Array([
-  203, 83, 204, 83, 225, 109, 44, 6,
+export const WRAP_TOKEN_V2_DISCRIMINATOR = new Uint8Array([
+  156, 173, 188, 64, 139, 131, 187, 136,
 ]);
 
-export function getWrapTokenDiscriminatorBytes() {
-  return fixEncoderSize(getBytesEncoder(), 8).encode(WRAP_TOKEN_DISCRIMINATOR);
+export function getWrapTokenV2DiscriminatorBytes() {
+  return fixEncoderSize(getBytesEncoder(), 8).encode(
+    WRAP_TOKEN_V2_DISCRIMINATOR
+  );
 }
 
-export type WrapTokenInstruction<
+export type WrapTokenV2Instruction<
   TProgram extends string = typeof BRIDGE_PROGRAM_ADDRESS,
   TAccountPayer extends string | AccountMeta<string> = string,
   TAccountGasFeeReceiver extends string | AccountMeta<string> = string,
@@ -58,7 +60,7 @@ export type WrapTokenInstruction<
   TAccountOutgoingMessage extends string | AccountMeta<string> = string,
   TAccountTokenProgram extends
     | string
-    | AccountMeta<string> = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+    | AccountMeta<string> = 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
   TAccountSystemProgram extends
     | string
     | AccountMeta<string> = '11111111111111111111111111111111',
@@ -93,7 +95,7 @@ export type WrapTokenInstruction<
     ]
   >;
 
-export type WrapTokenInstructionData = {
+export type WrapTokenV2InstructionData = {
   discriminator: ReadonlyUint8Array;
   outgoingMessageSalt: ReadonlyUint8Array;
   decimals: number;
@@ -101,26 +103,60 @@ export type WrapTokenInstructionData = {
   name: string;
   /** The symbol/ticker of the token (e.g., "WBTC") */
   symbol: string;
-  /** The 20-byte address of the corresponding token contract on Base (EVM address bytes). */
+  /**
+   * URI pointing to off-chain JSON metadata holding the token's image and description.
+   * Token-2022 has no dedicated fields for either, so both are served from this document.
+   *
+   * NOTE: Deliberately excluded from [`PartialTokenMetadata::hash`]. See that method.
+   */
+  uri: string;
+  /**
+   * The 20-byte address of the corresponding token contract on Base (EVM address bytes).
+   * This allows the bridge to identify which Base token this Solana token represents.
+   */
   remoteToken: ReadonlyUint8Array;
-  /** The scaling exponent used to convert between token amounts on different chains. */
+  /**
+   * The scaling exponent used to convert between token amounts on different chains.
+   * This handles cases where tokens have differing decimal precision on Base vs Solana.
+   * For example, when Base token has 18 decimals and the Solana wrapped mint has 9,
+   * this value conveys the decimal relationship so bridging logic can scale amounts.
+   * The exact conversion is performed by the EVM-side contract; Solana propagates this
+   * value but does not apply arithmetic with it.
+   */
   scalerExponent: number;
 };
 
-export type WrapTokenInstructionDataArgs = {
+export type WrapTokenV2InstructionDataArgs = {
   outgoingMessageSalt: ReadonlyUint8Array;
   decimals: number;
   /** The human-readable name of the token (e.g., "Wrapped Bitcoin") */
   name: string;
   /** The symbol/ticker of the token (e.g., "WBTC") */
   symbol: string;
-  /** The 20-byte address of the corresponding token contract on Base (EVM address bytes). */
+  /**
+   * URI pointing to off-chain JSON metadata holding the token's image and description.
+   * Token-2022 has no dedicated fields for either, so both are served from this document.
+   *
+   * NOTE: Deliberately excluded from [`PartialTokenMetadata::hash`]. See that method.
+   */
+  uri: string;
+  /**
+   * The 20-byte address of the corresponding token contract on Base (EVM address bytes).
+   * This allows the bridge to identify which Base token this Solana token represents.
+   */
   remoteToken: ReadonlyUint8Array;
-  /** The scaling exponent used to convert between token amounts on different chains. */
+  /**
+   * The scaling exponent used to convert between token amounts on different chains.
+   * This handles cases where tokens have differing decimal precision on Base vs Solana.
+   * For example, when Base token has 18 decimals and the Solana wrapped mint has 9,
+   * this value conveys the decimal relationship so bridging logic can scale amounts.
+   * The exact conversion is performed by the EVM-side contract; Solana propagates this
+   * value but does not apply arithmetic with it.
+   */
   scalerExponent: number;
 };
 
-export function getWrapTokenInstructionDataEncoder(): Encoder<WrapTokenInstructionDataArgs> {
+export function getWrapTokenV2InstructionDataEncoder(): Encoder<WrapTokenV2InstructionDataArgs> {
   return transformEncoder(
     getStructEncoder([
       ['discriminator', fixEncoderSize(getBytesEncoder(), 8)],
@@ -128,36 +164,38 @@ export function getWrapTokenInstructionDataEncoder(): Encoder<WrapTokenInstructi
       ['decimals', getU8Encoder()],
       ['name', addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())],
       ['symbol', addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())],
+      ['uri', addEncoderSizePrefix(getUtf8Encoder(), getU32Encoder())],
       ['remoteToken', fixEncoderSize(getBytesEncoder(), 20)],
       ['scalerExponent', getU8Encoder()],
     ]),
-    (value) => ({ ...value, discriminator: WRAP_TOKEN_DISCRIMINATOR })
+    (value) => ({ ...value, discriminator: WRAP_TOKEN_V2_DISCRIMINATOR })
   );
 }
 
-export function getWrapTokenInstructionDataDecoder(): Decoder<WrapTokenInstructionData> {
+export function getWrapTokenV2InstructionDataDecoder(): Decoder<WrapTokenV2InstructionData> {
   return getStructDecoder([
     ['discriminator', fixDecoderSize(getBytesDecoder(), 8)],
     ['outgoingMessageSalt', fixDecoderSize(getBytesDecoder(), 32)],
     ['decimals', getU8Decoder()],
     ['name', addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())],
     ['symbol', addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())],
+    ['uri', addDecoderSizePrefix(getUtf8Decoder(), getU32Decoder())],
     ['remoteToken', fixDecoderSize(getBytesDecoder(), 20)],
     ['scalerExponent', getU8Decoder()],
   ]);
 }
 
-export function getWrapTokenInstructionDataCodec(): Codec<
-  WrapTokenInstructionDataArgs,
-  WrapTokenInstructionData
+export function getWrapTokenV2InstructionDataCodec(): Codec<
+  WrapTokenV2InstructionDataArgs,
+  WrapTokenV2InstructionData
 > {
   return combineCodec(
-    getWrapTokenInstructionDataEncoder(),
-    getWrapTokenInstructionDataDecoder()
+    getWrapTokenV2InstructionDataEncoder(),
+    getWrapTokenV2InstructionDataDecoder()
   );
 }
 
-export type WrapTokenInput<
+export type WrapTokenV2Input<
   TAccountPayer extends string = string,
   TAccountGasFeeReceiver extends string = string,
   TAccountMint extends string = string,
@@ -202,15 +240,16 @@ export type WrapTokenInput<
    * Used internally by Anchor for account initialization and rent payments.
    */
   systemProgram?: Address<TAccountSystemProgram>;
-  outgoingMessageSalt: WrapTokenInstructionDataArgs['outgoingMessageSalt'];
-  decimals: WrapTokenInstructionDataArgs['decimals'];
-  name: WrapTokenInstructionDataArgs['name'];
-  symbol: WrapTokenInstructionDataArgs['symbol'];
-  remoteToken: WrapTokenInstructionDataArgs['remoteToken'];
-  scalerExponent: WrapTokenInstructionDataArgs['scalerExponent'];
+  outgoingMessageSalt: WrapTokenV2InstructionDataArgs['outgoingMessageSalt'];
+  decimals: WrapTokenV2InstructionDataArgs['decimals'];
+  name: WrapTokenV2InstructionDataArgs['name'];
+  symbol: WrapTokenV2InstructionDataArgs['symbol'];
+  uri: WrapTokenV2InstructionDataArgs['uri'];
+  remoteToken: WrapTokenV2InstructionDataArgs['remoteToken'];
+  scalerExponent: WrapTokenV2InstructionDataArgs['scalerExponent'];
 };
 
-export function getWrapTokenInstruction<
+export function getWrapTokenV2Instruction<
   TAccountPayer extends string,
   TAccountGasFeeReceiver extends string,
   TAccountMint extends string,
@@ -220,7 +259,7 @@ export function getWrapTokenInstruction<
   TAccountSystemProgram extends string,
   TProgramAddress extends Address = typeof BRIDGE_PROGRAM_ADDRESS,
 >(
-  input: WrapTokenInput<
+  input: WrapTokenV2Input<
     TAccountPayer,
     TAccountGasFeeReceiver,
     TAccountMint,
@@ -230,7 +269,7 @@ export function getWrapTokenInstruction<
     TAccountSystemProgram
   >,
   config?: { programAddress?: TProgramAddress }
-): WrapTokenInstruction<
+): WrapTokenV2Instruction<
   TProgramAddress,
   TAccountPayer,
   TAccountGasFeeReceiver,
@@ -264,7 +303,7 @@ export function getWrapTokenInstruction<
   // Resolve default values.
   if (!accounts.tokenProgram.value) {
     accounts.tokenProgram.value =
-      'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' as Address<'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'>;
+      'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' as Address<'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'>;
   }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
@@ -282,11 +321,11 @@ export function getWrapTokenInstruction<
       getAccountMeta(accounts.tokenProgram),
       getAccountMeta(accounts.systemProgram),
     ],
-    data: getWrapTokenInstructionDataEncoder().encode(
-      args as WrapTokenInstructionDataArgs
+    data: getWrapTokenV2InstructionDataEncoder().encode(
+      args as WrapTokenV2InstructionDataArgs
     ),
     programAddress,
-  } as WrapTokenInstruction<
+  } as WrapTokenV2Instruction<
     TProgramAddress,
     TAccountPayer,
     TAccountGasFeeReceiver,
@@ -298,7 +337,7 @@ export function getWrapTokenInstruction<
   >);
 }
 
-export type ParsedWrapTokenInstruction<
+export type ParsedWrapTokenV2Instruction<
   TProgram extends string = typeof BRIDGE_PROGRAM_ADDRESS,
   TAccountMetas extends readonly AccountMeta[] = readonly AccountMeta[],
 > = {
@@ -341,17 +380,17 @@ export type ParsedWrapTokenInstruction<
      */
     systemProgram: TAccountMetas[6];
   };
-  data: WrapTokenInstructionData;
+  data: WrapTokenV2InstructionData;
 };
 
-export function parseWrapTokenInstruction<
+export function parseWrapTokenV2Instruction<
   TProgram extends string,
   TAccountMetas extends readonly AccountMeta[],
 >(
   instruction: Instruction<TProgram> &
     InstructionWithAccounts<TAccountMetas> &
     InstructionWithData<ReadonlyUint8Array>
-): ParsedWrapTokenInstruction<TProgram, TAccountMetas> {
+): ParsedWrapTokenV2Instruction<TProgram, TAccountMetas> {
   if (instruction.accounts.length < 7) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
@@ -373,6 +412,6 @@ export function parseWrapTokenInstruction<
       tokenProgram: getNextAccount(),
       systemProgram: getNextAccount(),
     },
-    data: getWrapTokenInstructionDataDecoder().decode(instruction.data),
+    data: getWrapTokenV2InstructionDataDecoder().decode(instruction.data),
   };
 }

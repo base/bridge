@@ -49,6 +49,7 @@ import {
   type ParsedSetWindowDurationInstruction,
   type ParsedTransferGuardianInstruction,
   type ParsedWrapTokenInstruction,
+  type ParsedWrapTokenV2Instruction,
 } from '../instructions';
 
 export const BRIDGE_PROGRAM_ADDRESS = '' as Address<''>;
@@ -173,6 +174,7 @@ export enum BridgeInstruction {
   SetWindowDuration,
   TransferGuardian,
   WrapToken,
+  WrapTokenV2,
 }
 
 export function identifyBridgeInstruction(
@@ -564,6 +566,17 @@ export function identifyBridgeInstruction(
   ) {
     return BridgeInstruction.WrapToken;
   }
+  if (
+    containsBytes(
+      data,
+      fixEncoderSize(getBytesEncoder(), 8).encode(
+        new Uint8Array([156, 173, 188, 64, 139, 131, 187, 136])
+      ),
+      0
+    )
+  ) {
+    return BridgeInstruction.WrapTokenV2;
+  }
   throw new Error(
     'The provided instruction could not be identified as a bridge instruction.'
   );
@@ -674,4 +687,7 @@ export type ParsedBridgeInstruction<TProgram extends string = ''> =
     } & ParsedTransferGuardianInstruction<TProgram>)
   | ({
       instructionType: BridgeInstruction.WrapToken;
-    } & ParsedWrapTokenInstruction<TProgram>);
+    } & ParsedWrapTokenInstruction<TProgram>)
+  | ({
+      instructionType: BridgeInstruction.WrapTokenV2;
+    } & ParsedWrapTokenV2Instruction<TProgram>);
