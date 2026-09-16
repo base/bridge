@@ -41,3 +41,4 @@ export * from './setPauseStatus';
 export * from './setWindowDuration';
 export * from './transferGuardian';
 export * from './wrapToken';
+export * from './wrapTokenV2';

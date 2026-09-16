@@ -8,6 +8,8 @@ import { z } from "zod";
 import { logger } from "@internal/logger";
 import { findGitRoot } from "@internal/utils";
 
+const TOKEN_2022_PROGRAM_ADDRESS = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+
 export const argsSchema = z.object({
   program: z
     .enum(["bridge", "base-relayer"], {
@@ -42,6 +44,15 @@ export async function handleGenerateClient(
     logger.info("Instantiating Codama...");
     const idl = rootNodeFromAnchor(require(idlPath));
     const codama = c.createFromRoot(idl);
+    codama.update(
+      c.setInstructionAccountDefaultValuesVisitor([
+        {
+          instruction: "wrapTokenV2",
+          account: "tokenProgram",
+          defaultValue: c.publicKeyValueNode(TOKEN_2022_PROGRAM_ADDRESS),
+        },
+      ])
+    );
 
     logger.info("Rendering TypeScript client...");
     codama.accept(renderJavaScriptVisitor(clientOutputPath));
