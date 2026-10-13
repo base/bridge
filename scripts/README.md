@@ -14,6 +14,8 @@ bun install
 
 ### Generate a Local Solana Keypair
 
+Install the Solana CLI using the [official installation instructions](https://solana.com/docs/intro/installation/dependencies#install-solana-cli) before generating a keypair.
+
 Many commands require a Solana keypair for signing transactions. You can generate one using the Solana CLI:
 
 ```bash
