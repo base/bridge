@@ -10,6 +10,7 @@ import { toBytes, isAddress as isEvmAddress } from "viem";
 import { fetchBridge, getBridgeSolInstruction } from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
+import { parseTokenAmount, positiveAmountSchema } from "@internal/amount";
 import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
@@ -36,12 +37,7 @@ export const argsSchema = z.object({
       message: "Invalid Base/Ethereum address format",
     })
     .brand<"baseAddress">(),
-  amount: z
-    .string()
-    .transform((val) => parseFloat(val))
-    .refine((val) => !isNaN(val) && val > 0, {
-      message: "Amount must be a positive number",
-    }),
+  amount: positiveAmountSchema,
   payerKp: z
     .union([z.literal("config"), z.string().brand<"payerKp">()])
     .default("config"),
@@ -74,7 +70,7 @@ export async function handleBridgeSol(args: Args): Promise<void> {
     logger.info(`Sol Vault: ${solVaultAddress}`);
 
     // Calculate scaled amount (amount * 10^decimals)
-    const scaledAmount = BigInt(Math.floor(args.amount * Math.pow(10, 9)));
+    const scaledAmount = parseTokenAmount(args.amount, 9);
     logger.info(`Amount: ${args.amount}`);
     logger.info(`Scaled amount: ${scaledAmount}`);
 

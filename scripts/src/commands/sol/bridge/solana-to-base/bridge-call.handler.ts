@@ -14,6 +14,7 @@ import {
 } from "@base/bridge/bridge";
 
 import { logger } from "@internal/logger";
+import { parseTokenAmount, nonNegativeAmountSchema } from "@internal/amount";
 import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
@@ -40,13 +41,7 @@ export const argsSchema = z.object({
     z.literal("counter"),
     z.string().startsWith("0x", "Address must start with 0x").brand<"to">(),
   ]),
-  value: z
-    .string()
-    .transform((val) => parseFloat(val))
-    .refine((val) => !isNaN(val) && val >= 0, {
-      message: "Value must be a non-negative number",
-    })
-    .default(0),
+  value: nonNegativeAmountSchema,
   data: z
     .union([
       z.literal("increment"),
@@ -114,7 +109,7 @@ export async function handleBridgeCall(args: Args): Promise<void> {
           call: {
             ty: CallType.Call,
             to: toBytes(targetAddress),
-            value: BigInt(Math.floor(args.value * 1e18)), // Convert ETH to wei
+            value: parseTokenAmount(args.value, 18), // Convert ETH to wei
             data: Buffer.from(callData.slice(2), "hex"), // Remove 0x prefix
           },
         },

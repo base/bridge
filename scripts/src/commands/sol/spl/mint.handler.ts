@@ -10,6 +10,7 @@ import {
 } from "@solana-program/token";
 
 import { logger } from "@internal/logger";
+import { parseTokenAmount, positiveAmountSchema } from "@internal/amount";
 import {
   buildAndSendTransaction,
   getSolanaCliConfigKeypairSigner,
@@ -29,13 +30,7 @@ export const argsSchema = z.object({
   to: z
     .union([z.literal("config"), z.string().brand<"to">()])
     .default("config"),
-  amount: z
-    .string()
-    .transform((val) => parseFloat(val))
-    .refine((val) => !isNaN(val) && val > 0, {
-      message: "Amount must be a positive number",
-    })
-    .default(100),
+  amount: positiveAmountSchema.default("100"),
   mintAuthorityKp: z
     .union([z.literal("config"), z.string().brand<"mintAuthorityKp">()])
     .default("config"),
@@ -72,10 +67,8 @@ export async function handleMint(args: Args): Promise<void> {
     const recipientAddress = await resolveRecipient(args.to, rpc, maybeMint);
     logger.info(`Recipient: ${recipientAddress}`);
 
-    // Calculate scaled amount (amount * 10^decimals)
-    const scaledAmount = BigInt(
-      Math.floor(args.amount * Math.pow(10, mint.decimals))
-    );
+    // Scale amount to the smallest unit using string-based decimal parsing.
+    const scaledAmount = parseTokenAmount(args.amount, mint.decimals);
     logger.info(`Amount: ${args.amount}`);
     logger.info(`Decimals: ${mint.decimals}`);
     logger.info(`Scaled amount: ${scaledAmount}`);
