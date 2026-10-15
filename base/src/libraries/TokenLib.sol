@@ -13,7 +13,9 @@ import {Pubkey} from "./SVMLib.sol";
 ///
 /// @custom:field localToken Address of the ERC20 token on this chain.
 /// @custom:field remoteToken Pubkey of the remote token on Solana.
-/// @custom:field to Address of the recipient on the target chain. EVM address on Base, Solana pubkey on Solana.
+/// @custom:field to Recipient on the target chain. For Base recipients, encode the EVM address with
+///                  `TokenLib.encodeEvmRecipient`, i.e. left-aligned as `bytes32(bytes20(recipient))`.
+///                  For Solana recipients, use the Solana pubkey.
 /// @custom:field remoteAmount Amount of tokens being bridged (expressed in Solana units).
 struct Transfer {
     address localToken;
@@ -112,6 +114,27 @@ library TokenLib {
         assembly ("memory-safe") {
             $.slot := _TOKEN_LIB_STORAGE_LOCATION
         }
+    }
+
+    /// @notice Encodes an EVM recipient for a Solana-to-Base transfer.
+    ///
+    /// @dev The Solana message format stores recipients in a bytes32 field, but Base finalization reads the first
+    ///      20 bytes. This must be left-aligned, not ABI-style right-aligned.
+    ///
+    /// @param recipient Address to receive tokens on Base.
+    ///
+    /// @return encoded The recipient encoded as left-aligned bytes20 inside bytes32.
+    function encodeEvmRecipient(address recipient) internal pure returns (bytes32 encoded) {
+        return bytes32(bytes20(recipient));
+    }
+
+    /// @notice Decodes a Base recipient from a Solana-to-Base transfer.
+    ///
+    /// @param encoded Recipient encoded with `encodeEvmRecipient`.
+    ///
+    /// @return recipient Address to receive tokens on Base.
+    function decodeEvmRecipient(bytes32 encoded) internal pure returns (address recipient) {
+        return address(bytes20(encoded));
     }
 
     /// @notice Initializes a token transfer.
@@ -224,7 +247,7 @@ library TokenLib {
     function finalizeTransfer(Transfer memory transfer, address crossChainErc20Factory) internal {
         TokenLibStorage storage $ = getTokenLibStorage();
 
-        address to = address(bytes20(transfer.to));
+        address to = decodeEvmRecipient(transfer.to);
         uint256 localAmount;
 
         if (transfer.localToken == ETH_ADDRESS) {
